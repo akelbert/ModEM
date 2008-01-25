@@ -1,0 +1,106 @@
+# Makefile suited for building the Test2D program
+# Generated using: ./fmkmf.pl [OPTIONS] Test2D.f90 > Makefile
+# with command line options
+# -p INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/FWD
+# -f90 g95 (compiler)
+# -opt -g -ftrace=frame -fbounds-check (compiler optimisation)
+# -l -lblas -llapack (linking options)
+
+# Common compiler and linking options are:
+# FFLAGS = -g -O2
+# FFLAGS = -g -ftrace=frame -fbounds-check
+# FFLAGS = -dalign -g -w
+# FFLAGS = -dalign -g -w -L/usr/local/lib
+# LIBS = -lblas -llapack
+# LIBS = -lblas_solaris -llapack_solaris
+
+# ------------------Macro-Defs---------------------
+include Makefile.local
+F90 = g95 
+FFLAGS = -g -ftrace=frame -fbounds-check
+LIBS = -lblas -llapack
+
+# -------------------End-macro-Defs---------------------------
+OBJ = math_constants.o utilities.o Grid2D.o EMfield.o ModelParameter.o DataSpace.o WSfwd2D.o InterpEB.o SolnRHS.o DataGridInfo.o DataFunc.o FwdTEmod.o FwdTMmod.o EMsolver.o IoMod.o MeasComb.o SensPDEcoeff.o SensMatrix.o NLCG.o Test2D.o 
+
+
+all: Test2D 
+
+# Here is the link step 
+Test2D: $(OBJ) 
+	 $(F90) -o $(OUTDIR)/Test2D $(OBJ) $(LIBS) 
+
+# Here are the compile steps
+ 
+math_constants.o:UTILS/math_constants.f90  
+	 $(F90) -c $(FFLAGS) UTILS/math_constants.f90 
+
+utilities.o:UTILS/utilities.f90 math_constants.o 
+	 $(F90) -c $(FFLAGS) UTILS/utilities.f90 
+
+Grid2D.o:2D_MT/Grid2D.f90 math_constants.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/Grid2D.f90 
+
+EMfield.o:2D_MT/EMfield.f90 math_constants.o utilities.o Grid2D.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/EMfield.f90 
+
+ModelParameter.o:2D_MT/ModelParameter.f90 math_constants.o utilities.o EMfield.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/ModelParameter.f90 
+
+DataSpace.o:SENS/DataSpace.f90 utilities.o math_constants.o 
+	 $(F90) -c $(FFLAGS) SENS/DataSpace.f90 
+
+WSfwd2D.o:2D_MT/FWD/WSfwd2D.f90 math_constants.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/FWD/WSfwd2D.f90 
+
+InterpEB.o:2D_MT/InterpEB.f90 math_constants.o utilities.o ModelParameter.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/InterpEB.f90 
+
+SolnRHS.o:2D_MT/SolnRHS.f90 EMfield.o ModelParameter.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/SolnRHS.f90 
+
+DataGridInfo.o:2D_MT/DataGridInfo.f90 Grid2D.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/DataGridInfo.f90 
+
+DataFunc.o:2D_MT/DataFunc.f90 math_constants.o utilities.o InterpEB.o ModelParameter.o SolnRHS.o DataGridInfo.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/DataFunc.f90 
+
+FwdTEmod.o:2D_MT/FWD/FwdTEmod.f90 math_constants.o WSfwd2D.o SolnRHS.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/FWD/FwdTEmod.f90 
+
+FwdTMmod.o:2D_MT/FWD/FwdTMmod.f90 math_constants.o WSfwd2D.o SolnRHS.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/FWD/FwdTMmod.f90 
+
+EMsolver.o:2D_MT/EMsolver.f90 math_constants.o utilities.o DataFunc.o DataSpace.o FwdTEmod.o FwdTMmod.o SolnRHS.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/EMsolver.f90 
+
+IoMod.o:2D_MT/IoMod.f90 math_constants.o EMfield.o DataSpace.o EMsolver.o utilities.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/IoMod.f90 
+
+MeasComb.o:SENS/MeasComb.f90 math_constants.o utilities.o DataSpace.o ModelParameter.o SolnRHS.o DataFunc.o 
+	 $(F90) -c $(FFLAGS) SENS/MeasComb.f90 
+
+SensPDEcoeff.o:2D_MT/SensPDEcoeff.f90 math_constants.o utilities.o DataFunc.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/SensPDEcoeff.f90 
+
+SensMatrix.o:SENS/SensMatrix.f90 math_constants.o utilities.o MeasComb.o SensPDEcoeff.o EMsolver.o 
+	 $(F90) -c $(FFLAGS) SENS/SensMatrix.f90 
+
+NLCG.o:INV/NLCG.f90 SensMatrix.o 
+	 $(F90) -c $(FFLAGS) INV/NLCG.f90 
+
+Test2D.o:Test2D.f90 ModelParameter.o DataSpace.o WSfwd2D.o IoMod.o DataFunc.o SensMatrix.o Grid2D.o NLCG.o 
+	 $(F90) -c $(FFLAGS) Test2D.f90 
+
+# Type " make clean " to get rid of all object and module files 
+clean: 
+	rm -f *~ *.o *.obj *.mod *.d *.s00 *.dbg *.stackdump \
+	`find . -mindepth 1 -name "*~"` 
+
+cleanall: clean 
+	rm -f $(OUTDIR)/Test2D 
+
+src: clean 
+	tar cvfz $(ARCHIVE).tgz * 
+
+  
