@@ -1,2 +1,29 @@
-Run Configure.2D_MT to create Makefile for 2D_MT;
-run Configure.3D_MT to create Makefile for 3D_MT.
+Usage:
+
+2D_MT: make -f Makefile2d
+3D_MT: make -f Makefile3d
+
+Alternatively, run
+Configure.2D_MT - to create Makefile for 2D_MT;
+Configure.3D_MT - to create Makefile for 3D_MT.
+These scripts use fmkmf.pl script, which is an
+automatic Makefile generator, and Makefile.local,
+which could be hand-edited. Compilers and linked
+libraries may be modified in the Configure scripts
+or directly in the Makefile that gets created.
+The Configure scripts have to be rerun if the
+module usage dependencies change or if new source
+code is added.
+
+Importing the project from SVN repository into Eclipse:
+
+1) Install Photran and Subeclipse plugins using
+   Help -> Software Updates -> Find and Install
+2) Go to New -> SVN -> Checkout Projects from SVN
+3) Type in repository location
+   http://mt.coas.oregonstate.edu/svn/ModEM/trunk
+4) Check out the subdirectory f90; if it gives you
+   this option (i.e. if .project is not present
+   in the repository) check out as new project.
+5) If checking out as new project, select
+   Fortran Project -> Makefile Project -> GCC Tool Chain
