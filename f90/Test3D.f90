@@ -28,10 +28,10 @@ program Test3D
      logical		:: fwdPredTest = .false.
      logical		:: SensMatrixCalcTest = .false.
      logical		:: MultBySensTest = .false.
-     logical		:: MultBySensTransTest = .true.
+     logical		:: MultBySensTransTest = .false.
      logical		:: linPredTest = .false.
      logical		:: DirectSensTest = .false.
-		 logical    :: nlcgTest = .false.
+     logical		:: nlcgTest = .true.
      logical		:: logCond = .true.
 
      real (kind=selectedPrec), dimension(:), pointer :: periods
@@ -97,23 +97,23 @@ program Test3D
      !   not a template, is needed.
      if(MultBySensTransTest) then
         if(logCond) then
-					cfile = 'TestPredLog3D.imp'
-				else
-          cfile = 'TestPred3D.imp'
-				endif
-			else if (nlcgTest) then
-				cfile = 'true3d.imp'		
+	   cfile = 'TestPredLog3D.imp'
+        else
+           cfile = 'TestPred3D.imp'
+        endif
+     else if (nlcgTest) then
+        cfile = 'true3d.imp'		
      else
         cfile = 'Template_mini.imp'
      endif
 		
-		 cfile = 'true3d.imp'		
-     
-     call read_Z3D_ascii(fidRead,cfile,nPer,periods,nSites,sites,allData)
+     !call read_Z3D_ascii(fidRead,cfile,nPer,periods,nSites,sites,allData)
+     call read_Z3D(fidRead,cfile,nPer,periods,nSites,sites,allData)
 
-	 if(IOtest) then
-	 	call write_Z3D_ascii(fidWrite,'out.imp',nPer,periods,nSites,sites,allData)
-	 end if
+     if(IOtest) then
+        call write_Z3D_ascii(fidWrite,'out.imp',nPer,periods, &
+            nSites,sites,allData)
+     end if
 	 
      !  Using periods, sites obtained from data file
      !     set up transmitter and receiver dictionaries
@@ -158,7 +158,8 @@ program Test3D
 	else
             cfile = 'TestPred3D.imp'
 	endif
-        call write_Z3D_ascii(fidWrite,cfile,nPer,periods,  &
+!        call write_Z3D_ascii(fidWrite,cfile,nPer,periods,  &
+        call write_Z3D(fidWrite,cfile,nPer,periods,  &
 			nSites,sites,allData)
 
      endif
@@ -172,8 +173,9 @@ program Test3D
 	else
             cfile = 'TestPred3D_A.imp'
 	endif
-	    call setError_dvecMTX(error,allData)
-        call write_Z3D_ascii(fidWrite,cfile,nPer,periods,  &
+!	    call setError_dvecMTX(error,allData)
+!        call write_Z3D_ascii(fidWrite,cfile,nPer,periods,  &
+        call write_Z3D(fidWrite,cfile,nPer,periods,  &
 			nSites,sites,allData)
      endif
 
@@ -202,7 +204,10 @@ program Test3D
      endif
 
      if(MultBySensTransTest) then
-       call JmultT(sigma0,allData,dsigma)
+        call create_EMsolnMTX(allData,eAll) 
+        call fwdPred(sigma0,allData,eAll)
+       call JmultT(sigma0,allData,dsigma,eAll)
+!       call JmultT(sigma0,allData,dsigma)
        if(logCond) then
             cfile = 'TestSensMultTransLog3D.cpr'
         else
@@ -233,9 +238,9 @@ program Test3D
      endif
        
 
-		 if(nlcgTest) then
-       write(*,*) 'Starting the NLCG search...'
-        lambda = ONE
+     if(nlcgTest) then
+        write(*,*) 'Starting the NLCG search...'
+        lambda = .1
         call NLCGsolver(allData,lambda,sigma0,sigma1)
         if(logCond) then
             cfile = 'solution3d_log.cpr'

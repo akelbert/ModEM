@@ -309,11 +309,11 @@ contains
           endif
        else if(b%nonzero_bc .and. b%allocated) then
           call zero_cboundary(b%bc)
-			 else
-					if(.not.b%allocated) then
-						msg = 'Input not yet allocated in zero_RHS'
-						call errStop(msg)
-					endif
+       else
+          if(.not.b%allocated) then
+             msg = 'Input not yet allocated in zero_RHS'
+             call errStop(msg)
+          endif
        endif
      end subroutine zero_RHS
 !**********************************************************************
@@ -334,16 +334,16 @@ contains
 
        integer				:: k
 
-			 if (b%allocated) then
-					! do nothing - exit the create subroutine
-					return
-			 endif
+       if (b%allocated) then
+          ! do nothing - exit the create subroutine
+          return
+       endif
 
        do k = 1,b%nPol
           call create_RHS(grid,b%b(k)) 
        enddo
 
-			 b%allocated = .true.
+       b%allocated = .true.
 
      end subroutine create_EMrhs
 
@@ -358,7 +358,7 @@ contains
              call deall_RHS(b%b(k))
        enddo
 
-			 b%allocated = .false.
+       b%allocated = .false.
 
      end subroutine deall_EMrhs
 

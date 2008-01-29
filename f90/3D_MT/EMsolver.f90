@@ -93,7 +93,6 @@ Contains
 
    !  local variables
    integer		:: IER,k
-   real(kind=selectedPrec)	:: period
    character*80         :: msg, gridType
    logical		:: initForSens,sigmaNotCurrent
 
@@ -132,11 +131,6 @@ Contains
       modelDataInitialized = .true.
    endif
 
-   period = txDict(iTx)%period
-   
-   ! This needs to be called before solving for a different frequency
-   call UpdateFreq(period)
-
 !    the following needs work ... want to avoid reinitializing
 !     operator coefficients when conductivity does not change;
 !     need to have a way to reset sigmaNotCurrent to false when
@@ -149,6 +143,10 @@ Contains
        call updateCond(sigma)
 !      sigmaNotCurrent = .false.
 !   endif
+
+   ! This needs to be called before solving for a different frequency
+   !!!!!!!  BUT AFTER UPDATECOND !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   call UpdateFreq(txDict(iTx)%omega)
 
    end subroutine initSolver
 
@@ -203,7 +201,7 @@ Contains
    i_omega_mu = cmplx(0.,isign*mu*omega,kind=selectedPrec)
 
    !  complete operator intialization, for this frequency
-   call UpdateFreq(txDict(iTx)%omega)
+   !  call UpdateFreq(txDict(iTx)%omega)
    !  loop over polarizations
    do iMode = 1,2
       ! compute boundary conditions for polarization iMode
