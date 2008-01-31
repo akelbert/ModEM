@@ -19,10 +19,16 @@
 <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.1469524501" name="photran.managedbuild.toolchain.gnu.fortran.exe.debug" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.debug">
 <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.exe.debug.1096032036" name="Debug Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.exe.debug"/>
 <builder id="photran.managedbuild.target.gnu.builder.exe.debug.1502364704" managedBuildOn="false" name="Gnu Make.GCC Tool Chain" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
-<tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.728056760" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug"/>
-<tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1840086756" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug"/>
+<tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.728056760" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug">
+<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.598969417" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+</tool>
+<tool id="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug.1840086756" name="GNU Fortran Compiler" superClass="photran.managedbuild.tool.gnu.fortran.compiler.exe.debug">
+<inputType id="photran.managedbuild.tool.gnu.fortran.compiler.input.1979516621" superClass="photran.managedbuild.tool.gnu.fortran.compiler.input"/>
+</tool>
 <tool id="photran.managedbuild.tool.gnu.fortran.linker.exe.debug.1219849648" name="GNU Fortran Linker" superClass="photran.managedbuild.tool.gnu.fortran.linker.exe.debug"/>
-<tool id="photran.managedbuild.tool.gnu.assembler.exe.debug.795240421" name="GCC Assembler" superClass="photran.managedbuild.tool.gnu.assembler.exe.debug"/>
+<tool id="photran.managedbuild.tool.gnu.assembler.exe.debug.795240421" name="GCC Assembler" superClass="photran.managedbuild.tool.gnu.assembler.exe.debug">
+<inputType id="cdt.managedbuild.tool.gnu.assembler.input.390103009" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+</tool>
 </toolChain>
 </folderInfo>
 </configuration>

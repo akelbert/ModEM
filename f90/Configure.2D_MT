@@ -1,2 +1,2 @@
 #!/usr/bin/sh
-perl fmkmf.pl -f90 g95 -opt '-g -ftrace=frame -fbounds-check' -l '-lblas -llapack' -p INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/FWD Test2D.f90 >Makefile
+perl fmkmf.pl -f90 g95 -opt '-g -ftrace=frame -fbounds-check' -l '-lblas -llapack' -p INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/FWD:2D_MT/ioMod Test2D.f90 >Makefile

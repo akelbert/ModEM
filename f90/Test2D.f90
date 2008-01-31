@@ -9,7 +9,7 @@ program TETMtest
      use dataspace
      !use solnrhs
      use wsfwd2d
-     use iomod
+     use ioascii
      use dataFunc
      use sensmatrix
 !     use dcg
@@ -44,7 +44,6 @@ program TETMtest
      real (kind=selectedPrec), dimension(:,:), pointer :: sites
      character*2, dimension(:), pointer	:: modes
      character*2	:: cMode = 'TE'
-     character*80	:: paramType = ''
 
      ! grid geometry data structure
      type(grid2d_t), target 	:: TEgrid
@@ -77,8 +76,9 @@ program TETMtest
      ! Read input files ....
      !  at present hard-wired for file names
      ! (1) Read in numerical grid geometry
-     cfile = '2D_ascii.grd'
-     call read_Grid2D_ascii(fidRead,cfile,TEgrid)
+     cfile = 'mackie_inverse_model'
+     call read_Grid2D(fidRead,cfile,TEgrid)
+
      !  complete grid definition ... 
      call gridCalcs(TEgrid)
 
@@ -92,14 +92,7 @@ program TETMtest
      ! (2) Read background conductivity parameter (allocate first,
      !    using size info obtained from grid ... this might change
      !    for different parameters!)
-     if(logCond) then
-         cfile = 'background_log.cpr'
-     else
-         cfile = 'background.cpr'
-     endif
-		 cfile = 'background_ascii.cpr'
-     call create_modelParam(TEgrid,paramType,sigma0)
-     call read_Cond2D_ascii(fidRead,cfile,sigma0)
+     call read_Cond2D(fidRead,cfile,sigma0,TEgrid)
 	
      ! (3) Read in data file (only needs to be a template for
      !      most tests -- periods/sites/mode -- except for
@@ -111,10 +104,10 @@ program TETMtest
         cfile = 'template_'//cMode//'.imp'
      endif
 		 cfile = 'data_te_real_error_conj'
-     call read_Z_ascii(fidRead,cfile,nPer,periods,modes,nSites,sites,allData)
+     call read_Z(fidRead,cfile,nPer,periods,modes,nSites,sites,allData)
 
 	   if(IOtest) then
-	 	   call write_Z_ascii(fidWrite,'out.imp',nPer,periods,modes,nSites,sites,allData)
+	 	   call write_Z(fidWrite,'out.imp',nPer,periods,modes,nSites,sites,allData)
 	   end if
 
      !  Using periods, sites obtained from data file
@@ -136,8 +129,7 @@ program TETMtest
         else
             cfile = 'dTest.cpr'
         endif
-        call create_ModelParam(TEgrid,paramtype,dsigma)
-        call read_Cond2D(fidRead,cfile,dsigma)
+        call read_Cond2D(fidRead,cfile,dsigma,TEgrid)
      endif
 
      if(FWDtest) then
@@ -177,7 +169,7 @@ program TETMtest
             cfile = 'fwdPred'//cMode//'_A.imp'
 	endif
 		    call setError_dvecMTX(error,allData)
-        call write_Z_ascii(fidWrite,cfile,nPer,periods,modes, &
+        call write_Z(fidWrite,cfile,nPer,periods,modes, &
 			nSites,sites,allData)
      endif
 
@@ -217,7 +209,7 @@ program TETMtest
         else
             cfile = 'TestSensMultTrans'//cMode//'.cpr'
         endif
-        call write_Cond2D(fidWrite,cfile,dSigma)
+        call write_Cond2D(fidWrite,cfile,dSigma,TEgrid)
      endif
 
 !     if(linPredTest) then
@@ -249,7 +241,7 @@ program TETMtest
         else
             cfile = 'solution_'//cMode//'.cpr'
         endif
-        call write_Cond2D_ascii(fidWrite,cfile,sigma1)
+        call write_Cond2D(fidWrite,cfile,sigma1,TEgrid)
      endif
        
      ! deallocate

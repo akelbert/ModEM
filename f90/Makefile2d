@@ -1,7 +1,7 @@
 # Makefile suited for building the Test2D program
 # Generated using: ./fmkmf.pl [OPTIONS] Test2D.f90 > Makefile
 # with command line options
-# -p INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/FWD
+# -p INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/FWD:2D_MT/ioMod
 # -f90 g95 (compiler)
 # -opt -g -ftrace=frame -fbounds-check (compiler optimisation)
 # -l -lblas -llapack (linking options)
@@ -21,7 +21,7 @@ FFLAGS = -g -ftrace=frame -fbounds-check
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
-OBJ = math_constants.o utilities.o Grid2D.o EMfield.o ModelParameter.o DataSpace.o WSfwd2D.o InterpEB.o SolnRHS.o DataGridInfo.o DataFunc.o FwdTEmod.o FwdTMmod.o EMsolver.o IoMod.o MeasComb.o SensPDEcoeff.o SensMatrix.o NLCG.o Test2D.o 
+OBJ = math_constants.o utilities.o Grid2D.o EMfield.o ModelParameter.o DataSpace.o WSfwd2D.o InterpEB.o SolnRHS.o DataGridInfo.o DataFunc.o FwdTEmod.o FwdTMmod.o EMsolver.o ioAscii.o MeasComb.o SensPDEcoeff.o SensMatrix.o NLCG.o Test2D.o 
 
 
 all: Test2D 
@@ -74,8 +74,8 @@ FwdTMmod.o:2D_MT/FWD/FwdTMmod.f90 math_constants.o WSfwd2D.o SolnRHS.o
 EMsolver.o:2D_MT/EMsolver.f90 math_constants.o utilities.o DataFunc.o DataSpace.o FwdTEmod.o FwdTMmod.o SolnRHS.o 
 	 $(F90) -c $(FFLAGS) 2D_MT/EMsolver.f90 
 
-IoMod.o:2D_MT/IoMod.f90 math_constants.o EMfield.o DataSpace.o EMsolver.o utilities.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/IoMod.f90 
+ioAscii.o:2D_MT/ioMod/ioAscii.f90 math_constants.o EMfield.o DataSpace.o EMsolver.o utilities.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/ioMod/ioAscii.f90 
 
 MeasComb.o:SENS/MeasComb.f90 math_constants.o utilities.o DataSpace.o ModelParameter.o SolnRHS.o DataFunc.o 
 	 $(F90) -c $(FFLAGS) SENS/MeasComb.f90 
@@ -89,7 +89,7 @@ SensMatrix.o:SENS/SensMatrix.f90 math_constants.o utilities.o MeasComb.o SensPDE
 NLCG.o:INV/NLCG.f90 SensMatrix.o 
 	 $(F90) -c $(FFLAGS) INV/NLCG.f90 
 
-Test2D.o:Test2D.f90 ModelParameter.o DataSpace.o WSfwd2D.o IoMod.o DataFunc.o SensMatrix.o Grid2D.o NLCG.o 
+Test2D.o:Test2D.f90 ModelParameter.o DataSpace.o WSfwd2D.o ioAscii.o DataFunc.o SensMatrix.o Grid2D.o NLCG.o 
 	 $(F90) -c $(FFLAGS) Test2D.f90 
 
 # Type " make clean " to get rid of all object and module files 

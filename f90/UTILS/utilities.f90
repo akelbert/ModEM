@@ -11,12 +11,21 @@ Contains
 
      subroutine errStop(msg)
 
-     character*80, intent(in)  :: msg
-     write(0,*) msg
+     character(*), intent(in)  :: msg
+     write(0,*) 'Error: ',msg
      stop
 
      end subroutine errStop
-  
+
+!*****************************************************************************
+
+     subroutine warning(msg)
+
+     character(*), intent(in)  :: msg
+     write(0,*) 'Warning: ',msg
+
+     end subroutine warning
+    
 ! *****************************************************************************
 
       integer function findstr(str1,str2)

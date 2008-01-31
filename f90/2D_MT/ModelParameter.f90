@@ -47,7 +47,7 @@ end interface
 
 public	::	create_modelParam,deall_modelParam,dotProd_modelParam
 public	::	linComb_modelParam,zero_modelParam,copy_modelParam
-public  ::  scMult_modelParam
+public  ::  scMult_modelParam, getValue_modelParam
 public  ::  maxNorm_modelParam
 
 !   include interface for conductivity mappings
@@ -73,8 +73,7 @@ public  ::  maxNorm_modelParam
 
 !   include interface for model parameter IO
 !   include ModelParamIO.hd
-   public writeAll_Cond2D, write_Cond2D, read_Cond2D, readAll_Cond2D
-	 public read_Cond2D_ascii, write_Cond2D_ascii
+   public writeAll_Cond2D, readAll_Cond2D
 
 contains
 
@@ -82,14 +81,21 @@ contains
    !  allocateEarthCond allocates and initializes arrays for
    !   Earth-cell conductivity structure;
    !   Pass grid of type grid2d_t to set array sizes
-   subroutine create_modelParam(grid,paramtype,cond)
+   subroutine create_modelParam(grid,paramtype,cond,value,airCond)
 
      implicit none
      type (grid2d_t), intent(in), target   	:: grid
-     character*80, intent(in)   		:: paramtype
+     character(*), intent(in)   		    :: paramtype
      type (modelParam_t), intent(inout)   	:: cond
+     real (kind=selectedPrec), intent(in), optional :: value(:,:)
+     real (kind=selectedPrec), intent(in), optional :: airCond
      !  local variables
      integer ::       Nz,Ny,Nza,NzEarth
+
+	 if (cond%allocated) then
+        call warning('Model parameter already allocated in create_modelParam')
+        return
+	 end if
 
      Nz = grid%Nz
      Nza = grid%Nza
@@ -101,8 +107,20 @@ contains
      cond%paramType = paramtype
 
      allocate(cond%v(Ny,NzEarth))
-     cond%v = R_ZERO
+     if (present(value)) then
+        if((size(value,1)==Ny).and.(size(value,2)==NzEarth)) then
+           cond%v = value
+        else
+           call errStop('Wrong conductivity array size in create_modelParam')
+        end if
+     else
+        cond%v = R_ZERO
+     end if
      cond%allocated = .true.
+
+     if (present(airCond)) then
+        cond%AirCond = airCond
+     end if
 
    end subroutine create_modelParam
 
@@ -265,6 +283,45 @@ contains
      mOut%AirCond = mIn%AirCond
 
    end subroutine copy_modelParam
+
+   !************************************************************************
+   !  getValue_modelParam extracts information for a modelParam_t variable;
+   !  note that the output array must already be of correct size on input.
+   !  Therefore, grid is assumed to be known before calling this subroutine.
+   subroutine getValue_modelParam(cond,value,paramtype,airCond)
+
+     implicit none
+     type (modelParam_t), intent(in)   	        :: cond
+     real (kind=selectedPrec), intent(inout)    :: value(:,:)
+     character*80, intent(out), optional   		:: paramtype
+     real (kind=selectedPrec), intent(out), optional :: airCond
+     !  local variables
+     integer ::       Nz,Ny,Nza,NzEarth
+
+     if (.not.cond%allocated) then
+        msg = 'Error: Model parameter not allocated in getValue_modelParam'
+        call errStop(msg)
+     end if
+
+     Ny = cond%Ny
+     NzEarth = cond%NzEarth
+ 
+     if((size(value,1)==Ny).and.(size(value,2)==NzEarth)) then
+        value = cond%v
+     else
+        msg = 'Error: Wrong conductivity array size in getValue_modelParam'
+        call errStop(msg)
+     end if
+         
+     if (present(paramtype)) then
+        paramtype = cond%paramType
+     end if
+     
+     if (present(airCond)) then
+        airCond = cond%AirCond
+     end if
+
+   end subroutine getValue_modelParam
 
 !  include source code for conductivity mappings
 !  include CondMap2D.src
@@ -918,46 +975,6 @@ contains
       end subroutine writeAll_Cond2D
 
      !******************************************************************
-      subroutine write_Cond2D(fid,cfile,cond)
-
-      !  open cfile on unit fid, writes out object of
-      !   type modelParam in standard format (readable by matlab
-      !   routine readCond2D.m), closes file
-
-      integer, intent(in)		:: fid
-      character*80, intent(in)	:: cfile
-      type(modelParam_t), intent(in)		:: cond 
-
-      open(unit=fid, file=cfile, form='unformatted')
-      write(fid) cond%paramType
-      write(fid) cond%Ny,cond%NzEarth
-      write(fid) cond%v
-      write(fid) cond%AirCond
-      close(fid)
-      end subroutine write_Cond2D
-
-     !******************************************************************
-      subroutine write_Cond2D_ascii(fid,cfile,cond)
-
-      !  open cfile on unit fid, writes out object of
-      !   type modelParam in standard format (readable by matlab
-      !   routine readCond2D.m), closes file
-
-      integer, intent(in)		:: fid
-      character*80, intent(in)	:: cfile
-      type(modelParam_t), intent(in)		:: cond 
-      Integer                           ::k,j
-
-      open(unit=fid, file=cfile,status='unknown')
-      write(fid,*) cond%paramType
-      write(fid,*) cond%Ny,cond%NzEarth
-      do k=1,cond%Ny
-       write(fid,*) (cond%v(k,j),j=1,cond%NzEarth)
-      end do
-      write(fid,*) cond%AirCond
-      close(fid)
-      end subroutine write_Cond2D_ascii
-     !******************************************************************
       subroutine readAll_Cond2D(fid,cfile,nSigma,header,sigma)
 
       !  open cfile on unit fid, read nSigma objects of
@@ -997,87 +1014,5 @@ contains
       close(fid)
 
       end subroutine readAll_Cond2D
-
-     !******************************************************************
-      subroutine read_Cond2D(fid,cfile,cond)
-
-      !  open cfile on unit fid, read in object of
-      !   type modelParam in standard format 
-      !   cond must be allocated before calling
- 
-      integer, intent(in)		:: fid
-      character*80, intent(in)	:: cfile
-      character*80		:: msg
-      type(modelParam_t), intent(inout)		:: cond 
-
-      !  local variables
-      integer 		:: Ny, NzEarth
-      character*80	:: paramType
-
-      if(cond%allocated) then
-         open(unit=fid, file=cfile, form='unformatted',status='OLD')
-         read(fid) paramType
-         read(fid) Ny,NzEarth
-         if((cond%Ny .NE. Ny).OR.(cond%NzEarth .NE. NzEarth)) then
-            close(fid)
-            msg = 'Size of cond does not agree with contents of file'
-            call errStop(msg)
-         else
-            cond%paramType = paramType
-            read(fid) cond%v
-            read(fid) cond%AirCond
-            close(fid)
-         endif
-      else
-         msg = 'cond must be allocated before call to readCond2D'
-         call errStop(msg)
-      endif
-      end subroutine read_Cond2D
-
-     !******************************************************************
-    subroutine read_Cond2D_ascii(fid,cfile,cond)
-
-      !  open cfile on unit fid, read in object of
-      !   type modelParam in standard format 
-      !   cond must be allocated before calling
- 
-      integer, intent(in)		:: fid
-      character*80, intent(in)	:: cfile
-      character*80		:: msg
-      type(modelParam_t), intent(inout)		:: cond 
-
-      !  local variables
-      integer 		:: Ny, NzEarth,j,k
-      character*80	:: paramType
-
-      if(cond%allocated) then
-         open(unit=fid, file=cfile,  status='OLD')
-         read(fid,*) paramType
-         read(fid,*) Ny,NzEarth
-
-         if((cond%Ny .NE. Ny).OR.(cond%NzEarth .NE. NzEarth)) then
-            close(fid)
-            msg = 'Size of cond does not agree with contents of file'
-            call errStop(msg)
-         else
-            cond%paramType = paramType
-          do k=1,Ny  
-            read(fid,*) (cond%v(k,j), j=1,NzEarth)
-          end do
-             
-            read(fid,*) cond%AirCond
-            close(fid)
-         endif
-      else
-         msg = 'cond must be allocated before call to readCond2D'
-         call errStop(msg)
-      endif
-      
-     !write(1,*)Ny,NzEarth
-     !do k=1,Ny  
-     !     write(1,*) (cond%v(k,j), j=1,NzEarth)
-     !end do
-          
-      end subroutine read_Cond2D_ascii
 
 end module modelparameter
