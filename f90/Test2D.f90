@@ -1,84 +1,169 @@
-!*****************************************************************************
-program TETMtest
-!  program for testing 2D TE/TM forward modeling,
-!   and sensitivity codes, up through dcg tests (not yet all implemented)
-!    Modified April 27 from FWDtestTE
+! *****************************************************************************
+program Test2D
+!  program for linking 2D TE forward modeling/data functional
+!       etc. modules to matlab inversion drivers
+!     Modified from FWDtestTE
+!     Idea: a self contained program called with one or
+!        more command line options to execute specific mappings
+!        from model parameter space to data space.  A matlab
+!        script writes files, executes this program (which reads
+!        input data from these files, and outputs to other files),
+!        and then reads the outputs.  Generalize to a mex file!
 
 !   All new module names ....
      use modelparameter
      use dataspace
-     !use solnrhs
+     use solnrhs
      use wsfwd2d
-     use ioascii
+     use iobinary
      use dataFunc
      use sensmatrix
-!     use dcg
-	 !use emsolver !temporarily added by AK for deall_EMsolnMTX
-	 use grid2d !temporarily added by AK for deall_Grid2D
-	 use NLCG
+     use nlcg
         
      implicit none
 	
-     !   Sticking with Egbert I/O for initial tests
      ! I/O units ... reuse generic read/write units if 
-     !   possible
+     !   possible; for those kept open during program run, 
+     !   reserve a specific unit here 
      integer (kind=4) :: fidRead = 1
      integer (kind=4) :: fidWrite = 2
      integer (kind=4) :: fidError = 99
-	 integer (kind=4) :: j
 
-     ! logical vbles to control which tests are done
-     !   not all of these are implemented in SensMatrix2D now
-     logical		:: IOtest = .false.
-     logical		:: FWDtest = .false.
-     logical		:: fwdPredTest = .true.
-     logical		:: SensMatrixCalcTest = .false.
-     logical		:: MultBySensTest = .false.
-     logical		:: MultBySensTransTest = .false.
-     logical		:: linPredTest = .false.
-     logical		:: DirectSensTest = .false.
-     logical		:: nlcgTest = .false.
-     logical		:: logCond = .true.
+     ! characters used to comunicate (from matlab)
+     !   about which jobs is executed
+     character*1		:: job = ' '
+     character*1, parameter	:: FORWARD_PRED = 'F'
+     character*1, parameter	:: FORWARD_SOLN = 'E'
+     character*1, parameter	:: SENSITIVITIES = 'S'
+     character*1, parameter	:: MULT_BY_J = 'G'
+     character*1, parameter	:: MULT_BY_J_T = 'T'
+     character*1, parameter	:: MULT_BY_J_MTX = 'N'
+     character*1, parameter	:: MULT_BY_J_T_MTX = 'M'
+     character*1, parameter	:: FORWARD_PRED_DELTA = 'D'
+     character*1, parameter	:: CREATE_DATA_ERRORS = 'C'
+     character*1, parameter	:: CREATE_BG_MODEL = 'B'
+     character*1, parameter	:: NLCG_INVERSION = 'I'
 
-     real (kind=selectedPrec), dimension(:), pointer :: periods
-     real (kind=selectedPrec), dimension(:,:), pointer :: sites
-     character*2, dimension(:), pointer	:: modes
-     character*2	:: cMode = 'TE'
+     ! file names
+     character*80  :: ioConfigFile = ''     
+     character*80  :: gridFile = 'Input.grd'
+     character*80  :: inputModelFile = 'Input.cpr'
+     character*80  :: outputModelFile = 'Out.cpr'
+     character*80  :: inputDataFile = 'Input.imp'
+     character*80  :: outputDataFile = 'Out.imp'
+     character*80  :: EMsolnFile = 'Out.sol'
+     character*80  :: SensFile = 'Out.sns'  !'Input2.sns'   
+     character*80  :: fwdConfigFile = 'forward.cfg'
+     character*80  :: invConfigFile = 'inverse.cfg'     
+
+     real (kind=selectedPrec), dimension(:), pointer	:: periods
+     real (kind=selectedPrec), dimension(:,:), pointer	:: sites
+     character*2, dimension(:), pointer     		:: modes
 
      ! grid geometry data structure
      type(grid2d_t), target 	:: TEgrid
 
      ! impedance data structure
-     type(dvecMTX)		:: allData, allResid
+     type(dvecMTX)		:: allData
 
      !  storage for the "background" conductivity parameter
      type(modelParam_t)		:: sigma0
      !  storage for the full sensitivity matrix
-     type(modelParam_t),dimension(:), pointer	:: sigma
+     type(modelParam_t),dimension(:),pointer	:: sigma
      !  storage for a perturbation to conductivity
      type(modelParam_t)		:: dsigma
-     !  storage for the penalty functional derivative
-     type(modelParam_t)		:: grad
      !  storage for the inverse solution
      type(modelParam_t)		:: sigma1
-     !  the damping parameter
-     real (kind=selectedPrec) :: lambda
 
      !  storage for EM solutions
-     type(EMsolnMTX)		:: eAll
+     type(EMsolnMTX)            :: eAll
 
-     integer (kind=4) :: Nzb, IER, nPer, i, iy,iz,iPer,nSigma
+     !  the damping parameter
+     real(kind=selectedPrec)    :: lambda
+
+     real(kind=selectedPrec)	:: eps
+     real(kind=selectedPrec)	:: error
+     
+     real(kind=selectedPrec),dimension(:,:), pointer  :: bg_cond
+
+     integer (kind=4) :: Nzb, IER, nPer, i, iy,iz,iPer,nSigma,nTx
+     integer (kind=4) :: iargc,narg,k
      integer (kind=4) :: nMode=1,nComp=2,nSites
-     character*80 	cfile, gridType, header
-     real(kind=selectedPrec)	:: epsilon = 0.01
-     real(kind=selectedPrec)	:: error = 0.05
+     character*80  gridType, header,arg, paramtype
 
-     ! Read input files ....
-     !  at present hard-wired for file names
-     ! (1) Read in numerical grid geometry
-     cfile = 'mackie_inverse_model'
-     call read_Grid2D(fidRead,cfile,TEgrid)
+     !  parse command line ...  for now just uses first argument
+     !   to set job
+     narg = iargc()
+     if(narg .gt. 0) then
+        call getarg(1,arg)
+        if(arg(1:1).eq.'-') job = arg(2:2)
+     else
+        write(*,*) 'Usage: Test2D -[option] [config_file]'
+        write(*,*)
+        write(*,*) ' Available options:'
+        write(*,*) 'F - calculates the predicted data'
+        write(*,*) 'E - calculates the predicted data and saves the EM solution'
+        write(*,*) 'S - calculates and saves the full sensitivity matrix'
+        write(*,*) 'G - multiplies a model by J to create a data vector'
+        write(*,*) 'T - multiplies a data vector by J^T to create a model'
+        write(*,*) 'N - evaluates sum( J m_i ) over transmitters to yield a data'
+        write(*,*) '    vector; reads a sensitivity matrix from file to do this'
+        write(*,*) 'M - multiples d_i by J_i^T separately for each transmitter, '
+        write(*,*) '    to yield a bunch of models, one for each transmitter'
+        write(*,*) 'D - calculated the predicted data for a perturbed model'
+        write(*,*) 'C - creates data errors in a crude way (inversion testing)'
+        write(*,*) 'B - creates background model for inversion from the grid'
+        write(*,*) 'I - runs an NLCG inversion to yield an inverse model'
+        write(*,*)
+!        write(*,*) ' If config_file parameter is present, reads the input and'
+!        write(*,*) 'output file names from this file. Format of config_file: '
+!        write(*,*) 'CONFIG' 
+!        write(*,*) 'FWD   :'
+!        write(*,*) 'INV   :'
+!        write(*,*) 'INPUT '
+!        write(*,*) 'GRID  :'
+!        write(*,*) 'MODEL :'
+!        write(*,*) 'DATA  :'
+!        write(*,*) 'EMSOLN:'
+!        write(*,*) 'SENS  :'
+!        write(*,*) 'OUTPUT '
+!        write(*,*) 'GRID  :'
+!        write(*,*) 'MODEL :'
+!        write(*,*) 'DATA  :'
+!        write(*,*) 'EMSOLN:'
+!        write(*,*) 'SENS  :'
+        write(*,*) 'Config_file parameter option is not yet active. Input and'
+        write(*,*) 'output file names are hard coded at the top of Test2D.f90'
+        write(*,*) 'Instead, for now you can pass the input arguments: input '
+        write(*,*) 'grid file name, input model, output model, input data,   '
+        write(*,*) 'output data, in this order.'        
+        stop
+     endif
+     
+     if (narg > 1) then
+        call getarg(2,gridFile)
+     end if
 
+     if (narg > 2) then
+        call getarg(3,inputModelFile)
+     end if
+
+     if (narg > 3) then
+        call getarg(4,outputModelFile)
+     end if
+
+     if (narg > 4) then
+        call getarg(5,inputDataFile)
+     end if
+
+     if (narg > 5) then
+        call getarg(6,outputDataFile)
+     end if
+        
+     ! Read input grid files ....
+     !  hard-wired for file names used by matlab script
+     ! Read in numerical grid geometry (needed in all cases)
+     call read_Grid2D(fidRead,gridFile,TEgrid)
      !  complete grid definition ... 
      call gridCalcs(TEgrid)
 
@@ -88,178 +173,113 @@ program TETMtest
 
      !  set grid for higher level solver routines
      call set_SolnRHS_grid(TEgrid)
-    
+
+     select case (job)
+     
+     case (CREATE_BG_MODEL)
+        write(*,*) 'Creating background model for the inversion...'
+        allocate(bg_cond(TEgrid%Ny,TEgrid%Nz-TEgrid%Nza))
+        bg_cond = 1e-2
+        call create_modelParam(TEgrid,paramtype,sigma1,bg_cond)
+        call write_Cond2D(fidWrite,outputModelFile,sigma1,TEgrid)
+        deallocate(bg_cond)
+        stop 
+     end select
+     
      ! (2) Read background conductivity parameter (allocate first,
      !    using size info obtained from grid ... this might change
      !    for different parameters!)
-     call read_Cond2D(fidRead,cfile,sigma0,TEgrid)
+     call read_Cond2D(fidRead,inputModelFile,sigma0,TEgrid)
 	
-     ! (3) Read in data file (only needs to be a template for
-     !      most tests -- periods/sites/mode -- except for
-     !   multiplication by J^T; in this case a full data vector,
-     !   not a template, is needed.
-     if(MultBySensTransTest .or. nlcgTest) then
-	       cfile = 'true_'//cMode//'.imp'
-     else
-        cfile = 'template_'//cMode//'.imp'
-     endif
-		 cfile = 'data_te_real_error_conj'
-     call read_Z(fidRead,cfile,nPer,periods,modes,nSites,sites,allData)
-
-	   if(IOtest) then
-	 	   call write_Z(fidWrite,'out.imp',nPer,periods,modes,nSites,sites,allData)
-	   end if
+     ! (3) Read in data file (only a template on input--periods/sites)
+     call read_Z(fidRead,inputDataFile,nPer,periods,modes,nSites,sites,allData)
 
      !  Using periods, sites obtained from data file
      !     set up transmitter and receiver dictionaries
-     !   DICTIONARIES (and setup routines)
-     !        ARE NOW IN DataFunc2d ... probably this is not
-     !        a good place, since modeling modules that don't
-     !        care about data are using TXdict now
      call TXdictSetUp(nPer,periods,modes) 
      call RXdictSetUp(nSites,sites)
      call TypeDictSetup()
 
-     ! (4) if necessary, read in dsigma (perturbation to background
-     !       conductivity parameter
-     if((MultBySensTest .or.DirectSensTest).or. &
-         (MultBySensTransTest)) then
-        if(logCond) then
-            cfile = 'dTestLog.cpr'
-        else
-            cfile = 'dTest.cpr'
-        endif
-        call read_Cond2D(fidRead,cfile,dsigma,TEgrid)
-     endif
+     select case (job)
+     
+     case (FORWARD_PRED)
+        write(*,*) 'Calculating predicted data...'
+        call fwdPred(sigma0,allData)
+        ! write out impedances
+        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,   &
+			nSites,sites,allData)
 
-     if(FWDtest) then
+     case (FORWARD_SOLN)
         write(*,*) 'Calculating predicted data and saving the EM solution...'
-        call create_EMsolnMTX(allData,eAll) 
+        call create_EMsolnMTX(allData,eAll)
         call fwdPred(sigma0,allData,eAll)
         ! write out EM solutions
-        if(logCond) then
-	    cfile = 'TestLog'//cMode//'.sol'
-	else
-            cfile = 'Test'//cMode//'.sol'
-	endif
-        !  output of multiple  solutions ... just for testing, done 
-        !   with minimal metadata!
-
-        call write_EMsolnMTX(fidWrite,cfile,eAll)
-
+        call write_EMsolnMTX(fidWrite,EMsolnFile,eAll)
         ! write out all impedances
-        if(logCond) then
-	    cfile = 'fwdPredLog'//cMode//'.imp'
-	else
-            cfile = 'fwdPred'//cMode//'.imp'
-	endif
-        call write_Z(fidWrite,cfile,nPer,periods,modes,   &
+        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,   &
 			nSites,sites,allData)
 
-     endif
-
-     if(fwdPredTest) then
-        write(*,*) 'Calculating predicted data...'
-        ! don't save solutions, just impedances        
-        call fwdPred(sigma0,allData)
-        ! write out all impedances
-	if(logCond) then
-	    cfile = 'fwdPredLog'//cMode//'_A.imp'
-	else
-            cfile = 'fwdPred'//cMode//'_A.imp'
-	endif
-		    call setError_dvecMTX(error,allData)
-        call write_Z(fidWrite,cfile,nPer,periods,modes, &
-			nSites,sites,allData)
-     endif
-
-     if(SensMatrixCalcTest) then
+     case (SENSITIVITIES)
         write(*,*) 'Calculating the full sensitivity matrix...'
         call calcSensMatrix(allData,sigma0,sigma)
-	if(logCond) then
-	    cfile = 'TestLog'//cMode//'.sns'
-	else
-            cfile = 'Test'//cMode//'.sns'
-	endif
-        header = 'Sensitivity matrix test' 
-        call writeAll_Cond2D(fidWrite,cfile,header,   &
-			allData%nData,sigma)
-     endif
+        header = 'Sensitivity Matrix' 
+        call writeAll_Cond2D(fidWrite,SensFile,header,   &
+                        allData%nData,sigma)
 
-     if(MultBySensTest) then
-       write(*,*) 'Multiplying by J...'
-       call Jmult(dsigma,sigma0,allData) 
-       if(logCond) then
-	    cfile = 'TestSensMultLog'//cMode//'.imp'
-	else
-            cfile = 'TestSensMult'//cMode//'.imp'
-	endif
-        call write_Z(fidWrite,cfile,nPer,periods,modes,nSites,sites,allData)
-     endif
+     case (MULT_BY_J)
+        write(*,*) 'Multiplying by J...'
+        call read_Cond2D(fidRead,inputModelFile,dsigma,TEgrid)
+        call Jmult(dsigma,sigma0,allData) 
+        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,   &
+			nSites,sites,allData)
 
-     if(MultBySensTransTest) then
-       write(*,*) 'Multiplying by J^T...'
-       if(fwdTest) then
-         call JmultT(sigma0,allData,dsigma,eAll)
-       else
-         call JmultT(sigma0,allData,dsigma)
-       end if
-       if(logCond) then
-            cfile = 'TestSensMultTransLog'//cMode//'.cpr'
-        else
-            cfile = 'TestSensMultTrans'//cMode//'.cpr'
-        endif
-        call write_Cond2D(fidWrite,cfile,dSigma,TEgrid)
-     endif
+     case (MULT_BY_J_T)
+        write(*,*) 'Multiplying by J^T...'
+        call JmultT(sigma0,allData,dsigma) 
+        call write_Cond2D(fidWrite,outputModelFile,dsigma,TEgrid)
 
-!     if(linPredTest) then
-!        call sensMatMult(dsigma,sigma0,allData,epsilon) 
-!        cfile = 'LinPredTest'//cMode//'.imp'
-!        call write_Z(fidWrite,cfile,nPer,periods,modes,nSites,sites,allData)
-!     endif
-     
-     if(DirectSensTest) then
+     case (MULT_BY_J_T_MTX)
+        write(*,*) 'Multiplying by J^T (all transmitters)...'
+        call JmultT_MTX(sigma0,allData,sigma) 
+        header = 'Sensitivity Matrix' 
+        call writeAll_Cond2D(fidWrite,SensFile,header,   &
+                        allData%nTx,sigma)
+
+     case (MULT_BY_J_MTX)
+        write(*,*) 'Multiplying by J (all transmitters)...'
+        nTx = allData%nTx
+        paramtype = ''
+        allocate(sigma(nTx))
+        do i = 1,nTx 
+           call create_ModelParam(TEgrid,paramtype,sigma(i))
+        enddo
+        call readAll_Cond2D(fidRead,SensFile,nTx,header,sigma)
+        call Jmult_MTX(sigma,sigma0,allData) 
+        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,   &
+			nSites,sites,allData)
+			
+      case (FORWARD_PRED_DELTA)
         write(*,*) 'Calculating the predicted data for the perturbed model...'
         !  add sigma0 to epsilon * dsigma
-        call linComb_modelParam(ONE,sigma0,epsilon,dsigma,dsigma)
+        eps = 0.01
+        call linComb_modelParam(ONE,sigma0,eps,dsigma,dsigma)
         call fwdPred(dsigma,allData)
         ! write out impedances computed with perturbed sigma
-	if(logCond) then  
-	   cfile = 'TestDeltaPredLog'//cMode//'.imp'
-	else   
-	   cfile = 'TestDeltaPred'//cMode//'.imp'
-	endif
-        call write_Z(fidWrite,cfile,nPer,periods,modes,nSites,sites,allData)
-     endif
- 
-     if(nlcgTest) then
-       write(*,*) 'Starting the NLCG search...'
+        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,nSites,sites,allData)
+
+     case (CREATE_DATA_ERRORS)
+        write(*,*) 'Writing a data file with 5% errors in it...'
+        error = 0.05
+        call setError_dvecMTX(error,allData)
+        ! write out impedances
+        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,   &
+			nSites,sites,allData)
+			     		
+     case (NLCG_INVERSION)
+        write(*,*) 'Starting the NLCG search...'
         lambda = ONE
         call NLCGsolver(allData,lambda,sigma0,sigma1)
-        if(logCond) then
-            cfile = 'solution_'//cMode//'_log.cpr'
-        else
-            cfile = 'solution_'//cMode//'.cpr'
-        endif
-        call write_Cond2D(fidWrite,cfile,sigma1,TEgrid)
-     endif
-       
-     ! deallocate
-     if (associated(periods)) deallocate(periods)
-     if (associated(modes)) deallocate(modes)
-     if (associated(sites)) deallocate(sites)
-     if (associated(sigma)) then
-     	do j=1,size(sigma)
-        	call deall_modelParam(sigma(j))
-     	end do
-     	deallocate(sigma)
-     end if
-     call deall_modelParam(sigma0)
-     call deall_modelParam(dsigma)
-	 call deall_DvecMTX(allData)
-	 call deall_EMsolnMTX(eAll)
-	 call deall_Grid2D(TEgrid)
-	 call deall_RXdict
-	 call deall_Dict
+        call write_Cond2D(fidWrite,outputModelFile,sigma1,TEgrid)
+     end select
 
 end program

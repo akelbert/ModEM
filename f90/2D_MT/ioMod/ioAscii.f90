@@ -207,11 +207,18 @@ module ioAscii
      ! local variables
       integer   :: ns,iTx,k,j,isite,icomp
       character(10) :: siteid, tab='           '
+      character(80) :: header
 
       open(unit=fid,file=cfile,form='formatted',status='unknown')
+      write(fid,'(a13,a80)') 'Description: ',trim('Impedance responses from ModEM')
+      write(fid,'(a7,a80)') 'Units: ',trim('[V/m]/[A/m]')
+      write(fid,'(a17,i3)') 'Sign convention: ',ISIGN
+      write(fid,*)
+      
       write(fid,'(i5)') allData%nTx
       ! loop over periods
       do iTx = 1,allData%nTx
+         header = tab//'  Re   '//tab//'   Im    '
          ns = allData%d(iTx)%nSite
          ncomp = allData%d(iTx)%nComp
          ! write period, number of sites for this period
@@ -221,13 +228,15 @@ module ioAscii
          do k = 1,ns
             siteTemp(:,k) = sites(:,allData%d(iTx)%rx(k))
          enddo
-				 ! write latitude, longitude and elevation
-				 do j = 1,2
-				   do k = 1,ns
-         		  write(fid,'(f14.3)',advance='no') siteTemp(j,k)
-				   enddo
+		! write latitude, longitude and elevation
+		 do j = 1,2
+		   do k = 1,ns
+        	  write(fid,'(f14.3)',advance='no') siteTemp(j,k)
+		   enddo
            write(fid,*)
-				 enddo
+		 enddo
+	    ! write the comment line for the data block
+	     write(fid,*) header
          do isite = 1,ns
          	! Note: temporarily, we write site id's according to their number;
          	! in the future, they will be stored in the receiver dictionary
@@ -261,6 +270,11 @@ module ioAscii
       subroutine read_Z(fid,cfile,nTx,periods,modes,nSites,sites,allData)
      ! reads in data file, returns list of periods, modes, siteLocations, and
      !   sets up data vector structure, including data and error bars
+     ! First four lines are assumed to be:
+     ! Description: (up to 80 char)
+     ! Units: [V/m]/[A/m] OR [mV/km]/[nT]
+     ! Sign Convention: -1 OR 1
+     ! and an empty line
       integer, intent(in)       :: fid
       character(*), intent(in)  :: cfile
       integer, intent(out)      :: nTx,nSites
@@ -274,9 +288,33 @@ module ioAscii
       integer   :: ns,iTx,k,l,j,Ndata
       character(10)siteid
       real(kind=8), allocatable, dimension(:,:) :: siteTemp,siteTempAll
-      logical   :: newSite
+      logical   :: newSite, conjugate
+      character(80) temp, description, units
+      integer   :: sign_in_file
+      real(kind=8) :: SI_factor
 
       open(unit=fid,file=cfile,status='old')
+      read(fid,'(a13,a80)') temp,description
+      read(fid,'(a7,a80)') temp,units
+      read(fid,'(a17,i3)') temp,sign_in_file
+      read(fid,*)
+      
+      if (trim(units) .eq. '[V/m]/[A/m]') then
+         SI_factor = 1.0
+      else if (trim(units) .eq. '[mV/km]/[nT]') then
+         SI_factor = 1000.0
+      else
+         call errStop('Unknown units in input data file '//cfile)
+      end if
+      
+      if (sign_in_file == ISIGN) then
+        conjugate = .false.
+      else if (abs(sign_in_file) == 1) then
+        conjugate = .true.
+      else
+        call errStop('Unknown sign convention in the data file '//cfile)
+      end if
+      
       read(fid,*) nTx
       allocate(periods(nTx))
       allocate(modes(nTx))
@@ -293,29 +331,41 @@ module ioAscii
          ! read in site locations
          allocate(siteTemp(2,ns))
 
-            read(fid,*) (siteTemp(1,k),k=1,ns)
-            read(fid,*) (siteTemp(2,k),k=1,ns)
+         read(fid,*) (siteTemp(1,k),k=1,ns)
+         read(fid,*) (siteTemp(2,k),k=1,ns)
              
+         ! read comment line just before the data block
+         read(fid,*)
             
          ! create dvec object, read in data
          allData%d(iTx)%errorBar = .true.
          call create_Dvec(nComp,ns,allData%d(iTx))
          Ndata  = Ndata + nComp*ns
          allData%d(iTx)%tx = iTx
-	 if(modes(iTx) .eq. 'TM') then
-	    allData%d(iTx)%datatype = 2
-	 else
-	    allData%d(iTx)%datatype = 1
-	 endif
+	     if(modes(iTx) .eq. 'TM') then
+	         allData%d(iTx)%datatype = 2
+	     else
+	         allData%d(iTx)%datatype = 1
+	     endif
          do k=1,ns
              read(fid,*)siteid, (allData%d(iTx)%data(j,k),j=1,nComp)
              read(fid,*)        (allData%d(iTx)%err(j,k),j=1,nComp)   
 						! TEMPORARY: set error bounds
-						do j=1,nComp
-							allData%d(iTx)%err(j,k) = max(allData%d(iTx)%err(j,k),0.05*abs(allData%d(iTx)%data(j,k)))
-							!allData%d(iTx)%err(j,k) = max(allData%d(iTx)%err(j,k),2500.0)
-						end do
+						!do j=1,nComp
+						!	allData%d(iTx)%err(j,k) = max(allData%d(iTx)%err(j,k),0.05*abs(allData%d(iTx)%data(j,k)))
+						!end do
          end do
+         
+         ! convert data to SI units
+         allData%d(iTx)%data = SI_factor * allData%d(iTx)%data
+         allData%d(iTx)%err  = SI_factor * allData%d(iTx)%err
+         
+         ! conjugate data as necessary
+         if (conjugate) then
+           do j=1,nComp,2
+              allData%d(iTx)%data(j,:) = - allData%d(iTx)%data(j,:)
+           end do
+         end if 
          
          if(iTx .eq. 1) then
            ! allocate temporary storage for full sites list
