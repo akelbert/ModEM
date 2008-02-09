@@ -142,8 +142,7 @@ Contains
      ! electric field
      call EfromBSetUp_TM(solnRHS_grid,x,omega,ef%sigma,Le)
   else
-     msg = 'Error: option not available in nonLinDataFunc'
-     call errStop(msg)
+     call errStop('option not available in nonLinDataFunc')
   endif
 
   !  Using sparse vector representations of data functionals, 
@@ -192,7 +191,6 @@ Contains
   real (kind=selectedPrec)		:: x(2), omega
   character*2				:: mode
   logical				:: Conj_case = .false.
-  character*80				:: msg
 
   !  get mode, frequency for transmitter used to compute solution ef
   mode = typeDict(iDT)%mode
@@ -212,8 +210,7 @@ Contains
      ! electric field
      call EfromBSetUp_TM(SolnRHS_grid,x,omega,e0%sigma,Le,e0%vec,Qz(1)%L)
   else
-     msg = 'Error: option not available in linDataFunc'
-     call errStop(msg)
+     call errStop('option not available in linDataFunc')
   endif
   
   !  Compute electric, magnetic field for background soln.

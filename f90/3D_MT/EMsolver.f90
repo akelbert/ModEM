@@ -93,7 +93,7 @@ Contains
 
    !  local variables
    integer		:: IER,k
-   character*80         :: msg, gridType
+   character*80         :: gridType
    logical		:: initForSens,sigmaNotCurrent
 
    initForSens = present(comb)
@@ -193,7 +193,6 @@ Contains
    real(kind=selectedPrec)	:: period, omega
    integer			:: IER,iMode
    complex(kind=selectedPrec)	:: i_omega_mu
-   character*80         	:: msg
 
    omega = txDict(iTx)%omega
    period = txDict(iTx)%period
@@ -237,7 +236,6 @@ Contains
 
    ! local variables
    integer      			:: IER,iMode
-   character*80 			:: msg
    real(kind=selectedPrec) 		:: omega, period
 
    omega = txDict(iTx)%omega

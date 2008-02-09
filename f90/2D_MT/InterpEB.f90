@@ -362,8 +362,7 @@ Contains
                    Q(ii)%k = KQ
                    Q(ii)%c = CQ
                 else
-                   msg = 'In EinterpSetUp_TM: obs location out of bounds'
-                   call errStop(msg)
+                   call errStop('obs location out of bounds in EinterpSetUp_TM')
                    !  need to come up with something simple for this case
                    !   (trying to evaluate E in the outer edge cells)
                 endif

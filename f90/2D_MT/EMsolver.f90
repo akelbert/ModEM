@@ -97,7 +97,7 @@ Contains
    !  local variables
    integer					:: IER
    real(kind=selectedPrec)			:: period
-   character*80         			:: msg, gridType
+   character*80         			:: gridType
    character*2          			:: mode
    logical					:: initForSens
 
@@ -134,19 +134,16 @@ Contains
             call FWD2DSetupTE(SolnRHS_grid,sigma,IER)
             gridType = 'NODE'
             if(IER.lt.0) then
-              msg = 'Error initializing for TE mode'
-              call errStop(msg)
+              call errStop('initializing for TE mode in initSolver')
             endif
          case('TM')
             call FWD2DSetupTM(SolnRHS_grid,sigma,IER)
             gridType = 'NODE EARTH'
             if(IER.lt.0) then
-              msg = 'Error initializing for TM mode'
-              call errStop(msg)
+              call errStop('initializing for TM mode in initSolver')
             endif
          case default
-            msg = 'Error: mode must be TE or TM in initSolver'
-            call errStop(msg)
+            call errStop('mode must be TE or TM in initSolver')
       end select
    
       !  allocate for rhs for background, scratch sensitivity solutions
@@ -233,7 +230,6 @@ Contains
    real(kind=selectedPrec)	:: period,omega
    integer			:: IER
    complex(kind=selectedPrec)	:: i_omega_mu
-   character*80         	:: msg
    character*2          	:: mode
 
    mode = typeDict(iDT)%mode
@@ -250,8 +246,7 @@ Contains
          !  solve 2D TE equations, return solution in e0
          call Fwd2DsolveTE(b0,e0%vec%v,IER)
          if(IER .LT. 0) then
-            msg = 'Error solving TE mode equation'
-            call errStop(msg)
+            call errStop('solving TE mode equation in fwdSolve')
          endif
       case ('TM')
          ! compute boundary conditions for 2D TM forward problem
@@ -259,8 +254,7 @@ Contains
          !  solve 2D TM equations, return solution in e0
          call Fwd2DsolveTM(b0,e0%vec%v,IER)
          if(IER .LT. 0) then
-            msg = 'Error solving TM mode equation'
-            call errStop(msg)
+            call errStop('solving TM mode equation in fwdSolve')
          endif
       case default
    end select
@@ -288,21 +282,18 @@ Contains
 
    ! local variables
    integer      :: IER
-   character*80 :: msg
 
    comb%adj = FWDorADJ
    if(typeDict(iDT)%mode.eq.'TE') then
        call Fwd2DsolveTE(comb,e%vec%v,IER)
 
        if(IER .LT. 0) then
-          msg = 'Error solving TE mode equation: sensitivity'
-          call errStop(msg)
+          call errStop('solving TE mode equation in sensSolve')
        endif
     else
        call Fwd2DsolveTM(comb,e%vec%v,IER)
        if(IER .LT. 0) then
-          msg = 'Error solving TM mode equation: sensitivity'
-          call errStop(msg)
+          call errStop('solving TM mode equation in sensSolve')
        endif
    endif
    e%tx = iTx

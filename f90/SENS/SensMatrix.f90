@@ -48,7 +48,6 @@ Contains
    type(EMrhs)		:: comb
    integer 		:: j,nTx,k,nSite,nTot,ii,iTx, & 
 				iDT,nfunc,ncomp,iRx,iFunc
-   character*80		:: msg
    type(EMsparse), pointer	:: L(:),Q(:)
    logical 		:: calcQ
    
@@ -95,8 +94,7 @@ Contains
          !  data are complex; one sensitivity calculation can be
          !   used for both real and imaginary parts
          if(mod(ncomp,2).ne.0) then
-            msg = 'Error: for complex data # of components must be even'
-            call errStop(msg)
+            call errStop('for complex data # of components must be even in CalcSensMatrix')
          endif
          nFunc = ncomp/2
       else
@@ -176,14 +174,12 @@ Contains
    type(EMsoln)		:: e,e0
    type(EMrhs)		:: comb
    integer 		:: j,iTx,iDT
-   character*80		:: msg
    logical		:: savedSolns
 
    savedSolns = present(eAll)
    if(savedSolns) then
       if(d%nTx .ne. eAll%nTx) then
-         msg = 'Error : dimensions of eAll and d do not agree in fwdPred'
-         call errStop(msg)
+         call errStop('dimensions of eAll and d do not agree in Jmult')
       endif
    endif
 
@@ -261,7 +257,6 @@ Contains
    type(EMrhs) 		:: comb
    type(modelParam_t)	:: sigmaTemp, Qcomb
    integer 		:: j,iTx,iDT
-   character*80		:: msg
    logical		:: calcSomeQ, firstQ
    logical		:: savedSolns
 
@@ -270,8 +265,7 @@ Contains
    savedSolns = present(eAll)
    if(savedSolns) then
       if(d%nTx .ne. eAll%nTx) then
-         msg = 'Error : dimensions of eAll and d do not agree in fwdPred'
-         call errStop(msg)
+         call errStop('dimensions of eAll and d do not agree in JmultT')
       endif
    endif
 
@@ -374,14 +368,12 @@ Contains
    type(EMsoln)		:: e,e0
    type(EMrhs)		:: comb
    integer 		:: j,iTx,iDT,nTx
-   character*80		:: msg
    logical		:: savedSolns
 
    savedSolns = present(eAll)
    if(savedSolns) then
       if(d%nTx .ne. eAll%nTx) then
-         msg = 'Error : dimensions of eAll and d do not agree in fwdPred'
-         call errStop(msg)
+         call errStop('dimensions of eAll and d do not agree in Jmult_MTX')
       endif
    endif
 
@@ -474,7 +466,6 @@ Contains
    type(modelParam_t)	:: Qcomb
    logical		:: calcSomeQ = .false.
    integer 		:: j,iTx,iDT,nTx
-   character*80		:: msg
    logical		:: savedSolns
 
    ! nTX is number of transmitters;
@@ -498,8 +489,7 @@ Contains
    savedSolns = present(eAll)
    if(savedSolns) then
       if(d%nTx .ne. eAll%nTx) then
-         msg = 'Error : dimensions of eAll and d do not agree in fwdPred'
-         call errStop(msg)
+         call errStop('dimensions of eAll and d do not agree in JmultT_MTX')
       endif
    endif
 
@@ -582,17 +572,14 @@ Contains
    ! local variables
    type(EMsoln)				:: e0
    integer				:: iTx,iDT,j
-   character*80				:: msg
 
    if(.not.d%allocated) then
-      msg = 'Error : data vector not allocated on input to fwdPred'
-      call errStop(msg)
+      call errStop('data vector not allocated on input to fwdPred')
    end if
 
    if(present(eAll)) then
       if(d%nTx .ne. eAll%nTx) then
-         msg = 'Error : dimensions of eAll and d do not agree in fwdPred'
-         call errStop(msg)
+         call errStop('dimensions of eAll and d do not agree in fwdPred')
       endif
    endif
 

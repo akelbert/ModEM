@@ -13,7 +13,7 @@ public  :: NLCGsolver
 ! iteration control for the NLCG solver is initialized once
 ! and saved in the module to be used by most subroutines
 
-  type  :: iterControl_t
+  type  :: NLCGiterControl_t
      ! maximum number of iterations in one call to iterative solver
      integer					:: maxIter
      ! convergence criteria: return from solver if rms < rmsTol
@@ -36,38 +36,38 @@ public  :: NLCGsolver
      ! real (kind=selectedPrec)   :: alpha_k ! 0.1
      ! if alpha_{i+1} - alpha_i < tol_{alpha}, set alpha_{i+1} = alpha_i/2
      ! real (kind=selectedPrec)   :: alpha_tol ! 1.0e-2
-  end type iterControl_t
+  end type NLCGiterControl_t
 
-  type(iterControl_t), private, save :: NLCGiter
+  type(NLCGiterControl_t), private, save :: iterControl
 
 Contains
 
 !**********************************************************************
-   subroutine setIterControl(NLCGiter)
+   subroutine set_NLCGiterControl(iterControl)
    !  at present this is a simple routine to setup for
    !  iteration control; allowing parameters to be read from
    !   a file would be desireable.
 
-   type(iterControl_t), intent(inout)	:: NLCGiter
+   type(NLCGiterControl_t), intent(inout)	:: iterControl
  
      ! maximum number of iterations in one call to iterative solver
-     NLCGiter%maxIter = 120
+     iterControl%maxIter = 120
      ! convergence criteria: return from solver if rms < rmsTol
-     NLCGiter%rmsTol  = 1.05
+     iterControl%rmsTol  = 1.05
      ! the condition to identify when the inversion stalls approx. 1e-3
-     NLCGiter%fdiffTol = 1.0e-3
+     iterControl%fdiffTol = 1.0e-3
      ! exit if lambda < lambdaTol approx. 1e-4
-     NLCGiter%lambdaTol = 1.0e-4
+     iterControl%lambdaTol = 1.0e-4
      ! set lambda_i = k * lambda_{i-1} when the inversion stalls
-     NLCGiter%k = 0.1
+     iterControl%k = 0.1
      ! the factor that ensures sufficient decrease in the line search >=1e-4
-     NLCGiter%c = 1.0e-4
+     iterControl%c = 1.0e-4
      ! restart CG every nCGmax iterations to ensure conjugacy
-     NLCGiter%nCGmax = 8
+     iterControl%nCGmax = 8
      ! the starting step for the line search
-     NLCGiter%alpha_1 = 0.001
+     iterControl%alpha_1 = 0.001
 
-   end subroutine setIterControl
+   end subroutine set_NLCGiterControl
 
 
 !**********************************************************************
@@ -214,7 +214,7 @@ Contains
    call linComb_modelParam(ONE,grad,MinusTWO*lambda,mHat,dSS)
 
 	 ! update the damping parameter lambda
-	 lambda = NLCGiter%k * lambda
+	 lambda = iterControl%k * lambda
    
    ! penalty functional = sum of squares + scaled model norm
    F = SS + (lambda * mNorm)
@@ -276,7 +276,7 @@ Contains
    end subroutine CmSqrtMult
 
 !**********************************************************************
-   subroutine NLCGsolver(d,lambda,m0,m)
+   subroutine NLCGsolver(d,lambda,m0,m,alpha)
 
    ! computes inverse solution minimizing penalty functional
    !   for fixed value of regularization parameter, using
@@ -301,6 +301,8 @@ Contains
    type(modelParam_t), intent(in)		       :: m0
    !  m is solution parameter ... on input m contains starting guess
    type(modelParam_t), intent(inout)	       :: m
+   !  alpha is the initial step size
+   real(kind=selectedPrec), intent(inout), optional  :: alpha
    !  flavor is a string that specifies the algorithm to use
    ! character(80), intent(in)               :: flavor
    character(80)                           :: flavor = 'Cubic'
@@ -308,19 +310,20 @@ Contains
    !  local variables
    type(dvecMTX)			:: dHat, res
    type(modelParam_t)			:: mHat, m_minus_m0, grad, g, h, gPrev
-   !type(iterControl_t)			:: NLCGiter
-   real(kind=selectedPrec)		:: value, valuePrev, rms, rmsPrev, alpha, beta
+   !type(NLCGiterControl_t)			:: iterControl
+   !real(kind=selectedPrec)		:: value, valuePrev, rms, rmsPrev, alpha, beta
+   real(kind=selectedPrec)		:: value, valuePrev, rms, rmsPrev, beta
    real(kind=selectedPrec)      :: grad_dot_h, g_dot_g, g_dot_gPrev, gPrev_dot_gPrev, g_dot_h
    integer				:: iter, nCG, nLS, nfunc
    type(EMsolnMTX)      :: eAll
-   character*80	        :: msg
 
-
-   call setIterControl(NLCGiter)
+   call set_NLCGiterControl(iterControl)
 
    ! initialize the line search
    !if (.not.present(flavor)) flavor = 'Cubic'
-   alpha = NLCGiter%alpha_1
+   if (.not.present(alpha)) then
+      alpha = iterControl%alpha_1
+   end if
 
    ! starting from the prior hardcoded by setting mHat = 0 and m = m0
    m = m0
@@ -345,7 +348,7 @@ Contains
 
    do
       !  test for convergence ...
-      if((rms.lt.NLCGiter%rmsTol).or.(iter.ge.NLCGiter%maxIter)) then
+      if((rms.lt.iterControl%rmsTol).or.(iter.ge.iterControl%maxIter)) then
          exit
       end if
    
@@ -365,8 +368,7 @@ Contains
 	  case ('Quadratic')
 	  	call lineSearchQuadratic(lambda,d,m0,h,alpha,mHat,value,grad,rms,nLS)
 	  case default
-	    msg = 'Unknown line search requested in NLCG'
-        call errStop(msg)
+        call errStop('Unknown line search requested in NLCG')
 	  end select
 		nfunc = nfunc + nLS
 	  gPrev = g
@@ -381,12 +383,12 @@ Contains
     call printf('with',lambda,alpha,value,rms)
 	  
 	  ! if alpha is too small, we are not making progress: update lambda
-	  if (abs(rmsPrev - rms) < NLCGiter%fdiffTol) then
+	  if (abs(rmsPrev - rms) < iterControl%fdiffTol) then
 	  	! update lambda, penalty functional and gradient
       call update_damping_parameter(lambda,mHat,value,grad)
 			call linComb_modelParam(MinusONE,grad,R_ZERO,grad,g)
 			! check that lambda is still at a reasonable value
-			if (lambda < NLCGiter%lambdaTol) then
+			if (lambda < iterControl%lambdaTol) then
 				write(*,'(a55)') 'Unable to get out of a local minimum. Exiting...'
 				return
 			end if
@@ -411,7 +413,7 @@ Contains
 		! derivative = -g_{i+1}.dot.h_{i+1} to be negative, the condition 
 		! g_{i+1}.dot.(g_{i+1}+beta*h_i) > 0 must hold. Alternatively, books
 		! say we can take beta > 0 (didn't work as well)
-	  if ((g_dot_g + beta*g_dot_h > 0).and.(nCG < NLCGiter%nCGmax)) then
+	  if ((g_dot_g + beta*g_dot_h > 0).and.(nCG < iterControl%nCGmax)) then
       	call linComb_modelParam(ONE,g,beta,h,h)
       	nCG = nCG + 1
 	  else
@@ -487,9 +489,9 @@ Contains
    type(EMsolnMTX)                         :: eAll,eAll_1
 
    ! parameters
-   c = NLCGiter%c
-   !k = NLCGiter%alpha_k
-   !eps = NLCGiter%alpha_tol
+   c = iterControl%c
+   !k = iterControl%alpha_k
+   !eps = iterControl%alpha_tol
 
    ! initialize the line search     
    niter = 0
@@ -633,9 +635,9 @@ Contains
    type(EMsolnMTX)                         :: eAll,eAll_1
 
    ! parameters
-   c = NLCGiter%c
-   !k = NLCGiter%alpha_k
-   !eps = NLCGiter%alpha_tol
+   c = iterControl%c
+   !k = iterControl%alpha_k
+   !eps = iterControl%alpha_tol
 
    ! initialize the line search     
    niter = 0

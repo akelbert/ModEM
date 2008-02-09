@@ -3,7 +3,7 @@ module utilities
 	use math_constants
 	implicit none
 
-	character(80)  :: msg
+	!character(80)  :: msg
 
 Contains
 

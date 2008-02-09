@@ -45,17 +45,20 @@ program Test2D
      character*1, parameter	:: NLCG_INVERSION = 'I'
 
      ! file names
-     character*80  :: ioConfigFile = ''     
-     character*80  :: gridFile = 'Input.grd'
-     character*80  :: inputModelFile = 'Input.cpr'
-     character*80  :: outputModelFile = 'Out.cpr'
-     character*80  :: inputDataFile = 'Input.imp'
-     character*80  :: outputDataFile = 'Out.imp'
-     character*80  :: EMsolnFile = 'Out.sol'
-     character*80  :: SensFile = 'Out.sns'  !'Input2.sns'   
-     character*80  :: fwdConfigFile = 'forward.cfg'
-     character*80  :: invConfigFile = 'inverse.cfg'     
-
+     character*80      :: rFile_Config = ''
+     character*80      :: rFile_Grid = 'Test1.grd'
+     character*80      :: rFile_Model = 'scratch/Input1.cpr'
+     character*80      :: rFile_dModel = 'scratch/Input2.cpr'
+     character*80      :: rFile_dModelMTX = 'scratch/Input2.sns'
+     character*80      :: rFile_Data = 'scratch/Input.imp'
+     character*80      :: wFile_Model = 'scratch/Out.cpr'
+     character*80      :: wFile_dModel = 'scratch/Out.cpr'
+     character*80      :: wFile_dModelMTX = 'scratch/Out.sns'
+     character*80      :: wFile_Data = 'scratch/Out.imp'
+     character*80      :: wFile_EMsoln = 'scratch/Out.sol'
+     character*80      :: wFile_Sens = 'scratch/Out.sns'
+     !type (ioFiles_t)  :: ioFiles
+        
      real (kind=selectedPrec), dimension(:), pointer	:: periods
      real (kind=selectedPrec), dimension(:,:), pointer	:: sites
      character*2, dimension(:), pointer     		:: modes
@@ -80,16 +83,19 @@ program Test2D
 
      !  the damping parameter
      real(kind=selectedPrec)    :: lambda
+     real(kind=selectedPrec)    :: alpha
 
      real(kind=selectedPrec)	:: eps
      real(kind=selectedPrec)	:: error
      
+     real(kind=selectedPrec)	:: bg_cond_value
      real(kind=selectedPrec),dimension(:,:), pointer  :: bg_cond
 
      integer (kind=4) :: Nzb, IER, nPer, i, iy,iz,iPer,nSigma,nTx
      integer (kind=4) :: iargc,narg,k
      integer (kind=4) :: nMode=1,nComp=2,nSites
      character*80  gridType, header,arg, paramtype
+     character*80, dimension(:), pointer :: temp
 
      !  parse command line ...  for now just uses first argument
      !   to set job
@@ -98,72 +104,182 @@ program Test2D
         call getarg(1,arg)
         if(arg(1:1).eq.'-') job = arg(2:2)
      else
-        write(*,*) 'Usage: Test2D -[option] [config_file]'
+        write(*,*) 'Usage: Test2D -[option] [args]'
         write(*,*)
         write(*,*) ' Available options:'
-        write(*,*) 'F - calculates the predicted data'
-        write(*,*) 'E - calculates the predicted data and saves the EM solution'
-        write(*,*) 'S - calculates and saves the full sensitivity matrix'
-        write(*,*) 'G - multiplies a model by J to create a data vector'
-        write(*,*) 'T - multiplies a data vector by J^T to create a model'
-        write(*,*) 'N - evaluates sum( J m_i ) over transmitters to yield a data'
+        write(*,*) '-F  calculates the predicted data'
+        write(*,*) '-E  calculates the predicted data and saves the EM solution'
+        write(*,*) '-S  calculates and saves the full sensitivity matrix'
+        write(*,*) '-G  multiplies a model by J to create a data vector'
+        write(*,*) '-T  multiplies a data vector by J^T to create a model'
+        write(*,*) '-N  evaluates sum( J m_i ) over transmitters to yield a data'
         write(*,*) '    vector; reads a sensitivity matrix from file to do this'
-        write(*,*) 'M - multiples d_i by J_i^T separately for each transmitter, '
+        write(*,*) '-M  multiples d_i by J_i^T separately for each transmitter, '
         write(*,*) '    to yield a bunch of models, one for each transmitter'
-        write(*,*) 'D - calculated the predicted data for a perturbed model'
-        write(*,*) 'C - creates data errors in a crude way (inversion testing)'
-        write(*,*) 'B - creates background model for inversion from the grid'
-        write(*,*) 'I - runs an NLCG inversion to yield an inverse model'
+        write(*,*) '-D  calculated the predicted data for a perturbed model'
+        !write(*,*) '-C  creates data errors in a crude way (inversion testing)'
+        !write(*,*) '-B  creates background model for inversion from the grid'
+        write(*,*) '-I  runs an NLCG inversion to yield an inverse model'
         write(*,*)
-!        write(*,*) ' If config_file parameter is present, reads the input and'
-!        write(*,*) 'output file names from this file. Format of config_file: '
-!        write(*,*) 'CONFIG' 
-!        write(*,*) 'FWD   :'
-!        write(*,*) 'INV   :'
-!        write(*,*) 'INPUT '
-!        write(*,*) 'GRID  :'
-!        write(*,*) 'MODEL :'
-!        write(*,*) 'DATA  :'
-!        write(*,*) 'EMSOLN:'
-!        write(*,*) 'SENS  :'
-!        write(*,*) 'OUTPUT '
-!        write(*,*) 'GRID  :'
-!        write(*,*) 'MODEL :'
-!        write(*,*) 'DATA  :'
-!        write(*,*) 'EMSOLN:'
-!        write(*,*) 'SENS  :'
-        write(*,*) 'Config_file parameter option is not yet active. Input and'
-        write(*,*) 'output file names are hard coded at the top of Test2D.f90'
-        write(*,*) 'Instead, for now you can pass the input arguments: input '
-        write(*,*) 'grid file name, input model, output model, input data,   '
-        write(*,*) 'output data, in this order.'        
+        write(*,*) ' Additional arguments:'
+        write(*,*) '-F  rFile_Model rFile_Data wFile_Data'
+        write(*,*) '-E  rFile_Model rFile_Data wFile_Data wFile_EMsoln'
+        write(*,*) '-S  rFile_Model rFile_Data wFile_Sens'
+        write(*,*) '-G  rFile_Model rFile_dModel rFile_Data wFile_Data'
+        write(*,*) '-T  rFile_Model rFile_Data wFile_dModel'
+        write(*,*) '-N  rFile_Model rFile_Data wFile_dModelMTX'
+        write(*,*) '-M  rFile_Model rFile_dModelMTX rFile_Data wFile_Data'
+        write(*,*) '-D  rFile_Model rFile_Data wFile_Data'
+        !write(*,*) '-C  rFile_Data wFile_Data'
+        !write(*,*) '-B  rFile_Model wFile_Model bg_cond_value'
+        write(*,*) '-I  rFile_Model rFile_Data wFile_Model wFile_Data lambda alpha'
         stop
      endif
      
-     if (narg > 1) then
-        call getarg(2,gridFile)
-     end if
+     ! extract all following command line arguments
+     allocate(temp(1:narg-1))
+     do k = 1,narg-1
+       call getarg(k+1,temp(k))
+     end do
 
-     if (narg > 2) then
-        call getarg(3,inputModelFile)
-     end if
+     ! save model file name in all cases
+     
+     select case (job)
 
-     if (narg > 3) then
-        call getarg(4,outputModelFile)
-     end if
+      case (FORWARD_PRED, FORWARD_SOLN, FORWARD_PRED_DELTA)
+        ! F,E,D
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_Data = temp(2)
+	    end if
+	    if (narg > 3) then
+	       wFile_Data = temp(3)
+	    end if
+	    if (narg > 4) then
+	       wFile_EMsoln = temp(4)
+	    end if
 
-     if (narg > 4) then
-        call getarg(5,inputDataFile)
-     end if
+      case (SENSITIVITIES) 
+        ! S
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_Data = temp(2)
+	    end if
+	    if (narg > 3) then
+	       wFile_Sens = temp(3)
+	    end if
 
-     if (narg > 5) then
-        call getarg(6,outputDataFile)
-     end if
+      case (MULT_BY_J) 
+        ! G
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_dModel = temp(2)
+	    end if
+	    if (narg > 3) then
+	       rFile_Data = temp(3)
+	    end if
+	    if (narg > 4) then
+	       wFile_Data = temp(4)
+	    end if
+
+      case (MULT_BY_J_T)
+        ! T
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_Data = temp(2)
+	    end if
+	    if (narg > 3) then
+	       wFile_dModel = temp(3)
+	    end if
+
+      case (MULT_BY_J_T_MTX)
+        ! N
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_Data = temp(2)
+	    end if
+	    if (narg > 3) then
+	       wFile_dModelMTX = temp(3)
+	    end if
+
+      case (MULT_BY_J_MTX)
+        ! M
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_dModelMTX = temp(2)
+	    end if
+	    if (narg > 3) then
+	       rFile_Data = temp(3)
+	    end if
+	    if (narg > 4) then
+	       wFile_Data = temp(4)
+	    end if
+			
+      case (CREATE_DATA_ERRORS)
+        ! C
+	    if (narg > 1) then
+	       rFile_Data = temp(1)
+	    end if
+	    if (narg > 2) then
+	       wFile_Data = temp(2)
+	    end if
+
+      case (CREATE_BG_MODEL)
+        ! B
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       wFile_Model = temp(2)
+	    end if
+        if (narg > 3) then
+           read(temp(3),*) bg_cond_value
+        else
+           bg_cond_value = 1e-2
+        end if
+ 	          
+      case (NLCG_INVERSION)
+        ! I
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_Data = temp(2)
+	    end if
+	    if (narg > 3) then
+	       wFile_Model = temp(3)
+	    end if
+	    if (narg > 4) then
+	       wFile_Data = temp(4)
+	    end if
+	    if (narg > 5) then
+          read(temp(5),*) lambda
+        end if
+        if (narg > 6) then
+          read(temp(6),*) alpha
+        end if
+        
+      case default
+         call errStop('Unknown job. Please check your command line options')
+      
+     end select
         
      ! Read input grid files ....
      !  hard-wired for file names used by matlab script
      ! Read in numerical grid geometry (needed in all cases)
-     call read_Grid2D(fidRead,gridFile,TEgrid)
+     call read_Grid2D(fidRead,rFile_Grid,TEgrid)
      !  complete grid definition ... 
      call gridCalcs(TEgrid)
 
@@ -176,37 +292,44 @@ program Test2D
 
      select case (job)
      
-     case (CREATE_BG_MODEL)
-        write(*,*) 'Creating background model for the inversion...'
-        allocate(bg_cond(TEgrid%Ny,TEgrid%Nz-TEgrid%Nza))
-        bg_cond = 1e-2
-        call create_modelParam(TEgrid,paramtype,sigma1,bg_cond)
-        call write_Cond2D(fidWrite,outputModelFile,sigma1,TEgrid)
-        deallocate(bg_cond)
-        stop 
-     end select
+    end select
      
      ! (2) Read background conductivity parameter (allocate first,
      !    using size info obtained from grid ... this might change
      !    for different parameters!)
-     call read_Cond2D(fidRead,inputModelFile,sigma0,TEgrid)
+     if (len_trim(rFile_Model)>0) then
+       call read_Cond2D(fidRead,rFile_Model,sigma0,TEgrid)
+     else
+       call warning('No input model parametrization')
+     end if
 	
      ! (3) Read in data file (only a template on input--periods/sites)
-     call read_Z(fidRead,inputDataFile,nPer,periods,modes,nSites,sites,allData)
-
-     !  Using periods, sites obtained from data file
-     !     set up transmitter and receiver dictionaries
-     call TXdictSetUp(nPer,periods,modes) 
-     call RXdictSetUp(nSites,sites)
-     call TypeDictSetup()
+     if (len_trim(rFile_Data)>0) then
+       call read_Z(fidRead,rFile_Data,nPer,periods,modes,nSites,sites,allData)
+       !  Using periods, sites obtained from data file
+       !     set up transmitter and receiver dictionaries
+       call TXdictSetUp(nPer,periods,modes) 
+       call RXdictSetUp(nSites,sites)
+       call TypeDictSetup()
+     else
+       call warning('No input data file - unable to set up dictionaries')
+     end if
 
      select case (job)
+
+!     case (CREATE_BG_MODEL)
+!        write(*,*) 'Creating background model for the inversion...'
+!        allocate(bg_cond(TEgrid%Ny,TEgrid%Nz-TEgrid%Nza))
+!        bg_cond = bg_cond_value
+!        call create_modelParam(TEgrid,paramtype,sigma1,bg_cond)
+!        call write_Cond2D(fidWrite,wFile_Model,sigma1,TEgrid)
+!        deallocate(bg_cond)
      
      case (FORWARD_PRED)
         write(*,*) 'Calculating predicted data...'
         call fwdPred(sigma0,allData)
         ! write out impedances
-        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,   &
+        call write_Z(fidWrite,wFile_Data,nPer,periods,modes,   &
 			nSites,sites,allData)
 
      case (FORWARD_SOLN)
@@ -214,35 +337,35 @@ program Test2D
         call create_EMsolnMTX(allData,eAll)
         call fwdPred(sigma0,allData,eAll)
         ! write out EM solutions
-        call write_EMsolnMTX(fidWrite,EMsolnFile,eAll)
+        call write_EMsolnMTX(fidWrite,wFile_EMsoln,eAll)
         ! write out all impedances
-        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,   &
+        call write_Z(fidWrite,wFile_Data,nPer,periods,modes,   &
 			nSites,sites,allData)
 
      case (SENSITIVITIES)
         write(*,*) 'Calculating the full sensitivity matrix...'
         call calcSensMatrix(allData,sigma0,sigma)
         header = 'Sensitivity Matrix' 
-        call writeAll_Cond2D(fidWrite,SensFile,header,   &
+        call writeAll_Cond2D(fidWrite,wFile_Sens,header,   &
                         allData%nData,sigma)
 
      case (MULT_BY_J)
         write(*,*) 'Multiplying by J...'
-        call read_Cond2D(fidRead,inputModelFile,dsigma,TEgrid)
+        call read_Cond2D(fidRead,rFile_dModel,dsigma,TEgrid)
         call Jmult(dsigma,sigma0,allData) 
-        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,   &
+        call write_Z(fidWrite,wFile_Data,nPer,periods,modes,   &
 			nSites,sites,allData)
 
      case (MULT_BY_J_T)
         write(*,*) 'Multiplying by J^T...'
         call JmultT(sigma0,allData,dsigma) 
-        call write_Cond2D(fidWrite,outputModelFile,dsigma,TEgrid)
+        call write_Cond2D(fidWrite,wFile_dModel,dsigma,TEgrid)
 
      case (MULT_BY_J_T_MTX)
         write(*,*) 'Multiplying by J^T (all transmitters)...'
         call JmultT_MTX(sigma0,allData,sigma) 
         header = 'Sensitivity Matrix' 
-        call writeAll_Cond2D(fidWrite,SensFile,header,   &
+        call writeAll_Cond2D(fidWrite,wFile_dModelMTX,header,   &
                         allData%nTx,sigma)
 
      case (MULT_BY_J_MTX)
@@ -253,9 +376,9 @@ program Test2D
         do i = 1,nTx 
            call create_ModelParam(TEgrid,paramtype,sigma(i))
         enddo
-        call readAll_Cond2D(fidRead,SensFile,nTx,header,sigma)
+        call readAll_Cond2D(fidRead,rFile_dModelMTX,nTx,header,sigma)
         call Jmult_MTX(sigma,sigma0,allData) 
-        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,   &
+        call write_Z(fidWrite,wFile_Data,nPer,periods,modes,   &
 			nSites,sites,allData)
 			
       case (FORWARD_PRED_DELTA)
@@ -265,21 +388,22 @@ program Test2D
         call linComb_modelParam(ONE,sigma0,eps,dsigma,dsigma)
         call fwdPred(dsigma,allData)
         ! write out impedances computed with perturbed sigma
-        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,nSites,sites,allData)
+        call write_Z(fidWrite,wFile_Data,nPer,periods,modes,nSites,sites,allData)
 
-     case (CREATE_DATA_ERRORS)
-        write(*,*) 'Writing a data file with 5% errors in it...'
-        error = 0.05
-        call setError_dvecMTX(error,allData)
-        ! write out impedances
-        call write_Z(fidWrite,outputDataFile,nPer,periods,modes,   &
-			nSites,sites,allData)
+!     case (CREATE_DATA_ERRORS)
+!        write(*,*) 'Writing a data file with 5% errors in it...'
+!        error = 0.05
+!        call setError_dvecMTX(error,allData)
+!        ! write out impedances
+!        call write_Z(fidWrite,wFile_Data,nPer,periods,modes,   &
+!			nSites,sites,allData)
 			     		
      case (NLCG_INVERSION)
         write(*,*) 'Starting the NLCG search...'
-        lambda = ONE
-        call NLCGsolver(allData,lambda,sigma0,sigma1)
-        call write_Cond2D(fidWrite,outputModelFile,sigma1,TEgrid)
+        call NLCGsolver(allData,lambda,sigma0,sigma1,alpha)
+        call write_Cond2D(fidWrite,wFile_Model,sigma1,TEgrid)
+        call write_Z(fidWrite,wFile_Data,nPer,periods,modes,   &
+			nSites,sites,allData)
      end select
 
 end program

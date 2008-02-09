@@ -160,14 +160,12 @@ Contains
 
      ! local variables
      integer    :: j,k
-     character*80       :: msg
 
      if((m1%Ny .ne. m2%Ny).or. (m1%Nx .ne. m2%Nx).or. &
 		 (m1%NzEarth .ne. m2%NzEarth)) then
-        msg = 'Error: size of m1, m2 incompatable in dotProd_modelParam'
         write(6,*) 'Nx, Ny, Nz ',m1%Nx, m2%Nx,    &
 			m1%Ny,m2%Ny,m1%NzEarth,m2%NzEarth
-        call errStop(msg)
+        call errStop('size of m1, m2 incompatable in dotProd_modelParam')
      endif
 
      r = dotProd_rscalar_f(m1%cellCond, m2%cellCond)
@@ -200,17 +198,12 @@ Contains
      type(modelParam_t), intent(in)		:: m1,m2
      type(modelParam_t), intent(inout)		:: m
 
-     !  local variables
-     character*80                               :: msg
-
      if((m1%Ny .ne. m2%Ny).or. (m1%Nx .ne. m2%Nx) .or. &
 		(m1%NzEarth .ne. m2%NzEarth)) then
-        msg = 'Error: size of m1, m2 incompatable in linComb_modelParam'
-        call errStop(msg)
+        call errStop('size of m1, m2 incompatable in linComb_modelParam')
      endif
      if(m1%paramType .ne. m2%paramType) then
-        msg = 'Error: paramType incompatable in linComb_modelParam'
-        call errStop(msg)
+        call errStop('paramType incompatable in linComb_modelParam')
      endif
 
      ! make sure m is allocated, and of same size; if not same
@@ -250,14 +243,11 @@ Contains
      type(modelParam_t), intent(inout)    :: m
      real(kind=selectedPrec),optional	:: AirCond
 
-     character*80			::msg
-
      !  error checking
      if(m%allocated) then
         if((m%Ny .ne. CellCond%Ny).or. (m%Nx .ne. CellCond%Nx) .or. &
 		(m%NzEarth .ne. CellCond%Nz)) then
-           msg = 'modelParam/rscalar dimensions disagree in set_ModelParam'
-           call errstop(msg)
+           call errstop('modelParam/rscalar dimensions disagree in set_ModelParam')
         else
            m%cellCond = CellCond
            if(present(AirCond)) then
@@ -271,8 +261,7 @@ Contains
            endif
         endif
      else
-        msg = 'output modelParam must be allocated before calling set_modelParam'
-        call errstop(msg)
+        call errstop('output modelParam must be allocated before calling set_modelParam')
      endif
    end subroutine set_modelParam
 
@@ -499,17 +488,15 @@ Contains
     real(kind=selectedPrec)            :: Vdn,Vds,Vun,Vus
     real(kind=selectedPrec)            :: Vnr,Vnl,Vsr,Vsl
     real(kind=selectedPrec),pointer,dimension(:,:,:)	:: temp  
-    character*80 msg
 
     
     if ((.not.m%allocated).or.(.not.Econd%allocated)) then
-      write(0,*) 'Ccond or Econd in EdgeCond not allocated yet'
+      call errStop('m or Econd not allocated yet in EdgeToModelParam')
       stop
     end if
     
     if((m%paramtype.eq.LOG_CELL).and. (.not.present(m0))) then
-       msg = 'Background conductivity required for paramType LOG_CELL'
-       call errStop(msg)
+       call errStop('Background conductivity required for paramType LOG_CELL in EdgeToModelParam')
     endif
 
     ! Could add code to check whether the bounds are the same ...
@@ -800,7 +787,7 @@ Contains
       type(modelParam_t), intent(inout)    :: m
 
       integer		:: NzAir,Nz,Nx,Ny,NzEarth
-      character*80	:: paramType,msg
+      character*80	:: paramType
       real(kind=selectedPrec) 	:: AirCond
 
       if(m%allocated) then
@@ -811,8 +798,7 @@ Contains
           if((m%Ny .NE. Ny).OR.(m%NzEarth .NE. NzEarth) &
 		.or. (m%Nx .NE. Nx)) then
              close(fid)
-             msg = 'Size of cond does not agree with contents of file'
-             call errStop(msg)
+             call errStop('Size of cond does not agree with contents of file in read_Cond3D')
           else
              read(fid)   !dx
              read(fid)   !dy
@@ -822,8 +808,7 @@ Contains
              close(fid)
           endif
        else
-          msg = 'modelParam must be allocated before call to read_Cond3D'
-          call errStop(msg)
+          call errStop('modelParam must be allocated before call to read_Cond3D')
        endif
       end subroutine read_Cond3D
      !******************************************************************

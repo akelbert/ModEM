@@ -148,12 +148,10 @@ contains
 
      ! local variables
      integer	:: j,k
-     character*80	:: msg
 
      if((m1%Ny .ne. m2%Ny).or. (m1%NzEarth .ne. m2%NzEarth)) then
-        msg = 'Error: size of m1, m2 incompatable in dotProd_modelParam'
         write(6,*) 'Ny ',m1%Ny,m2%Ny,m1%NzEarth,m2%NzEarth
-        call errStop(msg) 
+        call errStop('size of m1, m2 incompatable in dotProd_modelParam') 
      endif
 
      r = R_ZERO
@@ -175,11 +173,9 @@ contains
 
      ! local variables
      integer	:: j,k
-     character*80	:: msg
 
      if(.not.(m%allocated)) then
-        msg = 'Error: m not allocated in maxNorm_modelParam'
-        call errStop(msg) 
+        call errStop('m not allocated in maxNorm_modelParam') 
      endif
 
      r = max(abs(minval(m%v)),abs(maxval(m%v)))
@@ -209,17 +205,12 @@ contains
      real(kind=selectedPrec),intent(in)		:: a1,a2
      type(modelParam_t), intent(in)	:: m1,m2
      type(modelParam_t), intent(inout)	:: m
-   
-     !  local variables
-     character*80				:: msg
-   
+      
      if((m1%Ny .ne. m2%Ny).or. (m1%NzEarth .ne. m2%NzEarth)) then
-        msg = 'Error: size of m1, m2 incompatable in linComb_modelParam'
-        call errStop(msg) 
+        call errStop('size of m1, m2 incompatable in linComb_modelParam') 
      endif
      if(m1%paramType .ne. m2%paramType) then
-        msg = 'Error: paramType incompatable in linComb_modelParam'
-        call errStop(msg) 
+        call errStop('paramType incompatable in linComb_modelParam') 
      endif
 
      ! make sure m is allocated, and of same size; if not same
@@ -248,13 +239,9 @@ contains
     type(modelParam_t), intent(in)	            :: mIn
     type(modelParam_t)                            :: mOut
 
-    !  local variables
-    character*80			:: msg
-
     ! check to see that input m is allocated
     if(.not.mIn%allocated) then
-       msg = 'input not allocated on call to scDivide_DvecMTX'
-       call errStop(msg)
+       call errStop('input not allocated on call to scDivide_DvecMTX')
     endif
 
 	call linComb_modelParam(R_ZERO,mIn,a,mIn,mOut)
@@ -299,8 +286,7 @@ contains
      integer ::       Nz,Ny,Nza,NzEarth
 
      if (.not.cond%allocated) then
-        msg = 'Error: Model parameter not allocated in getValue_modelParam'
-        call errStop(msg)
+        call errStop('Model parameter not allocated in getValue_modelParam')
      end if
 
      Ny = cond%Ny
@@ -309,8 +295,7 @@ contains
      if((size(value,1)==Ny).and.(size(value,2)==NzEarth)) then
         value = cond%v
      else
-        msg = 'Error: Wrong conductivity array size in getValue_modelParam'
-        call errStop(msg)
+        call errStop('Wrong conductivity array size in getValue_modelParam')
      end if
          
      if (present(paramtype)) then
@@ -354,7 +339,6 @@ contains
       integer iy,iz,Ny,Nz,Nza,izc, NzE
       real(kind=selectedPrec) w00,w01,w10,w11,wsum
       real(kind=selectedPrec), allocatable, dimension(:,:)	:: temp
-      character*80 msg
 
       Ny = cellCond%grid%Ny
       Nz = cellCond%grid%Nz
@@ -362,15 +346,13 @@ contains
       NzE = Nz-Nza
       allocate(temp(Ny,NzE))
       if(NodeCond%gridType(1:4) .NE. 'NODE') then 
-         msg = 'NodeCond must be of gridType NODE'
-         call errStop(msg)
+         call errStop('NodeCond must be of gridType NODE in CellToNode')
       endif
       if(CellCond%paramType(1:4) .EQ. 'LOGE') then 
          if(present(Sigma0)) then
             temp = CellCond%v*exp(Sigma0%v)
          else
-            msg = 'Sigma0 input to CellToNode is required for case LOGE'
-            call errStop(msg)
+            call errStop('Sigma0 input to CellToNode is required for case LOGE')
          endif
       else
          temp = CellCond%v 
@@ -428,16 +410,12 @@ contains
       ! local variables
       integer iy,iz,izc,Ny,Nz,Nza
       real(kind=selectedPrec) w00,w01,w10,w11,wsum
-      character*80 msg
-
 
       if(NodeCond%gridType(1:4) .NE. 'NODE') then 
-         msg = 'NodeCond must be of gridType NODE'
-         call errStop(msg)
+         call errStop('NodeCond must be of gridType NODE in NodeToCell')
       endif
       if((CellCond%paramType .eq. 'LOGE') .and. (.not.present(Sigma0))) then
-         msg = 'Background conductivity required for paramType LOGE'
-         call errStop(msg)
+         call errStop('Background conductivity required for paramType LOGE in NodeToCell')
       endif
 
       Ny = cellCond%grid%Ny
@@ -494,15 +472,13 @@ contains
       
       ! local variables
       integer iy,iz,izc,NyC,NzC,Nza
-      character*80 msg
 
       NyC = cellCond%grid%Ny
       NzC = cellCond%grid%Nz
       Nza = cellCond%grid%Nza
 
       if((NyC .NE. Ny).or.NzC .NE. Nz) then
-        msg = 'Error: diimensions of CellCond, Cond disagree'
-        call errStop(msg)
+        call errStop('dimensions of CellCond, Cond disagree in CondParamToArray')
       endif
      
       Cond = CellCond%AirCond
@@ -989,14 +965,12 @@ contains
 
       ! local variables
       integer i, nS, Ny,NzEarth
-      character*80		:: msg
 
       open(unit=fid, file=cfile, form='unformatted')
       read(fid) header
       read(fid) nS
       if(nS .NE. nSigma) then
-          msg = 'size of sigma does not agree with contents of file'
-          call errStop(msg)
+          call errStop('size of sigma does not agree with contents of file in readAll_Cond2D')
       endif
 
       do i = 1,nSigma
@@ -1004,8 +978,7 @@ contains
          read(fid) Ny,NzEarth
          if((sigma(i)%Ny .NE. Ny).OR. (sigma(i)%NzEarth .NE. NzEarth)) then
             close(fid)
-            msg = 'Size of cond does not agree with contents of file'
-            call errStop(msg)
+            call errStop('Size of cond does not agree with contents of file in readAll_Cond2D')
          else
             read(fid) sigma(i)%v
             read(fid) sigma(i)%AirCond

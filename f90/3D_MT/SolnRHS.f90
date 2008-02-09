@@ -311,8 +311,7 @@ contains
           call zero_cboundary(b%bc)
        else
           if(.not.b%allocated) then
-             msg = 'Input not yet allocated in zero_RHS'
-             call errStop(msg)
+             call errStop('Input not yet allocated in zero_RHS')
           endif
        endif
      end subroutine zero_RHS

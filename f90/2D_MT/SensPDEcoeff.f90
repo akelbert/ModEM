@@ -40,12 +40,10 @@ module senspdecoeff
    !   local variables
    integer			:: iy, iz, Ny, Nzb,Nza
    real (kind=selectedPrec)	:: dz,dy
-   character*80			:: msg
 
    if(Jy%gridType .ne. 'FACE EARTH' .or.  &
 		Jy%gridType .ne. 'FACE EARTH') then
-      msg = 'Error: wrong gridType for outputs Jy/Jz in curlB'
-      call errStop(msg)
+      call errStop('wrong gridType for outputs Jy/Jz in curlB')
    endif
 
    Nza = b%grid%Nza
@@ -81,12 +79,10 @@ module senspdecoeff
    !  local variables
    integer 			:: iy, iz, Ny, Nzb, Nza
    real (kind=selectedPrec)	:: dz1,dz2,dzz, dy1, dy2, dyy
-   character*80			:: msg
 
    if(Ey%gridType .ne. 'FACE EARTH' .or.  &
 		Ey%gridType .ne. 'FACE EARTH') then
-      msg = 'Error: wrong gridType for inputs Ey/Ez in curlE'
-      call errStop(msg)
+      call errStop('wrong gridType for inputs Ey/Ez in curlE')
    endif
 
    Nza = Ey%grid%Nza
@@ -119,12 +115,10 @@ module senspdecoeff
    ! local variables
    integer 			:: iy, iz, Ny, Nzb, Nza
    real(kind=selectedPrec)	:: dz1,dz2,dzz, dy1, dy2, dyy
-   character*80			:: msg
 
    if(Ey%gridType .ne. 'FACE EARTH' .or.  &
 		Ey%gridType .ne. 'FACE EARTH') then
-      msg = 'Error: wrong gridType for outputs Ey/Ez in curlE_T'
-      call errStop(msg)
+      call errStop('wrong gridType for outputs Ey/Ez in curlE_T')
    endif
 
    Nza = b%grid%Nza

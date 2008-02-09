@@ -35,7 +35,6 @@ module ioAscii
 
       integer, intent(in)		:: fid
       character*80, intent(in)	:: cfile
-      character*80		:: msg
       type(cvector), intent(inout)		:: vec 
 
       !  local variables
@@ -49,16 +48,14 @@ module ioAscii
          read(fid) N1,N2
          if((vec%N1 .NE. N1).OR.(vec%N2 .NE. N2)) then
             close(fid)
-            msg = 'Size of vec does not agree with contents of file'
-            call errStop(msg)
+            call errStop('Size of vec does not agree with contents of file in read_cvector')
          else
             vec%gridType = gridType
             read(fid) vec%v
             close(fid)
          endif
       else
-         msg = 'vec must be allocated before call to read_cvector'
-         call errStop(msg)
+         call errStop('vec must be allocated before call to read_cvector')
       endif
       end subroutine read_cvector
 
@@ -448,8 +445,7 @@ module ioAscii
         ! set the air layers spacing to that of the top 10 Earth layers
         if (NzEarth <= Nza) then
         	close(fid)
-            msg = 'Too few Earth layers in the Mackie input model file'
-            call errStop(msg)
+            call errStop('Too few Earth layers in the Mackie input model file in read_grid2d')
         else
         	do j = 1,Nza
         		grid%Dz(Nza-j+1) = grid%Dz(Nza+j)

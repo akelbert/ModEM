@@ -145,11 +145,9 @@ contains
 
      ! local variables
      integer				:: j,k
-     character*80			:: msg
 
      if((e1%N1 .ne. e2%N1).or. (e1%N2 .ne. e2%N2)) then
-        msg = 'Error: size of m1, m2 incompatable in EarthCondDotProd'
-        call errStop(msg) 
+        call errStop('size of m1, m2 incompatable in EarthCondDotProd') 
      endif
 
      c = C_ZERO

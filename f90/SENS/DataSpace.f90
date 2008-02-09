@@ -179,13 +179,9 @@ Contains
     type (dvec), intent(in)		:: d1
     type (dvec), intent(inout)		:: d2
 
-    ! local variables
-    character*80			:: msg
-
     ! check to see if RHS (d1) is active (allocated)
     if(.not.d1%allocated) then
-       msg = 'RHS not allocated yet for CopyDvec'
-       call errStop(msg)
+       call errStop('RHS not allocated yet for copy_Dvec')
     else
        ! check to see if everything is same
        if((d1%nComp.ne.d2%nComp).or.(d1%nSite.ne.d2%nSite) .or. &
@@ -217,12 +213,10 @@ Contains
 
     ! local variables
     integer				:: i
-    character*80			:: msg
 
     ! check to see if RHS (D1) is allocated
     if(.not.D1%allocated) then
-       msg = 'RHS not allocated yet for CopydvecMTX'
-       call errStop(msg)
+       call errStop('RHS not allocated yet for copy_dvecMTX')
     else
        ! check to see if number of TX allocated are same for D1, D2
        if(D1%nTX .ne. D2%nTX) then
@@ -254,19 +248,16 @@ Contains
     type (dvec), intent(inout)			:: dOut
 
     ! local variables
-    character*80				:: msg
     logical					:: errBar = .false.
  
     ! check to see if inputs (d1, d2) are both allocated
     if((.not.d1%allocated).or.(.not.d2%allocated)) then
-       msg = 'inputs not allocated on call to linComb_Dvec'
-       call errStop(msg)
+       call errStop('inputs not allocated on call to linComb_Dvec')
     endif
 
     ! check to see if inputs are compatable
     if((d1%nComp .ne. d2%nComp) .or. (d1%nSite .ne. d2%nSite)) then
-       msg = 'inputs dvecs not consistent in linComb_Dvec'
-       call errStop(msg)
+       call errStop('input dvecs not consistent in linComb_Dvec')
     endif
 
 	! set errBar=.true. if at least one of the inputs has error bars
@@ -293,8 +284,7 @@ Contains
 	
 	if(d1%errorBar .and. d2%errorBar) then
 	   if ((abs(a) > R_ZERO).and.(abs(b) > R_ZERO)) then 
-       	msg = 'unable to add two data vectors with error bars in linComb_Dvec'
-       	call errStop(msg)
+       	call errStop('unable to add two data vectors with error bars in linComb_Dvec')
        else
        	dOut%err = a*d1%err+b*d2%err
        end if
@@ -318,18 +308,15 @@ Contains
 
     !  local variables
     integer					:: j
-    character*80				:: msg
 
     ! check to see if inputs (D1, D2) are both allocated
     if((.not.D1%allocated).or.(.not.D2%allocated)) then
-       msg = 'inputs not allocated on call to linComb_Dvec'
-       call errStop(msg)
+       call errStop('inputs not allocated on call to linComb_DvecMTX')
     endif
 
     ! check to see if number of transmitters is the same
     if(D1%nTX .ne. D2%nTX) then
-       msg = 'Size of inputs D1, D2 not compatbile in LinCombDvecMTX'
-       call errStop(msg)
+       call errStop('Size of inputs D1, D2 not compatbile in linComb_DvecMTX')
     endif
 
     !  check for allocation, sizes of Dout
@@ -367,19 +354,16 @@ Contains
     type (dvec), intent(inout)			:: d2
 
     ! local variables
-    character*80				:: msg
     logical					:: errBar = .false.
 
     ! check to see if inputs (d1, d2) are both allocated
     if((.not.d1%allocated).or.(.not.d2%allocated)) then
-       msg = 'inputs not allocated on call to scMultAdd_Dvec'
-       call errStop(msg)
+       call errStop('inputs not allocated on call to scMultAdd_Dvec')
     endif
 
     ! check to see if inputs are compatable
     if((d1%nComp .ne. d2%nComp) .or. (d1%nSite .ne. d2%nSite)) then
-       msg = 'input dvecs not consistent in scMultAddDvec'
-       call errStop(msg)
+       call errStop('input dvecs not consistent in scMultAdd_Dvec')
     endif
 
     !  finally do the linear combination ...
@@ -398,18 +382,15 @@ Contains
 
     !  local variables
     integer				:: j
-    character*80			:: msg
 
     ! check to see if inputs (D1, D2) are both allocated
     if((.not.D1%allocated).or.(.not.D2%allocated)) then
-       msg = 'inputs not allocated on call to scMultAdd_DvecMTX'
-       call errStop(msg)
+       call errStop('inputs not allocated on call to scMultAdd_DvecMTX')
     endif
 
     ! check to see if number of transmitters is the same
     if(D1%nTX .ne. D2%nTX) then
-       msg = 'Size of inputs D1, D2 not compatbile in scMultAddDvecMTX'
-       call errStop(msg)
+       call errStop('Size of inputs D1, D2 not compatbile in scMultAddDvecMTX')
     endif
 
     ! Form linear combination of each dvec object (rely on error checking,
@@ -429,13 +410,9 @@ Contains
     type (dvecMTX), intent(in)	                :: dIn
     type (dvecMTX)                              :: dOut
 
-    !  local variables
-    character*80			:: msg
-
     ! check to see that input d is allocated
     if(.not.dIn%allocated) then
-       msg = 'input not allocated on call to scDivide_DvecMTX'
-       call errStop(msg)
+       call errStop('input not allocated on call to scDivide_DvecMTX')
     endif
 
 	call linComb_DvecMTX(R_ZERO,dIn,a,dIn,dOut)
@@ -452,18 +429,15 @@ Contains
 
     ! local variables
     integer				:: j, k
-    character*80			:: msg
 
     ! check to see if inputs (d1, d2) are allocated
     if((.not.d1%allocated).or.(.not.d2%allocated)) then
-       msg = 'RHS not allocated yet for DotProdDvec'
-       call errStop(msg)
+       call errStop('RHS not allocated yet for dotProd_Dvec')
     endif
 
     ! check to see if array sizes are the same
     if((d1%nComp.ne.d2%nComp).or.(d1%nSite.ne.d2%nSite)) then
-       msg = 'size of d1, d2 not compatible in DotProdDvec'
-       call errStop(msg)
+       call errStop('size of d1, d2 not compatible in dotProd_Dvec')
     endif
 
     r = 0.0
@@ -485,18 +459,15 @@ Contains
 
     ! local variables
     integer				:: j
-    character*80			:: msg
 
     ! check to see if inputs (D1, D2) are allocated
     if((.not.D1%allocated).or.(.not.D2%allocated)) then
-       msg = 'RHS not allocated yet for DotProdDvecMTX'
-       call errStop(msg)
+       call errStop('RHS not allocated yet for dotProd_DvecMTX')
     endif
 
     ! check to see if array sizes are the same
     if((D1%nTx.ne.D2%nTx).or.(D1%Ndata.ne.D2%Ndata)) then
-       msg = 'size of D1, D2 not compatible in DotProdDvecMTX'
-       call errStop(msg)
+       call errStop('size of D1, D2 not compatible in dotProd_DvecMTX')
     endif
 
     r = 0.0
@@ -518,17 +489,14 @@ Contains
 
    !  local variables
    integer      			:: nTx, j
-   character*80 			:: msg
 
    nTx = d%nTx
 
    if(.not.d%allocated) then
-      msg = 'Error: data vector in normalizeData not allocated'
-      call errStop(msg)
+      call errStop('data vector not allocated in normalize_dvecMTX')
    endif
    if(.not.d%errorBar) then
-      msg = 'Error: no error bars for input data in normalizeData'
-      call errStop(msg)
+      call errStop('no error bars for input data in normalize_dvecMTX')
    endif
 
    if(present(dNorm)) then
@@ -564,15 +532,12 @@ Contains
 
    !  local variables
    integer      			:: nTx, j
-   character*80 			:: msg
 
    if(.not.d%allocated) then
-      msg = 'Error: data vector in normalizeData not allocated'
-      call errStop(msg)
+      call errStop('data vector not allocated in normalize2_dvecMTX')
    endif
    if(.not.d%errorBar) then
-      msg = 'Error: no error bars for input data in normalizeData'
-      call errStop(msg)
+      call errStop('no error bars for input data in normalize2_dvecMTX')
    endif
 
    nTx = d%nTx
@@ -611,11 +576,9 @@ Contains
 
    !  local variables
    integer      			:: nComp, nSite
-   character*80 			:: msg
 
    if(.not.d%allocated) then
-      msg = 'Error: data vector in setError_dvec not allocated'
-      call errStop(msg)
+      call errStop('data vector not allocated in setError_dvec')
    endif
 
    nComp = d%nComp
@@ -646,11 +609,9 @@ Contains
 
    !  local variables
    integer      			:: nTx, nData, j, k
-   character*80 			:: msg
 
    if(.not.d%allocated) then
-      msg = 'Error: data vector in setError_dvecMTX not allocated'
-      call errStop(msg)
+      call errStop('data vector in setError_dvecMTX not allocated')
    endif
 
    nTx = d%nTx

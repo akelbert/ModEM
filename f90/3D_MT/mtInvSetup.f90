@@ -66,7 +66,6 @@ Contains
      
      !   local variables
      integer 				:: i1, i2, fidRM
-     character*80 			:: msg
      type(rscalar)			:: Cond
 
      ! I/O unit numbers ... most of these not now used
@@ -83,15 +82,13 @@ Contains
      i1 = i2 -3
      if (StartFile(i1:i2) == '.xml') then
         ! a .xml file is being used for StartFile
-        msg = 'The XML startup format is not supported yet'
-        call errstop(msg)
+        call errstop('The XML startup format is not supported yet')
      else if (StartFile(i1:i2) /= '.xml') then
         Call ReadStartFile(StartFile)
      end if
 
      if (fn_model == '') then
-        msg = 'Grid/conductivity model file not specified: stopping'
-        call errstop(msg)
+        call errstop('Grid/conductivity model file not specified: stopping')
      end if
    
      ! Read input files and set up basic grid geometry, conductivities,

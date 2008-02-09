@@ -54,15 +54,13 @@ Contains
   logical               	:: calcQ
   integer               	:: iSite, ncomp, itx, &
 					nFunc, iDT, iComp, iFunc
-  character*80          	:: msg
   type (modelParam_t)		:: sigmaQreal, sigmaQimag
 
   !  first check consistency of e0, ef, d
   !             ... all should point to same transmitter!
   if((d%tx.ne.e0%tx) .or. (d%tx.ne.ef%tx) .or. &
           (e0%tx.ne.ef%tx)) then
-     msg = 'Error: transmitter incompatability in linDataMeas'
-     call errStop(msg)
+     call errStop('transmitter incompatability in linDataMeas')
   endif
 
   itx = d%tx
@@ -71,16 +69,14 @@ Contains
   !  calcQ is true when data functional coefficients depend on
   !   model parameters 
   if(calcQ .and. .not.present(dSigma)) then
-     msg = 'Error: dSigma required as input to linDataMeas for this data type'
-     call errStop(msg)
+     call errStop('dSigma required as input to linDataMeas for this data type')
   endif
   ncomp = d%ncomp
   if(typeDict(iDT)%isComplex) then
      !  data are complex; one sensitivity calculation can be
      !   used for both real and imaginary parts
      if(mod(ncomp,2).ne.0) then
-        msg = 'Error: for complex data # of components must be even'
-        call errStop(msg)
+        call errStop('for complex data # of components must be even in linDataMeas')
      endif
      nFunc = ncomp/2
   else
@@ -192,7 +188,6 @@ Contains
   complex(kind=selectedPrec)		:: Z
   logical               		:: calcQ
   type(EMSparse),pointer    	:: Lz(:),Qz(:)
-  character*80				:: msg
 
   itx = d%tx
   iDT = d%dataType
@@ -204,8 +199,7 @@ Contains
      !  data are complex; one sensitivity calculation can be
      !   used for both real and imaginary parts
      if(mod(ncomp,2).ne.0) then
-        msg = 'Error: for complex data # of components must be even'
-        call errStop(msg)
+        call errStop('for complex data # of components must be even in linDataComb')
      endif
      nFunc = ncomp/2
   else
@@ -271,8 +265,6 @@ Contains
   !  local variables
   integer               ::  iSite, ncomp,nFunc,iDT,iComp, iFunc
   complex (kind=selectedPrec), pointer, dimension(:)      ::  Z
-  character(len=80)		:: msg
-
   
   iDT = d%dataType
   ncomp = d%ncomp
@@ -280,8 +272,7 @@ Contains
      !  data are complex; one sensitivity calculation can be
      !   used for both real and imaginary parts
      if(mod(ncomp,2).ne.0) then
-        msg = 'Error: for complex data # of components must be even'
-        call errStop(msg)
+        call errStop('for complex data # of components must be even in dataMeas')
      endif
      nFunc = ncomp/2
   else
