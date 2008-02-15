@@ -58,6 +58,11 @@ program Test2D
      character*80      :: wFile_EMsoln = 'scratch/Out.sol'
      character*80      :: wFile_Sens = 'scratch/Out.sns'
      !type (ioFiles_t)  :: ioFiles
+
+	 real					:: rtime  ! run time
+	 real					:: ftime  ! run time per frequency
+	 real					:: stime, etime ! start and end times
+     integer, dimension(8)	:: tarray ! utility variable
         
      real (kind=selectedPrec), dimension(:), pointer	:: periods
      real (kind=selectedPrec), dimension(:,:), pointer	:: sites
@@ -82,8 +87,8 @@ program Test2D
      type(EMsolnMTX)            :: eAll
 
      !  the damping parameter
-     real(kind=selectedPrec)    :: lambda
-     real(kind=selectedPrec)    :: alpha
+     real(kind=selectedPrec)    :: lambda = 1.0
+     real(kind=selectedPrec)    :: alpha = 0.1
 
      real(kind=selectedPrec)	:: eps
      real(kind=selectedPrec)	:: error
@@ -129,7 +134,7 @@ program Test2D
         write(*,*) '-T  rFile_Model rFile_Data wFile_dModel'
         write(*,*) '-N  rFile_Model rFile_Data wFile_dModelMTX'
         write(*,*) '-M  rFile_Model rFile_dModelMTX rFile_Data wFile_Data'
-        write(*,*) '-D  rFile_Model rFile_Data wFile_Data'
+        write(*,*) '-D  rFile_Model rFile_dModel rFile_Data wFile_Data'
         !write(*,*) '-C  rFile_Data wFile_Data'
         !write(*,*) '-B  rFile_Model wFile_Model bg_cond_value'
         write(*,*) '-I  rFile_Model rFile_Data wFile_Model wFile_Data lambda alpha'
@@ -146,8 +151,8 @@ program Test2D
      
      select case (job)
 
-      case (FORWARD_PRED, FORWARD_SOLN, FORWARD_PRED_DELTA)
-        ! F,E,D
+      case (FORWARD_PRED, FORWARD_SOLN)
+        ! F,E
         if (narg > 1) then
 	       rFile_Model = temp(1)
 	    end if
@@ -159,6 +164,24 @@ program Test2D
 	    end if
 	    if (narg > 4) then
 	       wFile_EMsoln = temp(4)
+	    end if
+
+      case (FORWARD_PRED_DELTA)
+        ! D
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+        if (narg > 2) then
+	       rFile_dModel = temp(2)
+	    end if
+	    if (narg > 3) then
+	       rFile_Data = temp(3)
+	    end if
+	    if (narg > 4) then
+	       wFile_Data = temp(4)
+	    end if
+	    if (narg > 5) then
+	       wFile_EMsoln = temp(5)
 	    end if
 
       case (SENSITIVITIES) 
@@ -315,6 +338,10 @@ program Test2D
        call warning('No input data file - unable to set up dictionaries')
      end if
 
+	 ! Start the (portable) clock
+	 call date_and_time(values=tarray)
+     stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+
      select case (job)
 
 !     case (CREATE_BG_MODEL)
@@ -383,6 +410,7 @@ program Test2D
 			
       case (FORWARD_PRED_DELTA)
         write(*,*) 'Calculating the predicted data for the perturbed model...'
+        call read_Cond2D(fidRead,rFile_dModel,dsigma,TEgrid)
         !  add sigma0 to epsilon * dsigma
         eps = 0.01
         call linComb_modelParam(ONE,sigma0,eps,dsigma,dsigma)
@@ -405,5 +433,10 @@ program Test2D
         call write_Z(fidWrite,wFile_Data,nPer,periods,modes,   &
 			nSites,sites,allData)
      end select
+
+	 call date_and_time(values=tarray)
+	 etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+	 rtime = etime - stime
+	 write(0,*) ' elapsed time (mins) ',rtime/60.0
 
 end program
