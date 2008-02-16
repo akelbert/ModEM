@@ -353,6 +353,14 @@ module ioBinary
       call getValue_modelParam(cond,v,paramType,AirCond)
       
       open(unit=fid, file=cfile, form='unformatted')
+      ! write grid dimensions ...
+      write(fid) grid%Ny,grid%Nz,grid%Nza
+
+      ! write grid spacings
+      write(fid) grid%Dy
+      write(fid) grid%Dz
+      
+      ! write model parameter
       write(fid) paramType
       write(fid) Ny,NzEarth
       write(fid) v
@@ -377,17 +385,31 @@ module ioBinary
       real (kind=selectedPrec), allocatable :: v(:,:)
 
       !  local variables
-      integer 		:: Ny, NzEarth
+      integer 		:: Ny, Nz, Nza, NzEarth
       character*80	:: paramType
       real (kind=selectedPrec) :: AirCond
 
       open(unit=fid, file=cfile, form='unformatted',status='OLD')
+      !  Read in grid geometry definitions, store in structure TEgrid
+      !    first grid dimensions ...
+      read(fid) Ny,Nz,Nza
+
+      ! then allocate for grid
+      call create_Grid2D(Ny,Nz,Nza,grid)
+      
+      !    read in grid spacings
+      read(fid) grid%Dy
+      read(fid) grid%Dz
+
+      ! complete grid definition
+      call gridCalcs(grid)
+
       read(fid) paramType
       read(fid) Ny,NzEarth
 
       if((grid%Ny .NE. Ny).OR.(grid%Nz - grid%Nza .NE. NzEarth)) then
          close(fid)
-         call errStop('Grid size does not agree with contents of file in read_cond2d')
+         call errStop('Grid size does not agree with model parameter size in read_cond2d')
       end if
       
       ! deallocate modelParam if it is allocated

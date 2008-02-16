@@ -46,7 +46,7 @@ program Test2D
 
      ! file names
      character*80      :: rFile_Config = ''
-     character*80      :: rFile_Grid = 'Test1.grd'
+     ! character*80      :: rFile_Grid = 'Test1.grd'
      character*80      :: rFile_Model = 'scratch/Input1.cpr'
      character*80      :: rFile_dModel = 'scratch/Input2.cpr'
      character*80      :: rFile_dModelMTX = 'scratch/Input2.sns'
@@ -298,30 +298,17 @@ program Test2D
          call errStop('Unknown job. Please check your command line options')
       
      end select
-        
-     ! Read input grid files ....
-     !  hard-wired for file names used by matlab script
-     ! Read in numerical grid geometry (needed in all cases)
-     call read_Grid2D(fidRead,rFile_Grid,TEgrid)
-     !  complete grid definition ... 
-     call gridCalcs(TEgrid)
-
-     !  set array size parameters in WS forward code module 
-     !   these stay fixed for all forward modeling with this grid
-     call setWSparams(TEgrid%Ny,TEgrid%Nz,TEgrid%Nza)
-
-     !  set grid for higher level solver routines
-     call set_SolnRHS_grid(TEgrid)
-
-     select case (job)
      
-    end select
-     
-     ! (2) Read background conductivity parameter (allocate first,
-     !    using size info obtained from grid ... this might change
-     !    for different parameters!)
+     ! Read background conductivity parameter and grid
      if (len_trim(rFile_Model)>0) then
        call read_Cond2D(fidRead,rFile_Model,sigma0,TEgrid)
+     
+       !  set array size parameters in WS forward code module 
+       !   these stay fixed for all forward modeling with this grid
+       call setWSparams(TEgrid%Ny,TEgrid%Nz,TEgrid%Nza)
+
+       !  set grid for higher level solver routines
+       call set_SolnRHS_grid(TEgrid)
      else
        call warning('No input model parametrization')
      end if
