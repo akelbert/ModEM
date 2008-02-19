@@ -47,7 +47,7 @@ end interface
 
 public	::	create_modelParam,deall_modelParam,dotProd_modelParam
 public	::	linComb_modelParam,zero_modelParam,copy_modelParam
-public  ::  scMult_modelParam, getValue_modelParam
+public  ::  scMult_modelParam, getValue_modelParam, getSize_modelParam
 public  ::  maxNorm_modelParam
 
 !   include interface for conductivity mappings
@@ -270,6 +270,24 @@ contains
      mOut%AirCond = mIn%AirCond
 
    end subroutine copy_modelParam
+
+   !************************************************************************
+   !  getSize_modelParam extracts model size from a modelParam_t variable
+   subroutine getSize_modelParam(cond,Ny,NzEarth)
+
+     implicit none
+     type (modelParam_t), intent(in)   	  :: cond
+     integer, intent(out)                 :: Ny,NzEarth
+
+     if (.not.cond%allocated) then
+        call errStop('Model parameter not allocated in getValue_modelParam')
+     end if
+
+     Ny = cond%Ny
+     NzEarth = cond%NzEarth
+ 
+   end subroutine getSize_modelParam
+
 
    !************************************************************************
    !  getValue_modelParam extracts information for a modelParam_t variable;

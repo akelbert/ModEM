@@ -309,6 +309,8 @@ Contains
       integer                           :: j
       character*80                      :: gridType
 
+      call deall_EMsolnMTX(eAll)
+
       eAll%nTx = d%nTx
       allocate(eAll%solns(d%nTx))
       eAll%allocated = .true.

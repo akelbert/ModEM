@@ -348,7 +348,6 @@ program Test2D
 
      case (FORWARD_SOLN)
         write(*,*) 'Calculating predicted data and saving the EM solution...'
-        call create_EMsolnMTX(allData,eAll)
         call fwdPred(sigma0,allData,eAll)
         ! write out EM solutions
         call write_EMsolnMTX(fidWrite,wFile_EMsoln,eAll)

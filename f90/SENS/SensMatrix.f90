@@ -197,8 +197,8 @@ Contains
       call initSolver(iDT,iTx,sigma0,e0,e,comb)
 
       if(savedSolns) then
-         e0 = eAll%solns(j)
-         ! call copy_EMsoln(e0,eAll%solns(j))
+         !e0 = eAll%solns(j)
+         call copy_EMsoln(e0,eAll%solns(j))
       else
          !  solve forward problem; result is stored in e0
          call fwdSolve(itx,iDT,e0)
@@ -259,7 +259,7 @@ Contains
    integer 		:: j,iTx,iDT
    logical		:: calcSomeQ, firstQ
    logical		:: savedSolns
-
+   
    calcSomeQ = .false.
    firstQ = .true.
    savedSolns = present(eAll)
@@ -287,8 +287,8 @@ Contains
       endif
 
       if(savedSolns) then
-         e0 = eAll%solns(j)
-	 ! call copy_EMsoln(e0,eAll%solns(j))
+         !e0 = eAll%solns(j)
+	     call copy_EMsoln(e0,eAll%solns(j))
       else
          !  solve forward problem; result is stored in e0
          call fwdSolve(itx,iDT,e0)
@@ -403,8 +403,8 @@ Contains
       call initSolver(iDT,iTx,sigma0,e0,e,comb)
 
       if(savedSolns) then
-         e0 = eAll%solns(j)
-         ! call copy_EMsoln(e0,eAll%solns(j))
+         ! e0 = eAll%solns(j)
+         call copy_EMsoln(e0,eAll%solns(j))
       else
          !  solve forward problem; result is stored in e0
          call fwdSolve(itx,iDT,e0)
@@ -509,8 +509,8 @@ Contains
       call initSolver(iDT,iTx,sigma0,e0,e,comb)
 
       if(savedSolns) then
-         e0 = eAll%solns(j)
-	 ! call copy_EMsoln(e0,eAll%solns(j))
+         ! e0 = eAll%solns(j)
+	     call copy_EMsoln(e0,eAll%solns(j))
       else
          !  solve forward problem; result is stored in e0
          call fwdSolve(itx,iDT,e0)
@@ -578,7 +578,10 @@ Contains
    end if
 
    if(present(eAll)) then
-      if(d%nTx .ne. eAll%nTx) then
+      if(.not. eAll%allocated) then
+         !call errStop('eAll has to be allocated on input to fwdPred')
+         call create_EMsolnMTX(d,eAll)
+      else if(d%nTx .ne. eAll%nTx) then
          call errStop('dimensions of eAll and d do not agree in fwdPred')
       endif
    endif
@@ -601,7 +604,7 @@ Contains
 
       ! compute forward solution
       call fwdSolve(iTx,iDT,e0)
-      
+             
       ! apply data functionals
       call dataMeas(e0,d%d(j)) 
 

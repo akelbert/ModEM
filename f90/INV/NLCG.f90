@@ -116,7 +116,7 @@ Contains
    call linComb_modelParam(ONE,m,ONE,m0,m)
    
    !  create data structure to save solutions for all transmitters
-   call create_EMSolnMTX(d,eAll)
+   ! call create_EMSolnMTX(d,eAll)
    
    ! initialize dHat
    dHat = d
@@ -124,7 +124,7 @@ Contains
    !  compute predicted data for current model parameter m 
    !   also sets up forward solutions for all transmitters in eAll
    call fwdPred(m,dHat,eAll)
-
+   
 !	call write_Z_ascii(fidWrite,cfile,nPer,periods,modes, &
 !			nSites,sites,allData)
  
@@ -175,6 +175,8 @@ Contains
    !  local variables
    type(dvecMTX)    :: res
    type(modelParam_t) :: m,JTd,CmJTd
+ 
+   ! integer :: j, Ny, NzEarth
    
    ! compute the smoothed model parameter vector	
    call CmSqrtMult(mHat,m)
@@ -182,6 +184,12 @@ Contains
    
    ! compute residual: res = d-dHat
    call linComb_DvecMTX(ONE,d,MinusONE,dHat,res)
+   
+   ! loop over transmitters:
+   !do j = 1,res%nTx
+   !   call getSize_modelParam(eAll%solns(j)%sigma,Ny,NzEarth)
+   !   print *, Ny, NzEarth
+   !end do
    
    ! multiply by J^T
    call CdInvMult(res)

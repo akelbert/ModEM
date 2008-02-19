@@ -14,11 +14,11 @@
 </extensions>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">
-<configuration artifactName="ModEM" buildProperties="" id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.2124300833" name="GCC Tool Chain" parent="org.eclipse.cdt.build.core.emptycfg">
+<configuration artifactName="ModEM" buildProperties="" description="" id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.2124300833" name="GCC Tool Chain" parent="org.eclipse.cdt.build.core.emptycfg">
 <folderInfo id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.2124300833.2110683924" name="/" resourcePath="">
 <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.1469524501" name="photran.managedbuild.toolchain.gnu.fortran.exe.debug" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.debug">
 <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.exe.debug.1096032036" name="Debug Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.exe.debug"/>
-<builder id="photran.managedbuild.target.gnu.builder.exe.debug.1502364704" managedBuildOn="false" name="Gnu Make.GCC Tool Chain" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
+<builder arguments="-f Makefile2d" buildPath="${workspace_loc:/f90}" command="make" id="photran.managedbuild.target.gnu.builder.exe.debug.1502364704" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
 <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.728056760" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug">
 <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.598969417" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 </tool>
@@ -117,6 +117,7 @@
 </profile>
 </storageModule>
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+<storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
 </cconfiguration>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">
