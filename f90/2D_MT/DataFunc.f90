@@ -94,7 +94,7 @@ Contains
   end subroutine deall_RXdict
 
 !******************************************************************************
-  subroutine nonLinDataFunc(ef,iDT,iRX,Z)
+  subroutine nonLinDataFunc(ef,Sigma,iDT,iRX,Z)
 
   !   2D MT impedance; gets mode from solution
   ! given electric field solution  (stored as type cvector)
@@ -103,7 +103,9 @@ Contains
   !   This now creates the required sparse vectors 
   !      (either for TE or TM, as appropriate) for impedance evaluation
 
-  type (EMsoln), intent(in)			:: ef    
+  type (EMsoln), intent(in)			:: ef
+  ! model parameter used to computed ef
+  type (modelParam_t), intent(in)   :: Sigma
   ! indicies into data type and receiver dictionaries
   integer, intent(in)				:: iDt, iRX
   !  complex data returned; note that (a) this will always be complex
@@ -140,7 +142,7 @@ Contains
      ! magnetic field
      call NodeInterpSetup2D(solnRHS_grid,x,mode,Lb)
      ! electric field
-     call EfromBSetUp_TM(solnRHS_grid,x,omega,ef%sigma,Le)
+     call EfromBSetUp_TM(solnRHS_grid,x,omega,Sigma,Le)
   else
      call errStop('option not available in nonLinDataFunc')
   endif
@@ -161,7 +163,7 @@ Contains
   end subroutine nonLinDataFunc
 
 !****************************************************************************
-  subroutine linDataFunc(e0,iDT,iRX,Lz,Qz)
+  subroutine linDataFunc(e0,Sigma0,iDT,iRX,Lz,Qz)
   !  given input background electric field solution,
   !  index into receiver dictionary for a single site (iRX)
   !  compute sparse complex vector giving coefficients
@@ -176,6 +178,8 @@ Contains
   
   !  electric field solutions are stored as type EMsoln
   type (EMsoln), intent(in)		:: e0
+  ! model parameter used to computed e0
+  type (modelParam_t), intent(in)   :: Sigma0
   ! indicies into data type and receiver dictionaries
   integer, intent(in)			:: iRX,iDT
   !  Lz, Qz will always be arrays in the calling
@@ -208,7 +212,7 @@ Contains
      ! magnetic field
      call NodeInterpSetup2D(SolnRHS_grid,x,mode,Lb)
      ! electric field
-     call EfromBSetUp_TM(SolnRHS_grid,x,omega,e0%sigma,Le,e0%vec,Qz(1)%L)
+     call EfromBSetUp_TM(SolnRHS_grid,x,omega,Sigma0,Le,e0%vec,Qz(1)%L)
   else
      call errStop('option not available in linDataFunc')
   endif

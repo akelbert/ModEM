@@ -112,7 +112,7 @@ Contains
          iRx = d%d(j)%rx(k)
 
          !  compute linearized data functional(s) : L
-         call linDataFunc(e0,iDT,iRx,L,Q)
+         call linDataFunc(e0,sigma0,iDT,iRx,L,Q)
 
          ! loop over functionals  (for TE/TM impedances nFunc = 1)
          do iFunc = 1,nFunc
@@ -126,14 +126,14 @@ Contains
             ! multiply by P^T (and add Q^T if appropriate)
             if(typeDict(iDT)%isComplex) then
                ii = ii + 2
-               call PmultT(e0,e,dsigma(ii-1),dsigma(ii))
+               call PmultT(e0,sigma0,e,dsigma(ii-1),dsigma(ii))
                if(calcQ) then
                   call EMSparseQtoModelParam(C_ONE,Q(iFunc),sigma0, &
 			dsigma(ii-1),dsigma(ii))
                endif
             else
                ii = ii+1
-               call PmultT(e0,e,dsigma(ii))
+               call PmultT(e0,sigma0,e,dsigma(ii))
                if(calcQ) then
                   call EMSparseQtoModelParam(C_ONE,Q(iFunc),sigma0,dsigma(ii))
                endif
@@ -207,16 +207,16 @@ Contains
       !  compute rhs (stored in comb) for forward sensitivity 
       !  calculation, using conductivity perturbations and 
       !  background soln:
-      call Pmult(e0,delSig,comb)
+      call Pmult(e0,sigma0,delSig,comb)
 
       ! solve forward problem with source in comb
       call sensSolve(iTx,iDT,FWD,comb,e)
 
       ! finally apply linearized data functionals
       if(TypeDict(iDT)%calcQ) then
-         call linDataMeas(e0,e,d%d(j),delSig) 
+         call linDataMeas(e0,sigma0,e,d%d(j),delSig) 
       else 
-	 call linDataMeas(e0,e,d%d(j))
+	 call linDataMeas(e0,sigma0,e,d%d(j))
       endif 
 
    enddo
@@ -313,10 +313,10 @@ Contains
             !  BUT: linDataComb overwrites comb ... so zero this
             !       for every transmitter
           call zero_EMrhs(comb)
-          call linDataComb(e0,d%d(j),comb,Qcomb) 
+          call linDataComb(e0,sigma0,d%d(j),comb,Qcomb) 
       else
           call zero_EMrhs(comb)
-          call linDataComb(e0,d%d(j),comb)
+          call linDataComb(e0,sigma0,d%d(j),comb)
       endif
       ! solve forward problem with source in comb
       call sensSolve(iTx,iDT,TRN,comb,e)
@@ -325,7 +325,7 @@ Contains
       !  HERE PmultT overwrites sigmaTemp
       !  NOTE: here we throw away imaginary part, even for complex
       !     data (conceivably might want to save this in some cases!)
-      call PmultT(e0,e,sigmaTemp)
+      call PmultT(e0,sigma0,e,sigmaTemp)
       call linComb_modelParam(ONE,dsigma,ONE,sigmaTemp,dsigma)
    enddo
  
@@ -413,16 +413,16 @@ Contains
       !  compute rhs (stored in comb) for forward sensitivity 
       !  calculation, using conductivity perturbations and 
       !  background soln:
-      call Pmult(e0,delSig(j),comb)
+      call Pmult(e0,sigma0,delSig(j),comb)
 
       ! solve forward problem with source in comb
       call sensSolve(iTx,iDT,FWD,comb,e)
 
       ! finally apply linearized data functionals
       if(TypeDict(iDT)%calcQ) then
-         call linDataMeas(e0,e,d%d(j),delSig(j)) 
+         call linDataMeas(e0,sigma0,e,d%d(j),delSig(j)) 
       else 
-	 call linDataMeas(e0,e,d%d(j))
+	 call linDataMeas(e0,sigma0,e,d%d(j))
       endif 
 
    enddo
@@ -521,9 +521,9 @@ Contains
       !   parameter also compute analagous comb in parameter space
       call zero_EMrhs(comb)
       if(typeDict(iDT)%calcQ) then
-         call linDataComb(e0,d%d(j),comb,Qcomb) 
+         call linDataComb(e0,sigma0,d%d(j),comb,Qcomb) 
       else
-         call linDataComb(e0,d%d(j),comb) 
+         call linDataComb(e0,sigma0,d%d(j),comb) 
       endif
 
       ! solve forward problem with source in comb
@@ -533,7 +533,7 @@ Contains
       !  HERE PmultT overwrites sigmaTemp
       !  NOTE: here we throw away imaginary part, even for complex
       !     data (conceivably might want to save this in some cases!)
-      call PmultT(e0,e,dsigma(j))
+      call PmultT(e0,sigma0,e,dsigma(j))
       if(typeDict(iDT)%calcQ) then
          !  add Qcomb
          call linComb_ModelParam(ONE,dsigma(j),ONE,Qcomb,dsigma(j))
@@ -606,7 +606,7 @@ Contains
       call fwdSolve(iTx,iDT,e0)
              
       ! apply data functionals
-      call dataMeas(e0,d%d(j)) 
+      call dataMeas(e0,sigma,d%d(j)) 
 
       if(present(eAll)) then
          call copy_EMsoln(eAll%solns(j),e0)

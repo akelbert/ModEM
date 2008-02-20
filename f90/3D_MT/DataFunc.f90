@@ -81,7 +81,7 @@ Contains
   end subroutine RXdictSetUp
 
 !******************************************************************************
-  subroutine nonLinDataFunc(ef,iDT,iRX,Z,Binv)
+  subroutine nonLinDataFunc(ef,Sigma,iDT,iRX,Z,Binv)
   ! given electric field solutions (both modes--and note
   !    that the solution knows about the transmitter used),
   ! and indices into data types and receiver dictionaries for one
@@ -91,6 +91,7 @@ Contains
 
   implicit none
   type (EMsoln), intent(in)		:: ef
+  type (modelParam_t), intent(in) :: Sigma ! used to compute ef
   integer, intent(in)			:: iDT
   integer, intent(in) 			:: iRX
   complex(kind=selectedPrec), intent(inout)	:: Z(*)
@@ -187,7 +188,7 @@ Contains
   end subroutine nonLinDataFunc
 !
 !****************************************************************************
-  subroutine linDataFunc(e0,iDT,iRX,L,Q)
+  subroutine linDataFunc(e0,Sigma0,iDT,iRX,L,Q)
   !  given input background electric field solution (both modes; e0),
   !  indices into data type/receiver dictionaries
   !  compute array of sparse complex vectors giving coefficients
@@ -196,8 +197,9 @@ Contains
   !     derivative of data functional with respect to model paramters
   !         (NOT YET IMPLEMENTED FOR 3D MT!!!!)
   
-  type (EMsoln), intent(in)		:: e0
-  integer, intent(in)			:: iDT, iRX
+  type (EMsoln), intent(in)		   :: e0
+  type (modelParam_t), intent(in)  :: Sigma0
+  integer, intent(in)			   :: iDT, iRX
   !   NOTE: Lz and Qz have to be declared as arrays for
   !     consistency with calling program (in general the
   !     number nFunc of complex data functionals that will
@@ -231,7 +233,7 @@ Contains
               IJ(2,2*(i-1)+j) = j
            enddo
         enddo
-        Call nonlinDataFunc(e0,Full_Impedance,iRX,Z,Binv)
+        Call nonlinDataFunc(e0,Sigma0,Full_Impedance,iRX,Z,Binv)
      case(Impedance_Plus_Hz)
         nComp = 6;
         ComputeHz = .true.
@@ -241,7 +243,7 @@ Contains
               IJ(2,2*(i-1)+j) = j
            enddo
         enddo
-        Call nonlinDataFunc(e0,Impedance_Plus_Hz,iRX,Z,Binv)
+        Call nonlinDataFunc(e0,Sigma0,Impedance_Plus_Hz,iRX,Z,Binv)
      case(Off_Diagonal_Impedance)
         nComp = 2
         ComputeHz = .false.
@@ -249,7 +251,7 @@ Contains
         IJ(2,1) = 2
         IJ(1,2) = 2
         IJ(2,2) = 1
-        Call nonlinDataFunc(e0,Full_Impedance,iRX,Z,Binv)
+        Call nonlinDataFunc(e0,Sigma0,Full_Impedance,iRX,Z,Binv)
   endselect
 
   ! Then set up interpolation functionals for Ex, Ey, Bx, By, Bz

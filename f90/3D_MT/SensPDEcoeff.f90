@@ -25,27 +25,28 @@ module senspdecoeff
    Contains
 
    !**********************************************************************
-   subroutine Pmult(e0,dsigma,e)
+   subroutine Pmult(e0,sigma0,dsigma,e)
    !   mapping from modelParam dsigma to source for forward problem
    !    (needed to calculate J*dsigma, where J is sensitivity)
    !   e0 is input background field solution;
    !    e is output ... used for forcing, created before calling 
    !    this routine
 
-   type(EMsoln), intent(in)		:: e0
-   type(modelParam_t), intent(in)		:: dsigma
+   type(EMsoln), intent(in)		    :: e0
+   type(modelParam_t), intent(in)	:: sigma0 ! used to compute e0
+   type(modelParam_t), intent(in)	:: dsigma
    type(EMrhs), intent(inout)		:: e
 
    !  local variables
    complex(kind=selectedPrec)		:: minus_i_omega_mu
-   type(rvector)			:: temp
-   integer				:: k
+   type(rvector)			        :: temp
+   integer				            :: k
    
    minus_i_omega_mu = cmplx(0.,-isign*mu*e0%omega,kind=selectedPrec)
    call create_rvector(e0%grid,temp,EDGE)
 
    ! map dsigma to edges, storing in array temp
-   call ModelParamToEdge(dsigma,temp,e0%sigma)
+   call ModelParamToEdge(dsigma,temp,sigma0)
 
    !  multiply temp by i_omeag_mu*e0, put result in e
    do k = 1,2
@@ -58,7 +59,7 @@ module senspdecoeff
    end subroutine Pmult
 
    !**********************************************************************
-   subroutine PmultT(e0,e,dsigmaReal,dsigmaImag)
+   subroutine PmultT(e0,sigma0,e,dsigmaReal,dsigmaImag)
    !   transpose of Pmult, mapping from adjoint soln e to dsigma
    !        e -> dsigma
    !   e0 is input background field solution
@@ -67,6 +68,7 @@ module senspdecoeff
    !        for real and imaginary parts; imaginary output is optional ...
 
    type(EMsoln), intent(in)			:: e0
+   type(modelParam_t), intent(in)	:: sigma0 ! used to compute e0
    type(EMsoln), intent(in)			:: e
    type(modelParam_t), intent(inout)		:: dsigmaReal
    type(modelParam_t), intent(inout),optional	:: dsigmaImag
@@ -92,12 +94,12 @@ module senspdecoeff
 
    ! map real/imag parts onto parameter space
    call getReal_cvector(Ctemp(1),temp)
-   call EdgeToModelParam(temp,dsigmaReal,e0%sigma)
+   call EdgeToModelParam(temp,dsigmaReal,sigma0)
 
    if(present(dsigmaImag)) then
       ! also compute imaginary part
       call getImag_cvector(Ctemp(1),temp)
-      call EdgeToModelParam(temp,dsigmaImag,e0%sigma)
+      call EdgeToModelParam(temp,dsigmaImag,sigma0)
    endif
    
    call deall_rvector(temp)

@@ -155,12 +155,10 @@ Contains
 
       !  allocate for background solution
       call create_EMsoln(SolnRHS_grid,gridType,e0)
-      e0%sigma => sigma
 
       if(initForSens) then
          !  allocate for sensitivity solution, RHS
          call create_EMsoln(solnRHS_grid,gridType,e)
-         e%sigma => sigma
          comb%mode = mode
          comb%nonzero_source = .true.
          comb%nonzero_bc = .false.

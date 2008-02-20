@@ -22,9 +22,7 @@ module senspdecoeff
 
    !  routines that are public/private
    public	::  Pmult, PmultT
-   !   routines listed below could be merged into Pmult, PmultT
-   !    don't need to be separate!
-   private	::  P_TE, P_TE_T, P_TM, P_TM_T
+
    private	::  curlB, curlE, curlE_T
 
    Contains
@@ -146,203 +144,136 @@ module senspdecoeff
    end subroutine curlE_T
 
    !**********************************************************************
-   subroutine P_TE(e0,dsigma,e)
-   !   mapping from EarthCond parameter dsigma to source for TE prob;
+   subroutine Pmult(e0,sigma0,dsigma,e)
+   !  generic Pmult (sorts out TE vs. TM from e0%mode):
+   !   mapping from modelParam parameter dsigma to source;
    !        dsigma -> e
    !   e0 is input background field solution;
-   !    (e is output ... used for forcing, but at present we store
-   !     this as type cvector, and copy into forcing later;
-   !    The output is allocated before calling this routine
-   !   Calls NodeToCell  ... should this be renamed???
-
-   type(EMsoln), intent(in)		:: e0
-   type(modelParam_t), intent(in)		:: dsigma
-   type(EMrhs), intent(inout)		:: e
-
-   !  local variables
-   complex(kind=selectedPrec)		:: i_omega_mu
-   
-   i_omega_mu = cmplx(0.,isign*mu*e0%omega,kind=selectedPrec)
-   e%source%v = C_ZERO
-   call CellToNode(dsigma,e%source,e0%sigma)
-
-   !  multiply by i * omega * mu
-   e%source%v = e%source%v*e0%vec%v*i_omega_mu
-
-   end subroutine P_TE
-
-   !**********************************************************************
-   subroutine P_TE_T(e0,e,dsigmaReal,dsigmaImag)
-   !   transpose of P_TE, mapping from adjoint soln e to sigma
-   !        e -> dsigma
-   !   e0 is input background field solution
-   !   NOTE: because the model parameter is real, while e is complex
-   !       the adjoint mapping returns separate data structures
-   !        for real and imaginary parts; imaginary output is optional ...
-
-   type(EMsoln), intent(in)			:: e0
-   type(EMsoln), intent(in)			:: e
-   type(modelParam_t), intent(inout)		:: dsigmaReal
-   type(modelParam_t), intent(inout),optional	:: dsigmaImag
-
-   !  local variables
-   complex(kind=selectedPrec)			:: i_omega_mu
-   type(cvector)					:: temp
-   
-   i_omega_mu = cmplx(0.,isign*mu*e0%omega,kind=selectedPrec)
-
-   call create_cvector(e0%vec%grid,e0%vec%gridType,temp)
-   ! multiply backward solution by i_omega_mu * e0
-   ! map real/imag parts onto parameter space
-   temp%v = real(e%vec%v*e0%vec%v*i_omega_mu)
-
-   call NodeToCell(temp,dsigmaReal,e0%sigma)
-
-   if(present(dsigmaImag)) then
-      ! also compute imaginary part
-      temp%v = imag(e%vec%v*e0%vec%v*i_omega_mu)
-      call NodeToCell(temp,dsigmaImag,e0%sigma)
-   endif
-   
-   call deall_cvector(temp)
-
-   end subroutine P_TE_T
-
-   !**********************************************************************
-   subroutine P_TM(b0,dsigma,b)
-   !   mapping from EarthCond parameter sigma to source for TM prob;
-   !        dsigma -> b
-   !   b0 is input background field solution;
-   !   Allocate output b before calling
-   !   Calls param_to_face_TE, etc
-
-   type(EMsoln), intent(in)		:: b0
-   type(modelParam_t), intent(in)		:: dsigma
-   type(EMrhs), intent(inout)		:: b
-
-   !  local variables
-   character*80                 	:: gridType
-   type(cvector)                 	:: Jy,Jz,CJy,CJz
-
-   !  allocate temporary data structures
-   gridType = 'FACE EARTH'
-   call create_cvector(b0%grid,gridType,Jy)
-   call create_cvector(b0%grid,gridType,Jz)
-   call create_cvector(b0%grid,gridType,CJy)
-   call create_cvector(b0%grid,gridType,CJz)
-
-   call CellToFace(dsigma,b0%sigma, CJy,CJz)
-
-   call curlB(b0%vec,Jy,Jz)
-   CJy%v = CJy%v*Jy%v
-   CJz%v = CJz%v*Jz%v
-   call curlE(CJy,CJz,b%source)
-   !   If the differential operator were S = del x rho del x +- i wt
-   !    (as assumed in the derivation of P for TM mode in my notes)
-   !   then the sign of the output b%v should be reversed.
-   !   However, as implemented in WS TM forward solver the differential
-   !    operator is actually -S (this is the usual way that the
-   !       TM operator is written for 2D MT).  Hence the sign of b%v
-   !    should NOT be reversed here
-
-   call deall_cvector(Jy)
-   call deall_cvector(Jz)
-   call deall_cvector(CJy)
-   call deall_cvector(CJz)
-
-   end subroutine P_TM
-
-   !**********************************************************************
-   subroutine P_TM_T(b0,b,dsigmaReal,dsigmaImag)
-   !   Transpose of P_TM, mapping adjoint soln b to sigma
-   !         b -> dsigma
-   !   b0 is input background field solution;
-   !   Calls  ...
-
-   type(EMsoln), intent(in)			:: b0
-   type(EMsoln), intent(in)			:: b
-   type(modelParam_t), intent(inout)		:: dsigmaReal
-   type(modelParam_t), intent(inout), optional	:: dsigmaImag
-
-   !  local variables
-   character*80					:: gridType
-   type(cvector)					:: Jy,Jz,CJy,CJz
-
-   !  allocate temporary data structures
-   gridType = 'FACE EARTH'
-   call create_cvector(b0%grid,gridType,Jy)
-   call create_cvector(b0%grid,gridType,Jz)
-   call create_cvector(b0%grid,gridType,CJy)
-   call create_cvector(b0%grid,gridType,CJz)
-
-   !  compute curls
-   call curlE_T(b%vec,CJy,CJz)
-   call curlB(b0%vec,Jy,Jz)
-   CJy%v = CJy%v*Jy%v
-   CJz%v = CJz%v*Jz%v
-
-   ! map from face back to model parameter space
-   Jy%v = real(CJy%v)
-   Jz%v = real(CJz%v)
-   call FaceToCell(Jy,Jz,b0%sigma,dsigmaReal)
-
-   if(present(dsigmaImag)) then
-      Jy%v = imag(CJy%v)
-      Jz%v = imag(CJz%v)
-      call FaceToCell(Jy,Jz,b0%sigma,dsigmaImag)
-   endif
-
-   call deall_cvector(Jy)
-   call deall_cvector(Jz)
-   call deall_cvector(CJy)
-   call deall_cvector(CJz)
-
-   end subroutine P_TM_T
-
-   !**********************************************************************
-   subroutine Pmult(e0,dsigma,e)
-   !  generic Pmult: sorts out TE vs. TM from itx,
-   !   and calls appropriate P_TE or P_TM routine
-   !  (probably should be recoded to get rid of separate
-   !   TE/TM routines)
+   !    (e is output used for forcing;
+   !    The output is allocated before calling this routine)
 
    type(EMsoln), intent(in)             :: e0
+   type(modelParam_t), intent(in)	    :: sigma0 ! used to compute e0
    type(modelParam_t), intent(in)		:: dsigma
    type(EMrhs), intent(inout)          	:: e
+   !  local variables
+   complex(kind=selectedPrec)		    :: i_omega_mu
+   character*80                 	    :: gridType
+   type(cvector)                 	    :: Jy,Jz,CJy,CJz
 
    if(e0%mode.eq.'TE') then
-      call P_TE(e0,dsigma,e)
+   
+	   i_omega_mu = cmplx(0.,isign*mu*e0%omega,kind=selectedPrec)
+	   e%source%v = C_ZERO
+	   call CellToNode(dsigma,e%source,sigma0)
+	
+	   !  multiply by i * omega * mu
+	   e%source%v = e%source%v*e0%vec%v*i_omega_mu
+
    else
-      call P_TM(e0,dsigma,e)
+ 
+	   !  allocate temporary data structures
+	   gridType = 'FACE EARTH'
+	   call create_cvector(e0%grid,gridType,Jy)
+	   call create_cvector(e0%grid,gridType,Jz)
+	   call create_cvector(e0%grid,gridType,CJy)
+	   call create_cvector(e0%grid,gridType,CJz)
+	
+	   call CellToFace(dsigma,sigma0, CJy,CJz)
+	
+	   call curlB(e0%vec,Jy,Jz)
+	   CJy%v = CJy%v*Jy%v
+	   CJz%v = CJz%v*Jz%v
+	   call curlE(CJy,CJz,e%source)
+	   !   If the differential operator were S = del x rho del x +- i wt
+	   !    (as assumed in the derivation of P for TM mode in my notes)
+	   !   then the sign of the output e%v should be reversed.
+	   !   However, as implemented in WS TM forward solver the differential
+	   !    operator is actually -S (this is the usual way that the
+	   !       TM operator is written for 2D MT).  Hence the sign of e%v
+	   !    should NOT be reversed here
+	
+	   call deall_cvector(Jy)
+	   call deall_cvector(Jz)
+	   call deall_cvector(CJy)
+	   call deall_cvector(CJz)
+   
    endif
    
    end subroutine Pmult
 
 !**********************************************************************
-   subroutine PmultT(e0,e,dsigmaReal,dsigmaImag)
-   !  generic PmultT: sorts our TE vs. TM from itx,
-   !   and calls appropriate P_TE_T or P_TM_T routine
-   !  (probably should be recoded to get rid of separate
-   !   TE/TM routines)
+   subroutine PmultT(e0,sigma0,e,dsigmaReal,dsigmaImag)
+   !  generic PmultT (sorts out TE vs. TM from e0%mode):
+   !   transpose of Pmult, mapping from adjoint soln e to sigma
+   !   mapping from modelParam parameter dsigma to source;
+   !        e -> dsigma
+   !   e0 is input background field solution;
+   !   NOTE: because the model parameter is real, while e is complex
+   !       the adjoint mapping returns separate data structures
+   !        for real and imaginary parts; imaginary output is optional ...
 
    type(EMsoln), intent(in)             :: e0
+   type(modelParam_t), intent(in)	    :: sigma0 ! used to compute e0
    type(EMsoln), intent(in)             :: e
    type(modelParam_t), intent(inout)               :: dsigmaReal
    type(modelParam_t), intent(inout),optional      :: dsigmaImag
+   !  local variables
+   complex(kind=selectedPrec)			:: i_omega_mu
+   character*80					        :: gridType
+   type(cvector)					    :: Jy,Jz,CJy,CJz
+   type(cvector)					    :: temp
 
+   if(e0%mode.eq.'TE') then
+   
+	   i_omega_mu = cmplx(0.,isign*mu*e0%omega,kind=selectedPrec)
+	
+	   call create_cvector(e0%vec%grid,e0%vec%gridType,temp)
+	   ! multiply backward solution by i_omega_mu * e0
+	   ! map real/imag parts onto parameter space
+	   temp%v = real(e%vec%v*e0%vec%v*i_omega_mu)
+	
+	   call NodeToCell(temp,dsigmaReal,sigma0)
+	
+	   if(present(dsigmaImag)) then
+	      ! also compute imaginary part
+	      temp%v = imag(e%vec%v*e0%vec%v*i_omega_mu)
+	      call NodeToCell(temp,dsigmaImag,sigma0)
+	   endif
+	   
+	   call deall_cvector(temp)
 
-   if(present(dsigmaImag)) then
-      if(e0%mode.eq.'TE') then
-         call P_TE_T(e0,e,dsigmaReal,dsigmaImag)
-      else
-         call P_TM_T(e0,e,dsigmaReal,dsigmaImag)
-      endif
    else
-      if(e0%mode.eq.'TE') then
-         call P_TE_T(e0,e,dsigmaReal)
-      else
-         call P_TM_T(e0,e,dsigmaReal)
-      endif
+
+	   !  allocate temporary data structures
+	   gridType = 'FACE EARTH'
+	   call create_cvector(e0%grid,gridType,Jy)
+	   call create_cvector(e0%grid,gridType,Jz)
+	   call create_cvector(e0%grid,gridType,CJy)
+	   call create_cvector(e0%grid,gridType,CJz)
+	
+	   !  compute curls
+	   call curlE_T(e%vec,CJy,CJz)
+	   call curlB(e0%vec,Jy,Jz)
+	   CJy%v = CJy%v*Jy%v
+	   CJz%v = CJz%v*Jz%v
+	
+	   ! map from face back to model parameter space
+	   Jy%v = real(CJy%v)
+	   Jz%v = real(CJz%v)
+	   call FaceToCell(Jy,Jz,sigma0,dsigmaReal)
+	
+	   if(present(dsigmaImag)) then
+	      Jy%v = imag(CJy%v)
+	      Jz%v = imag(CJz%v)
+	      call FaceToCell(Jy,Jz,sigma0,dsigmaImag)
+	   endif
+	
+	   call deall_cvector(Jy)
+	   call deall_cvector(Jz)
+	   call deall_cvector(CJy)
+	   call deall_cvector(CJz)
+
    endif
 
    end subroutine PmultT

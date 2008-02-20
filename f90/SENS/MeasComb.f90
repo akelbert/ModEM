@@ -30,8 +30,9 @@ implicit none
 
 Contains
 
-  subroutine linDataMeas(e0,ef,d,dSigma)
-  ! given measured and  background electric field solutions (ef,e0)
+  subroutine linDataMeas(e0,Sigma0,ef,d,dSigma)
+  ! given the background model parameter (Sigma0) and both
+  ! measured and  background electric field solutions (ef,e0)
   ! evaluate linearized data functionals for all sites represented
   !  in a dvec object.
 
@@ -41,6 +42,8 @@ Contains
   ! input.  Predicted impedances are computed using
   ! these and the input electric field solutions
   type (dvec), intent(inout)            	:: d
+  !  background model parameter
+  type (modelParam_t), intent(in)	        :: Sigma0
   !  optional input of conductivity perturbation dSigma used to
   !   solve for ef, needed if data functional depends on input parameter
   !   and this routine is used to multiply J (sensitivity matrix) times
@@ -96,11 +99,11 @@ Contains
      !    if required
      !   linDataFunc returns one Lz (and Qz if appropriate)
      !    for each of nFunc functionals
-     call linDataFunc(e0,iDT,d%rx(iSite),Lz,Qz)
+     call linDataFunc(e0,Sigma0,iDT,d%rx(iSite),Lz,Qz)
      if((iSite .eq. 1).and.calcQ) then
-        call copy_ModelParam(sigmaQreal,e0%sigma)
+        call copy_ModelParam(sigmaQreal,Sigma0)
         if(typeDict(iDT)%isComplex) then
-           call copy_ModelParam(sigmaQimag,e0%sigma)
+           call copy_ModelParam(sigmaQimag,Sigma0)
         endif
      endif 
      iComp = 1
@@ -115,7 +118,7 @@ Contains
               call zero_ModelParam(sigmaQreal)
               call zero_ModelParam(sigmaQimag)
               call EMSparseQtoModelParam(C_ONE,Qz(iFunc), &
-			e0%sigma,sigmaQreal,sigmaQimag)
+			    Sigma0,sigmaQreal,sigmaQimag)
               d%data(iComp-2,iSite) = d%data(iComp-2,iSite) &
 	      		+ dotProd_modelParam(sigmaQreal,dSigma)	
               d%data(iComp-1,iSite) = d%data(iComp-1,iSite) &
@@ -126,7 +129,7 @@ Contains
            iComp = iComp + 1
            if(calcQ) then
               call zero_ModelParam(sigmaQreal)
-              call EMSparseQtoModelParam(C_ONE,Qz(iFunc),e0%sigma,sigmaQreal)
+              call EMSparseQtoModelParam(C_ONE,Qz(iFunc),Sigma0,sigmaQreal)
               d%data(iComp-1,iSite) = d%data(iComp-1,iSite) +  &
 			dotProd_modelParam(sigmaQreal,dSigma)
            endif
@@ -150,7 +153,7 @@ Contains
   end subroutine linDataMeas
 
 !*****************************************************************************
-  subroutine linDataComb(e0,d,comb,Qcomb)
+  subroutine linDataComb(e0,Sigma0,d,comb,Qcomb)
 
   ! given background electric field solution
   ! and a dvec object (element of data space containing
@@ -171,6 +174,8 @@ Contains
   !   information is obtained from the dictionaries using indices 
   !    stored in d%rx, d%tx, d%dataType
 
+  ! background model parameter
+  type (modelParam_t), intent(in)  :: Sigma0
   !  electric field solutions are stored as type EMsoln
   type (EMsoln), intent(in)     :: e0
   ! d provides indices into receiver dictionary on
@@ -215,7 +220,7 @@ Contains
      ! compute sparse vector representations of linearized
      ! data functionals for transfer function
      ! elements at one site
-     call linDataFunc(e0,iDT,d%rx(iSite),Lz,Qz)
+     call linDataFunc(e0,Sigma0,iDT,d%rx(iSite),Lz,Qz)
      iComp = 1
      do iFunc  = 1, nFunc
         if(typeDict(iDT)%isComplex) then
@@ -231,7 +236,7 @@ Contains
         call add_EMsparseEMrhs(Z,Lz(iFunc),comb)
         if(calcQ) then
            ! adds to input Qcomb (type modelParam)
-           call EMSparseQtoModelParam(Z,Qz(iFunc),e0%sigma,Qcomb)
+           call EMSparseQtoModelParam(Z,Qz(iFunc),Sigma0,Qcomb)
         endif
      enddo
    enddo
@@ -249,7 +254,7 @@ Contains
   end subroutine linDataComb
 
 !****************************************************************************
-  subroutine dataMeas(ef,d)
+  subroutine dataMeas(ef,Sigma,d)
   ! given solution for a single TX ef compute predicted data 
   !  at all sites, returning result in d
   !   Data type information is obtained from typeDict, 
@@ -261,6 +266,8 @@ Contains
   ! input. Predicted impedances are computed using
   ! these and the input electric field solutions
   type (dvec), intent(inout)    :: d
+  ! model parameter used to compute ef
+  type (modelParam_t), intent(in)  :: Sigma
 
   !  local variables
   integer               ::  iSite, ncomp,nFunc,iDT,iComp, iFunc
@@ -283,7 +290,7 @@ Contains
 
   ! loop over sites
   do iSite = 1,d%nSite
-     call nonLinDataFunc(ef,iDT,d%rx(iSite),Z)
+     call nonLinDataFunc(ef,Sigma,iDT,d%rx(iSite),Z)
      !  copy responses in Z (possibly complex, possibly multiple
      !         components) into dvec object d
      !  Loop over components

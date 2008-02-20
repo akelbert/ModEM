@@ -128,11 +128,8 @@ contains
        if(associated(e%grid)) then
            nullify(e%grid)
        endif
-       if(associated(e%sigma)) then
-           nullify(e%sigma)
-       endif
 
-			 e%allocated = .false.
+       e%allocated = .false.
 
      end subroutine deall_EMsoln
 
@@ -153,7 +150,6 @@ contains
        eOut%omega = eIn%omega
        eOut%period = eIn%period
        eOut%tx = eIn%tx
-       eOut%sigma => eIn%sigma
        eOut%grid => eIn%grid
 
      end subroutine copy_EMsoln
