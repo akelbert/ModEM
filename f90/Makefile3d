@@ -21,7 +21,7 @@ FFLAGS = -g -ftrace=frame -fbounds-check
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
-OBJ = math_constants.o Grid3D.o utilities.o sg_scalar.o sg_vector.o sg_sparse_vector.o ModelParameter.o DataSpace.o sg_boundary.o SolnRHS.o sg_diff_oper.o modelOperator3D.o solver.o EMsolve3D.o DataGridInfo.o InterpEB.o DataFunc.o WSfwd2Dpar.o WSutils.o WSfwd1Dmod.o WSfwd2Dmod.o FwdTEmod.o boundary_ws.o EMsolver.o IoMod.o MeasComb.o SensPDEcoeff.o SensMatrix.o mtInvSetup.o NLCG.o Test3D.o 
+OBJ = math_constants.o Grid3D.o utilities.o sg_scalar.o sg_vector.o sg_sparse_vector.o ModelParameter.o DataSpace.o sg_boundary.o SolnRHS.o sg_diff_oper.o WSfwd2Dpar.o WSutils.o WSfwd1Dmod.o WSfwd2Dmod.o FwdTEmod.o boundary_ws.o modelOperator3D.o solver.o EMsolve3D.o DataGridInfo.o InterpEB.o DataFunc.o EMsolver.o IoMod.o MeasComb.o SensPDEcoeff.o SensMatrix.o mtInvSetup.o NLCG.o Test3D.o 
 
 
 all: Test3D 
@@ -59,29 +59,11 @@ DataSpace.o:SENS/DataSpace.f90 utilities.o math_constants.o
 sg_boundary.o:3D_MT/EMfield/sg_boundary.f90 math_constants.o Grid3D.o sg_vector.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/EMfield/sg_boundary.f90 
 
-SolnRHS.o:3D_MT/SolnRHS.f90 math_constants.o ModelParameter.o sg_vector.o sg_boundary.o sg_sparse_vector.o 
+SolnRHS.o:3D_MT/SolnRHS.f90 math_constants.o utilities.o ModelParameter.o sg_vector.o sg_boundary.o sg_sparse_vector.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/SolnRHS.f90 
 
 sg_diff_oper.o:3D_MT/EMfield/sg_diff_oper.f90 math_constants.o sg_vector.o sg_scalar.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/EMfield/sg_diff_oper.f90 
-
-modelOperator3D.o:3D_MT/FWD/modelOperator3D.f90 math_constants.o utilities.o Grid3D.o sg_vector.o sg_boundary.o ModelParameter.o 
-	 $(F90) -c $(FFLAGS) 3D_MT/FWD/modelOperator3D.f90 
-
-solver.o:3D_MT/FWD/solver.f90 math_constants.o Grid3D.o sg_scalar.o sg_vector.o sg_scalar.o modelOperator3D.o sg_vector.o modelOperator3D.o 
-	 $(F90) -c $(FFLAGS) 3D_MT/FWD/solver.f90 
-
-EMsolve3D.o:3D_MT/FWD/EMsolve3D.f90 sg_boundary.o sg_diff_oper.o sg_sparse_vector.o modelOperator3D.o solver.o SolnRHS.o sg_vector.o sg_scalar.o 
-	 $(F90) -c $(FFLAGS) 3D_MT/FWD/EMsolve3D.f90 
-
-DataGridInfo.o:3D_MT/DataGridInfo.f90 math_constants.o Grid3D.o 
-	 $(F90) -c $(FFLAGS) 3D_MT/DataGridInfo.f90 
-
-InterpEB.o:3D_MT/InterpEB.f90 utilities.o sg_sparse_vector.o ModelParameter.o 
-	 $(F90) -c $(FFLAGS) 3D_MT/InterpEB.f90 
-
-DataFunc.o:3D_MT/DataFunc.f90 InterpEB.o SolnRHS.o math_constants.o DataGridInfo.o 
-	 $(F90) -c $(FFLAGS) 3D_MT/DataFunc.f90 
 
 WSfwd2Dpar.o:3D_MT/FWD/Mod2d/WSfwd2Dpar.f90 math_constants.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/FWD/Mod2d/WSfwd2Dpar.f90 
@@ -98,10 +80,28 @@ WSfwd2Dmod.o:3D_MT/FWD/Mod2d/WSfwd2Dmod.f90 WSfwd1Dmod.o
 FwdTEmod.o:3D_MT/FWD/Mod2d/FwdTEmod.f90 WSfwd2Dmod.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/FWD/Mod2d/FwdTEmod.f90 
 
-boundary_ws.o:3D_MT/FWD/boundary_ws.f90 sg_vector.o sg_boundary.o FwdTEmod.o ModelParameter.o 
+boundary_ws.o:3D_MT/FWD/boundary_ws.f90 sg_vector.o sg_scalar.o sg_boundary.o FwdTEmod.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/FWD/boundary_ws.f90 
 
-EMsolver.o:3D_MT/EMsolver.f90 math_constants.o DataFunc.o DataSpace.o EMsolve3D.o boundary_ws.o 
+modelOperator3D.o:3D_MT/FWD/modelOperator3D.f90 math_constants.o utilities.o Grid3D.o sg_vector.o sg_boundary.o ModelParameter.o boundary_ws.o 
+	 $(F90) -c $(FFLAGS) 3D_MT/FWD/modelOperator3D.f90 
+
+solver.o:3D_MT/FWD/solver.f90 math_constants.o sg_scalar.o modelOperator3D.o sg_vector.o modelOperator3D.o 
+	 $(F90) -c $(FFLAGS) 3D_MT/FWD/solver.f90 
+
+EMsolve3D.o:3D_MT/FWD/EMsolve3D.f90 sg_boundary.o sg_diff_oper.o sg_sparse_vector.o modelOperator3D.o solver.o SolnRHS.o sg_vector.o sg_scalar.o 
+	 $(F90) -c $(FFLAGS) 3D_MT/FWD/EMsolve3D.f90 
+
+DataGridInfo.o:3D_MT/DataGridInfo.f90 math_constants.o Grid3D.o 
+	 $(F90) -c $(FFLAGS) 3D_MT/DataGridInfo.f90 
+
+InterpEB.o:3D_MT/InterpEB.f90 utilities.o sg_sparse_vector.o ModelParameter.o 
+	 $(F90) -c $(FFLAGS) 3D_MT/InterpEB.f90 
+
+DataFunc.o:3D_MT/DataFunc.f90 InterpEB.o SolnRHS.o math_constants.o DataGridInfo.o 
+	 $(F90) -c $(FFLAGS) 3D_MT/DataFunc.f90 
+
+EMsolver.o:3D_MT/EMsolver.f90 math_constants.o DataFunc.o DataSpace.o EMsolve3D.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/EMsolver.f90 
 
 IoMod.o:3D_MT/IoMod.f90 Grid3D.o math_constants.o EMsolve3D.o DataSpace.o DataGridInfo.o EMsolver.o 

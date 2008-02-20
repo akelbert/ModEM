@@ -398,6 +398,9 @@ Contains
 			! check that lambda is still at a reasonable value
 			if (lambda < iterControl%lambdaTol) then
 				write(*,'(a55)') 'Unable to get out of a local minimum. Exiting...'
+				! multiply by C^{1/2} and add m_0
+                call CmSqrtMult(mHat,m_minus_m0)
+                call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)	
 				return
 			end if
 	  	! restart

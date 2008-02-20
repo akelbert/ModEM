@@ -3,10 +3,10 @@
 ! subroutine bound3d (in boundary.f)
 module boundary_ws
 
-  use sg_vector		! inherits stag_grid through sg_vector
+  use sg_vector
+  use sg_scalar
   use sg_boundary
   use fwdtemod
-  use modelParameter
   
   implicit none
 
@@ -18,7 +18,7 @@ Contains
 
   !****************************************************************************
   ! Generates boundary conditions and initial guess for the iterative solution.
-  subroutine BC_x0_WS(imode,period,grid3D,m,E0,BC)
+  subroutine BC_x0_WS(imode,period,grid3D,Cond3D,E0,BC)
     !  sets up boundary condtions in BC and initial electric 
     !  field solution vector in E0 
     !  E0 should be complex vector, allocated, usedfor = 'Edge'
@@ -29,8 +29,8 @@ Contains
     real(kind=selectedPrec)	:: period
     !  Input 3D grid
     type(grid3d_t), intent(in)	:: grid3D
-    !  Input 3D conductivity 
-    type(modelParam_t), intent(in)	:: m
+    !  Input 3D conductivity in cells
+    type(rscalar), intent(in)	:: Cond3D
 
     ! Output electric field first guess (for iterative solver)
     type(cvector), intent(inout)	:: E0
@@ -43,7 +43,6 @@ Contains
     type(grid2d_t)		        :: grid2D
     integer				:: iSlice,ih,iz,nEXB,nv,nh,nSlice
     integer				:: IER
-    type(rscalar)			:: Cond3D
     
     ! These are temporary work arrays
     ! Array for 2D solutions
@@ -52,9 +51,6 @@ Contains
     complex (kind=selectedPrec), allocatable, dimension(:)      :: EXB
     ! Array for 2D Conductivity
     real (kind=selectedPrec), allocatable, dimension(:,:)	:: Cond2D
-
-    !  set local array for cell conductivities
-    call modelParamToCellCond(m,Cond3D)
 
     !  nv is number of vertical levels in 2D
     nv = grid3D%nz

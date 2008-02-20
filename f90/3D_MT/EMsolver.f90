@@ -15,7 +15,6 @@ use math_constants
 use datafunc
 use dataspace
 use emsolve3d
-use boundary_ws
 
 implicit none
   
@@ -202,10 +201,8 @@ Contains
    !  loop over polarizations
    do iMode = 1,2
       ! compute boundary conditions for polarization iMode
-      !   Need to figure out mapping of conductivity needed here
-      !    (have a pointer to modelParam in e0)!
-      call BC_x0_WS(imode,period,e0%grid,e0%sigma, & 
-		e0%pol(imode),b0%bc)
+      !   uses cell conductivity already set by updateCond
+      call SetBound(imode,period,e0%pol(imode),b0%bc)
 			write(*,'(a12,a3,a18,es12.6,a10,i2)') 'Solving the ','FWD', &
 				' problem for freq ',omega/(2*PI),' & mode # ',imode
       call FWDsolve3D(b0,omega,e0%pol(imode))

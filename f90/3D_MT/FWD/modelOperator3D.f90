@@ -21,6 +21,7 @@ module modelOperator3D
   use sg_vector            	! generic routines for vector operations on the
   use sg_boundary
   use modelParameter
+  use boundary_ws          ! sets the boundary conditions
   implicit none
 
   ! * These variables are used by model equation 
@@ -33,6 +34,9 @@ module modelOperator3D
   type(rvector), public			::	volE    ! THE volume elements 
   type(rvector), private		::	condE   ! THE edge conductivities
   real(kind=selectedPrec),private	::      omega   ! THE (active) frequency
+  
+  ! NOTE: THIS VARIABLE IS TEMPORARILY REQUIRED TO SET THE BOUNDARY CONDITIONS
+  type(rscalar), private        :: Cond3D
 
   !!!!!!>>>>>>>>> FROM multA
   ! aBC is for the Ea equation using the b component in the c direction.
@@ -91,6 +95,9 @@ module modelOperator3D
   !   These are used to initialize the modules grid, and to set/modify
   !     conductivity and/or frequency 
 
+  !  routine to set the boundary conditions (a wrapper for BC_x0_WS for now)
+  public                                :: SetBound
+  
   !  routines from multA
   public                             	:: CurlcurleSetUp, CurlcurlE
   public                                :: AdiagInit, AdiagSetUp, Maxwell
@@ -176,6 +183,10 @@ Contains
     Call ModelParamToEdge(CondParam, condE)
 
     Call DivCorrSetUp()
+    
+    ! TEMPORARY; REQUIRED FOR BOUNDARY CONDITIONS
+    !  set static array for cell conductivities
+    call modelParamToCellCond(CondParam,Cond3D)
   
   end subroutine UpdateCond  ! UpdateCond
 
@@ -200,8 +211,32 @@ Contains
     Call DiluSetUp()
     Call DivCorrSetUp()    
 
+    ! TEMPORARY; REQUIRED FOR BOUNDARY CONDITIONS
+    !  set static array for cell conductivities
+    call modelParamToCellCond(CondParam,Cond3D)
+
   end subroutine UpdateFreqCond  ! UpdateFreqCond
-   
+
+!**********************************************************************
+! Sets boundary conditions. Currently a wrapper for BC_x0_WS.
+! Uses input 3D conductivity in cells Cond3D, that has to be initialized
+! by updateCond before calling this routine. Also uses mGrid set by 
+! ModelDataInit. Could use omega, which is set by updateFreq.
+  Subroutine SetBound(imode,period,E0,BC)
+
+    !  Input mode, period 
+    integer, intent(in)		:: imode
+    real(kind=selectedPrec)	:: period
+     
+    ! Output electric field first guess (for iterative solver)
+    type(cvector), intent(inout)	:: E0
+    ! Output boundary conditions 
+    type(cboundary), intent(inout)	:: BC
+
+    call BC_x0_WS(imode,period,mGrid,Cond3D,E0,BC)
+
+  end subroutine SetBound   
+         
 ! ****************************************************************************
 ! Routines from multA; set up finite difference operator for quasi-static 
 !   frequency domain 3D EM induction equations, apply in various ways for forward,
