@@ -6,7 +6,7 @@ program Test3D
      use modelparameter
      use dataspace
      use solnrhs
-     use iomod
+     use iobinary
      use dataFunc
      use sensmatrix
      use mtinvsetup

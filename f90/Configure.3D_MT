@@ -1,2 +1,2 @@
 #!/usr/bin/sh
-perl fmkmf.pl -f90 g95 -opt '-g -ftrace=frame -fbounds-check' -l '-lblas -llapack' -p INV:LAPACK:SENS:UTILS:3D_MT:3D_MT/FWD:3D_MT/FWD/Mod2d:3D_MT/EMfield Test3D.f90 >Makefile
+perl fmkmf.pl -f90 g95 -opt '-g -ftrace=frame -fbounds-check' -l '-lblas -llapack' -p INV:LAPACK:SENS:UTILS:3D_MT:3D_MT/FWD:3D_MT/FWD/Mod2d:3D_MT/EMfield:3D_MT/ioMod Test3D.f90 >Makefile

@@ -26,7 +26,7 @@
 !          record, all impedances for one frequency are in one sequential record
 
 ! *****************************************************************************
-module IoMod
+module ioBinary
   ! This module contains io routines for boundary nodes,
   ! electric field solutions, impedances, and solver diagnostics
 
@@ -811,4 +811,4 @@ Contains
       close(fid)
       end subroutine write_EMsolnMTX3D
 
-end module IoMod
+end module ioBinary

@@ -1,7 +1,7 @@
 # Makefile suited for building the Test3D program
 # Generated using: ./fmkmf.pl [OPTIONS] Test3D.f90 > Makefile
 # with command line options
-# -p INV:LAPACK:SENS:UTILS:3D_MT:3D_MT/FWD:3D_MT/FWD/Mod2d:3D_MT/EMfield
+# -p INV:LAPACK:SENS:UTILS:3D_MT:3D_MT/FWD:3D_MT/FWD/Mod2d:3D_MT/EMfield:3D_MT/ioMod
 # -f90 g95 (compiler)
 # -opt -g -ftrace=frame -fbounds-check (compiler optimisation)
 # -l -lblas -llapack (linking options)
@@ -21,7 +21,7 @@ FFLAGS = -g -ftrace=frame -fbounds-check
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
-OBJ = math_constants.o Grid3D.o utilities.o sg_scalar.o sg_vector.o sg_sparse_vector.o ModelParameter.o DataSpace.o sg_boundary.o SolnRHS.o sg_diff_oper.o WSfwd2Dpar.o WSutils.o WSfwd1Dmod.o WSfwd2Dmod.o FwdTEmod.o boundary_ws.o modelOperator3D.o solver.o EMsolve3D.o DataGridInfo.o InterpEB.o DataFunc.o EMsolver.o IoMod.o MeasComb.o SensPDEcoeff.o SensMatrix.o mtInvSetup.o NLCG.o Test3D.o 
+OBJ = math_constants.o Grid3D.o utilities.o sg_scalar.o sg_vector.o sg_sparse_vector.o ModelParameter.o DataSpace.o sg_boundary.o SolnRHS.o sg_diff_oper.o WSfwd2Dpar.o WSutils.o WSfwd1Dmod.o WSfwd2Dmod.o FwdTEmod.o boundary_ws.o modelOperator3D.o solver.o EMsolve3D.o DataGridInfo.o InterpEB.o DataFunc.o EMsolver.o ioBinary.o MeasComb.o SensPDEcoeff.o SensMatrix.o mtInvSetup.o NLCG.o Test3D.o 
 
 
 all: Test3D 
@@ -104,8 +104,8 @@ DataFunc.o:3D_MT/DataFunc.f90 InterpEB.o SolnRHS.o math_constants.o DataGridInfo
 EMsolver.o:3D_MT/EMsolver.f90 math_constants.o DataFunc.o DataSpace.o EMsolve3D.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/EMsolver.f90 
 
-IoMod.o:3D_MT/IoMod.f90 Grid3D.o math_constants.o EMsolve3D.o DataSpace.o DataGridInfo.o EMsolver.o 
-	 $(F90) -c $(FFLAGS) 3D_MT/IoMod.f90 
+ioBinary.o:3D_MT/ioMod/ioBinary.f90 Grid3D.o math_constants.o EMsolve3D.o DataSpace.o DataGridInfo.o EMsolver.o 
+	 $(F90) -c $(FFLAGS) 3D_MT/ioMod/ioBinary.f90 
 
 MeasComb.o:SENS/MeasComb.f90 math_constants.o utilities.o DataSpace.o ModelParameter.o SolnRHS.o DataFunc.o 
 	 $(F90) -c $(FFLAGS) SENS/MeasComb.f90 
@@ -122,7 +122,7 @@ mtInvSetup.o:3D_MT/mtInvSetup.f90 math_constants.o utilities.o EMsolve3D.o Model
 NLCG.o:INV/NLCG.f90 SensMatrix.o 
 	 $(F90) -c $(FFLAGS) INV/NLCG.f90 
 
-Test3D.o:Test3D.f90 ModelParameter.o DataSpace.o SolnRHS.o IoMod.o DataFunc.o SensMatrix.o mtInvSetup.o NLCG.o 
+Test3D.o:Test3D.f90 ModelParameter.o DataSpace.o SolnRHS.o ioBinary.o DataFunc.o SensMatrix.o mtInvSetup.o NLCG.o 
 	 $(F90) -c $(FFLAGS) Test3D.f90 
 
 # Type " make clean " to get rid of all object and module files 
