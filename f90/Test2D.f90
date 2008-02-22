@@ -416,8 +416,8 @@ program Test2D
         write(*,*) 'Starting the NLCG search...'
         call NLCGsolver(allData,lambda,sigma0,sigma1,alpha)
         call write_Cond2D(fidWrite,wFile_Model,sigma1,TEgrid)
-        call write_Z(fidWrite,wFile_Data,nPer,periods,modes,   &
-			nSites,sites,allData)
+        call fwdPred(sigma1,allData)
+        call write_Z(fidWrite,wFile_Data,nPer,periods,modes,nSites,sites,allData)
      end select
 
 	 call date_and_time(values=tarray)

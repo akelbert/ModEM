@@ -301,7 +301,9 @@ Contains
    !  with \tilde{m} = 0. However, in general we could also
    !  start with the result of a previous search.
    
-   !  d is data
+   !  d is data; on output it contains the responses for the inverse model
+   !  NOTE: trying to set d = dHat on exit results in a corrupted data structure
+   !  that is not readable by Matlab. Have to figure out why!..
    type(dvecMTX), intent(in)		       :: d
    !  lambda is regularization parameter
    real(kind=selectedPrec), intent(inout)  :: lambda
@@ -400,7 +402,8 @@ Contains
 				write(*,'(a55)') 'Unable to get out of a local minimum. Exiting...'
 				! multiply by C^{1/2} and add m_0
                 call CmSqrtMult(mHat,m_minus_m0)
-                call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)	
+                call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
+                !d = dHat	
 				return
 			end if
 	  	! restart
@@ -439,7 +442,8 @@ Contains
    ! multiply by C^{1/2} and add m_0
    call CmSqrtMult(mHat,m_minus_m0)
    call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
-	 write(*,'(a25,i5,a25,i5)') 'NLCG iterations:',iter,' function evaluations:',nfunc
+   !d = dHat
+   write(*,'(a25,i5,a25,i5)') 'NLCG iterations:',iter,' function evaluations:',nfunc
 
    end subroutine NLCGsolver
 
