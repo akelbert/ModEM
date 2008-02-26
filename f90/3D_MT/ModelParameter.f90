@@ -83,6 +83,7 @@ module ModelParameter
 !        are different (conductivity vs. resistivity)
 !        
       public  ::  modelParamToEdge,edgeToModelParam,SigC
+      public  :: getSize_modelParam
 
 
 !   3) model covariance opeartors; not implemented yet, so no documenetation!
@@ -105,8 +106,8 @@ module ModelParameter
 !   4) read and write routines (and/or some sort of routines for setting
 !       model parameters from input arrays); since attributes are private,
 !       these routines must be in this module.
-       public	:: read_Cond3D_RM, write_Cond3D, read_Cond3D, &
-		writeAll_Cond3D
+       public	:: writeAll_Cond3D
+       
 Contains
 !
 !**********************************************************************
@@ -118,8 +119,12 @@ Contains
 
      implicit none
      type (grid3d_t), intent(in), target	:: grid
-     character*80, intent(in)			:: paramtype
+     character(*), intent(in)			    :: paramtype
      type (modelParam_t), intent(inout)		:: m
+
+     if(m%allocated) then
+        call deall_modelParam(m)
+     endif
 
      call create_rscalar(grid,m%cellCond,CELL_EARTH)
      m%Nx = grid%Nx
@@ -226,43 +231,51 @@ Contains
    end subroutine linComb_modelParam
    
    !**********************************************************************
-   subroutine set_modelParam(CellCond,paramType,m,AirCond)
+   subroutine set_modelParam(m,v,paramType,vAir)
 
      ! set cell conductivities in a model parameter object m
-     !   using CONDUCTIVITY values (NOT Log, NOT resistivity)
-     !   from an rscalar object CellCond
      !
-     !   Here paramType can be used to control log/linear 
-     !      conductivity in the output modelParam object.
-     !   
-     !   AirCond is an optional air conductivity (NOT Log, NOT
-     !    resistivity.  If ommitted default air conductivity is set
-     !
-     type(rscalar), intent(in)		:: CellCond
-     character*80, intent(in)		:: paramType
+     ! the values of v and vAir are determined by paramType;
+     ! if different from that of the model parameter, convert
+     ! to the paramType of the model parameter.
      type(modelParam_t), intent(inout)    :: m
-     real(kind=selectedPrec),optional	:: AirCond
+     type(rscalar), intent(in)		      :: v
+     character(*), intent(in)		      :: paramType
+     real(kind=selectedPrec), intent(in), optional :: vAir
 
-     !  error checking
-     if(m%allocated) then
-        if((m%Ny .ne. CellCond%Ny).or. (m%Nx .ne. CellCond%Nx) .or. &
-		(m%NzEarth .ne. CellCond%Nz)) then
-           call errstop('modelParam/rscalar dimensions disagree in set_ModelParam')
-        else
-           m%cellCond = CellCond
-           if(present(AirCond)) then
-              m%AirCond=AirCond
-           else
-              m%AirCond=SIGMA_AIR
-           endif
-           if(paramType(1:8).eq.LOG_CELL) then
-              m%cellCond%v = log(m%cellCond%v)
-              m%AirCond = log(m%AirCond)
-           endif
-        endif
-     else
+     if(.not.(m%allocated)) then
         call errstop('output modelParam must be allocated before calling set_modelParam')
      endif
+     
+     !  error checking
+     if((m%Ny .ne. v%Ny).or. (m%Nx .ne. v%Nx) .or. (m%NzEarth .ne. v%Nz)) then
+        call errstop('modelParam/rscalar dimensions disagree in set_modelParam')
+     else 
+	    ! set values
+	    m%cellCond = v
+	    if(present(vAir)) then
+	       m%AirCond=vAir
+	    endif
+	 endif
+	 
+	 if(trim(paramType) .eq. trim(m%paramType)) then
+	    ! we are done
+	 else if((m%paramType .eq. LOG_CELL) .and. (paramType .eq. CELL_EARTH)) then
+	    ! convert to log
+	    m%cellCond%v = log(m%cellCond%v)
+	    if(present(vAir)) then
+	       m%AirCond=log(m%AirCond)
+	    endif
+	 else if((m%paramType .eq. CELL_EARTH) .and. (paramType .eq. LOG_CELL)) then
+	    ! convert to cell
+	    m%cellCond%v = exp(m%cellCond%v)
+	    if(present(vAir)) then
+	       m%AirCond=exp(m%AirCond)
+	    endif
+	 else
+        call errstop('unknown paramType in set_modelParam')	      
+     endif
+
    end subroutine set_modelParam
 
    !**********************************************************************
@@ -288,11 +301,32 @@ Contains
 
    end subroutine copy_modelParam
 
-   !**********************************************************************
-   subroutine modelParamToCellCond(m,cCond)
+   !************************************************************************
+   !  getSize_modelParam extracts model size from a modelParam_t variable
+   subroutine getSize_modelParam(m,Nx,Ny,NzEarth)
 
-     type(modelParam_t), intent(in)       :: m
-     type(rscalar), intent(inout)	:: cCond
+     implicit none
+     type (modelParam_t), intent(in)   	  :: m
+     integer, intent(out)                 :: Nx,Ny,NzEarth
+
+     if (.not.m%allocated) then
+        call errStop('Model parameter not allocated in getValue_modelParam')
+     end if
+
+     Nx = m%Nx
+     Ny = m%Ny
+     NzEarth = m%NzEarth
+ 
+   end subroutine getSize_modelParam
+   
+   !**********************************************************************
+   subroutine modelParamToCellCond(m,cCond,paramType,grid,AirCond)
+
+     type(modelParam_t), intent(in)        :: m
+     type(rscalar), intent(inout)	       :: cCond
+     character(80), intent(out), optional  :: paramType
+     type(grid3d_t), intent(out), optional :: grid
+     real(kind=selectedPrec), intent(out), optional :: AirCond
 
      if(cCond%allocated) then
         if((cCond%Ny .ne. m%Ny).or. (cCond%Nx .ne. m%Nx) .or. &
@@ -310,7 +344,22 @@ Contains
         cCond%v(:,:,1:m%grid%NzAir) = m%AirCond
         cCond%v(:,:,m%grid%NzAir+1:m%grid%Nz) = m%cellCond%v
      endif
+     
+     if (present(paramType)) then
+        paramType = m%paramType
+     end if
 
+     if (present(grid)) then
+        if (grid%allocated) then
+           call deall_grid3d(grid)
+        end if
+        grid = m%grid
+     end if
+
+     if (present(AirCond)) then
+        AirCond = m%AirCond
+     end if
+          
    end subroutine modelParamToCellCond
 
   !**********************************************************************
@@ -706,111 +755,6 @@ Contains
     endselect
   end function sigC
 
-  !******************************************************************
-   subroutine read_Cond3D_RM(fid,cfile,paramType,m)
-
-  !   opens cfile on unit fid, read resistivities
-  !   from Mackie format 3D model file, and returns
-  !   as a paramType (loge or linear)  modelParam
-  !
-  !  This is a "wrapper" routine that calls a reading routine
-  !   defined outside of the scope of module modelParameter to set
-  !   attributes of a modelParam object
-  !
-  !   output modelParam is deallocated (if necessary)
-  !   and (re)created based on grid defined in cfile;
-  !   air conductivity is set to default (could add another
-  !   argument to surboutine to change this ... airCond is
-  !    not given in Mackie file)
-
-    integer, intent(in)			:: fid
-    character*80, intent(in)  		:: cfile,paramType
-    type(modelParam_t), intent(inout)	:: m
-
-    !  local variables
-    type(grid3d_t)			:: tempGrid
-    type(rscalar)			:: tempCond
-
-       if(m%allocated) then
-          call deall_modelParam(m)
-       endif
-
-       call readRMgridCond(fid,cfile,tempGrid,tempCond)
-
-       if(paramType(1:8) == LOG_CELL) then
-          tempCond%v = log(tempCond%v)
-       endif
-
-       call create_modelParam(tempGrid,paramtype,m)
-       call copy_rscalar(m%cellCond,tempCond)
-
-       call deall_rscalar(tempCond)
-       call deall_grid3D(tempGrid)
-
-    end subroutine read_Cond3D_RM
-  !******************************************************************
-   subroutine write_Cond3D(fid,cfile,m)
-
-   !  open cfile on unit fid, writes out object of
-   !   type modelParam in standard *binary* format (comparable
-   !   format written by write_Cond3D), then close file
-
-      integer, intent(in)               :: fid
-      character*80, intent(in)  :: cfile
-      type(modelParam_t), intent(in)              :: m
-
-      integer		:: NzAir,Nz,Nx,Ny
-
-      Nz = m%grid%Nz
-      Nx = m%Nx
-      Ny = m%Ny
-      NzAir = m%grid%Nz-m%NzEarth
-      open(unit=fid, file=cfile, form='unformatted')
-      write(fid) m%paramType
-      write(fid) Nx,Ny,m%NzEarth
-      write(fid) m%grid%dx
-      write(fid) m%grid%dy
-      write(fid) m%grid%dz(NzAir+1:Nz)
-      write(fid) m%AirCond
-      write(fid) m%CellCond%v
-      close(fid)
-      end subroutine write_Cond3D
-  !******************************************************************
-   subroutine read_Cond3D(fid,cfile,m)
-
-   !  open cfile on unit fid, writes out object of
-   !   type modelParam in standard *binary* format (comparable
-   !   format written by write_Cond3D), then close file
-
-      integer, intent(in)                :: fid
-      character*80, intent(in) 		 :: cfile
-      type(modelParam_t), intent(inout)    :: m
-
-      integer		:: NzAir,Nz,Nx,Ny,NzEarth
-      character*80	:: paramType
-      real(kind=selectedPrec) 	:: AirCond
-
-      if(m%allocated) then
-          open(unit=fid, file=cfile, form='unformatted',status='old')
-     
-          read(fid) paramType
-          read(fid) Nx,Ny,NzEarth
-          if((m%Ny .NE. Ny).OR.(m%NzEarth .NE. NzEarth) &
-		.or. (m%Nx .NE. Nx)) then
-             close(fid)
-             call errStop('Size of cond does not agree with contents of file in read_Cond3D')
-          else
-             read(fid)   !dx
-             read(fid)   !dy
-             read(fid)   ! dz
-             read(fid) AirCond
-             read(fid) m%cellCond%v
-             close(fid)
-          endif
-       else
-          call errStop('modelParam must be allocated before call to read_Cond3D')
-       endif
-      end subroutine read_Cond3D
      !******************************************************************
       subroutine writeAll_Cond3D(fid,cfile,header,nSigma,m)
 
@@ -840,130 +784,6 @@ Contains
       enddo
       close(fid)
       end subroutine writeAll_Cond3D
-  ! ***************************************************************************
-  subroutine ReadRMgridCond(fidRM,inputFile,grid,Cond)
-  ! this routine reads files in Mackie's 3D formats, returning the basic
-  !   grid components, and optionally also conductivity
-  !   If present, Cond is created during call
-
-    implicit none
-
-    integer,intent(in)                          :: fidRM
-    character(len=80), intent(in)               :: inputFile
-    type (grid3d_t), intent(inout)             :: grid
-    type (rscalar), intent(inout), optional     :: Cond
-
-    real(kind=selectedPrec)                     :: origin(3)
-    real(kind=selectedPrec),pointer,dimension(:)    :: res
-    integer                                     :: whichLayer
-    integer                                     :: ix,iy,iz,ip,i,j
-    real(kind=selectedPrec)                     :: alpha = 3.
-    integer                                     :: jj,Nx,Ny,Nz,NzEarth,NzAir
-    integer                                     :: status, ioerr
-
-    character (len=80)                          :: ifValues = ''
-    character (len=80)                          :: someChar = ''
-    integer                                     :: jOne, jTwo
-    logical                                     :: returnCond
-
-    returnCond = present(Cond)
-
-    ! Open file and read grid
-    open(unit=fidRM,file=inputFile,status='old',ERR=9000)
-    read(fidRM,*) Nx, Ny, NzEarth, nzAir, ifValues
-
-    if (ifValues(1:6) /= 'VALUES') then
-        write(0, *) 'Mapping not supported yet in:ReadGridInputRM'
-        stop
-    end if
-
-    call create_Grid3D(Nx,Ny,NzAir,NzEarth,grid)
-
-    ! In Randy Mackie's format, dx is read forwwards, as is dy and dz
-    read(fidRM,*) (grid%dx(ix),ix=1,grid%nx)
-    read(fidRM,*) (grid%dy(iy),iy=1,grid%ny)
-    read(fidRM,*) (grid%dz(iz),iz=grid%nzAir+1,grid%nzAir+grid%nzEarth)
-
-    !   Following is Kush's approach to setting air layers:
-    ! mirror imaging the dz values in the air layer with respect to
-    ! earth layer as far as we can using the following formulation
-    ! air layer(bottom:top) = (alpha)^(j-1) * earth layer(top:bottom)
-    i = grid%nzAir+1
-    j = 0
-    do iz = grid%nzAir, 1, -1
-        j = j + 1
-        grid%dz(iz) = ((alpha)**(j-1))*grid%dz(i)
-        i = i + 1
-    end do
-
-    ! the topmost air layer has to be atleast 30 km
-    if (grid%dz(1).lt.30000) then
-        grid%dz(1) = 30000
-    end if
-
-    if(returnCond) then
-       call create_rscalar(grid,Cond,CELL_EARTH)
-    endif
-
-    allocate(res(grid%Nx))
-    do iz = 1,grid%nzEarth
-       read(fidRM, *) whichLayer
-       do iy = 1,grid%ny
-          ! in Randy Mackie's format, x varies the fastest
-          read(fidRM,*) res
-          if(returnCond) then
-              Cond%v(:,iy,iz) = 1./res
-          endif
-       enddo     !iy
-    enddo        !iz
-    deallocate(res)
-
-    ! skip the three lines: a) WINGLINK, b) site name, and c) block numbers
-    ! read WINGLINK (it can also be a blank line).
-    read(fidRM, *, IOSTAT = ioerr) someChar
-    ! a) WINGLINK
-    if (ioerr /= 0) then
-        if (someChar(1:8) == 'WINGLINK') then
-           write(0, *) 'Model file created by Winglink'
-        end if
-    end if
-
-    someChar = ''
-    ! b) site name
-    read(fidRM, *, IOSTAT = ioerr) someChar
-    ! c) the block numbers
-    read(fidRM, *, IOSTAT = ioerr) jOne, jTwo
-
-    read(fidRM, *, IOSTAT = ioerr) grid%ox, grid%oy
-    ! the defualt from a file read through Randy Mackie's format
-    ! in Randy Mackie's format, real coordinates are in kilometers
-    ! defaults in case of missing data
-    if (ioerr /= 0) then
-        grid%ox = 0.0
-        grid%oy = 0.0
-        grid%oz = 0.0
-    else
-       grid%ox = grid%ox*1000.0
-       grid%oy = grid%oy*1000.0
-       grid%oz = 0.0
-    endif
-
-    read(fidRM, *, IOSTAT = ioerr) grid%rotdeg
-    if (ioerr /= 0) then
-        grid%rotdeg = 0.0
-    end if
-
-    CLOSE(fidRM)
-
-    GOTO 9999
-
-9000 CONTINUE
-    WRITE(0,*) '!!! FILE CANNOT BE FOUND !!!'
-    STOP
-
-9999 CONTINUE
-
-  end subroutine ReadRMgridCond
 
 !**********************************************************************
 

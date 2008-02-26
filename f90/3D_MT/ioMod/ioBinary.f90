@@ -46,7 +46,7 @@ module ioBinary
   public                   :: DfileWrite
   public                   :: ZfileRead, ZfileWrite
   public                   :: read_Z3D,write_Z3D
-  public                   :: read_Z3D_ascii,write_Z3D_ascii
+  public                   :: write_Cond3D, read_Cond3D
 
 Contains
 
@@ -612,172 +612,87 @@ Contains
       close(fid)
       end subroutine read_Z3D
 
-   !**********************************************************************
-   subroutine write_Z3D_ascii(fid,cfile,nTx,periods,nSites,sites,allData)
-   ! writes impedance file, including list of periods, siteLocations
-   !   NOTE: this assumes that the arrays "sites" and "periods" are
-     !    essentially identical to the receiver and transmitter dictionaries
-     !    (in which case, why have both these arrays and the dicts?)
-     !   Also, we just get ncomp from each dvec, and infer dataType
-     !    from this.  Not at all general with regard to dvec objects.
+  !******************************************************************
+   subroutine write_Cond3D(fid,cfile,m)
 
-      integer, intent(in)			:: fid
-      character(*), intent(in)			:: cfile
-      integer, intent(in)			:: nTx,nSites
-      real(kind=selectedPrec),intent(in)	:: periods(nTx)
-      real(kind=selectedPrec),intent(in)	:: sites(3,nSites)
-      type(dvecMTX),intent(in)			:: allData
-      real(kind=selectedPrec), dimension(:,:), pointer :: siteTemp
+   !  open cfile on unit fid, writes out object of
+   !   type modelParam in standard *binary* format (comparable
+   !   format written by write_Cond3D), then close file
+   ! NOTE: uses grid for the model size; needs to be thought
+   !       about if we decide to decouple grid and the model
 
-     ! local variables
-      integer   :: ns,iTx,k,j,nComp,icomp,isite
-      character(10) :: siteid, tab='          '
+      integer, intent(in)               :: fid
+      character(*), intent(in)  :: cfile
+      type(modelParam_t), intent(in)              :: m
 
-      open(unit=fid,file=cfile,form='formatted',status='unknown')
-      write(fid,'(i5)') allData%nTx
-      ! loop over periods
-      do iTx = 1,allData%nTx
-         ns = allData%d(iTx)%nSite
-         ncomp = allData%d(iTx)%nComp
-         ! write period, number of sites for this period
-         write(fid,'(es12.6,2i5)') periods(iTx),nComp,ns
-         ! write site locations for this period
-         allocate(siteTemp(3,ns))
-         do k = 1,ns
-            siteTemp(:,k) = sites(:,allData%d(iTx)%rx(k))
-         enddo
-				 ! write latitude, longitude and elevation
-				 do j = 1,3
-				   do k = 1,ns
-         		  write(fid,'(f14.3)',advance='no') siteTemp(j,k)
-				   enddo
-           write(fid,*)
-				 enddo
-         do isite = 1,ns
-         	! Note: temporarily, we write site id's according to their number;
-         	! in the future, they will be stored in the receiver dictionary
-         	write(siteid,'(i5)') isite
-         	write(fid,'(a10)',advance='no') trim(siteid)
-         	!  note that each data field in a dvec (i.e., allData%d(iTx)%data)
-         	!   is a real array of size (nComp,ns)
-         	do icomp = 1,ncomp
-         		write(fid,'(es15.6)',advance='no') allData%d(iTx)%data(icomp,isite)
-         	enddo
-         	write(fid,*)
-         	write(fid,'(a10)',advance='no') tab
-         	do icomp = 1,ncomp
-         		write(fid,'(es15.6)',advance='no') allData%d(iTx)%err(icomp,isite)
-         	enddo
-         	write(fid,*)
-         enddo
-         deallocate(siteTemp)
-      enddo
+      type(rscalar)           :: ccond
+      type(grid3d_t)          :: grid
+      real(kind=selectedPrec) :: AirCond
+      character(80)           :: paramType
+
+      call modelParamToCellCond(m,ccond,paramType,grid,AirCond)
+
+      open(unit=fid, file=cfile, form='unformatted')
+      write(fid) grid%Nx,grid%Ny,grid%NzEarth
+      write(fid) grid%dx
+      write(fid) grid%dy
+      write(fid) grid%dz(grid%NzAir+1:grid%Nz)
+      write(fid) paramType
+      write(fid) AirCond
+      write(fid) ccond%v
       close(fid)
-      end subroutine write_Z3D_ascii
-      !******************************************************************
-     subroutine read_Z3D_ascii(fid,cfile,nTx,periods,nSites,sites,allData)
-     ! reads in data file, returns list of periods, , siteLocations, and
-     !   sets up data vector structure, including data and error bars
-     !   Also returns a list of periods, and sites ... not very general!
-      integer, intent(in)       			:: fid
-      character(*), intent(in)  			:: cfile
-      integer, intent(out)      			:: nTx,nSites
-      real(kind=selectedPrec),dimension(:), pointer     :: periods
-      real(kind=selectedPrec),dimension(:,:), pointer   :: sites
-      type(dvecMTX), intent(inout)   			:: allData
-
-     ! local variables
-      integer   	:: nComp,ns,iTx,k,l,j,Ndata
-      character(10) :: siteid
-      real(kind=selectedPrec), pointer, dimension(:,:) :: siteTemp,siteTempAll
-      logical		:: newSite
-
-      open(unit=fid,file=cfile,form='formatted',status='old')
-      read(fid,*) nTx
-     ! write(6,*) nTx
-      allocate(periods(nTx))
-      allocate(allData%d(nTx))
-      allData%allocated = .true.
-      allData%errorBar = .true.
-      allData%nTx = nTx
-
-     ! loop over dvec instances
-      Ndata = 0
-      do iTx = 1,nTx
-         ! read in number of sites for this dvec
-         !  nTx is number of dvecs ... might not all be for different periods!
-         !   really should clean up list of periods (effectively the
-	 !    transmitter dictionary
-        read(fid,*) periods(iTx),nComp,ns
-
-         ! read in site locations
-         allocate(siteTemp(3,ns))
-         
-          read(fid,*) (siteTemp(1,j),j=1,ns)
-          read(fid,*) (siteTemp(2,j),j=1,ns)
-          read(fid,*) (siteTemp(3,j),j=1,ns)
       
-         ! create dvec object, read in data
-         allData%d(iTx)%errorBar = .true.
-         call create_Dvec(nComp,ns,allData%d(iTx))
-         Ndata  = Ndata + nComp*ns
-         allData%d(iTx)%tx = iTx
+      call deall_rscalar(ccond)
+      call deall_grid3d(grid)
+      
+      end subroutine write_Cond3D
+  !******************************************************************
+   subroutine read_Cond3D(fid,cfile,m,paramType,grid)
 
-         selectcase(nComp)
-            case(8)
-               allData%d(iTx)%datatype =  Full_Impedance 
-            case(12)
-               allData%d(iTx)%datatype =  Impedance_Plus_Hz 
-            case(4)
-               allData%d(iTx)%datatype =  Off_Diagonal_Impedance
-         endselect
-         do k=1,ns
-         read(fid,*)siteid, (allData%d(iTx)%data(j,k),j=1,nComp)
-         read(fid,*)        (allData%d(iTx)%err(j,k),j=1,nComp)
-         end do
+   !  open cfile on unit fid, writes out object of
+   !   type modelParam in standard *binary* format (comparable
+   !   format written by write_Cond3D), then close file
 
-         if(iTx .eq. 1) then
-           ! allocate temporary storage for full sites list
-           ! (this might not always work ... I am assuming that the
-           !        max number of sites is ns from period one * nTx)
-            allocate(siteTempAll(3,ns*nTx))
-            nSites = ns
-            do k = 1,ns
-               siteTempAll(:,k) = siteTemp(:,k)
-               allData%d(iTx)%rx(k) = k
-            enddo
-         else
-            ! check to see if site locations are already in list
-            !  if not add to list; in any event set reciever "pointer" rx
-            do k = 1,ns
-               newSite = .true.
-               do l = 1,nSites
-                  if((siteTemp(1,k).eq.siteTempAll(1,l)).and.  &
-                        (siteTemp(2,k).eq.siteTempAll(2,l)).and. &
-                        (siteTemp(3,k).eq.siteTempAll(3,l))) then
-                     newSite = .false.
-                     allData%d(iTx)%rx(k) = l
-                     exit
-                  endif
-               enddo
-               if(newSite) then
-                  nSites = nSites+1
-                  siteTempAll(:,nSites) = siteTemp(:,k)
-                  allData%d(iTx)%rx(k) = nSites
-               endif
-            enddo
-         endif
-         deallocate(siteTemp)
-      enddo
-      allData%Ndata = Ndata
-      ! copy list of unique sites into "sites" array
-      allocate(sites(3,nSites))
-      do k = 1,nSites
-         sites(:,k) = siteTempAll(:,k)
-      enddo
+      integer, intent(in)                  :: fid
+      character(*), intent(in) 		       :: cfile
+      type(modelParam_t), intent(out)      :: m
+      character(80), intent(out)           :: paramType
+      type(grid3d_t), intent(inout), optional :: grid
+
+      integer		:: NzAir,Nz,Nx,Ny,NzEarth
+      real(kind=selectedPrec) 	:: AirCond
+      type(rscalar)             :: ccond
+
+      open(unit=fid, file=cfile, form='unformatted',status='old')
+       
+      read(fid) Nx,Ny,NzEarth,NzAir
+
+      call create_grid3d(Nx,Ny,NzAir,NzEarth,grid)
+      read(fid)  grid%dx
+      read(fid)  grid%dy
+      read(fid)  grid%dz(NzAir+1:NzAir+NzEarth)
+      call gridCalcs(grid)
+
+      read(fid) paramType
+
+      call create_rscalar(grid,ccond,CELL_EARTH)
+
+      read(fid) AirCond
+      read(fid) ccond%v
+
       close(fid)
-      end subroutine read_Z3D_ascii
 
+      ! move cell conductivities read into rscalar object into a modelParam
+	  ! object ... this dance needed to keep modelParam attributes private
+	  !   First need to create model parameter
+	  call create_modelParam(grid,paramType,m)
+	  call set_modelParam(m,ccond,CELL_EARTH,AirCond)
+	
+	  ! now done with ccond, so deallocate
+	  call deall_rscalar(ccond)
+	  
+      end subroutine read_Cond3D
+      
 !******************************************************************
       subroutine write_EMsolnMTX3D(fid,cfile,eAll)
 

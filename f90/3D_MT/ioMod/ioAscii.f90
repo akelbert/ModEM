@@ -46,7 +46,7 @@ module ioAscii
   public                   :: DfileWrite
   public                   :: ZfileRead, ZfileWrite
   public                   :: read_Z3D,write_Z3D
-  public                   :: read_Z3D_ascii,write_Z3D_ascii
+  public                   :: write_Cond3D, read_Cond3D
 
 Contains
 
@@ -474,146 +474,9 @@ Contains
 !    and receiver dictionaries for use by the program, but which here is
 !    kept with the data in the file    
 ! 
+
    !**********************************************************************
    subroutine write_Z3D(fid,cfile,nTx,periods,nSites,sites,allData)
-   ! writes impedance file, including list of periods, siteLocations
-   !   NOTE: this assumes that the arrays "sites" and "periods" are
-     !    essentially identical to the receiver and transmitter dictionaries
-     !    (in which case, why have both these arrays and the dicts?)
-     !   Also, we just get ncomp from each dvec, and infer dataType
-     !    from this.  Not at all general with regard to dvec objects.
-
-      integer, intent(in)			:: fid
-      character(*), intent(in)			:: cfile
-      integer, intent(in)			:: nTx,nSites
-      real(kind=selectedPrec),intent(in)	:: periods(nTx)
-      real(kind=selectedPrec),intent(in)	:: sites(3,nSites)
-      type(dvecMTX),intent(in)			:: allData
-      real(kind=selectedPrec), dimension(:,:), pointer :: siteTemp
-
-     ! local variables
-      integer   :: ns,iTx,k,j,nComp
-
-      open(unit=fid,file=cfile,form='unformatted',status='unknown')
-      write(fid) allData%nTx
-      ! loop over periods
-      do iTx = 1,allData%nTx
-         ns = allData%d(iTx)%nSite
-         ncomp = allData%d(iTx)%nComp
-         ! write period, number of sites for this period
-         write(fid) periods(iTx),nComp,ns
-         ! write site locations for this period
-         allocate(siteTemp(3,ns))
-         do k = 1,ns
-            siteTemp(:,k) = sites(:,allData%d(iTx)%rx(k))
-         enddo
-         write(fid) siteTemp
-         !  note that each data field in a dvec (i.e., allData%d(iTx)%data)
-         !   is a real array of size (nComp,ns)
-         write(fid) allData%d(iTx)%data
-         write(fid) allData%d(iTx)%err
-         deallocate(siteTemp)
-      enddo
-      close(fid)
-      end subroutine write_Z3D
-     !**********************************************************************
-     subroutine read_Z3D(fid,cfile,nTx,periods,nSites,sites,allData)
-     ! reads in data file, returns list of periods, , siteLocations, and
-     !   sets up data vector structure, including data and error bars
-     !   Also returns a list of periods, and sites ... not very general!
-      integer, intent(in)       			:: fid
-      character(*), intent(in)  			:: cfile
-      integer, intent(out)      			:: nTx,nSites
-      real(kind=selectedPrec),dimension(:), pointer     :: periods
-      real(kind=selectedPrec),dimension(:,:), pointer   :: sites
-      type(dvecMTX), intent(inout)   			:: allData
-
-     ! local variables
-      integer   	:: nComp,ns,iTx,k,l,j,Ndata
-      real(kind=selectedPrec), pointer, dimension(:,:) :: siteTemp,siteTempAll
-      logical		:: newSite
-
-      open(unit=fid,file=cfile,form='unformatted',status='old')
-      read(fid) nTx
-      allocate(periods(nTx))
-      allocate(allData%d(nTx))
-      allData%allocated = .true.
-      allData%errorBar = .true.
-      allData%nTx = nTx
-
-     ! loop over dvec instances
-      Ndata = 0
-      do iTx = 1,nTx
-         ! read in number of sites for this dvec
-         !  nTx is number of dvecs ... might not all be for different periods!
-         !   really should clean up list of periods (effectively the
-	 !    transmitter dictionary
-         read(fid) periods(iTx),nComp,ns
-         ! read in site locations
-         allocate(siteTemp(3,ns))
-         read(fid) siteTemp
-         ! create dvec object, read in data
-         allData%d(iTx)%errorBar = .true.
-         call create_Dvec(nComp,ns,allData%d(iTx))
-         Ndata  = Ndata + nComp*ns
-         allData%d(iTx)%tx = iTx
-
-         selectcase(nComp)
-            case(8)
-               allData%d(iTx)%datatype =  Full_Impedance 
-            case(12)
-               allData%d(iTx)%datatype =  Impedance_Plus_Hz 
-            case(4)
-               allData%d(iTx)%datatype =  Off_Diagonal_Impedance
-         endselect
-
-         read(fid) allData%d(iTx)%data
-         read(fid) allData%d(iTx)%err
-
-         if(iTx .eq. 1) then
-           ! allocate temporary storage for full sites list
-           ! (this might not always work ... I am assuming that the
-           !        max number of sites is ns from period one * nTx)
-            allocate(siteTempAll(3,ns*nTx))
-            nSites = ns
-            do k = 1,ns
-               siteTempAll(:,k) = siteTemp(:,k)
-               allData%d(iTx)%rx(k) = k
-            enddo
-         else
-            ! check to see if site locations are already in list
-            !  if not add to list; in any event set reciever "pointer" rx
-            do k = 1,ns
-               newSite = .true.
-               do l = 1,nSites
-                  if((siteTemp(1,k).eq.siteTempAll(1,l)).and.  &
-                        (siteTemp(2,k).eq.siteTempAll(2,l)).and. &
-                        (siteTemp(3,k).eq.siteTempAll(3,l))) then
-                     newSite = .false.
-                     allData%d(iTx)%rx(k) = l
-                     exit
-                  endif
-               enddo
-               if(newSite) then
-                  nSites = nSites+1
-                  siteTempAll(:,nSites) = siteTemp(:,k)
-                  allData%d(iTx)%rx(k) = nSites
-               endif
-            enddo
-         endif
-         deallocate(siteTemp)
-      enddo
-      allData%Ndata = Ndata
-      ! copy list of unique sites into "sites" array
-      allocate(sites(3,nSites))
-      do k = 1,nSites
-         sites(:,k) = siteTempAll(:,k)
-      enddo
-      close(fid)
-      end subroutine read_Z3D
-
-   !**********************************************************************
-   subroutine write_Z3D_ascii(fid,cfile,nTx,periods,nSites,sites,allData)
    ! writes impedance file, including list of periods, siteLocations
    !   NOTE: this assumes that the arrays "sites" and "periods" are
      !    essentially identical to the receiver and transmitter dictionaries
@@ -673,9 +536,9 @@ Contains
          deallocate(siteTemp)
       enddo
       close(fid)
-      end subroutine write_Z3D_ascii
+      end subroutine write_Z3D
       !******************************************************************
-     subroutine read_Z3D_ascii(fid,cfile,nTx,periods,nSites,sites,allData)
+     subroutine read_Z3D(fid,cfile,nTx,periods,nSites,sites,allData)
      ! reads in data file, returns list of periods, , siteLocations, and
      !   sets up data vector structure, including data and error bars
      !   Also returns a list of periods, and sites ... not very general!
@@ -776,8 +639,206 @@ Contains
          sites(:,k) = siteTempAll(:,k)
       enddo
       close(fid)
-      end subroutine read_Z3D_ascii
+      end subroutine read_Z3D
 
+  ! ***************************************************************************
+  subroutine ReadRMgridCond(fidRM,inputFile,grid,Cond)
+  ! this routine reads files in Mackie's 3D formats, returning the basic
+  !   grid components, and optionally also conductivity
+  !   If present, Cond is created during call
+
+    implicit none
+
+    integer,intent(in)                          :: fidRM
+    character(len=80), intent(in)               :: inputFile
+    type (grid3d_t), intent(inout)             :: grid
+    type (rscalar), intent(inout), optional     :: Cond
+
+    real(kind=selectedPrec)                     :: origin(3)
+    real(kind=selectedPrec),pointer,dimension(:)    :: res
+    integer                                     :: whichLayer
+    integer                                     :: ix,iy,iz,ip,i,j
+    real(kind=selectedPrec)                     :: alpha = 3.
+    integer                                     :: jj,Nx,Ny,Nz,NzEarth,NzAir
+    integer                                     :: status, ioerr
+
+    character (len=80)                          :: ifValues = ''
+    character (len=80)                          :: someChar = ''
+    integer                                     :: jOne, jTwo
+    logical                                     :: returnCond
+
+    returnCond = present(Cond)
+
+    ! Open file and read grid
+    open(unit=fidRM,file=inputFile,status='old',ERR=9000)
+    read(fidRM,*) Nx, Ny, NzEarth, nzAir, ifValues
+
+    if (ifValues(1:6) /= 'VALUES') then
+        write(0, *) 'Mapping not supported yet in:ReadGridInputRM'
+        stop
+    end if
+
+    call create_Grid3D(Nx,Ny,NzAir,NzEarth,grid)
+
+    ! In Randy Mackie's format, dx is read forwwards, as is dy and dz
+    read(fidRM,*) (grid%dx(ix),ix=1,grid%nx)
+    read(fidRM,*) (grid%dy(iy),iy=1,grid%ny)
+    read(fidRM,*) (grid%dz(iz),iz=grid%nzAir+1,grid%nzAir+grid%nzEarth)
+
+    !   Following is Kush's approach to setting air layers:
+    ! mirror imaging the dz values in the air layer with respect to
+    ! earth layer as far as we can using the following formulation
+    ! air layer(bottom:top) = (alpha)^(j-1) * earth layer(top:bottom)
+    i = grid%nzAir+1
+    j = 0
+    do iz = grid%nzAir, 1, -1
+        j = j + 1
+        grid%dz(iz) = ((alpha)**(j-1))*grid%dz(i)
+        i = i + 1
+    end do
+
+    ! the topmost air layer has to be atleast 30 km
+    if (grid%dz(1).lt.30000) then
+        grid%dz(1) = 30000
+    end if
+
+    if(returnCond) then
+       call create_rscalar(grid,Cond,CELL_EARTH)
+    endif
+
+    allocate(res(grid%Nx))
+    do iz = 1,grid%nzEarth
+       read(fidRM, *) whichLayer
+       do iy = 1,grid%ny
+          ! in Randy Mackie's format, x varies the fastest
+          read(fidRM,*) res
+          if(returnCond) then
+              Cond%v(:,iy,iz) = 1./res
+          endif
+       enddo     !iy
+    enddo        !iz
+    deallocate(res)
+
+    ! skip the three lines: a) WINGLINK, b) site name, and c) block numbers
+    ! read WINGLINK (it can also be a blank line).
+    read(fidRM, *, IOSTAT = ioerr) someChar
+    ! a) WINGLINK
+    if (ioerr /= 0) then
+        if (someChar(1:8) == 'WINGLINK') then
+           write(0, *) 'Model file created by Winglink'
+        end if
+    end if
+
+    someChar = ''
+    ! b) site name
+    read(fidRM, *, IOSTAT = ioerr) someChar
+    ! c) the block numbers
+    read(fidRM, *, IOSTAT = ioerr) jOne, jTwo
+
+    read(fidRM, *, IOSTAT = ioerr) grid%ox, grid%oy
+    ! the defualt from a file read through Randy Mackie's format
+    ! in Randy Mackie's format, real coordinates are in kilometers
+    ! defaults in case of missing data
+    if (ioerr /= 0) then
+        grid%ox = 0.0
+        grid%oy = 0.0
+        grid%oz = 0.0
+    else
+       grid%ox = grid%ox*1000.0
+       grid%oy = grid%oy*1000.0
+       grid%oz = 0.0
+    endif
+
+    read(fidRM, *, IOSTAT = ioerr) grid%rotdeg
+    if (ioerr /= 0) then
+        grid%rotdeg = 0.0
+    end if
+
+    CLOSE(fidRM)
+
+    GOTO 9999
+
+9000 CONTINUE
+    WRITE(0,*) '!!! FILE CANNOT BE FOUND !!!'
+    STOP
+
+9999 CONTINUE
+
+  end subroutine ReadRMgridCond
+
+ ! ***************************************************************************
+  subroutine writeRMgridCond(fidRM,inputFile,grid,Cond)
+  ! this routine reads files in Mackie's 3D formats, returning the basic
+  !   grid components, and optionally also conductivity
+  !   If present, Cond is created during call
+
+    implicit none
+
+    integer,intent(in)                          :: fidRM
+    character(len=80), intent(in)               :: inputFile
+    type (grid3d_t), intent(inout)             :: grid
+    type (rscalar), intent(inout), optional     :: Cond
+
+  end subroutine writeRMgridCond
+
+      !******************************************************************
+      subroutine read_Cond3D(fid,cfile,m,paramType,grid)
+
+      !  open cfile on unit fid, writes out object of
+      !   type modelParam in Randie Mackie's format, closes file
+      ! note that while this is in general a good interface for
+      ! a write subroutine for modelParam, we do not have to write
+      ! out the grid unless we want to do so
+
+      integer, intent(in)		           :: fid
+      character(*), intent(in)             :: cfile
+      type(modelParam_t), intent(out)	   :: m
+      character(*), intent(in)             :: paramType
+      type(grid3d_t), intent(inout)        :: grid
+      type(rscalar)                      :: ccond
+ 
+ 	  ! Read input files and set up basic grid geometry, conductivities,
+	  ! and frequencies (stored in the transmitter dictionary, txDictMT)
+	  call ReadRMgridCond(fid,cfile,grid,ccond)
+	
+	  ! move cell conductivities read into rscalar object into a modelParam
+	  ! object ... this dance needed to keep modelParam attributes private
+	  !   First need to create model parameter
+	  call create_modelParam(grid,paramType,m)
+	  call set_modelParam(m,ccond,CELL_EARTH)
+	
+	  ! now done with ccond, so deallocate
+	  call deall_rscalar(ccond)
+        
+      end subroutine read_Cond3D      
+
+      !******************************************************************
+      subroutine write_Cond3D(fid,cfile,m)
+
+      !  open cfile on unit fid, writes out object of
+      !   type modelParam in Randie Mackie's format, closes file
+      ! note that while this is in general a good interface for
+      ! a write subroutine for modelParam, we do not have to write
+      ! out the grid unless we want to do so
+
+      integer, intent(in)		           :: fid
+      character(*), intent(in)             :: cfile
+      type(modelParam_t), intent(out)	   :: m
+      type(rscalar)                        :: ccond
+      type(grid3d_t)                       :: grid
+      character(80)                        :: paramType
+ 
+ 	  ! Read input files and set up basic grid geometry, conductivities,
+	  ! and frequencies (stored in the transmitter dictionary, txDictMT)
+	  call modelParamToCellCond(m,ccond,paramType,grid)
+	  
+	  call writeRMgridCond(fid,cfile,grid,ccond)
+
+	  ! now done with ccond and grid, so deallocate
+	  call deall_rscalar(ccond)
+	  call deall_grid3d(grid)
+	        
+      end subroutine write_Cond3D
 !******************************************************************
       subroutine write_EMsolnMTX3D(fid,cfile,eAll)
 

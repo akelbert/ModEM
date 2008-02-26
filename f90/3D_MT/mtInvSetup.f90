@@ -99,7 +99,7 @@ Contains
      ! object ... this dance needed to keep modelParam attributes private
      !   First need to create model parameter
      call create_modelParam(grid,paramType,Sigma)
-     call set_modelParam(Cond,paramType,Sigma)
+     call set_modelParam(Sigma,Cond,CELL_EARTH)
 
      ! now done with Cond, so deallocate
      call deall_rscalar(Cond)
