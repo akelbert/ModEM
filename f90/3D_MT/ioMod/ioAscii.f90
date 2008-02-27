@@ -45,7 +45,7 @@ module ioAscii
   public                   :: EfileRead, EfileWrite
   public                   :: DfileWrite
   public                   :: ZfileRead, ZfileWrite
-  public                   :: read_Z3D,write_Z3D
+  public                   :: read_Z,write_Z
   public                   :: write_Cond3D, read_Cond3D
 
 Contains
@@ -476,7 +476,7 @@ Contains
 ! 
 
    !**********************************************************************
-   subroutine write_Z3D(fid,cfile,nTx,periods,nSites,sites,allData)
+   subroutine write_Z(fid,cfile,nTx,periods,nSites,sites,allData)
    ! writes impedance file, including list of periods, siteLocations
    !   NOTE: this assumes that the arrays "sites" and "periods" are
      !    essentially identical to the receiver and transmitter dictionaries
@@ -536,9 +536,9 @@ Contains
          deallocate(siteTemp)
       enddo
       close(fid)
-      end subroutine write_Z3D
+      end subroutine write_Z
       !******************************************************************
-     subroutine read_Z3D(fid,cfile,nTx,periods,nSites,sites,allData)
+     subroutine read_Z(fid,cfile,nTx,periods,nSites,sites,allData)
      ! reads in data file, returns list of periods, , siteLocations, and
      !   sets up data vector structure, including data and error bars
      !   Also returns a list of periods, and sites ... not very general!
@@ -639,7 +639,7 @@ Contains
          sites(:,k) = siteTempAll(:,k)
       enddo
       close(fid)
-      end subroutine read_Z3D
+      end subroutine read_Z
 
   ! ***************************************************************************
   subroutine ReadRMgridCond(fidRM,inputFile,grid,Cond)
@@ -840,7 +840,7 @@ Contains
 	        
       end subroutine write_Cond3D
 !******************************************************************
-      subroutine write_EMsolnMTX3D(fid,cfile,eAll)
+      subroutine write_EMsolnMTX(fid,cfile,eAll)
 
       !  open cfile on unit fid, writes out object of
       !   type cvector in standard format (readable by matlab
@@ -870,6 +870,6 @@ Contains
          enddo
       enddo
       close(fid)
-      end subroutine write_EMsolnMTX3D
+      end subroutine write_EMsolnMTX
 
 end module ioAscii

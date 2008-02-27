@@ -10,6 +10,7 @@ module mtinvsetup
   use utilities
   use emsolve3d
   use modelparameter
+  use ioascii
   
 
   implicit none

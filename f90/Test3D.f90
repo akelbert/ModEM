@@ -9,7 +9,7 @@ program Test3D
      use iobinary
      use dataFunc
      use sensmatrix
-     use mtinvsetup
+     !use mtinvsetup
      use nlcg
         
      implicit none
@@ -21,23 +21,43 @@ program Test3D
      integer (kind=4) :: fidWrite = 2
      integer (kind=4) :: fidError = 99
 
-     ! logical vbles to control which tests are done
-     !   not all of these are implemented in SensMatrix now
-     logical		:: IOtest = .false.
-     logical		:: FWDtest = .false.
-     logical		:: fwdPredTest = .false.
-     logical		:: SensMatrixCalcTest = .false.
-     logical		:: MultBySensTest = .false.
-     logical		:: MultBySensTransTest = .false.
-     logical		:: linPredTest = .false.
-     logical		:: DirectSensTest = .false.
-     logical		:: nlcgTest = .true.
-     logical		:: logCond = .true.
+     ! characters used to comunicate (from matlab)
+     !   about which jobs is executed
+     character*1		:: job = ' '
+     character*1, parameter	:: FORWARD_PRED = 'F'
+     character*1, parameter	:: FORWARD_SOLN = 'E'
+     character*1, parameter	:: SENSITIVITIES = 'S'
+     character*1, parameter	:: MULT_BY_J = 'G'
+     character*1, parameter	:: MULT_BY_J_T = 'T'
+     character*1, parameter	:: MULT_BY_J_MTX = 'N'
+     character*1, parameter	:: MULT_BY_J_T_MTX = 'M'
+     character*1, parameter	:: FORWARD_PRED_DELTA = 'D'
+     character*1, parameter	:: NLCG_INVERSION = 'I'
 
-     real (kind=selectedPrec), dimension(:), pointer :: periods
-     real (kind=selectedPrec), dimension(:,:), pointer :: sites
-     character*2, dimension(:), pointer	:: modes
-     character*80	:: paramType = ''
+     ! file names
+     character*80      :: rFile_Config = ''
+     ! character*80      :: rFile_Grid = 'Test1.grd'
+     character*80      :: rFile_Model = 'scratch/Input1.cpr'
+     character*80      :: rFile_dModel = 'scratch/Input2.cpr'
+     character*80      :: rFile_dModelMTX = 'scratch/Input2.sns'
+     character*80      :: rFile_Data = 'scratch/Input.imp'
+     character*80      :: wFile_Model = 'scratch/Out.cpr'
+     character*80      :: wFile_dModel = 'scratch/Out.cpr'
+     character*80      :: wFile_dModelMTX = 'scratch/Out.sns'
+     character*80      :: wFile_Data = 'scratch/Out.imp'
+     character*80      :: wFile_EMsoln = 'scratch/Out.sol'
+     character*80      :: wFile_Sens = 'scratch/Out.sns'
+
+	 real					:: rtime  ! run time
+	 real					:: ftime  ! run time per frequency
+	 real					:: stime, etime ! start and end times
+     integer, dimension(8)	:: tarray ! utility variable
+        
+     real (kind=selectedPrec), dimension(:), pointer	:: periods
+     real (kind=selectedPrec), dimension(:,:), pointer	:: sites
+
+     ! forward solver control defined in EMsolve3D
+     type(EMsolve_control)  :: solverParams
 
      ! grid geometry data structure
      type(grid3d_t), target 	:: grid
@@ -47,211 +67,312 @@ program Test3D
 
      !  storage for the "background" conductivity parameter
      type(modelParam_t)		:: sigma0
-     !  storage for the inverse solution
-     type(modelParam_t)		:: sigma1
      !  storage for the full sensitivity matrix
-     type(modelParam_t),dimension(:), pointer	:: sigma
+     type(modelParam_t),dimension(:),pointer	:: sigma
      !  storage for a perturbation to conductivity
      type(modelParam_t)		:: dsigma
-     type(emsolve_control)       :: solverParams    
+     !  storage for the inverse solution
+     type(modelParam_t)		:: sigma1
 
      !  storage for EM solutions
-     type(EMsolnMTX)		:: eAll
+     type(EMsolnMTX)            :: eAll
 
-     integer(kind=4) :: Nzb, IER, nPer, i, iy,iz,iPer,nSigma,ierr
-     integer(kind=4) :: nSites
-     character*80 	cfile, gridType, header
-     real(kind=selectedPrec)	:: epsilon = 0.01
-     real(kind=selectedPrec)	:: lambda
-     real(kind=selectedPrec)	:: error = 0.05
+     !  the damping parameter
+     real(kind=selectedPrec)    :: lambda = 1.0
+     real(kind=selectedPrec)    :: alpha = 0.1
 
-     if(logCond) then
-        paramType = LOG_CELL
+     real(kind=selectedPrec)	:: eps
+     real(kind=selectedPrec)	:: error
+     
+     real(kind=selectedPrec)	:: bg_cond_value
+     real(kind=selectedPrec),dimension(:,:), pointer  :: bg_cond
+
+     integer (kind=4) :: Nzb, IER, nPer, i, iy,iz,iPer,nSigma,nTx
+     integer (kind=4) :: iargc,narg,k
+     integer (kind=4) :: nMode=1,nComp=2,nSites
+     character*80  gridType, header,arg, paramType
+     character*80, dimension(:), pointer :: temp
+
+     !  parse command line ...  for now just uses first argument
+     !   to set job
+     narg = iargc()
+     if(narg .gt. 0) then
+        call getarg(1,arg)
+        if(arg(1:1).eq.'-') job = arg(2:2)
      else
-        paramType = CELL
+        write(*,*) 'Usage: Test3D -[option] [args]'
+        write(*,*)
+        write(*,*) ' Available options:'
+        write(*,*) '-F  calculates the predicted data'
+        write(*,*) '-E  calculates the predicted data and saves the EM solution'
+        write(*,*) '-S  calculates and saves the full sensitivity matrix'
+        write(*,*) '-G  multiplies a model by J to create a data vector'
+        write(*,*) '-T  multiplies a data vector by J^T to create a model'
+        write(*,*) '-N  evaluates sum( J m_i ) over transmitters to yield a data'
+        write(*,*) '    vector; reads a sensitivity matrix from file to do this'
+        write(*,*) '-M  multiples d_i by J_i^T separately for each transmitter, '
+        write(*,*) '    to yield a bunch of models, one for each transmitter'
+        write(*,*) '-D  calculated the predicted data for a perturbed model'
+        write(*,*) '-I  runs an NLCG inversion to yield an inverse model'
+        write(*,*)
+        write(*,*) ' Additional arguments:'
+        write(*,*) '-F  rFile_Model rFile_Data wFile_Data'
+        write(*,*) '-E  rFile_Model rFile_Data wFile_Data wFile_EMsoln'
+        write(*,*) '-S  rFile_Model rFile_Data wFile_Sens'
+        write(*,*) '-G  rFile_Model rFile_dModel rFile_Data wFile_Data'
+        write(*,*) '-T  rFile_Model rFile_Data wFile_dModel'
+        write(*,*) '-N  rFile_Model rFile_Data wFile_dModelMTX'
+        write(*,*) '-M  rFile_Model rFile_dModelMTX rFile_Data wFile_Data'
+        write(*,*) '-D  rFile_Model rFile_dModel rFile_Data wFile_Data'
+        write(*,*) '-I  rFile_Model rFile_Data wFile_Model wFile_Data lambda alpha'
+        stop
      endif
      
-     ! Read input files ....
-     ! (1)  at present hard-wired for file names
-     ! In StartUp3D xml startup file is read to get some needed file names:
-     !     Name of model grid/background conductivity file (Mackie
-     !      3D format); solver control; (other files in startup not 
-     !      presently used in this program; could be used to set
-     !      outputs).   Then model file is read and grid geometry
-     !      is set, as well as background conductivity.
+     ! extract all following command line arguments
+     allocate(temp(1:narg-1))
+     do k = 1,narg-1
+       call getarg(k+1,temp(k))
+     end do
 
-     cfile = 'startup'
-     call StartUp3D(cfile,ParamType,grid,solverParams,sigma0)
-     !  complete preliminary grid calculations and setup 
-     call gridCalcs(grid)
-
-     !  set grid for higher level solver routines
-     call set_SolnRHS_grid(grid)
+     ! save model file name in all cases
      
-     !  set solver control
-     call setEMsolveControl(solverParams)
-    
-     ! (2) Read in data file (only needs to be a template for
-     !      most tests -- periods/sites/mode -- except for
-     !   multiplication by J^T; in this case a full data vector,
-     !   not a template, is needed.
-     if(MultBySensTransTest) then
-        if(logCond) then
-	   cfile = 'TestPredLog3D.imp'
-        else
-           cfile = 'TestPred3D.imp'
-        endif
-     else if (nlcgTest) then
-        cfile = 'true3d.imp'		
-     else
-        cfile = 'Template_mini.imp'
-     endif
-		
-     !call read_Z3D_ascii(fidRead,cfile,nPer,periods,nSites,sites,allData)
-     call read_Z3D(fidRead,cfile,nPer,periods,nSites,sites,allData)
+     select case (job)
 
-     if(IOtest) then
-        call write_Z3D_ascii(fidWrite,'out.imp',nPer,periods, &
-            nSites,sites,allData)
+      case (FORWARD_PRED, FORWARD_SOLN)
+        ! F,E
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_Data = temp(2)
+	    end if
+	    if (narg > 3) then
+	       wFile_Data = temp(3)
+	    end if
+	    if (narg > 4) then
+	       wFile_EMsoln = temp(4)
+	    end if
+
+      case (FORWARD_PRED_DELTA)
+        ! D
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+        if (narg > 2) then
+	       rFile_dModel = temp(2)
+	    end if
+	    if (narg > 3) then
+	       rFile_Data = temp(3)
+	    end if
+	    if (narg > 4) then
+	       wFile_Data = temp(4)
+	    end if
+	    if (narg > 5) then
+	       wFile_EMsoln = temp(5)
+	    end if
+
+      case (SENSITIVITIES) 
+        ! S
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_Data = temp(2)
+	    end if
+	    if (narg > 3) then
+	       wFile_Sens = temp(3)
+	    end if
+
+      case (MULT_BY_J) 
+        ! G
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_dModel = temp(2)
+	    end if
+	    if (narg > 3) then
+	       rFile_Data = temp(3)
+	    end if
+	    if (narg > 4) then
+	       wFile_Data = temp(4)
+	    end if
+
+      case (MULT_BY_J_T)
+        ! T
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_Data = temp(2)
+	    end if
+	    if (narg > 3) then
+	       wFile_dModel = temp(3)
+	    end if
+
+      case (MULT_BY_J_T_MTX)
+        ! N
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_Data = temp(2)
+	    end if
+	    if (narg > 3) then
+	       wFile_dModelMTX = temp(3)
+	    end if
+
+      case (MULT_BY_J_MTX)
+        ! M
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_dModelMTX = temp(2)
+	    end if
+	    if (narg > 3) then
+	       rFile_Data = temp(3)
+	    end if
+	    if (narg > 4) then
+	       wFile_Data = temp(4)
+	    end if
+			
+      case (NLCG_INVERSION)
+        ! I
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_Data = temp(2)
+	    end if
+	    if (narg > 3) then
+	       wFile_Model = temp(3)
+	    end if
+	    if (narg > 4) then
+	       wFile_Data = temp(4)
+	    end if
+	    if (narg > 5) then
+          read(temp(5),*) lambda
+        end if
+        if (narg > 6) then
+          read(temp(6),*) alpha
+        end if
+        
+      case default
+         call errStop('Unknown job. Please check your command line options')
+      
+     end select
+     
+     ! Read background conductivity parameter and grid
+     if (len_trim(rFile_Model)>0) then
+       ! This line specifies the parametrization type; any model parameters
+       ! read from files are converted to this type
+       paramType=LOG_CELL
+     
+	   ! Read input files and set up basic grid geometry & conductivities
+       call read_Cond3D(fidRead,rFile_Model,sigma0,paramType,grid)
+     
+       !  set grid for higher level solver routines
+       call set_SolnRHS_grid(grid)
+     
+       !  set solver control (currently using defaults)
+       solverParams%UseDefaults= .true.
+       call setEMsolveControl(solverParams)
+     else
+       call warning('No input model parametrization')
      end if
-	 
-     !  Using periods, sites obtained from data file
-     !     set up transmitter and receiver dictionaries
-     !   DICTIONARIES (and setup routines)
-     !        ARE NOW IN DataFunc2d ... probably this is not
-     !        a good place, since modeling modules that don't
-     !        care about data are using TXdict now
-     call TXdictSetUp(nPer,periods) 
-     call RXdictSetUp(nSites,sites)
-     call TypeDictSetup()
+	
+     ! (3) Read in data file (only a template on input--periods/sites)
+     if (len_trim(rFile_Data)>0) then
+       call read_Z(fidRead,rFile_Data,nPer,periods,nSites,sites,allData)
+       !  Using periods, sites obtained from data file
+       !     set up transmitter and receiver dictionaries
+       call TXdictSetUp(nPer,periods) 
+       call RXdictSetUp(nSites,sites)
+       call TypeDictSetup()
+     else
+       call warning('No input data file - unable to set up dictionaries')
+     end if
 
-     ! (3) if necessary, read in dsigma (perturbation to background
-     !       conductivity parameter
-     if((MultBySensTest .or.DirectSensTest)) then
-        if(logCond) then
-            cfile = 'dTestLog3D.cpr'
-        else
-            cfile = 'dTest3D.cpr'
-        endif
-        call create_ModelParam(grid,paramType,dsigma)
-        call read_Cond3D(fidRead,cfile,dsigma)
-     endif
+	 ! Start the (portable) clock
+	 call date_and_time(values=tarray)
+     stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
-     if(FWDtest) then
-        call create_EMsolnMTX(allData,eAll) 
+     select case (job)
+     
+     case (FORWARD_PRED)
+        write(*,*) 'Calculating predicted data...'
+        call fwdPred(sigma0,allData)
+        ! write out impedances
+        call write_Z(fidWrite,wFile_Data,nPer,periods,nSites,sites,allData)
+
+     case (FORWARD_SOLN)
+        write(*,*) 'Calculating predicted data and saving the EM solution...'
         call fwdPred(sigma0,allData,eAll)
         ! write out EM solutions
-        if(logCond) then
-	    cfile = 'TestLog3D.sol'
-	else
-            cfile = 'Test3D.sol'
-	endif
-        !  output of multiple  solutions ... just for testing, done 
-        !   with minimal metadata!
-
-
-       call write_EMsolnMTX3D(fidWrite,cfile,eAll)
-
+        call write_EMsolnMTX(fidWrite,wFile_EMsoln,eAll)
         ! write out all impedances
-        if(logCond) then
-	    cfile = 'TestPredLog3D.imp'
-	else
-            cfile = 'TestPred3D.imp'
-	endif
-!        call write_Z3D_ascii(fidWrite,cfile,nPer,periods,  &
-        call write_Z3D(fidWrite,cfile,nPer,periods,  &
-			nSites,sites,allData)
+        call write_Z(fidWrite,wFile_Data,nPer,periods,nSites,sites,allData)
 
-     endif
-
-     if(fwdPredTest) then
-        ! don't save solutions, just impedances
-        call fwdPred(sigma0,allData)
-        ! write out all impedances
-	if(logCond) then
-	    cfile = 'TestPredLog3D_A.imp'
-	else
-            cfile = 'TestPred3D_A.imp'
-	endif
-!	    call setError_dvecMTX(error,allData)
-!        call write_Z3D_ascii(fidWrite,cfile,nPer,periods,  &
-        call write_Z3D(fidWrite,cfile,nPer,periods,  &
-			nSites,sites,allData)
-     endif
-
-
-     if(SensMatrixCalcTest) then
+     case (SENSITIVITIES)
+        write(*,*) 'Calculating the full sensitivity matrix...'
         call calcSensMatrix(allData,sigma0,sigma)
-	if(logCond) then
-	    cfile = 'TestLog3D.sns'
-	else
-            cfile = 'Test3D.sns'
-	endif
+        header = 'Sensitivity Matrix' 
         header = 'Sensitivity matrix test' 
-        call writeAll_Cond3D(fidWrite,cfile,header,   &
-			allData%nData,sigma)
-     endif
+        call writeAll_Cond3D(fidWrite,wFile_Sens,header,allData%nData,sigma)
 
-     if(MultBySensTest) then
-       call Jmult(dsigma,sigma0,allData) 
-       if(logCond) then
-	    cfile = 'TestSensMultLog3D.imp'
-	else
-            cfile = 'TestSensMult3D.imp'
-	endif
-        call write_Z3D(fidWrite,cfile,nPer,periods,  &
-		nSites,sites,allData)
-     endif
+     case (MULT_BY_J)
+        write(*,*) 'Multiplying by J...'
+        call read_Cond3D(fidRead,rFile_dModel,dsigma,paramType,grid)
+        call Jmult(dsigma,sigma0,allData) 
+        call write_Z(fidWrite,wFile_Data,nPer,periods,nSites,sites,allData)
 
-     if(MultBySensTransTest) then
-        call create_EMsolnMTX(allData,eAll) 
-        call fwdPred(sigma0,allData,eAll)
-       call JmultT(sigma0,allData,dsigma,eAll)
-!       call JmultT(sigma0,allData,dsigma)
-       if(logCond) then
-            cfile = 'TestSensMultTransLog3D.cpr'
-        else
-            cfile = 'TestSensMultTrans3D.cpr'
-        endif
-        call write_Cond3D(fidWrite,cfile,dSigma)
-     endif
+     case (MULT_BY_J_T)
+        write(*,*) 'Multiplying by J^T...'
+        call JmultT(sigma0,allData,dsigma) 
+        call write_Cond3D(fidWrite,wFile_dModel,dsigma)
 
-!     if(linPredTest) then
-!        call sensMatMult(dsigma,sigma0,allData,epsilon) 
-!        cfile = 'LinPredTest3D.imp'
-!        call write_Z3D(fidWrite,cfile,nPer,periods,   &
-!			nSites,sites,allData)
-!     endif
-     
-     if(DirectSensTest) then
+     case (MULT_BY_J_T_MTX)
+        write(*,*) 'Multiplying by J^T (all transmitters)...'
+        call JmultT_MTX(sigma0,allData,sigma) 
+        header = 'Sensitivity Matrix' 
+        call writeAll_Cond3D(fidWrite,wFile_dModelMTX,header,allData%nTx,sigma)
+
+     case (MULT_BY_J_MTX)
+        write(*,*) 'Sorry, currently not functioning. Exiting...'
+        return
+        !write(*,*) 'Multiplying by J (all transmitters)...'
+        !nTx = allData%nTx
+        !paramtype = ''
+        !allocate(sigma(nTx))
+        !do i = 1,nTx 
+        !   call create_ModelParam(grid,paramType,sigma(i))
+        !enddo
+        !call readAll_Cond3D(fidRead,rFile_dModelMTX,nTx,header,sigma)
+        !call Jmult_MTX(sigma,sigma0,allData) 
+        !call write_Z(fidWrite,wFile_Data,nPer,periods,nSites,sites,allData)
+			
+      case (FORWARD_PRED_DELTA)
+        write(*,*) 'Calculating the predicted data for the perturbed model...'
+        call read_Cond3D(fidRead,rFile_dModel,dsigma,paramType,grid)
         !  add sigma0 to epsilon * dsigma
-        call linComb_modelParam(ONE,sigma0,epsilon,dsigma,dsigma)
+        eps = 0.01
+        call linComb_modelParam(ONE,sigma0,eps,dsigma,dsigma)
         call fwdPred(dsigma,allData)
         ! write out impedances computed with perturbed sigma
-	if(logCond) then  
-	   cfile = 'TestDeltaPredLog3D.imp'
-	else   
-	   cfile = 'TestDeltaPred3D.imp'
-	endif
-        call write_Z3D(fidWrite,cfile,nPer,periods,&  
-                  nSites,sites,allData)
-     endif
-       
+        call write_Z(fidWrite,wFile_Data,nPer,periods,nSites,sites,allData)
 
-     if(nlcgTest) then
+     case (NLCG_INVERSION)
         write(*,*) 'Starting the NLCG search...'
-        lambda = .1
-        call NLCGsolver(allData,lambda,sigma0,sigma1)
-        if(logCond) then
-            cfile = 'solution3d_log.cpr'
-        else
-            cfile = 'solution3d.cpr'
-        endif
-        call write_Cond3D(fidWrite,cfile,sigma1)
-     endif
+        call NLCGsolver(allData,lambda,sigma0,sigma1,alpha)
+        call write_Cond3D(fidWrite,wFile_Model,sigma1)
+        call fwdPred(sigma1,allData)
+        call write_Z(fidWrite,wFile_Data,nPer,periods,nSites,sites,allData)
+     end select
 
-     ! deallocate
-     call deall_modelParam(sigma0)
-     call deall_modelParam(dsigma)
+	 call date_and_time(values=tarray)
+	 etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+	 rtime = etime - stime
+	 write(0,*) ' elapsed time (mins) ',rtime/60.0
 
 end program

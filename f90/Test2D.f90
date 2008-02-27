@@ -40,8 +40,6 @@ program Test2D
      character*1, parameter	:: MULT_BY_J_MTX = 'N'
      character*1, parameter	:: MULT_BY_J_T_MTX = 'M'
      character*1, parameter	:: FORWARD_PRED_DELTA = 'D'
-     character*1, parameter	:: CREATE_DATA_ERRORS = 'C'
-     character*1, parameter	:: CREATE_BG_MODEL = 'B'
      character*1, parameter	:: NLCG_INVERSION = 'I'
 
      ! file names
@@ -122,8 +120,6 @@ program Test2D
         write(*,*) '-M  multiples d_i by J_i^T separately for each transmitter, '
         write(*,*) '    to yield a bunch of models, one for each transmitter'
         write(*,*) '-D  calculated the predicted data for a perturbed model'
-        !write(*,*) '-C  creates data errors in a crude way (inversion testing)'
-        !write(*,*) '-B  creates background model for inversion from the grid'
         write(*,*) '-I  runs an NLCG inversion to yield an inverse model'
         write(*,*)
         write(*,*) ' Additional arguments:'
@@ -135,8 +131,6 @@ program Test2D
         write(*,*) '-N  rFile_Model rFile_Data wFile_dModelMTX'
         write(*,*) '-M  rFile_Model rFile_dModelMTX rFile_Data wFile_Data'
         write(*,*) '-D  rFile_Model rFile_dModel rFile_Data wFile_Data'
-        !write(*,*) '-C  rFile_Data wFile_Data'
-        !write(*,*) '-B  rFile_Model wFile_Model bg_cond_value'
         write(*,*) '-I  rFile_Model rFile_Data wFile_Model wFile_Data lambda alpha'
         stop
      endif
@@ -250,29 +244,6 @@ program Test2D
 	       wFile_Data = temp(4)
 	    end if
 			
-      case (CREATE_DATA_ERRORS)
-        ! C
-	    if (narg > 1) then
-	       rFile_Data = temp(1)
-	    end if
-	    if (narg > 2) then
-	       wFile_Data = temp(2)
-	    end if
-
-      case (CREATE_BG_MODEL)
-        ! B
-        if (narg > 1) then
-	       rFile_Model = temp(1)
-	    end if
-	    if (narg > 2) then
-	       wFile_Model = temp(2)
-	    end if
-        if (narg > 3) then
-           read(temp(3),*) bg_cond_value
-        else
-           bg_cond_value = 1e-2
-        end if
- 	          
       case (NLCG_INVERSION)
         ! I
         if (narg > 1) then
@@ -331,14 +302,6 @@ program Test2D
 
      select case (job)
 
-!     case (CREATE_BG_MODEL)
-!        write(*,*) 'Creating background model for the inversion...'
-!        allocate(bg_cond(TEgrid%Ny,TEgrid%Nz-TEgrid%Nza))
-!        bg_cond = bg_cond_value
-!        call create_modelParam(TEgrid,paramtype,sigma1,bg_cond)
-!        call write_Cond2D(fidWrite,wFile_Model,sigma1,TEgrid)
-!        deallocate(bg_cond)
-     
      case (FORWARD_PRED)
         write(*,*) 'Calculating predicted data...'
         call fwdPred(sigma0,allData)
@@ -404,14 +367,6 @@ program Test2D
         ! write out impedances computed with perturbed sigma
         call write_Z(fidWrite,wFile_Data,nPer,periods,modes,nSites,sites,allData)
 
-!     case (CREATE_DATA_ERRORS)
-!        write(*,*) 'Writing a data file with 5% errors in it...'
-!        error = 0.05
-!        call setError_dvecMTX(error,allData)
-!        ! write out impedances
-!        call write_Z(fidWrite,wFile_Data,nPer,periods,modes,   &
-!			nSites,sites,allData)
-			     		
      case (NLCG_INVERSION)
         write(*,*) 'Starting the NLCG search...'
         call NLCGsolver(allData,lambda,sigma0,sigma1,alpha)
