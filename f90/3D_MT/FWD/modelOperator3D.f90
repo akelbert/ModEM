@@ -214,7 +214,7 @@ Contains
     ! TEMPORARY; REQUIRED FOR BOUNDARY CONDITIONS
     !  set static array for cell conductivities
     call modelParamToCellCond(CondParam,Cond3D)
-
+ 
   end subroutine UpdateFreqCond  ! UpdateFreqCond
 
 !**********************************************************************
@@ -234,6 +234,9 @@ Contains
     type(cboundary), intent(inout)	:: BC
 
     call BC_x0_WS(imode,period,mGrid,Cond3D,E0,BC)
+    
+    ! Cell conductivity array is no longer needed
+    call deall_rscalar(Cond3D) 
 
   end subroutine SetBound   
          

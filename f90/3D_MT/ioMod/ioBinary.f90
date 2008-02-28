@@ -656,12 +656,13 @@ Contains
       integer, intent(in)                  :: fid
       character(*), intent(in) 		       :: cfile
       type(modelParam_t), intent(out)      :: m
-      character(80), intent(inout)           :: paramType
+      character(80), intent(in)            :: paramType
       type(grid3d_t), intent(inout), optional :: grid
 
       integer		:: NzAir,Nz,Nx,Ny,NzEarth
       real(kind=selectedPrec) 	:: AirCond
       type(rscalar)             :: ccond
+      character(80)             :: gridType,rParamType
 
       open(unit=fid, file=cfile, form='unformatted',status='old')
        
@@ -673,9 +674,10 @@ Contains
       read(fid)  grid%dz(NzAir+1:NzAir+NzEarth)
       call gridCalcs(grid)
 
-      read(fid) paramType
+      read(fid) rParamType
 
-      call create_rscalar(grid,ccond,CELL_EARTH)
+      gridType = CELL_EARTH
+      call create_rscalar(grid,ccond,gridType)
 
       read(fid) AirCond
       read(fid) ccond%v
@@ -685,8 +687,10 @@ Contains
       ! move cell conductivities read into rscalar object into a modelParam
 	  ! object ... this dance needed to keep modelParam attributes private
 	  !   First need to create model parameter
-	  call create_modelParam(grid,paramType,m)
-	  call set_modelParam(m,ccond,CELL_EARTH,AirCond)
+	  call create_modelParam(grid,rParamType,m,ccond,AirCond)
+	  
+	  ! convert modelParam to the required paramType
+	  call setType_modelParam(m,paramType)
 	
 	  ! now done with ccond, so deallocate
 	  call deall_rscalar(ccond)

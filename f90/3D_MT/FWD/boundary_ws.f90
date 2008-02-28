@@ -159,7 +159,6 @@ Contains
     deallocate(Cond2D)
     deallocate(Esol)
     deallocate(EXB)
-    call deall_rscalar(Cond3D)
 
     return
 

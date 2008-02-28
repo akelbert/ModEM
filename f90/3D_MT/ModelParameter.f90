@@ -83,7 +83,8 @@ module ModelParameter
 !        are different (conductivity vs. resistivity)
 !        
       public  ::  modelParamToEdge,edgeToModelParam,SigC
-      public  :: getSize_modelParam
+      public  :: getSize_modelParam, setType_modelParam
+      public  :: setValue_modelParam, getValue_modelParam
 
 
 !   3) model covariance opeartors; not implemented yet, so no documenetation!
@@ -115,12 +116,16 @@ Contains
    !  create_modelParam allocates and initializes arrays for
    !   conductivity parameter structure
    !   Pass grid of type grid3d_t to set array sizes
-   subroutine create_modelParam(grid,paramtype,m)
+   ! optional arguments v and vAir are assumed to be consistent
+   ! with paramType
+   subroutine create_modelParam(grid,paramtype,m,v,vAir)
 
      implicit none
      type (grid3d_t), intent(in), target	:: grid
-     character(*), intent(in)			    :: paramtype
+     character(80), intent(in)			    :: paramtype
      type (modelParam_t), intent(inout)		:: m
+     type (rscalar), intent(in), optional   :: v
+     real (kind=selectedPrec), intent(in), optional :: vAir
 
      if(m%allocated) then
         call deall_modelParam(m)
@@ -134,10 +139,18 @@ Contains
      m%paramType = paramtype
      m%allocated = .true.
 
-     if(paramtype.eq.LOG_CELL) then
-        m%AirCond = log(SIGMA_AIR)
+     if(present(v)) then
+        m%cellCond = v
+     endif
+     
+     if(present(vAir)) then
+        m%AirCond = vAir
      else
-        m%AirCond = SIGMA_AIR
+		if(paramtype .eq. LOG_CELL) then
+		   m%AirCond = log(SIGMA_AIR)
+		else
+		   m%AirCond = SIGMA_AIR
+		endif     
      endif
 
    end subroutine create_modelParam
@@ -155,6 +168,39 @@ Contains
      endif
 
    end subroutine deall_modelParam
+
+   !**********************************************************************
+   ! Converts the input model parameter structure to paramType, by
+   ! comparing paramType with m%paramType and performing the necessary
+   ! computations if the two strings differ; assumes that m is allocated.
+   subroutine setType_modelParam(m,paramType)
+
+     type(modelParam_t), intent(inout)    :: m
+     character(*), intent(in)		      :: paramType
+
+     if(.not.(m%allocated)) then
+        call errstop('modelParam must be allocated before calling setType_modelParam')
+     endif
+     
+	 if(trim(paramType) .eq. trim(m%paramType)) then
+	    ! we are done
+	 else if((paramType .eq. LOG_CELL) .and. (m%paramType .eq. CELL_EARTH)) then
+	    ! convert to log
+	    m%cellCond%v = log(m%cellCond%v)
+	    m%AirCond=log(m%AirCond)
+	 else if((paramType .eq. CELL_EARTH) .and. (m%paramType .eq. LOG_CELL)) then
+	    ! convert to cell
+	    m%cellCond%v = exp(m%cellCond%v)
+	    m%AirCond=exp(m%AirCond)
+	 else
+        call errstop('unknown paramType in setType_modelParam')	      
+     endif
+
+     m%paramType = paramType
+     return
+
+   end subroutine setType_modelParam
+
 !**********************************************************************
    function dotProd_modelParam(m1,m2) result(r)
 
@@ -231,52 +277,79 @@ Contains
    end subroutine linComb_modelParam
    
    !**********************************************************************
-   subroutine set_modelParam(m,v,paramType,vAir)
+   ! Sets cell conductivities in a model parameter object m
+   !
+   ! the values of v and vAir are determined by paramType;
+   ! if different from that of the model parameter, returns
+   ! an error. To avoid this error, first convert m to the
+   ! required paramType using setType_modelParam.   
+   subroutine setValue_modelParam(m,paramType,v,vAir)
 
-     ! set cell conductivities in a model parameter object m
-     !
-     ! the values of v and vAir are determined by paramType;
-     ! if different from that of the model parameter, convert
-     ! to the paramType of the model parameter.
      type(modelParam_t), intent(inout)    :: m
+     character(80), intent(in)		      :: paramType
      type(rscalar), intent(in)		      :: v
-     character(*), intent(in)		      :: paramType
      real(kind=selectedPrec), intent(in), optional :: vAir
 
      if(.not.(m%allocated)) then
-        call errstop('output modelParam must be allocated before calling set_modelParam')
+        call errstop('output modelParam must be allocated before calling setValue_modelParam')
      endif
      
      !  error checking
      if((m%Ny .ne. v%Ny).or. (m%Nx .ne. v%Nx) .or. (m%NzEarth .ne. v%Nz)) then
-        call errstop('modelParam/rscalar dimensions disagree in set_modelParam')
-     else 
-	    ! set values
-	    m%cellCond = v
-	    if(present(vAir)) then
-	       m%AirCond=vAir
-	    endif
+        call errstop('modelParam/rscalar dimensions disagree in setValue_modelParam')
+     else if(paramType .ne. m%paramType) then
+        call errstop('paramTypes not consistent in setValue_modelParam')
+     endif
+     
+	 ! set values
+	 m%cellCond = v
+	 if(present(vAir)) then
+	    m%AirCond=vAir
+	 endif
+
+   end subroutine setValue_modelParam
+
+   !**********************************************************************
+   ! Gets cell conductivities from a model parameter object m
+   !
+   ! Extracts the values of v and vAir;
+   ! values that are extracted are converted to paramType.
+   ! Different from modelParamToCellCond in that the value
+   ! that gets extracted is exactly what is stored in the modelParam:
+   ! it does not contain any air layers. This is needed for BC_x0_WS.
+   subroutine getValue_modelParam(m,paramType,v,vAir)
+
+     type(modelParam_t), intent(in)       :: m
+     character(80), intent(in)		      :: paramType
+     type(rscalar), intent(out)		      :: v
+     real(kind=selectedPrec), intent(out), optional :: vAir
+     ! local variable
+     type(modelParam_t)                   :: mTemp
+
+     if(.not.(m%allocated)) then
+        call errstop('input modelParam must be allocated before calling getValue_modelParam')
+     endif
+     
+     if (v%allocated) then
+        call deall_rscalar(v)
+     endif
+     
+     ! create a temporary copy
+     mTemp = m
+         
+     ! convert model to the required type
+     call setType_modelParam(mTemp,paramType)
+     
+	 ! set values
+	 v = mTemp%cellCond
+	 if(present(vAir)) then
+	    vAir = mTemp%AirCond
 	 endif
 	 
-	 if(trim(paramType) .eq. trim(m%paramType)) then
-	    ! we are done
-	 else if((m%paramType .eq. LOG_CELL) .and. (paramType .eq. CELL_EARTH)) then
-	    ! convert to log
-	    m%cellCond%v = log(m%cellCond%v)
-	    if(present(vAir)) then
-	       m%AirCond=log(m%AirCond)
-	    endif
-	 else if((m%paramType .eq. CELL_EARTH) .and. (paramType .eq. LOG_CELL)) then
-	    ! convert to cell
-	    m%cellCond%v = exp(m%cellCond%v)
-	    if(present(vAir)) then
-	       m%AirCond=exp(m%AirCond)
-	    endif
-	 else
-        call errstop('unknown paramType in set_modelParam')	      
-     endif
+	 ! deallocate temporary model parameter
+	 call deall_modelParam(mTemp)
 
-   end subroutine set_modelParam
+   end subroutine getValue_modelParam
 
    !**********************************************************************
    subroutine copy_modelParam(mOut,mIn)
