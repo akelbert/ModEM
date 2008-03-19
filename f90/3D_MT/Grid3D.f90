@@ -207,9 +207,29 @@ Contains
     type(grid3d_t), target, intent(inout)    :: grid
     real(kind=selectedPrec), intent(in), optional	  :: origin(3)
               
-    integer                               :: ix,iy,iz
+    integer                               :: ix,iy,iz,i,j
     integer                               :: status 
     real (kind=selectedPrec)                         :: xCum, yCum, zCum
+    real(kind=selectedPrec)                     :: alpha = 3.
+
+    !   Following is Kush's approach to setting air layers:
+    ! mirror imaging the dz values in the air layer with respect to
+    ! earth layer as far as we can using the following formulation
+    ! air layer(bottom:top) = (alpha)^(j-1) * earth layer(top:bottom)
+    if (minval(grid%dz) .le. R_ZERO) then
+	    i = grid%nzAir+1
+	    j = 0
+	    do iz = grid%nzAir, 1, -1
+	        j = j + 1
+	        grid%dz(iz) = ((alpha)**(j-1))*grid%dz(i)
+	        i = i + 1
+	    end do
+    end if
+
+    ! the topmost air layer has to be atleast 30 km
+    if (grid%dz(1).lt.30000) then
+        grid%dz(1) = 30000
+    end if
 
     grid%dxinv = 1/ grid%dx
     grid%dyinv = 1/ grid%dy

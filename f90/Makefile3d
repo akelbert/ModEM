@@ -6,18 +6,20 @@
 # -opt -g -ftrace=frame -fbounds-check (compiler optimisation)
 # -l -lblas -llapack (linking options)
 
-# Common compiler and linking options are:
+#  Uncomment these lines to make program with g95
+# F90 = g95
 # FFLAGS = -g -O2
 # FFLAGS = -g -ftrace=frame -fbounds-check
-# FFLAGS = -dalign -g -w
-# FFLAGS = -dalign -g -w -L/usr/local/lib
 # LIBS = -lblas -llapack
-# LIBS = -lblas_solaris -llapack_solaris
+#  Uncomment these lines to make program for solaris
+# F90 = f90
+# FFLAGS = -dalign -g -C -w  -L/usr/local/lib
+# LIBS = -xlic_lib=sunperf
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-F90 = g95 
-FFLAGS = -g -ftrace=frame -fbounds-check
+F90 = ifort
+FFLAGS = -g
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------

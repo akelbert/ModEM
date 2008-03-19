@@ -144,13 +144,15 @@ print "# -f90 $f90 (compiler)\n";
 print "# -opt $optim (compiler optimisation)\n";
 print "# -l $linkopts (linking options)\n\n";
 
-print "# Common compiler and linking options are:\n";
+print "#  Uncomment these lines to make program with g95\n";
+print "# F90 = g95\n";
 print "# FFLAGS = -g -O2\n";
 print "# FFLAGS = -g -ftrace=frame -fbounds-check\n";
-print "# FFLAGS = -dalign -g -w\n";
-print "# FFLAGS = -dalign -g -w -L/usr/local/lib\n";
 print "# LIBS = -lblas -llapack\n";
-print "# LIBS = -lblas_solaris -llapack_solaris\n";
+print "#  Uncomment these lines to make program for solaris\n";
+print "# F90 = f90\n";
+print "# FFLAGS = -dalign -g -C -w  -L/usr/local/lib\n";
+print "# LIBS = -xlic_lib=sunperf\n";
 
 if($optiond){
   print "# Main program is $mainprogfile \n" ;

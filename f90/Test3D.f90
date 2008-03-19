@@ -340,7 +340,6 @@ program Test3D
 
      case (MULT_BY_J_MTX)
         write(*,*) 'Sorry, currently not functioning. Exiting...'
-        return
         !write(*,*) 'Multiplying by J (all transmitters)...'
         !nTx = allData%nTx
         !paramtype = ''
