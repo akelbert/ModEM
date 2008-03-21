@@ -56,8 +56,8 @@ subroutine PCG(b,x, PCGiter)
   type (solverControl_t), intent(inout) 	:: PCGiter
 
   ! local variables
-  type (cscalar)	:: r,z,p,q
-  complex(kind=selectedPrec)	:: beta,alpha,rho,rhoOld
+  type (cscalar)	:: r,s,p,q
+  complex(kind=selectedPrec)	:: beta,alpha,delta,deltaOld
   complex(kind=selectedPrec)	:: bnorm, rnorm
   integer		:: i
   
@@ -73,7 +73,7 @@ subroutine PCG(b,x, PCGiter)
 
   ! Allocation of r, z, p, q
   Call create(x%grid, r, x%gridType)
-  Call create(x%grid, z, x%gridType)
+  Call create(x%grid, s, x%gridType)
   Call create(x%grid, p, x%gridType)
   Call create(x%grid, q, x%gridType)
 
@@ -85,20 +85,20 @@ subroutine PCG(b,x, PCGiter)
   PCGiter%rerr(i) = real(rnorm/bnorm)
 
   loop: do while ((PCGiter%rerr(i).gt.PCGiter%tol).and.(i.lt.PCGiter%maxIt))
-     Call Minv(r,z)
-     rho = dotProd(r,z)
+     Call Minv(r,s)
+     delta = dotProd(r,s)
      if(i.eq.1) then
-        p = z
+        p = s
      else
-        beta = rho/rhoOld
-        Call linComb(C_ONE,z,beta,p,p)
+        beta = delta/deltaOld
+        Call linComb(C_ONE,s,beta,p,p)
      end if
 
      Call A(p,q)
-     alpha = rho/dotProd(p,q)
+     alpha = delta/dotProd(p,q)
      Call scMultAdd(alpha,p,x)
      Call scMultAdd(-alpha,q,r)
-     rhoOld = rho
+     deltaOld = delta
      i = i + 1
      rnorm = dotProd(r,r) 
      PCGiter%rerr(i) = real(rnorm/bnorm)
@@ -109,7 +109,7 @@ subroutine PCG(b,x, PCGiter)
 
   ! deallocate all the work arrays
   Call deall(r)
-  Call deall(z)
+  Call deall(s)
   Call deall(p)
   Call deall(q)
 

@@ -33,7 +33,7 @@ module sg_scalar
   END INTERFACE
 
   INTERFACE scMultAdd
-     module procedure scMult_cscalar
+     module procedure scMultAdd_cscalar
   END INTERFACE
 
   INTERFACE linComb

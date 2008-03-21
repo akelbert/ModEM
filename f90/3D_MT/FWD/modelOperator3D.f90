@@ -236,7 +236,8 @@ Contains
     call BC_x0_WS(imode,period,mGrid,Cond3D,E0,BC)
     
     ! Cell conductivity array is no longer needed
-    call deall_rscalar(Cond3D) 
+    ! NOT TRUE: needed for imode=2
+    ! call deall_rscalar(Cond3D) 
 
   end subroutine SetBound   
          

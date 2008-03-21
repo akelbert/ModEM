@@ -9,6 +9,13 @@ module grid3d
   use math_constants
   implicit none
 
+  ! Very important: '=' sign has to be overloaded, since by default it is
+  ! legal in fortran to say y = x for data types, but that doesn't copy
+  ! allocatable or pointer arrays
+  INTERFACE ASSIGNMENT (=)
+     MODULE PROCEDURE copy_grid3d
+  END INTERFACE
+  
   ! Initialization routines
   public                             	:: create_grid3D,deall_grid3D, &
                                 GridCalcs, copy_grid3D
@@ -158,7 +165,7 @@ Contains
 
     type (grid3d_t) , intent(inout)	:: grid
 
-    deallocate(grid%Dz)
+    deallocate(grid%Dx)
     deallocate(grid%Dy)
     deallocate(grid%Dz)
 

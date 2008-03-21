@@ -54,7 +54,7 @@ module EMsolve3D
   ! maximum number of divergence correction calls allowed
   integer, parameter    ::              MaxDivCorDef = 50
   ! maximum number of PCG iterations for divergence correction
-  integer, parameter    ::              MaxIterDivCorDef = 300
+  integer, parameter    ::              MaxIterDivCorDef = 30
   ! misfit tolerance for convergence of EMsolve algorithm
   real(kind=selectedPrec), parameter       ::      tolEMDef = 1E-7
   ! misfit tolerance for convergence of divergence correction solver
