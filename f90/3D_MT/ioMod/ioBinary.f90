@@ -629,11 +629,15 @@ Contains
       type(grid3d_t)          :: grid
       real(kind=selectedPrec) :: AirCond
       character(80)           :: paramType
+ 
+      paramType = LOG_CELL
 
-      call modelParamToCellCond(m,ccond,paramType,grid,AirCond)
+      call getValue_modelParam(m,paramType,ccond,AirCond)
+
+      grid = ccond%grid
 
       open(unit=fid, file=cfile, form='unformatted')
-      write(fid) grid%Nx,grid%Ny,grid%NzEarth
+      write(fid) grid%nx,grid%ny,grid%nzEarth,grid%nzAir
       write(fid) grid%dx
       write(fid) grid%dy
       write(fid) grid%dz(grid%NzAir+1:grid%Nz)
