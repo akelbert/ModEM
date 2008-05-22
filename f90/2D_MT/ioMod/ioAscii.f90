@@ -456,6 +456,9 @@ module ioAscii
          close(fid)
       end if
       
+      ! complete grid definition
+      call gridCalcs(grid)
+      
       end subroutine read_grid2d
       
      !**********************************************************************

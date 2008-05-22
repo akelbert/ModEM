@@ -392,7 +392,7 @@ contains
           endif
        enddo
     else
-       write (0, *) 'gridType incompatability in SparseFullDotProd2D'
+       write (0, *) 'gridType incompatibility in dotProd_scvector'
        stop
     endif
 
