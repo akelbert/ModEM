@@ -207,9 +207,9 @@ module ioAscii
       character(80) :: header
 
       open(unit=fid,file=cfile,form='formatted',status='unknown')
-      write(fid,'(a13,a80)') 'Description: ',trim('Impedance responses from ModEM')
-      write(fid,'(a7,a80)') 'Units: ',trim('[V/m]/[A/m]')
-      write(fid,'(a17,i3)') 'Sign convention: ',ISIGN
+      write(fid,'(a13,a80)') trim('Description: '),trim('Impedance responses from ModEM')
+      write(fid,'(a7,a80)') trim('Units: '),trim('[V/m]/[A/m]')
+      write(fid,'(a17,i3)') trim('Sign convention: '),ISIGN
       write(fid,*)
       
       write(fid,'(i5)') allData%nTx
@@ -514,23 +514,46 @@ module ioAscii
       real (kind=selectedPrec), allocatable    :: value(:,:)
       Integer                     ::k,j,Nz,Nza,NzEarth,Ny
       logical                     :: newFile
+      character(80)               :: paramType
 
       if (len_trim(cfile)>0) then
          newFile = .true.
          open(unit=fid,file=cfile,status='unknown')
       end if
       
-      call write_grid2d(fid,'',grid)
+            !  Read in grid geometry definitions, store in structure TEgrid
+      !    first grid dimensions ...
+      Ny=grid%ny
+      Nz=grid%nz
+      NzEarth=grid%nz - grid%nza
+      Nza = grid%nza
+      write(fid,'(2i5)') Ny,NzEarth
+
+      !    write grid spacings: NOTE that Randie Mackie inserts an empty
+      !    line after every 100 values in the grid (i.e. 10 lines);
+      !    we do not do that here to save extra coding
+
+        write(fid,'(10g11.4)') (grid%Dy(j),j=1,Ny)
+
+        write(fid,'(10g11.4)') (grid%Dz(j),j=Nza+1,Nz)
+      
+      !call write_grid2d(fid,'',grid)
       
       Ny = grid%Ny
       NzEarth = grid%Nz-grid%Nza
       allocate(value(Ny,NzEarth))
       
       ! extract conductivity values from the modelParam structure
-      call getValue_modelParam(cond,value)
+      call getValue_modelParam(cond,value,paramType)
      
       ! convert from conductivity to resistivity
-      value(:,:) = ONE/value(:,:)
+      if (trim(paramType)=='LOGE') then
+      	value(:,:) = ONE/exp(value(:,:))
+      else if (trim(paramType)=='CELL') then
+       	value(:,:) = ONE/value(:,:)
+      else
+        ! assume resistivity and do nothing
+ 	  end if      
       
       ! write out resistivity values
       write(fid,'(a1)') '0'
@@ -562,16 +585,45 @@ module ioAscii
       real (kind=selectedPrec), allocatable    :: value(:,:)
       Integer                     ::k,j,Nz,Nza,NzEarth,Ny
       logical                     :: newFile
+      real (kind=selectedPrec)    :: airCond
 
       if (len_trim(cfile)>0) then
          newFile = .true.
          open(unit=fid,file=cfile,status='old')
       end if
       
-      call read_grid2d(fid,'',grid)
+           ! We are using Randie Mackie's format, which does not have information
+      ! about the air layers. So we make it equal 10 in this routine.
+      Nza = 10
       
-      Ny = grid%Ny
-      NzEarth = grid%Nz-grid%Nza
+      !  Read in grid geometry definitions, store in structure TEgrid
+      !    first grid dimensions ...
+      read(fid,*) Ny,NzEarth
+      Nz = NzEarth + Nza
+      ! then allocate for grid
+      call create_Grid2D(Ny,Nz,Nza,grid)
+
+      !    read in grid spacings
+
+        read(fid,*) (grid%Dy(j),j=1,Ny)
+
+        read(fid,*) (grid%Dz(j),j=Nza+1,Nz)
+        
+        ! set the air layers spacing to that of the top 10 Earth layers
+           grid%Dz(Nza) = max(grid%Dz(Nza+1),10.)
+           do j = 1,Nza-1
+        	grid%Dz(Nza-j) = 3. * grid%Dz(Nza-j+1)
+           end do    
+!        	do j = 1,Nza
+!        		grid%Dz(Nza-j+1) = grid%Dz(Nza+j)
+!        	end do    
+
+      !call read_grid2d(fid,'',grid)
+            ! complete grid definition
+      call gridCalcs(grid)
+      
+      !Ny = grid%Ny
+      !NzEarth = grid%Nz-grid%Nza
       allocate(value(Ny,NzEarth))
       
       ! read in resistivity values
@@ -580,11 +632,14 @@ module ioAscii
       	read(fid,*) (value(k,j), k=1,Ny)
       end do
             
-      ! convert to conductivity
-      value(:,:) = ONE/value(:,:)
+      ! convert to log conductivity
+      value(:,:) = log(ONE/value(:,:))
+      
+      ! set natural log of air conductivity
+      airCond = log(SIGMA_AIR)
       
       ! write into the modelParam structure
-      call create_modelParam(grid,'CELL',cond,value)
+      call create_modelParam(grid,'LOGE',cond,value,airCond)
       
       if (newFile) then
          close(fid)

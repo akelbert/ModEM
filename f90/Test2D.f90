@@ -15,7 +15,7 @@ program Test2D
      use dataspace
      use solnrhs
      use wsfwd2d
-     use iobinary
+     use ioascii
      use dataFunc
      use sensmatrix
      use nlcg
