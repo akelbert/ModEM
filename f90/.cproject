@@ -18,7 +18,7 @@
 <folderInfo id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.2124300833.2110683924" name="/" resourcePath="">
 <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.1469524501" name="photran.managedbuild.toolchain.gnu.fortran.exe.debug" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.debug">
 <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.exe.debug.1096032036" name="Debug Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.exe.debug"/>
-<builder arguments="-f Makefile2d" buildPath="${workspace_loc:/f90}" command="make" id="photran.managedbuild.target.gnu.builder.exe.debug.1502364704" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
+<builder arguments="-f Makefile2d.local" buildPath="${workspace_loc:/f90}" command="make" id="photran.managedbuild.target.gnu.builder.exe.debug.1502364704" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
 <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.728056760" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug">
 <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.598969417" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 </tool>
@@ -118,6 +118,7 @@
 </storageModule>
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
+<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cconfiguration>
 <cconfiguration id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.2124300833.1666650850">
 <storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.2124300833.1666650850" moduleId="org.eclipse.cdt.core.settings" name="GCC_3D_MT">
@@ -134,7 +135,7 @@
 <folderInfo id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.2124300833.1666650850." name="/" resourcePath="">
 <toolChain id="photran.managedbuild.toolchain.gnu.fortran.exe.debug.146477117" name="photran.managedbuild.toolchain.gnu.fortran.exe.debug" superClass="photran.managedbuild.toolchain.gnu.fortran.exe.debug">
 <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="photran.managedbuild.target.gnu.platform.exe.debug.1250782775" name="Debug Platform" osList="solaris,linux,hpux,aix,qnx" superClass="photran.managedbuild.target.gnu.platform.exe.debug"/>
-<builder arguments="-f Makefile3d" buildPath="${workspace_loc:/f90}" command="make" id="photran.managedbuild.target.gnu.builder.exe.debug.359377155" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
+<builder arguments="-f Makefile3d.local" buildPath="${workspace_loc:/f90}" command="make" id="photran.managedbuild.target.gnu.builder.exe.debug.359377155" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make" superClass="photran.managedbuild.target.gnu.builder.exe.debug"/>
 <tool id="photran.managedbuild.tool.gnu.c.compiler.exe.debug.650109712" name="GCC C Compiler" superClass="photran.managedbuild.tool.gnu.c.compiler.exe.debug">
 <inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1609213090" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 </tool>
@@ -234,6 +235,7 @@
 </storageModule>
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
+<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cconfiguration>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">

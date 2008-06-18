@@ -527,7 +527,12 @@ module ioAscii
       Nz=grid%nz
       NzEarth=grid%nz - grid%nza
       Nza = grid%nza
-      write(fid,'(2i5)') Ny,NzEarth
+      allocate(value(Ny,NzEarth))
+      
+      ! extract conductivity values from the modelParam structure
+      call getValue_modelParam(cond,value,paramType)
+      
+      write(fid,'(2i5,a80)') Ny,NzEarth,trim(paramType)
 
       !    write grid spacings: NOTE that Randie Mackie inserts an empty
       !    line after every 100 values in the grid (i.e. 10 lines);
@@ -538,17 +543,13 @@ module ioAscii
         write(fid,'(10g11.4)') (grid%Dz(j),j=Nza+1,Nz)
       
       !call write_grid2d(fid,'',grid)
-      
-      Ny = grid%Ny
-      NzEarth = grid%Nz-grid%Nza
-      allocate(value(Ny,NzEarth))
-      
-      ! extract conductivity values from the modelParam structure
-      call getValue_modelParam(cond,value,paramType)
+      !Ny = grid%Ny
+      !NzEarth = grid%Nz-grid%Nza
+
      
       ! convert from conductivity to resistivity
       if (trim(paramType)=='LOGE') then
-      	value(:,:) = ONE/exp(value(:,:))
+      	value(:,:) = - value(:,:)
       else if (trim(paramType)=='CELL') then
        	value(:,:) = ONE/value(:,:)
       else
@@ -586,6 +587,8 @@ module ioAscii
       Integer                     ::k,j,Nz,Nza,NzEarth,Ny
       logical                     :: newFile
       real (kind=selectedPrec)    :: airCond
+      character(80)               :: paramType
+      character(10)               :: temp
 
       if (len_trim(cfile)>0) then
          newFile = .true.
@@ -598,7 +601,17 @@ module ioAscii
       
       !  Read in grid geometry definitions, store in structure TEgrid
       !    first grid dimensions ...
-      read(fid,*) Ny,NzEarth
+      !  If paramType == 'LOGE', the file contains natural log resistivity,
+      !  otherwise it's resistivity
+      read(fid,'(2i5,a10)',advance='no') Ny,NzEarth,temp
+      
+      paramType = temp
+      
+      ! By default assume 'CELL' - Randie Mackie's linear resistivity format
+      if (trim(paramType) == '') then
+         paramType = 'CELL'
+      end if
+      
       Nz = NzEarth + Nza
       ! then allocate for grid
       call create_Grid2D(Ny,Nz,Nza,grid)
@@ -609,14 +622,12 @@ module ioAscii
 
         read(fid,*) (grid%Dz(j),j=Nza+1,Nz)
         
-        ! set the air layers spacing to that of the top 10 Earth layers
-           grid%Dz(Nza) = max(grid%Dz(Nza+1),10.)
-           do j = 1,Nza-1
-        	grid%Dz(Nza-j) = 3. * grid%Dz(Nza-j+1)
-           end do    
-!        	do j = 1,Nza
-!        		grid%Dz(Nza-j+1) = grid%Dz(Nza+j)
-!        	end do    
+      ! set the air layers to something quasi-reasonable: in the future,
+      ! will include them in the input ascii file
+      grid%Dz(Nza) = max(grid%Dz(Nza+1),10.)
+      do j = 1,Nza-1
+      	grid%Dz(Nza-j) = 3. * grid%Dz(Nza-j+1)
+      end do 
 
       !call read_grid2d(fid,'',grid)
             ! complete grid definition
@@ -633,13 +644,19 @@ module ioAscii
       end do
             
       ! convert to log conductivity
-      value(:,:) = log(ONE/value(:,:))
+      if (trim(paramType) == 'LOGE') then
+        value(:,:) = - value(:,:)
+      else if (trim(paramType) == 'CELL') then
+      	value(:,:) = ONE/value(:,:)
+      else
+        call errStop('Unable to understand the model parameter type in read_cond2d')
+      end if
       
       ! set natural log of air conductivity
       airCond = log(SIGMA_AIR)
       
-      ! write into the modelParam structure
-      call create_modelParam(grid,'LOGE',cond,value,airCond)
+      ! write into the modelParam structure (according to paramType)
+      call create_modelParam(grid,paramType,cond,value,airCond)
       
       if (newFile) then
          close(fid)

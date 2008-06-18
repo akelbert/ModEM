@@ -26,7 +26,8 @@ LIBS = -lblas -llapack
 OBJ = math_constants.o utilities.o Grid2D.o EMfield.o ModelParameter.o DataSpace.o SolnRHS.o WSfwd2D.o InterpEB.o DataGridInfo.o DataFunc.o FwdTEmod.o FwdTMmod.o EMsolver.o ioAscii.o MeasComb.o SensPDEcoeff.o SensMatrix.o NLCG.o Test2D.o 
 
 
-all: Test2D 
+all: Test2D
+	cp Test2D /usr/local/bin
 
 # Here is the link step 
 Test2D: $(OBJ) 
