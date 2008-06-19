@@ -198,6 +198,7 @@ module ioAscii
       real(kind=8),intent(in)   :: sites(2,nSites)
       type(dvecMTX), intent(in)      :: allData
       real(kind=8), dimension(:,:), allocatable :: siteTemp
+      character(80)   :: info,units
       integer   :: nComp = 2
       complex*8  temp
 
@@ -206,10 +207,15 @@ module ioAscii
       character(10) :: siteid, tab='           '
       character(80) :: header
 
+      info = 'Impedance responses from ModEM'
+      units = '[V/m]/[A/m]'
+
       open(unit=fid,file=cfile,form='formatted',status='unknown')
-      write(fid,'(a13,a80)') trim('Description: '),trim('Impedance responses from ModEM')
-      write(fid,'(a7,a80)') trim('Units: '),trim('[V/m]/[A/m]')
-      write(fid,'(a17,i3)') trim('Sign convention: '),ISIGN
+      write(fid,'(a12)',advance='no') 'Description:'
+      write(fid,*) trim(info)
+      write(fid,'(a6)',advance='no') 'Units:'
+      write(fid,*) trim(units)
+      write(fid,'(a17,i3)') 'Sign convention: ',ISIGN
       write(fid,*)
       
       write(fid,'(i5)') allData%nTx
@@ -233,7 +239,7 @@ module ioAscii
            write(fid,*)
 		 enddo
 	    ! write the comment line for the data block
-	     write(fid,*) header
+	     write(fid,'(a80)') header
          do isite = 1,ns
          	! Note: temporarily, we write site id's according to their number;
          	! in the future, they will be stored in the receiver dictionary
@@ -296,9 +302,9 @@ module ioAscii
       read(fid,'(a17,i3)') temp,sign_in_file
       read(fid,*)
       
-      if (trim(units) .eq. '[V/m]/[A/m]') then
+      if (index(units,'[V/m]/[A/m]')>0) then
          SI_factor = 1.0
-      else if (trim(units) .eq. '[mV/km]/[nT]') then
+      else if (index(units,'[mV/km]/[nT]')>0) then
          SI_factor = 1000.0
       else
          call errStop('Unknown units in input data file '//cfile)
@@ -532,7 +538,8 @@ module ioAscii
       ! extract conductivity values from the modelParam structure
       call getValue_modelParam(cond,value,paramType)
       
-      write(fid,'(2i5,a80)') Ny,NzEarth,trim(paramType)
+      write(fid,'(2i5)',advance='no') Ny,NzEarth
+      write(fid,*) trim(paramType)
 
       !    write grid spacings: NOTE that Randie Mackie inserts an empty
       !    line after every 100 values in the grid (i.e. 10 lines);
@@ -587,8 +594,7 @@ module ioAscii
       Integer                     ::k,j,Nz,Nza,NzEarth,Ny
       logical                     :: newFile
       real (kind=selectedPrec)    :: airCond
-      character(80)               :: paramType
-      character(10)               :: temp
+      character(80)               :: line,paramType
 
       if (len_trim(cfile)>0) then
          newFile = .true.
@@ -603,12 +609,14 @@ module ioAscii
       !    first grid dimensions ...
       !  If paramType == 'LOGE', the file contains natural log resistivity,
       !  otherwise it's resistivity
-      read(fid,'(2i5,a10)',advance='no') Ny,NzEarth,temp
-      
-      paramType = temp
-      
+      read(fid,'(a80)') line
+
+      read(line,*) Ny,NzEarth
+            
       ! By default assume 'CELL' - Randie Mackie's linear resistivity format
-      if (trim(paramType) == '') then
+      if (index(line,'LOGE')>0) then
+         paramType = 'LOGE'
+      else
          paramType = 'CELL'
       end if
       
