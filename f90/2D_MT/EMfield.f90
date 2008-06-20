@@ -12,7 +12,7 @@ module EMfield
 !   inversion have been developed here (less than for 3D).
 !  NOTE that for 2D we only deal with scalar fields, defined either
 !   on nodes or cells ... these are distinguished through 
-!   structure field gridType, which can be either "NODE" or "CELL"
+!   structure field gridType, which can be either NODE or CELL
 !  For full-sparse operations full vectors are stored as type
 !   Vec2D ... gridTypes should match!
 
@@ -32,7 +32,7 @@ implicit none
     type(grid2d_t), pointer		:: grid
     !   corners, cells, sides ... full ...interior, whatever
     !   supported types at present:
-    !         CELL, NODE, CELL EARTH, NODE EARTH, FACE EARTH
+    !         CELL, NODE, CELL_EARTH, NODE_EARTH, EDGE_EARTH
     character*80			:: gridType = ''
   end type cvector
 
@@ -93,24 +93,24 @@ contains
        Ny = grid%Ny
 
        select case (gridType)
-          case ('NODE')
+          case (NODE)
             vec%N1 = Ny+1
             vec%N2 = Nz+1
             allocate(vec%v(Ny+1,Nz+1))
-          case ('NODE EARTH')
+          case (NODE_EARTH)
             vec%N1 = Ny+1
             vec%N2 = NzEarth+1
             allocate(vec%v(Ny+1,NzEarth+1))
-          case ('CELL')
+          case (CELL)
             vec%N1 = Ny
             vec%N2 = Nz
             allocate(vec%v(Ny,Nz))
-          case ('CELL EARTH')
+          case (CELL_EARTH)
             vec%N1 = Ny
             vec%N2 = NzEarth
             allocate(vec%v(Ny,NzEarth))
-          case ('FACE EARTH')
-            ! allocates for all faces, including boundaries
+          case (EDGE_EARTH)
+            ! allocates for all edges, including boundaries
             vec%N1 = Ny+1
             vec%N2 = NzEarth+1
             allocate(vec%v(Ny+1,NzEarth+1))

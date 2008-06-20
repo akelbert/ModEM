@@ -132,13 +132,13 @@ Contains
       select case(mode)
          case('TE')
             call FWD2DSetupTE(SolnRHS_grid,sigma,IER)
-            gridType = 'NODE'
+            gridType = NODE
             if(IER.lt.0) then
               call errStop('initializing for TE mode in initSolver')
             endif
          case('TM')
             call FWD2DSetupTM(SolnRHS_grid,sigma,IER)
-            gridType = 'NODE EARTH'
+            gridType = NODE_EARTH
             if(IER.lt.0) then
               call errStop('initializing for TM mode in initSolver')
             endif
@@ -314,9 +314,9 @@ Contains
       eAll%allocated = .true.
       do j = 1,d%nTx
          if(typeDict(d%d(j)%dataType)%mode .eq. 'TE') then
-            gridType = 'NODE'
+            gridType = NODE
          else
-            gridType = 'NODE EARTH'
+            gridType = NODE_EARTH
          endif
          call create_EMsoln(SolnRHS_grid,gridType,eAll%solns(j))
       enddo

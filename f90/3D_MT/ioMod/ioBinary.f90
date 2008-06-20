@@ -630,7 +630,7 @@ Contains
       real(kind=selectedPrec) :: AirCond
       character(80)           :: paramType
  
-      paramType = LOG_CELL
+      paramType = LOGE
 
       call getValue_modelParam(m,paramType,ccond,AirCond)
 

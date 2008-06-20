@@ -42,17 +42,6 @@ module math_constants
   complex(kind=selectedPrec), parameter :: C_ZERO = (0.0_selectedPrec, 0.0_selectedPrec)
   complex(kind=selectedPrec), parameter	:: C_MinusOne = (-1.0_selectedPrec, 0.0_selectedPrec)
 
-  character(len=80), parameter		:: CELL = 'CELL'
-  character(len=80), parameter		:: NODE = 'NODE'
-  character(len=80), parameter		:: FACE = 'FACE'
-  character(len=80), parameter		:: EDGE = 'Edge'
-  character(len=80), parameter		:: CENTER = 'Center'
-  character(len=80), parameter		:: Corner = 'Corner'
-  character(len=80), parameter		:: NODE_EARTH = 'NODE EARTH'
-  character(len=80), parameter		:: FACE_EARTH = 'FACE EARTH'
-  character(len=80), parameter		:: CELL_EARTH = 'CELL EARTH'
-  character(len=80), parameter		:: LOG_CELL = 'LOG_CELL'
-
   character(len=2), parameter		:: TE = 'TE'
   character(len=2), parameter		:: TM = 'TM'
 

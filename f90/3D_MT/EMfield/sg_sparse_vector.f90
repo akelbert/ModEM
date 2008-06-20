@@ -60,8 +60,9 @@ module sg_sparse_vector
 !**************************************************************************
   type :: sparsevecc
 
-     ! complex vector defined on edge/ face nodes: 
-     ! intention of use as a character string: 'Edge', or 'Face'
+     ! complex vector defined on edge/ face nodes;
+     ! store the intention of the use in a character string defined
+     ! as in Grid3D as a parameter: EDGE or FACE
      character (len=80)	                             	:: gridType=''
      ! nCoeff is number of non-zero nodes
      integer 						:: nCoeff  = 0

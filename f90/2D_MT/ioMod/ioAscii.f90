@@ -555,9 +555,9 @@ module ioAscii
 
      
       ! convert from conductivity to resistivity
-      if (trim(paramType)=='LOGE') then
+      if (index(paramType,'LOGE')>0) then
       	value(:,:) = - value(:,:)
-      else if (trim(paramType)=='CELL') then
+      else if (index(paramType,'LINEAR')>0) then
        	value(:,:) = ONE/value(:,:)
       else
         ! assume resistivity and do nothing
@@ -613,11 +613,11 @@ module ioAscii
 
       read(line,*) Ny,NzEarth
             
-      ! By default assume 'CELL' - Randie Mackie's linear resistivity format
+      ! By default assume 'LINEAR RHO' - Randie Mackie's linear resistivity format
       if (index(line,'LOGE')>0) then
          paramType = 'LOGE'
       else
-         paramType = 'CELL'
+         paramType = 'LINEAR'
       end if
       
       Nz = NzEarth + Nza
@@ -654,7 +654,7 @@ module ioAscii
       ! convert to log conductivity
       if (trim(paramType) == 'LOGE') then
         value(:,:) = - value(:,:)
-      else if (trim(paramType) == 'CELL') then
+      else if (trim(paramType) == 'LINEAR') then
       	value(:,:) = ONE/value(:,:)
       else
         call errStop('Unable to understand the model parameter type in read_cond2d')

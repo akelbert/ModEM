@@ -20,6 +20,14 @@ module grid3d
   public                             	:: create_grid3D,deall_grid3D, &
                                 GridCalcs, copy_grid3D
 
+  ! Possible grid types for EMfield, storing the intention of use for types
+  ! such as cvector, cscalar, rvector, rscalar, sparsevecc.
+  character(len=80), parameter		:: FACE = 'FACE'
+  character(len=80), parameter		:: EDGE = 'EDGE'
+  character(len=80), parameter		:: CENTER = 'CELL'
+  character(len=80), parameter		:: CORNER = 'NODE'
+  character(len=80), parameter		:: CELL_EARTH = 'CELL EARTH'
+
   ! ***************************************************************************
   ! type grid_param consists of parameters that define the basic grid geometry
   ! used for three dimensional numerical modeling

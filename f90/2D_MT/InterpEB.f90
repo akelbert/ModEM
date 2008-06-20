@@ -170,7 +170,7 @@ Contains
        enddo
     enddo
 
-    call create_sparsevecc(inGrid,FACE,ii,LC)
+    call create_sparsevecc(inGrid,EDGE,ii,LC)
     LC%j = J
     LC%k = K
     LC%c = C
@@ -371,7 +371,7 @@ Contains
        enddo
     enddo
 
-    call create_sparsevecc(inGrid,FACE_EARTH,ii,LC)
+    call create_sparsevecc(inGrid,EDGE_EARTH,ii,LC)
     LC%j = J
     LC%k = K
     LC%c = C

@@ -355,7 +355,7 @@ subroutine SdivCorr(inE,outE,phi0)
   allocate(PCGiter%rerr(PCGiter%maxIt), STAT = status)
   PCGiter%rerr = 0.0
 
-  Desc = 'Corner'
+  Desc = CORNER
   ! alocating phiSol, phiRHS
   Call create_cscalar(inE%grid, phiSol, Desc)
   Call create_cscalar(inE%grid, phiRHS, Desc)  

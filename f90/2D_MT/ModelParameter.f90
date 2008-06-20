@@ -15,6 +15,10 @@ use emfield     !!!!  inherits :  grid2d
 
 implicit none
 
+  ! supported model parameter types (conductivity only)
+   character(len=80), parameter		:: LOGE = 'LOGE'
+   character(len=80), parameter		:: LINEAR = 'LINEAR'
+
 type ::  modelParam_t
    !  modelParam is derived data type used to store parameters that
    !   determine conductivity/resistivity model
@@ -28,8 +32,8 @@ type ::  modelParam_t
    real (kind=selectedPrec)		:: AirCond = SIGMA_AIR
    logical           			:: allocated = .false.
    !   parameter types supported:
-   !   CELL = conductivity of each grid Earth cell is specified
-   !           (linear at present!)
+   !   LINEAR = linear conductivity of each grid Earth cell is specified
+   !   LOGE = natural log of conductivity in Earth cells specified
    character*80      			:: paramType = ''
 end type modelParam_t
 
@@ -56,7 +60,7 @@ public  ::  maxNorm_modelParam
 !  conductivity mappings and adjoints for 2D MT modeling and inversion code 
 !  routines that are public
    public	:: CellToNode, NodeToCell, CondParamToArray
-   public	:: rhoC, FaceToCell, CellToFace, QtoModelParam
+   public	:: rhoC, EdgeToCell, CellToEdge, QtoModelParam
 
 !   include interface for model covariance
 !   include wscovar.hd
@@ -363,10 +367,10 @@ contains
       Nza = cellCond%grid%Nza
       NzE = Nz-Nza
       allocate(temp(Ny,NzE))
-      if(NodeCond%gridType(1:4) .NE. 'NODE') then 
+      if(NodeCond%gridType .NE. NODE) then 
          call errStop('NodeCond must be of gridType NODE in CellToNode')
       endif
-      if(CellCond%paramType(1:4) .EQ. 'LOGE') then 
+      if(CellCond%paramType .EQ. LOGE) then 
          if(present(Sigma0)) then
             temp = CellCond%v*exp(Sigma0%v)
          else
@@ -414,8 +418,8 @@ contains
       type (cvector), intent(in)   :: NodeCond
       
 
-      !  OUTPUT is cell conductivity parameter structure
-      !    (paramType should be CELL)
+      !  OUTPUT is linear cell conductivity parameter structure
+      !    (paramType should be LINEAR)
       !  CellCond is overwritten by call to this routine
       type (modelParam_t), intent(inout)   :: CellCond
       !   Optional input Sigma0 is background conductivity, required
@@ -429,10 +433,10 @@ contains
       integer iy,iz,izc,Ny,Nz,Nza
       real(kind=selectedPrec) w00,w01,w10,w11,wsum
 
-      if(NodeCond%gridType(1:4) .NE. 'NODE') then 
+      if(NodeCond%gridType .NE. NODE) then 
          call errStop('NodeCond must be of gridType NODE in NodeToCell')
       endif
-      if((CellCond%paramType .eq. 'LOGE') .and. (.not.present(Sigma0))) then
+      if((CellCond%paramType .eq. LOGE) .and. (.not.present(Sigma0))) then
          call errStop('Background conductivity required for paramType LOGE in NodeToCell')
       endif
 
@@ -469,7 +473,7 @@ contains
 		 CellCond%v(iy,izc)+w11*real(NodeCond%v(iy,iz))
          enddo           
       enddo
-      if(CellCond%paramType .eq. 'LOGE') then
+      if(CellCond%paramType .eq. LOGE) then
          CellCond%v = CellCond%v*exp(Sigma0%v)
       endif
 
@@ -482,7 +486,7 @@ contains
       !     Sets air cells to AirCond
       !
       !  INPUT is cell conductivity parameter structure
-      !    (i.e., paramType should be CELL)
+      !    (i.e., paramType should be LINEAR)
       type (modelParam_t), intent(in)   :: CellCond
       integer, intent(in)	:: Ny,Nz
   
@@ -506,7 +510,7 @@ contains
             Cond(iy,iz) = CellCond%v(iy,izc)
          enddo            
       enddo  
-      if(CellCond%paramTYpe.eq.'LOGE') then
+      if(CellCond%paramType .eq. LOGE) then
          Cond = exp(Cond)
       endif
                 
@@ -527,7 +531,7 @@ contains
       real(kind=selectedPrec)	                :: r
 
       ! local variables
-      if(sigma%paramType.eq.'LOGE') then
+      if(sigma%paramType .eq. LOGE) then
          r = exp(-sigma%v(j,k))
       else
          r = 1./sigma%v(j,k)
@@ -536,7 +540,7 @@ contains
       end function rhoC
 
    !**********************************************************************
-   subroutine CellToFace(CellCond, sigma0, EdgeCond_y,EdgeCond_z)
+   subroutine CellToEdge(CellCond, sigma0, EdgeCond_y,EdgeCond_z)
    ! map from Cell to Edge on Y and Z axis
 
    type (modelParam_t), intent(in)    :: CellCond
@@ -555,7 +559,7 @@ contains
    Nzb = Nz - Nza
 
    allocate(temp(Ny,Nzb))
-   if(CellCond%paramType .EQ. 'LOGE') then
+   if(CellCond%paramType .EQ. LOGE) then
       temp = - CellCond%v/exp(sigma0%v)
    else
       temp = - CellCond%v/(sigma0%v*sigma0%v)
@@ -586,12 +590,12 @@ contains
 
    deallocate(temp)
 
-   end subroutine CellToFace
+   end subroutine CellToEdge
 
    !**********************************************************************
 
-   subroutine FaceToCell(EdgeCond_y,EdgeCond_z,sigma0,CellCond)
-   ! map from Cell to Face on Y and Z axis
+   subroutine EdgeToCell(EdgeCond_y,EdgeCond_z,sigma0,CellCond)
+   ! map from Edge to Cell on Y and Z axis
 
    type (cvector), intent(in)   :: EdgeCond_y, EdgeCond_z
    type (modelParam_t), intent(in) :: sigma0
@@ -631,13 +635,13 @@ contains
      enddo
    enddo
 
-   if (CellCond%paramType .eq. 'LOGE') then
+   if (CellCond%paramType .eq. LOGE) then
       CellCond%v = - CellCond%v/exp(sigma0%v)
    else
       CellCond%v = - CellCond%v/(sigma0%v*sigma0%v)
    endif
 
-   end subroutine FaceToCell
+   end subroutine EdgeToCell
 
    !**********************************************************************
    subroutine QtoModelParam(Qj,sigma0,dsigmaReal,dSigmaImag)
@@ -658,7 +662,7 @@ contains
    do jk = 1,Qj%nCoeff
       j = Qj%J(jk)
       k = Qj%K(jk)
-      if(sigma0%paramType .eq. 'LOGE') then
+      if(sigma0%paramType .eq. LOGE) then
          dsigmaReal%v(j,k) = dSigmaReal%v(j,k) &
 			-real(Qj%C(jk))/exp(sigma0%v(j,k))
          if(present(dSigmaImag)) then

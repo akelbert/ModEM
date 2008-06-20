@@ -804,7 +804,7 @@ Contains
 	  ! move cell conductivities read into rscalar object into a modelParam
 	  ! object ... this dance needed to keep modelParam attributes private
 	  !   First need to create model parameter
-	  call create_modelParam(grid,CELL_EARTH,m,ccond)
+	  call create_modelParam(grid,LINEAR,m,ccond)
 	  
 	  ! convert modelParam to the required paramType
 	  call setType_modelParam(m,paramType)

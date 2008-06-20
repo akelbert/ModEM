@@ -267,7 +267,7 @@ program Test3D
      if (len_trim(rFile_Model)>0) then
        ! This line specifies the parametrization type; any model parameters
        ! read from files are converted to this type
-       paramType=LOG_CELL
+       paramType=LOGE
      
 	   ! Read input files and set up basic grid geometry & conductivities
        call read_Cond3D(fidRead,rFile_Model,sigma0,paramType,grid)

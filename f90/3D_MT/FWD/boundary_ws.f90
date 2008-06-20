@@ -21,7 +21,7 @@ Contains
   subroutine BC_x0_WS(imode,period,grid3D,Cond3D,E0,BC)
     !  sets up boundary condtions in BC and initial electric 
     !  field solution vector in E0 
-    !  E0 should be complex vector, allocated, usedfor = 'Edge'
+    !  E0 should be complex vector, allocated, usedfor = EDGE
     !  BC should be complex BC, allocated
 
     !  Input mode, period 

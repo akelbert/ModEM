@@ -125,8 +125,8 @@ module sg_scalar
   ! a complex field
   type :: cscalar
 
-     ! store the intention of the use as a character string: 'Center', 
-     ! CORNER, CELL_EARTH
+     ! store the intention of the use in a character string defined
+     ! in Grid3D as a parameter: CENTER, CORNER, CELL_EARTH
      character (len=80)	                               :: gridType
 
      ! Note that the arrays are defined through dynamic memory allocation  
@@ -152,8 +152,8 @@ module sg_scalar
   ! a real field
   type :: rscalar
 
-     ! store the intention of the use as a character string: 'Center'
-     ! CORNER, CELL_EARTH
+     ! store the intention of the use in a character string defined
+     ! in Grid3D as a parameter: CENTER, CORNER, CELL_EARTH
      character (len=80)	                           	:: gridType
 
      ! Typical usage:  conductivity averaged on centers of

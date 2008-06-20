@@ -144,14 +144,13 @@ module sg_vector
   ! a complex field
   type :: cvector
 
-     ! store the intention of the use as a character string: 'Edge',
-     ! or 'Face'
-     ! Two possibilities: 'Edge'/ 'Face' 
+     ! store the intention of the use in a character string defined
+     ! in Grid3D as a parameter: EDGE or FACE are two possibilities
      character (len=80)	                             :: gridType
 
      ! Typical usage:  electrical fields on cell edges of
      ! staggered grid
-     ! For example, in an 'Edge', the dimensions would be
+     ! For example, in an EDGE, the dimensions would be
      ! x: edge nodes in x-direction: dimension Nx, Ny+1, Nz+1
      ! y: edge nodes in y-direction: dimension Nx+1, Ny, Nz+1
      ! z: edge nodes in z-direction: dimension Nx+1, Ny+1, Nz
@@ -177,9 +176,8 @@ module sg_vector
   ! a real field
   type :: rvector
 
-     ! store the intention of the use as a character string: 'Edge' 
-     ! or 'Face'
-     ! Two possibilities: 'Edge'/ 'Face' 
+     ! store the intention of the use in a character string defined
+     ! in Grid3D as a parameter: EDGE or FACE are two possibilities
      character (len=80)	                              :: gridType
 
      ! Typical usage:  conductivity averaged on cell edges of

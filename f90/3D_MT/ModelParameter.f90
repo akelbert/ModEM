@@ -20,6 +20,10 @@ module ModelParameter
 
   implicit none
 
+  ! supported model parameter types (conductivity only)
+   character(len=80), parameter		:: LOGE = 'LOGE'
+   character(len=80), parameter		:: LINEAR = 'LINEAR'
+   
   type :: modelParam_t
      !  Parameters which define conductivity distribution.
      !   for the present approach, with each cell of the computational grid
@@ -40,7 +44,7 @@ module ModelParameter
      real (kind=selectedPrec)   :: AirCond
      logical			:: allocated = .false.
      character (len=80)		:: paramType = ''
-     !  supported paramType at present: 'CELL_EARTH' and 'LOG_CELL'
+     !  supported paramType at present: LINEAR and LOGE
   end type modelParam_t
 
 !   ModelParameter module needs to contain routines of three general types
@@ -146,7 +150,7 @@ Contains
      if(present(vAir)) then
         m%AirCond = vAir
      else
-		if(paramtype .eq. LOG_CELL) then
+		if(paramtype .eq. LOGE) then
 		   m%AirCond = log(SIGMA_AIR)
 		else
 		   m%AirCond = SIGMA_AIR
@@ -184,11 +188,11 @@ Contains
      
 	 if(trim(paramType) .eq. trim(m%paramType)) then
 	    ! we are done
-	 else if((paramType .eq. LOG_CELL) .and. (m%paramType .eq. CELL_EARTH)) then
+	 else if((paramType == LOGE) .and. (m%paramType == LINEAR)) then
 	    ! convert to log
 	    m%cellCond%v = log(m%cellCond%v)
 	    m%AirCond=log(m%AirCond)
-	 else if((paramType .eq. CELL_EARTH) .and. (m%paramType .eq. LOG_CELL)) then
+	 else if((paramType == LINEAR) .and. (m%paramType == 'LOGE')) then
 	    ! convert to cell
 	    m%cellCond%v = exp(m%cellCond%v)
 	    m%AirCond=exp(m%AirCond)
@@ -410,7 +414,7 @@ Contains
      else
         call create_rscalar(m%grid,cCond,CENTER)
      endif
-     if(m%paramType(1:8) .eq. LOG_CELL) then
+     if(m%paramType .eq. LOGE) then
         cCond%v(:,:,1:m%grid%NzAir) = exp(m%AirCond)
         cCond%v(:,:,m%grid%NzAir+1:m%grid%Nz) = exp(m%cellCond%v)
      else
@@ -440,9 +444,9 @@ Contains
   subroutine ModelParamToEdge(m, Econd,m0)
   !  Maps conductivity defined on grid cells (prisms) to edge-nodes ... this
   !   can be used for both non-linear and linearized mappings when 
-  !   paramtype = 'LOG_CELL'.  In this case, if optional argument m0 is present
+  !   paramtype = LOGE.  In this case, if optional argument m0 is present
   !   the linearized mapping is used; otherwise the non-linear mappring is used.
-  !   If paramtype = 'COND' (linear conductivity) then the same linear mapping
+  !   If paramtype = LINEAR (linear conductivity) then the same linear mapping
   !   is done in whether m0 is present or not (and in fact, m0 is not referenced
   !   in this case)
   !  NOTE: there is a subtlty (and possible source of error) associated with
@@ -496,7 +500,7 @@ Contains
     airCond = m%airCond
     temp = m%cellCond%v
    
-    if(m%paramType(1:8) .EQ. LOG_CELL) then 
+    if(m%paramType .EQ. LOGE) then 
        if(linearizedMapping) then
           temp = temp*exp(m0%cellCond%v)
           airCond = R_ZERO
@@ -599,7 +603,7 @@ Contains
     !  OUTPUTS: model parameter
     type(modelParam_t), intent(inout)         :: m 
     !  INPUT (OPTIONAL) background model parameter, 
-    !         required if m%paramtype=LOG_CELL
+    !         required if m%paramtype=LOGE
     type(modelParam_t), optional, intent(in)	:: m0
 
     !   LOCAL Variables
@@ -617,8 +621,8 @@ Contains
       stop
     end if
     
-    if((m%paramtype.eq.LOG_CELL).and. (.not.present(m0))) then
-       call errStop('Background conductivity required for paramType LOG_CELL in EdgeToModelParam')
+    if((m%paramtype.eq.LOGE).and. (.not.present(m0))) then
+       call errStop('Background conductivity required for paramType LOGE in EdgeToModelParam')
     endif
 
     ! Could add code to check whether the bounds are the same ...
@@ -691,7 +695,7 @@ Contains
         enddo
       enddo  
   
-    if(m%paramType(1:8) .EQ. LOG_CELL) then 
+    if(m%paramType .EQ. LOGE) then 
        m%cellCond%v = temp*exp(m0%cellCond%v)
     else
        m%cellCond%v = temp
@@ -724,7 +728,7 @@ Contains
       i = Qj%I(jk)
       j = Qj%J(jk)
       k = Qj%K(jk)
-      if(sigma0%paramType(1:8) .eq. LOG_CELL) then
+      if(sigma0%paramType .eq. LOGE) then
          dsigmaReal%CellCond%v(i,j,k) = dSigmaReal%CellCond%v(i,j,k) &
                         -real(Qj%C(jk))/exp(sigma0%CellCond%v(i,j,k))
          if(present(dSigmaImag)) then
@@ -779,7 +783,7 @@ Contains
        w22 = m%grid%dy(iy-1)*m%grid%dz(iz-1)
        temp(2,2) = m%cellCond%v(ix,iy-1,izE-1)
        S = w11+w21+w12+w22
-       if(m%paramtype .eq. LOG_CELL) then
+       if(m%paramtype .eq. LOGE) then
           temp = exp(temp)
        endif
        if(izE.eq.1) then
@@ -799,7 +803,7 @@ Contains
        w22 = m%grid%dx(ix-1)*m%grid%dz(iz-1)
        temp(2,2) = m%cellCond%v(ix-1,iy,izE-1)
        S = w11+w21+w12+w22
-       if(m%paramtype .eq. LOG_CELL) then
+       if(m%paramtype .eq. LOGE) then
           temp = exp(temp)
        endif
        if(izE.eq.1) then
@@ -819,7 +823,7 @@ Contains
        w22 = m%grid%dx(ix-1)*m%grid%dy(iy-1)
        temp(2,2) = m%cellCond%v(ix-1,iy-1,izE)
        S = w11+w21+w12+w22
-       if(m%paramtype .eq. LOG_CELL) then
+       if(m%paramtype .eq. LOGE) then
           temp = exp(temp)
        endif
        r = (temp(1,1)*w11 + temp(2,1)*w21+  &

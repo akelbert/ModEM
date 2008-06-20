@@ -1,7 +1,18 @@
 module grid2d
-use math_constants
-
    !  Defines grid data structure, basic grid methods
+   
+   use math_constants
+
+   ! Possible grid types, on which cvector is defined. Viewing the grid
+   ! as 2D, NODES and EDGES correspond to the corners and the edges of
+   ! all square grid elements, and CELLS corresponds to the centers of
+   ! these squares. EARTH means the air is excluded from the grid.
+   character(len=80), parameter		:: CELL = 'CELL' 
+   character(len=80), parameter		:: NODE = 'NODE'
+   character(len=80), parameter		:: EDGE = 'EDGE'
+   character(len=80), parameter		:: NODE_EARTH = 'NODE EARTH'
+   character(len=80), parameter		:: CELL_EARTH = 'CELL EARTH'
+   character(len=80), parameter		:: EDGE_EARTH = 'EDGE EARTH'
 
    type ::  grid2d_t
       !  grid2d_t is derived data type used to store grid geometry

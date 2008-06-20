@@ -30,7 +30,7 @@ module senspdecoeff
    subroutine curlB(b,Jy,Jz)
    ! computes curl B,  mapping from Node -> Face
    !   coded to map onto all faces, including boundaries
-   !   Outputs Jy, Jz should be allocated as gridType 'FACE EARTH'
+   !   Outputs Jy, Jz should be allocated as gridType EDGE_EARTH
 
    type(cvector), intent(in)	:: b
    type(cvector), intent(inout)	:: Jy,Jz
@@ -39,8 +39,8 @@ module senspdecoeff
    integer			:: iy, iz, Ny, Nzb,Nza
    real (kind=selectedPrec)	:: dz,dy
 
-   if(Jy%gridType .ne. 'FACE EARTH' .or.  &
-		Jy%gridType .ne. 'FACE EARTH') then
+   if(Jy%gridType .ne. EDGE_EARTH .or.  &
+		Jz%gridType .ne. EDGE_EARTH) then
       call errStop('wrong gridType for outputs Jy/Jz in curlB')
    endif
 
@@ -66,10 +66,10 @@ module senspdecoeff
 
    !**********************************************************************
    subroutine curlE(Ey,Ez,b)
-   ! computes curl E mapping from Face -> Node
+   ! computes curl E mapping from Edge -> Node
    !   maps only onto interior nodes
-   !   Inputs Ey, Ez should be allocated as gridType 'FACE EARTH'
-   !   Output is of type 'NODE EARTH'
+   !   Inputs Ey, Ez should be allocated as gridType EDGE_EARTH
+   !   Output is of type NODE_EARTH
 
    type(cvector), intent(in)		:: Ey,Ez
    type(cvector), intent(inout)		:: b
@@ -78,8 +78,8 @@ module senspdecoeff
    integer 			:: iy, iz, Ny, Nzb, Nza
    real (kind=selectedPrec)	:: dz1,dz2,dzz, dy1, dy2, dyy
 
-   if(Ey%gridType .ne. 'FACE EARTH' .or.  &
-		Ey%gridType .ne. 'FACE EARTH') then
+   if(Ey%gridType .ne. EDGE_EARTH .or.  &
+		Ez%gridType .ne. EDGE_EARTH) then
       call errStop('wrong gridType for inputs Ey/Ez in curlE')
    endif
 
@@ -114,8 +114,8 @@ module senspdecoeff
    integer 			:: iy, iz, Ny, Nzb, Nza
    real(kind=selectedPrec)	:: dz1,dz2,dzz, dy1, dy2, dyy
 
-   if(Ey%gridType .ne. 'FACE EARTH' .or.  &
-		Ey%gridType .ne. 'FACE EARTH') then
+   if(Ey%gridType .ne. EDGE_EARTH .or.  &
+		Ez%gridType .ne. EDGE_EARTH) then
       call errStop('wrong gridType for outputs Ey/Ez in curlE_T')
    endif
 
@@ -173,13 +173,13 @@ module senspdecoeff
    else
  
 	   !  allocate temporary data structures
-	   gridType = 'FACE EARTH'
+	   gridType = EDGE_EARTH
 	   call create_cvector(e0%grid,gridType,Jy)
 	   call create_cvector(e0%grid,gridType,Jz)
 	   call create_cvector(e0%grid,gridType,CJy)
 	   call create_cvector(e0%grid,gridType,CJz)
 	
-	   call CellToFace(dsigma,sigma0, CJy,CJz)
+	   call CellToEdge(dsigma,sigma0, CJy,CJz)
 	
 	   call curlB(e0%vec,Jy,Jz)
 	   CJy%v = CJy%v*Jy%v
@@ -246,7 +246,7 @@ module senspdecoeff
    else
 
 	   !  allocate temporary data structures
-	   gridType = 'FACE EARTH'
+	   gridType = EDGE_EARTH
 	   call create_cvector(e0%grid,gridType,Jy)
 	   call create_cvector(e0%grid,gridType,Jz)
 	   call create_cvector(e0%grid,gridType,CJy)
@@ -258,15 +258,15 @@ module senspdecoeff
 	   CJy%v = CJy%v*Jy%v
 	   CJz%v = CJz%v*Jz%v
 	
-	   ! map from face back to model parameter space
+	   ! map from edge back to model parameter space
 	   Jy%v = real(CJy%v)
 	   Jz%v = real(CJz%v)
-	   call FaceToCell(Jy,Jz,sigma0,dsigmaReal)
+	   call EdgeToCell(Jy,Jz,sigma0,dsigmaReal)
 	
 	   if(present(dsigmaImag)) then
 	      Jy%v = imag(CJy%v)
 	      Jz%v = imag(CJz%v)
-	      call FaceToCell(Jy,Jz,sigma0,dsigmaImag)
+	      call EdgeToCell(Jy,Jz,sigma0,dsigmaImag)
 	   endif
 	
 	   call deall_cvector(Jy)
