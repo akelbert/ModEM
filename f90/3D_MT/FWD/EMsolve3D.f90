@@ -266,7 +266,7 @@ Contains
        nIterTotal = nIterTotal + QMRiter%niter
 
        nDivCor = nDivCor+1
-       if( nDivCor .le. MaxDivCor) then
+       if( nDivCor < MaxDivCor) then
           ! do divergence correction
           Call copy_cvector(temp, eSol)
           if(bRHS%nonzero_Source) then
