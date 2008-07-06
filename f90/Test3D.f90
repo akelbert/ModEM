@@ -6,7 +6,7 @@ program Test3D
      use modelparameter
      use dataspace
      use solnrhs
-     use iobinary
+     use ioascii
      use dataFunc
      use sensmatrix
      !use mtinvsetup
@@ -33,6 +33,7 @@ program Test3D
      character*1, parameter	:: MULT_BY_J_T_MTX = 'M'
      character*1, parameter	:: FORWARD_PRED_DELTA = 'D'
      character*1, parameter	:: NLCG_INVERSION = 'I'
+     character*1, parameter	:: IO = 'W'
 
      ! file names
      character*80      :: rFile_Config = ''
@@ -114,6 +115,7 @@ program Test3D
         write(*,*) '    to yield a bunch of models, one for each transmitter'
         write(*,*) '-D  calculated the predicted data for a perturbed model'
         write(*,*) '-I  runs an NLCG inversion to yield an inverse model'
+        write(*,*) '-W  tests your input and output routines'
         write(*,*)
         write(*,*) ' Additional arguments:'
         write(*,*) '-F  rFile_Model rFile_Data wFile_Data'
@@ -125,6 +127,7 @@ program Test3D
         write(*,*) '-M  rFile_Model rFile_dModelMTX rFile_Data wFile_Data'
         write(*,*) '-D  rFile_Model rFile_dModel rFile_Data wFile_Data'
         write(*,*) '-I  rFile_Model rFile_Data wFile_Model wFile_Data lambda alpha'
+        write(*,*) '-W  rFile_Model rFile_Data wFile_Model wFile_Data'
         stop
      endif
      
@@ -257,7 +260,22 @@ program Test3D
         if (narg > 6) then
           read(temp(6),*) alpha
         end if
-        
+
+      case (IO)
+        ! W
+        if (narg > 1) then
+	       rFile_Model = temp(1)
+	    end if
+	    if (narg > 2) then
+	       rFile_Data = temp(2)
+	    end if
+	    if (narg > 3) then
+	       wFile_Model = temp(3)
+	    end if
+	    if (narg > 4) then
+	       wFile_Data = temp(4)
+	    end if
+                
       case default
          call errStop('Unknown job. Please check your command line options')
       
@@ -265,9 +283,6 @@ program Test3D
      
      ! Read background conductivity parameter and grid
      if (len_trim(rFile_Model)>0) then
-       ! This line specifies the parametrization type; any model parameters
-       ! read from files are converted to this type
-       paramType=LOGE
      
 	   ! Read input files and set up basic grid geometry & conductivities
        call read_Cond3D(fidRead,rFile_Model,sigma0,paramType,grid)
@@ -318,7 +333,6 @@ program Test3D
         write(*,*) 'Calculating the full sensitivity matrix...'
         call calcSensMatrix(allData,sigma0,sigma)
         header = 'Sensitivity Matrix' 
-        header = 'Sensitivity matrix test' 
         call writeAll_Cond3D(fidWrite,wFile_Sens,header,allData%nData,sigma)
 
      case (MULT_BY_J)
@@ -367,6 +381,12 @@ program Test3D
         call write_Cond3D(fidWrite,wFile_Model,sigma1)
         call fwdPred(sigma1,allData)
         call write_Z(fidWrite,wFile_Data,nPer,periods,nSites,sites,allData)
+
+     case (IO)
+        write(*,*) 'Writing model and data files and exiting...'
+        call write_Cond3D(fidWrite,wFile_Model,sigma0)
+        call write_Z(fidWrite,wFile_Data,nPer,periods,nSites,sites,allData)
+
      end select
 
 	 call date_and_time(values=tarray)

@@ -324,7 +324,7 @@ Contains
    subroutine getValue_modelParam(m,paramType,v,vAir)
 
      type(modelParam_t), intent(in)       :: m
-     character(80), intent(in)		      :: paramType
+     character(80), intent(inout)		  :: paramType
      type(rscalar), intent(out)		      :: v
      real(kind=selectedPrec), intent(out), optional :: vAir
      ! local variable
@@ -332,6 +332,10 @@ Contains
 
      if(.not.(m%allocated)) then
         call errstop('input modelParam must be allocated before calling getValue_modelParam')
+     endif
+     
+     if(trim(paramType) .eq. '') then
+     	paramType = m%paramType
      endif
      
      if (v%allocated) then
