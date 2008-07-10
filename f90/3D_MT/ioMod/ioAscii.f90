@@ -902,9 +902,9 @@ Contains
 	  
       ! convert from conductivity to resistivity
       if (index(paramType,'LOGE')>0) then
-      	value(:,:,:) = - Cond.v(:,:,:)
+      	value = - Cond%v
       else if (index(paramType,'LINEAR')>0) then
-       	value(:,:,:) = ONE/Cond.v(:,:,:)
+       	value = ONE/Cond%v
       else
         ! assume resistivity and do nothing
  	  end if      
