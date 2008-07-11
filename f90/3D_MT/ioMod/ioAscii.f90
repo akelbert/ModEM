@@ -651,6 +651,7 @@ Contains
             case(4)
                allData%d(iTx)%datatype =  Off_Diagonal_Impedance
          end select
+         read(fid,*) ! header line: will need to parse this in the future
          do k=1,ns
          read(fid,*)siteid, (allData%d(iTx)%data(j,k),j=1,nComp)
          read(fid,*)        (allData%d(iTx)%err(j,k),j=1,nComp)
