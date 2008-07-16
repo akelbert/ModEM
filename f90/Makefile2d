@@ -1,9 +1,9 @@
 # Makefile suited for building the Test2D program
 # Generated using: ./fmkmf.pl [OPTIONS] Test2D.f90 > Makefile
 # with command line options
-# -p INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/FWD:2D_MT/ioMod
-# -f90 g95 (compiler)
-# -opt -g -ftrace=frame -fbounds-check (compiler optimisation)
+# -p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/FWD:2D_MT/ioMod
+# -f90 ifort (compiler)
+# -opt -g (compiler optimisation)
 # -l -lblas -llapack (linking options)
 
 #  Uncomment these lines to make program with g95
@@ -18,16 +18,15 @@
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-F90 = ifort
-FFLAGS = -g
+F90 = g95 
+FFLAGS = -g -C
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
-OBJ = math_constants.o utilities.o Grid2D.o EMfield.o ModelParameter.o DataSpace.o SolnRHS.o WSfwd2D.o InterpEB.o DataGridInfo.o DataFunc.o FwdTEmod.o FwdTMmod.o EMsolver.o ioAscii.o MeasComb.o SensPDEcoeff.o SensMatrix.o NLCG.o Test2D.o 
+OBJ = math_constants.o utilities.o Grid2D.o EMfield.o ModelParameter.o DataSpace.o SolnRHS.o WSfwd2D.o InterpEB.o DataGridInfo.o DataFunc.o FwdTEmod.o FwdTMmod.o EMsolver.o ioAscii.o MeasComb.o SensPDEcoeff.o SensMatrix.o UserCtrl.o Main.o NLCG.o Test2D.o 
 
 
-all: Test2D
-	cp Test2D /usr/local/bin
+all: Test2D 
 
 # Here is the link step 
 Test2D: $(OBJ) 
@@ -89,10 +88,16 @@ SensPDEcoeff.o:2D_MT/SensPDEcoeff.f90 math_constants.o utilities.o DataFunc.o
 SensMatrix.o:SENS/SensMatrix.f90 math_constants.o utilities.o MeasComb.o SensPDEcoeff.o EMsolver.o 
 	 $(F90) -c $(FFLAGS) SENS/SensMatrix.f90 
 
+UserCtrl.o:./UserCtrl.f90  
+	 $(F90) -c $(FFLAGS) ./UserCtrl.f90 
+
+Main.o:2D_MT/Main.f90 ModelParameter.o DataSpace.o EMsolver.o UserCtrl.o ioAscii.o 
+	 $(F90) -c $(FFLAGS) 2D_MT/Main.f90 
+
 NLCG.o:INV/NLCG.f90 SensMatrix.o 
 	 $(F90) -c $(FFLAGS) INV/NLCG.f90 
 
-Test2D.o:Test2D.f90 ModelParameter.o DataSpace.o SolnRHS.o WSfwd2D.o ioAscii.o DataFunc.o SensMatrix.o NLCG.o 
+Test2D.o:Test2D.f90 ModelParameter.o DataSpace.o SolnRHS.o WSfwd2D.o ioAscii.o DataFunc.o SensMatrix.o Main.o NLCG.o 
 	 $(F90) -c $(FFLAGS) Test2D.f90 
 
 # Type " make clean " to get rid of all object and module files 

@@ -265,7 +265,6 @@ module ioAscii
       !temp=dcmplx(allData%d(iTx)%data(1,k),allData%d(iTx)%data(2,k))
       !write(fid,*)tab, ((periods(iTx)*MU)/(2.0*PI))*abs(temp)**2, abs(atan(allData%d(iTx)%data(2,k)/allData%d(iTx)%data(1,k)))*(180/PI)
       
-      close(fid)
       end subroutine write_Z
 
 
