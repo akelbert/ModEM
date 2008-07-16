@@ -1,5 +1,5 @@
-# Makefile suited for building the Test2D program
-# Generated using: ./fmkmf.pl [OPTIONS] Test2D.f90 > Makefile
+# Makefile suited for building the Mod2DMT program
+# Generated using: ./fmkmf.pl [OPTIONS] Mod2DMT.f90 > Makefile
 # with command line options
 # -p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/FWD:2D_MT/ioMod
 # -f90 ifort (compiler)
@@ -18,19 +18,19 @@
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-F90 = g95 
-FFLAGS = -g -C
+F90 = ifort 
+FFLAGS = -g
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
-OBJ = math_constants.o utilities.o Grid2D.o EMfield.o ModelParameter.o DataSpace.o SolnRHS.o WSfwd2D.o InterpEB.o DataGridInfo.o DataFunc.o FwdTEmod.o FwdTMmod.o EMsolver.o ioAscii.o MeasComb.o SensPDEcoeff.o SensMatrix.o UserCtrl.o Main.o NLCG.o Test2D.o 
+OBJ = math_constants.o utilities.o Grid2D.o EMfield.o ModelParameter.o DataSpace.o SolnRHS.o WSfwd2D.o InterpEB.o DataGridInfo.o DataFunc.o FwdTEmod.o FwdTMmod.o EMsolver.o ioAscii.o MeasComb.o SensPDEcoeff.o SensMatrix.o UserCtrl.o Main.o NLCG.o Mod2DMT.o 
 
 
-all: Test2D 
+all: Mod2DMT 
 
 # Here is the link step 
-Test2D: $(OBJ) 
-	 $(F90) -o $(OUTDIR)/Test2D $(OBJ) $(LIBS) 
+Mod2DMT: $(OBJ) 
+	 $(F90) -o $(OUTDIR)/Mod2DMT $(OBJ) $(LIBS) 
 
 # Here are the compile steps
  
@@ -97,8 +97,8 @@ Main.o:2D_MT/Main.f90 ModelParameter.o DataSpace.o EMsolver.o UserCtrl.o ioAscii
 NLCG.o:INV/NLCG.f90 SensMatrix.o 
 	 $(F90) -c $(FFLAGS) INV/NLCG.f90 
 
-Test2D.o:Test2D.f90 ModelParameter.o DataSpace.o SolnRHS.o WSfwd2D.o ioAscii.o DataFunc.o SensMatrix.o Main.o NLCG.o 
-	 $(F90) -c $(FFLAGS) Test2D.f90 
+Mod2DMT.o:Mod2DMT.f90 ModelParameter.o DataSpace.o SolnRHS.o WSfwd2D.o ioAscii.o DataFunc.o SensMatrix.o Main.o NLCG.o 
+	 $(F90) -c $(FFLAGS) Mod2DMT.f90 
 
 # Type " make clean " to get rid of all object and module files 
 clean: 
@@ -106,7 +106,7 @@ clean:
 	`find . -mindepth 1 -name "*~"` 
 
 cleanall: clean 
-	rm -f $(OUTDIR)/Test2D 
+	rm -f $(OUTDIR)/Mod2DMT 
 
 src: clean 
 	tar cvfz $(ARCHIVE).tgz * 

@@ -1,5 +1,5 @@
 ! *****************************************************************************
-program Test2D
+program Mod2DMT
 !  program for linking 2D TE forward modeling/data functional
 !       etc. modules to matlab inversion drivers
 !     Modified from FWDtestTE
@@ -59,7 +59,7 @@ program Test2D
      character*80  gridType, header,arg, paramtype
      character*80, dimension(:), pointer :: temp
      
-     call parseArgs('mt2d',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
+     call parseArgs('Mod2DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
      
      call initGlobalData()
      

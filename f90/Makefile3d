@@ -1,9 +1,9 @@
-# Makefile suited for building the Test3D program
-# Generated using: ./fmkmf.pl [OPTIONS] Test3D.f90 > Makefile
+# Makefile suited for building the Mod3DMT program
+# Generated using: ./fmkmf.pl [OPTIONS] Mod3DMT.f90 > Makefile
 # with command line options
-# -p INV:LAPACK:SENS:UTILS:3D_MT:3D_MT/FWD:3D_MT/FWD/Mod2d:3D_MT/EMfield:3D_MT/ioMod
-# -f90 g95 (compiler)
-# -opt -g -ftrace=frame -fbounds-check (compiler optimisation)
+# -p .:INV:LAPACK:SENS:UTILS:3D_MT:3D_MT/FWD:3D_MT/FWD/Mod2d:3D_MT/EMfield:3D_MT/ioMod
+# -f90 ifort (compiler)
+# -opt -g -C (compiler optimisation)
 # -l -lblas -llapack (linking options)
 
 #  Uncomment these lines to make program with g95
@@ -18,19 +18,19 @@
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-F90 = ifort
+F90 = ifort 
 FFLAGS = -g -C
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
-OBJ = math_constants.o Grid3D.o utilities.o sg_scalar.o sg_vector.o sg_sparse_vector.o ModelParameter.o DataSpace.o sg_boundary.o SolnRHS.o sg_diff_oper.o WSfwd2Dpar.o WSutils.o WSfwd1Dmod.o WSfwd2Dmod.o FwdTEmod.o boundary_ws.o modelOperator3D.o solver.o EMsolve3D.o DataGridInfo.o InterpEB.o DataFunc.o EMsolver.o ioAscii.o MeasComb.o SensPDEcoeff.o SensMatrix.o NLCG.o Test3D.o 
+OBJ = math_constants.o Grid3D.o utilities.o sg_scalar.o sg_vector.o sg_sparse_vector.o ModelParameter.o DataSpace.o sg_boundary.o SolnRHS.o sg_diff_oper.o WSfwd2Dpar.o WSutils.o WSfwd1Dmod.o WSfwd2Dmod.o FwdTEmod.o boundary_ws.o modelOperator3D.o solver.o EMsolve3D.o DataGridInfo.o InterpEB.o DataFunc.o EMsolver.o ioAscii.o MeasComb.o SensPDEcoeff.o SensMatrix.o NLCG.o Mod3DMT.o 
 
 
-all: Test3D 
+all: Mod3DMT 
 
 # Here is the link step 
-Test3D: $(OBJ) 
-	 $(F90) -o $(OUTDIR)/Test3D $(OBJ) $(LIBS) 
+Mod3DMT: $(OBJ) 
+	 $(F90) -o $(OUTDIR)/Mod3DMT $(OBJ) $(LIBS) 
 
 # Here are the compile steps
  
@@ -121,8 +121,8 @@ SensMatrix.o:SENS/SensMatrix.f90 math_constants.o utilities.o MeasComb.o SensPDE
 NLCG.o:INV/NLCG.f90 SensMatrix.o 
 	 $(F90) -c $(FFLAGS) INV/NLCG.f90 
 
-Test3D.o:Test3D.f90 ModelParameter.o DataSpace.o SolnRHS.o ioAscii.o DataFunc.o SensMatrix.o NLCG.o 
-	 $(F90) -c $(FFLAGS) Test3D.f90 
+Mod3DMT.o:Mod3DMT.f90 ModelParameter.o DataSpace.o SolnRHS.o ioAscii.o DataFunc.o SensMatrix.o NLCG.o 
+	 $(F90) -c $(FFLAGS) Mod3DMT.f90 
 
 # Type " make clean " to get rid of all object and module files 
 clean: 
@@ -130,7 +130,7 @@ clean:
 	`find . -mindepth 1 -name "*~"` 
 
 cleanall: clean 
-	rm -f $(OUTDIR)/Test3D 
+	rm -f $(OUTDIR)/Mod3DMT 
 
 src: clean 
 	tar cvfz $(ARCHIVE).tgz * 

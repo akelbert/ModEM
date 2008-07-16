@@ -1,5 +1,5 @@
 !*****************************************************************************
-program Test3D
+program Mod3DMT
 !  program for testing 3D forward modeling,
 !   and sensitivity codes ....    Modified from TETMtest
 
