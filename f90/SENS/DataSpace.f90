@@ -127,17 +127,22 @@ Contains
   subroutine deall_Dvec(d)
 
     !  deallocates all memory and reinitialized dvec object d
+    ! NOTE: do not base your judgement on the deallocation of d%err
+    ! on d%errorBar variable: it can be set to .false. somewhere in
+    ! the program without deallocating d%err.
 
     type (dvec), intent(inout)	:: d
+    integer  istat
 
     if(d%allocated) then
        !  deallocate everything relevant
        deallocate(d%data,d%rx)
        nullify(d%data,d%rx)
-       if(d%errorBar) then
-          deallocate(d%err)
-          nullify(d%err)
-       endif
+       if (associated(d%err)) deallocate(d%err, STAT=istat)
+       !if(d%errorBar) then
+       !   deallocate(d%err)
+       !   nullify(d%err)
+       !endif
     endif
     d%allocated = .false.
     d%tx = 0

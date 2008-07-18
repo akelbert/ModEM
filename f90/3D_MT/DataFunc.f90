@@ -28,7 +28,7 @@ module dataFunc
   
   implicit none
 
-  public			:: RXdictSetup
+  public			:: RXdictSetup, deall_RXdict
   !   Names of these routines must be as here, as these are called by
   !    top-level inversion routines
   public                        :: nonLinDataFunc, linDataFunc
@@ -65,7 +65,6 @@ Contains
   ! for magnetic and electric field vector evaluation
   subroutine RXdictSetUp(nSites,siteLocations)
 
-    implicit none
     integer, intent(in)	 		:: nSites
     real(kind=selectedPrec), intent(in)	:: siteLocations(3,nSites)
     
@@ -79,6 +78,18 @@ Contains
     enddo
 
   end subroutine RXdictSetUp
+  
+  ! **************************************************************************
+  ! Cleans up and deletes receiver dictionary at end of program execution
+  subroutine deall_RXdict()
+
+	integer     :: istat
+
+    if (associated(rxDict)) then
+       deallocate(rxDict,STAT=istat)
+    end if
+
+  end subroutine deall_RXdict 
 
 !******************************************************************************
   subroutine nonLinDataFunc(ef,Sigma,iDT,iRX,Z,Binv)
@@ -293,6 +304,14 @@ Contains
         endif
      enddo
   enddo
+  
+  ! clean up
+  call deall_sparsevecc(L1)
+  call deall_sparsevecc(Lex)
+  call deall_sparsevecc(Ley)
+  call deall_sparsevecc(Lbx)
+  call deall_sparsevecc(Lby)
+  call deall_sparsevecc(Lbz)        
 
   end subroutine linDataFunc
 !****************************************************************************

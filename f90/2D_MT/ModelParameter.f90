@@ -136,6 +136,7 @@ contains
      if(cond%allocated) then
         deallocate(cond%v)
         nullify(cond%v)
+        nullify(cond%grid)
         cond%allocated = .false.
         cond%paramType = ''
      endif

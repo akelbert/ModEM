@@ -66,6 +66,15 @@ contains
        SolnRHS_grid = grid
 
     end subroutine set_SolnRHS_grid
+    
+!**********************************************************************
+    subroutine delete_SolnRHS_grid
+!    Call this routine when SolnRHS_grid is no longer needed
+
+       call deall_grid2d(SolnRHS_grid)
+
+    end subroutine delete_SolnRHS_grid
+    
 !**********************************************************************
 
 ! Initializes and sets up transmitter dictionary for MT,

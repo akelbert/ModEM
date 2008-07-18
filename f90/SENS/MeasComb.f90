@@ -310,6 +310,7 @@ Contains
   
   ! predicted data have no error bars defined
   d%errorBar = .false.
+  deallocate(Z)
 
   end subroutine dataMeas
 

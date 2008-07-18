@@ -3,8 +3,10 @@ module Main
 	! These subroutines are called from the main program only
 
   use modelparameter
-  use dataspace
-  use emsolver
+  use dataspace ! dvecMTX
+  use datafunc ! to deallocate rxDict
+  use datagridinfo ! to deallocate txDict, typeDict
+  use emsolver ! EMsolnMTX
   use userctrl
   use ioascii
   implicit none
@@ -27,9 +29,9 @@ module Main
   
   integer, save                                             :: output_level
   
-  real (kind=selectedPrec), dimension(:), pointer, save	:: periods
-  real (kind=selectedPrec), dimension(:,:), pointer, save	:: sites
-  character*2, dimension(:), pointer, save    		:: modes
+  real (kind=selectedPrec), pointer, dimension(:), save	:: periods
+  real (kind=selectedPrec), pointer, dimension(:,:), save	:: sites
+  character(2), pointer, dimension(:), save    		:: modes
 
   ! grid geometry data structure
   type(grid2d_t), target, save	:: TEgrid
@@ -40,7 +42,7 @@ module Main
   !  storage for the "background" conductivity parameter
   type(modelParam_t), save		:: sigma0
   !  storage for the full sensitivity matrix
-  type(modelParam_t),dimension(:), pointer, save	:: sigma
+  type(modelParam_t), pointer, dimension(:), save	:: sigma
   !  storage for a perturbation to conductivity
   type(modelParam_t), save		:: dsigma
   !  storage for the inverse solution
@@ -48,6 +50,9 @@ module Main
 
   !  storage for EM solutions
   type(EMsolnMTX), save            :: eAll
+  
+  logical                   :: write_model, write_data, write_EMsoln
+    
 
 
 Contains
@@ -131,6 +136,19 @@ Contains
 	  output_level = 3
 	end select
 
+    write_model = .false.
+    if (len_trim(cUserDef%wFile_Model)>0) then
+       write_model = .true.
+    end if
+    write_data = .false.
+    if (len_trim(cUserDef%wFile_Data)>0) then
+       write_data = .true.
+    end if
+    write_EMsoln = .false.
+    if (len_trim(cUserDef%wFile_EMsoln)>0) then
+       write_EMsoln = .true.
+    end if
+     
 	return
 
   end subroutine initGlobalData	! initGlobalData
@@ -141,15 +159,29 @@ Contains
   
   subroutine deallGlobalData()
 
-	integer	:: istat
+	integer	:: i, istat
 
 	! Deallocate global variables that have been allocated by InitGlobalData()
+	call deall_grid2d(TEgrid)
 	call deall_dvecMTX(allData)
+	call deall_EMsolnMTX(eAll)
+	call deall_modelParam(sigma0)
+	call deall_modelParam(dsigma)
+	call deall_modelParam(sigma1)
 	deallocate(modes,periods,sites,STAT=istat)
+
+	call deall_rxDict() ! 2D_MT/DataFunc.f90
+	deallocate(txDict,STAT=istat) ! 2D_MT/DataGridInfo.f90	
+	deallocate(typeDict,STAT=istat) ! 2D_MT/DataGridInfo.f90	
 	
-	!if (allocated(misfitValue)) then
-	!  deallocate(misfitValue)
-	!end if
+	if (associated(sigma)) then
+	   do i = 1,size(sigma)
+	       call deall_modelParam(sigma(i))
+	   end do
+	   deallocate(sigma,STAT=istat)
+	end if
+	
+	call delete_SolnRHS_grid()
 
   end subroutine deallGlobalData	! deallGlobalData
   

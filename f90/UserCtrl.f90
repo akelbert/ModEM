@@ -12,9 +12,6 @@ module UserCtrl
   character*1, parameter	:: MULT_BY_J_MTX = 'L'
   character*1, parameter	:: MULT_BY_J_T_MTX = 'K'
   character*1, parameter	:: INVERSE_NLCG = 'I'
-
-  logical                   :: write_model, write_data, write_EMsoln
-
      
   ! ***************************************************************************
   ! * input_info contains the list of all essential input information currently
@@ -249,21 +246,11 @@ Contains
          stop
       
      end select
+     
+     deallocate(temp)
   
-     ! save additional info for the main program
+     ! save this info for the main program
      ctrl%job = job
-      
-     if (len_trim(ctrl%wFile_Model)>0) then
-        write_model = .true.
-     end if
-
-     if (len_trim(ctrl%wFile_Data)>0) then
-        write_data = .true.
-     end if
-
-     if (len_trim(ctrl%wFile_EMsoln)>0) then
-        write_EMsoln = .true.
-     end if
        
   end subroutine parseArgs
   

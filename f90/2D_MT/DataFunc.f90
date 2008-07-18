@@ -28,7 +28,7 @@ module datafunc
 
   use math_constants
   use utilities
-  use interpeb2d        !  basic interpolation routines for 2D TE and TM
+  use interpeb        !  basic interpolation routines for 2D TE and TM
                         !    solution grids; allow computation of both E and B
                         !    at an arbitrary point in either grid
   use modelparameter, only:	rhoC	!  model parameterization
@@ -85,13 +85,17 @@ Contains
 
   end subroutine RXdictSetUp
 
-! **************************************************************************
-  ! deallocates receiver dictionary
-  subroutine deall_RXdict
+  ! **************************************************************************
+  ! Cleans up and deletes receiver dictionary at end of program execution
+  subroutine deall_RXdict()
 
-    if(associated(rxDict)) deallocate(rxDict)
+	integer     :: istat
 
-  end subroutine deall_RXdict
+    if (associated(rxDict)) then
+       deallocate(rxDict,STAT=istat)
+    end if
+
+  end subroutine deall_RXdict 
 
 !******************************************************************************
   subroutine nonLinDataFunc(ef,Sigma,iDT,iRX,Z)
@@ -236,6 +240,10 @@ Contains
      !   by 1/B  (actually 1/B == 1 !)
      Qz(1)%L%C = c_E*Qz(1)%L%C
   endif
+
+  ! clean up
+  call deall_sparsevecc(Le)
+  call deall_sparsevecc(Lb)
 
   end subroutine linDataFunc
 !****************************************************************************
