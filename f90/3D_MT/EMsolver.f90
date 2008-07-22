@@ -269,4 +269,22 @@ Contains
 
    end subroutine create_EMsolnMTX
 
+   !**********************************************************************
+   subroutine deall_EMsolnMTX(eAll)
+
+      type(EMsolnMTX), intent(inout)     :: eAll
+
+      !  local variables
+      integer                           :: j
+      character*80                      :: gridType
+
+	  do j = 1,eAll%nTx
+	  	call deall_EMsoln(eAll%solns(j))
+	  end do
+
+      if (associated(eAll%solns)) deallocate(eAll%solns)
+      eAll%allocated = .false.
+
+   end subroutine deall_EMsolnMTX
+   
 end module emsolver

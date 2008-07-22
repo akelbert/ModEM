@@ -19,9 +19,10 @@ module ioAscii
    implicit none
 
    !  routines that are public
-   public	::  read_cvector,write_cvector,write_EMsolnMTX, &
-		read_grid2d, write_grid2d, write_Z, read_Z, &
-		read_cond2d, write_cond2d
+   private	::  read_cvector,write_cvector, &
+		read_grid2d, write_grid2d
+		
+   public   :: write_Z, read_Z, read_Cond2D, write_Cond2D, write_EMsolnMTX
 
 
    Contains

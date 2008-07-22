@@ -42,7 +42,7 @@ Contains
     ! 2D grid definitions
     type(grid2d_t)		        :: grid2D
     integer				:: iSlice,ih,iz,nEXB,nv,nh,nSlice
-    integer				:: IER
+    integer				:: IER,istat
     
     ! These are temporary work arrays
     ! Array for 2D solutions
@@ -155,10 +155,11 @@ Contains
     BC%yZMax = 0.0
 
     ! clean up of the temporary work arrays
-    deallocate(grid2D%Dy)
-    deallocate(Cond2D)
-    deallocate(Esol)
-    deallocate(EXB)
+    deallocate(grid2D%Dy, STAT=istat)
+    deallocate(grid2D%Dz, STAT=istat)
+    deallocate(Cond2D, STAT=istat)
+    deallocate(Esol, STAT=istat)
+    deallocate(EXB, STAT=istat)
 
     return
 

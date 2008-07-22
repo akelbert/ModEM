@@ -284,6 +284,8 @@ Contains
        endif
     enddo
 
+    deallocate(Lic1oldIndex, STAT = status)
+
   end subroutine linComb_sparsevecc
 
   ! **********************************************************************

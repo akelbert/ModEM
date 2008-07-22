@@ -582,7 +582,7 @@ Contains
       type(dvecMTX), intent(inout)   			:: allData
 
      ! local variables
-      integer   	:: nComp,ns,iTx,k,l,j,Ndata
+      integer   	:: nComp,ns,iTx,k,l,j,Ndata,istat
       character(10) :: siteid
       real(kind=selectedPrec), pointer, dimension(:,:) :: siteTemp,siteTempAll
       logical		:: newSite
@@ -699,7 +699,7 @@ Contains
                endif
             enddo
          endif
-         deallocate(siteTemp)
+         deallocate(siteTemp,STAT=istat)
       enddo
       allData%Ndata = Ndata
       ! copy list of unique sites into "sites" array
@@ -708,6 +708,7 @@ Contains
          sites(:,k) = siteTempAll(:,k)
       enddo
       close(fid)
+      deallocate(siteTempAll,STAT=istat)
       end subroutine read_Z
 
   ! ***************************************************************************

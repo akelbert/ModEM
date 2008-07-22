@@ -1,2 +1,10 @@
-#!
-perl fmkmf.pl -f90 ifort -opt '-g -C' -l '-lblas -llapack' -p .:INV:LAPACK:SENS:UTILS:3D_MT:3D_MT/FWD:3D_MT/FWD/Mod2d:3D_MT/EMfield:3D_MT/ioMod Mod3DMT.f90 >Makefile
+#!/bin/sh
+if [ $# -le 0 ]; then
+    echo 1>&2 Usage: $0 Makefile3d.local
+    exit 127
+fi
+if [ -e $1 ]; then
+    rm $1
+fi
+perl fmkmf.pl -f90 ifort -opt '-g -C' -l '-lblas -llapack' \
+-p .:INV:LAPACK:SENS:UTILS:3D_MT:3D_MT/FWD:3D_MT/FWD/Mod2d:3D_MT/EMfield:3D_MT/ioMod Mod3DMT.f90 > $1

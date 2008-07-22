@@ -25,6 +25,9 @@ module Main
   !type (emsolve_control), save								:: fwdCtrls
   !type (inverse_control), save								:: invCtrls
   
+  ! forward solver control defined in EMsolve3D
+  type(EMsolve_control)  :: solverParams
+  
   integer, save                                             :: output_level
   
   real (kind=selectedPrec), pointer, dimension(:), save	:: periods
@@ -32,7 +35,7 @@ module Main
   character(2), pointer, dimension(:), save    		:: modes
 
   ! grid geometry data structure
-  type(grid2d_t), target, save	:: grid
+  type(grid3d_t), target, save	:: grid
 
   ! impedance data structure
   type(dvecMTX), save		:: allData
@@ -80,15 +83,15 @@ Contains
 	inquire(FILE=cUserDef%rFile_Model,EXIST=exists) 
 
 	if (exists) then
-	   ! Read background conductivity parameter and grid
-       call read_Cond2D(fidRead,cUserDef%rFile_Model,sigma0,grid)
-     
-       !  set array size parameters in WS forward code module 
-       !   these stay fixed for all forward modeling with this grid
-       call setWSparams(grid%Ny,grid%Nz,grid%Nza)
+	   ! Read input files and set up basic grid geometry & conductivities
+       call read_Cond3D(fidRead,cUserDef%rFile_Model,sigma0,paramType,grid)
 
        !  set grid for higher level solver routines
        call set_SolnRHS_grid(grid)
+     
+       !  set solver control (currently using defaults)
+       solverParams%UseDefaults= .true.
+       call setEMsolveControl(solverParams)
 	else
 	  call warning('No input model parametrization')
 	end if
@@ -98,10 +101,10 @@ Contains
 	inquire(FILE=cUserDef%rFile_Data,EXIST=exists) 
 
 	if (exists) then
-       call read_Z(fidRead,cUserDef%rFile_Data,nPer,periods,modes,nSites,sites,allData)
+	   call read_Z(fidRead,cUserDef%rFile_Data,nPer,periods,nSites,sites,allData)
        !  Using periods, sites obtained from data file
        !     set up transmitter and receiver dictionaries
-       call TXdictSetUp(nPer,periods,modes) 
+       call TXdictSetUp(nPer,periods) 
        call RXdictSetUp(nSites,sites)
        call TypeDictSetup()
     else
@@ -115,7 +118,7 @@ Contains
      case (MULT_BY_J)
 	   inquire(FILE=cUserDef%rFile_dModel,EXIST=exists)
 	   if (exists) then
-	   	  call read_Cond2D(fidRead,cUserDef%rFile_dModel,dsigma,grid)
+	   	  call read_Cond3D(fidRead,cUserDef%rFile_dModel,dsigma,paramType,grid)
 	   else
 	      call warning('The input model perturbation file does not exist')
 	   end if
@@ -130,7 +133,7 @@ Contains
         enddo
         inquire(FILE=cUserDef%rFile_dModelMTX,EXIST=exists)
 	    if (exists) then
-           call readAll_Cond2D(fidRead,cUserDef%rFile_dModelMTX,nTx,sigma,header)
+           call readAll_Cond3D(fidRead,cUserDef%rFile_dModelMTX,nTx,sigma,header)
         else
 	       call warning('The input model perturbation file does not exist')
 	    end if
@@ -191,7 +194,7 @@ Contains
 	integer	:: i, istat
 
 	! Deallocate global variables that have been allocated by InitGlobalData()
-	call deall_grid2d(grid)
+	call deall_grid3d(grid)
 	call deall_dvecMTX(allData)
 	call deall_EMsolnMTX(eAll)
 	call deall_modelParam(sigma0)
@@ -199,9 +202,9 @@ Contains
 	call deall_modelParam(sigma1)
 	deallocate(modes,periods,sites,STAT=istat)
 
-	call deall_rxDict() ! 2D_MT/DataFunc.f90
-	deallocate(txDict,STAT=istat) ! 2D_MT/DataGridInfo.f90	
-	deallocate(typeDict,STAT=istat) ! 2D_MT/DataGridInfo.f90	
+	call deall_rxDict() ! 3D_MT/DataFunc.f90
+	deallocate(txDict,STAT=istat) ! 3D_MT/DataGridInfo.f90	
+	deallocate(typeDict,STAT=istat) ! 3D_MT/DataGridInfo.f90	
 	
 	if (associated(sigma)) then
 	   do i = 1,size(sigma)
@@ -211,6 +214,9 @@ Contains
 	end if
 	
 	call delete_SolnRHS_grid()
+	call deallEMsolveControl()
+	call CurlcurleCleanUp()
+	call ModelDataCleanUp()
 
   end subroutine deallGlobalData	! deallGlobalData
   

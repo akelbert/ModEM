@@ -151,6 +151,17 @@ Contains
     omega = 0.0
 
   end subroutine ModelDataInit
+  
+  
+  subroutine ModelDataCleanUp
+  
+    call deall_grid3d(mGrid)
+    call deall_rvector(volE)
+    call deall_rvector(condE)
+    ! Cond3D is temporary
+    call deall_rscalar(Cond3D)
+  
+  end subroutine ModelDataCleanUp
 
   ! **************************************************************************
   ! * UpdateFreq updates the frequency that is currently being use
@@ -496,7 +507,38 @@ Contains
 
   end subroutine CurlcurlE        ! CurlcurlE
 
+  ! ***************************************************************************
+  ! * CurlcurlE computes the finite difference equation in complex vectors 
+  ! * for del X del X E. Deallocate these vectors when they are no longer needed.
+  subroutine CurlcurleCleanUp()
 
+    implicit none
+
+    integer                     :: status     ! for dynamic memory deallocation  
+
+    ! Deallocate memory for del x del operator coefficient arrays
+    ! Coefficients for difference equation only uses interior
+    ! nodes. however, we need boundary nodes for the adjoint problem
+    deallocate(xXY, STAT=status)
+    deallocate(xXZ, STAT=status)
+    deallocate(xY, STAT=status)   
+    deallocate(xZ, STAT=status)   
+    deallocate(xXO, STAT=status)   
+
+    deallocate(yYZ, STAT=status)
+    deallocate(yYX, STAT=status)
+    deallocate(yZ, STAT=status)   
+    deallocate(yX, STAT=status)   
+    deallocate(yYO, STAT=status)   
+
+    deallocate(zZX, STAT=status)
+    deallocate(zZY, STAT=status)
+    deallocate(zX, STAT=status)   
+    deallocate(zY, STAT=status)   
+    deallocate(zZO, STAT=status)
+    
+  end subroutine CurlcurleCleanUp
+  
   ! ***************************************************************************
   ! * AdiagInit initializes the memory for the diagonal nodes being added
   ! * with the imaginary part. Init routines mostly do memory allocation, 

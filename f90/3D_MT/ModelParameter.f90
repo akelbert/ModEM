@@ -837,13 +837,13 @@ Contains
   end function sigC
 
      !******************************************************************
-      subroutine writeAll_Cond3D(fid,cfile,header,nSigma,m)
+      subroutine writeAll_Cond3D(fid,cfile,nSigma,m,header)
 
       !  open cfile on unit fid, writes out nSigma objects of
       !   type modelParam , closes file  
 
       integer, intent(in)               :: fid,nSigma
-      character*80, intent(in)          :: cfile, header
+      character(*), intent(in)          :: cfile, header
       type(modelParam_t), intent(in)      :: m(nSigma)
 
       integer 		:: i,Nz,NzAir
@@ -866,6 +866,46 @@ Contains
       close(fid)
       end subroutine writeAll_Cond3D
 
+     !******************************************************************
+      subroutine readAll_Cond3D(fid,cfile,nSigma,m,header)
+
+      !  open cfile on unit fid, writes out nSigma objects of
+      !   type modelParam , closes file  
+
+      integer, intent(in)               :: fid
+      integer, intent(in)              :: nSigma
+      character(*), intent(in)          :: cfile
+      character(80), intent(out)        :: header
+      type(modelParam_t), intent(inout)   :: m(nSigma)
+
+      integer 		:: i,nS,Nx,Ny,Nz,NzAir,NzEarth,istat
+
+      open(unit=fid, file=cfile, form='unformatted')
+      read(fid) header
+      read(fid) nS
+      
+      if(nS .NE. nSigma) then
+          call errStop('size of sigma does not agree with contents of file in readAll_Cond2D')
+      endif
+
+      do i = 1,nSigma
+         read(fid) m(i)%paramType
+         read(fid) Nx,Ny,NzEarth
+         if((m(i)%Nx .NE. Nx) .OR. (m(i)%Ny .NE. Ny) .OR. (m(i)%NzEarth .NE. NzEarth)) then
+            close(fid)
+            call errStop('Size of cond does not agree with contents of file in readAll_Cond2D')
+         else
+            Nz = m(i)%grid%Nz
+            NzAir = m(i)%grid%Nz-m(i)%NzEarth
+            read(fid) m(i)%grid%dx
+            read(fid) m(i)%grid%dy
+            read(fid) m(i)%grid%dz(NzAir+1:Nz)
+            read(fid) m(i)%AirCond
+            read(fid) m(i)%CellCond%v
+         endif
+      enddo
+      close(fid)
+      end subroutine readAll_Cond3D
 !**********************************************************************
 
   subroutine WScov(m)

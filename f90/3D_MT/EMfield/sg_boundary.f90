@@ -263,7 +263,7 @@ Contains
     if(E%allocated) then
        deallocate(E%xYMax, E%zYMax, E%xYMin, E%zYMin, E%yXMax, &
             E%zXMax, E%yXMin, E%zXMin, E%xZMin, E%yZMin, &
-            E%xZMin, E%yZMin, E%xZMax, E%xZMax, STAT=status)
+            E%xZMin, E%yZMin, E%xZMax, E%yZMax, STAT=status)
     end if
 
     E%nx = 0

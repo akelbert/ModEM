@@ -195,6 +195,13 @@ Contains
   if(present(Binv)) then
      Binv = BB(1:2,:)
   endif
+
+  ! clean up  
+  call deall_sparsevecc(Lex)
+  call deall_sparsevecc(Ley)
+  call deall_sparsevecc(Lbx)
+  call deall_sparsevecc(Lby)
+  call deall_sparsevecc(Lbz)
   
   end subroutine nonLinDataFunc
 !

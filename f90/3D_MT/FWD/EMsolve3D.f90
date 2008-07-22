@@ -467,10 +467,12 @@ end subroutine SdivCorr ! SdivCorr
   !**********************************************************************
   !   deallEMsolveControl deallocate
   subroutine  deallEMsolveControl()
+    
+     integer istat
 
-     deallocate(EMrelErr)
-     deallocate(divJ)
-     deallocate(DivCorRelErr)
+     deallocate(EMrelErr, STAT=istat)
+     deallocate(divJ, STAT=istat)
+     deallocate(DivCorRelErr, STAT=istat)
 
   end subroutine deallEMsolveControl
 

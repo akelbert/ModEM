@@ -444,6 +444,17 @@ Contains
    call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
    !d = dHat
    write(*,'(a25,i5,a25,i5)') 'NLCG iterations:',iter,' function evaluations:',nfunc
+   
+   ! cleaning up
+   call deall_dvecMTX(dHat)
+   call deall_dvecMTX(res)
+   call deall_modelParam(mHat)
+   call deall_modelParam(m_minus_m0)
+   call deall_modelParam(grad)
+   call deall_modelParam(g)
+   call deall_modelParam(h)
+   call deall_modelParam(gPrev)
+   call deall_EMsolnMTX(eAll)  
 
    end subroutine NLCGsolver
 
