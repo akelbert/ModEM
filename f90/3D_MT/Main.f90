@@ -213,10 +213,8 @@ Contains
 	   deallocate(sigma,STAT=istat)
 	end if
 	
-	call delete_SolnRHS_grid()
-	call deallEMsolveControl()
-	call CurlcurleCleanUp()
-	call ModelDataCleanUp()
+	call delete_SolnRHS_grid() ! 3D_MT/DataGridInfo.f90
+	call deallEMsolveControl() ! 3D_MT/FWD/EMsolve3D.f90
 
   end subroutine deallGlobalData	! deallGlobalData
   

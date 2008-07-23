@@ -99,8 +99,8 @@ module modelOperator3D
   public                                :: SetBound
   
   !  routines from multA
-  public                             	:: CurlcurleSetUp, CurlcurlE
-  public                                :: AdiagInit, AdiagSetUp, Maxwell
+  public                             	:: CurlcurleSetUp, CurlcurlE, CurlcurleCleanUp
+  public                                :: AdiagInit, AdiagSetUp, deall_Adiag, Maxwell
   public                                :: MultA_O, MultA_N, AdjtBC
   !   These are used to initialize differential equation coefficients, and
   !    then to apply the differential operator
@@ -158,6 +158,7 @@ Contains
     call deall_grid3d(mGrid)
     call deall_rvector(volE)
     call deall_rvector(condE)
+
     ! Cond3D is temporary
     call deall_rscalar(Cond3D)
   
@@ -580,6 +581,16 @@ Contains
 
   end subroutine AdiagSetUp
 
+  ! ***************************************************************************
+  ! * deall_Adiag deallocates the memory for the diagonal nodes being added
+  ! * with the imaginary part.
+  subroutine deall_Adiag()
+
+    implicit none
+
+    Call deall_cvector(Adiag)
+    
+  end subroutine deall_Adiag
 
   ! ***************************************************************************
   ! * Maxwell computes the finite difference equation in complex vectors
@@ -1507,6 +1518,8 @@ Contains
     Call deall_rvector(db2)
     Call deall_rscalar(c)
     Call deall_rscalar(d)
+    ! corner volumes
+    Call deall_rscalar(volC)
 
   end subroutine Deallocate_DivCorr	! Deallocate_DivCorr
 

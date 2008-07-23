@@ -14,7 +14,7 @@ module EMsolve3D
   use solnrhs
 
   implicit none
-  public	:: FWDSolve3D ,ModelOperatorSetup
+  public	:: FWDSolve3D ,ModelOperatorSetup, ModelOperatorCleanup
   public	:: deallSolverDiag, deallEMsolveControl
   public        :: createSolverDiag, getEMsolveDiag, setEMsolveControl
   private	:: SdivCorr
@@ -312,6 +312,7 @@ Contains
     endif
 
     ! deallocate local temporary arrays
+    Call deall(phi0)
     Call deall(b)
     Call deall(temp)
     Call deall(tempBC)  
@@ -422,6 +423,20 @@ end subroutine SdivCorr ! SdivCorr
     Call CurlcurleSetUp()
     
   end subroutine ModelOperatorSetUp
+  
+  !**********************************************************************
+  ! Deallocate the model operators after an EM problem is finished
+  subroutine ModelOperatorCleanUp()
+
+    ! Deallocate EM equation operator arrays
+    call deall_Adiag()
+	call DeallocateDilu()
+	call Deallocate_DivCorr()
+    
+    ! Deallocate model operators arrays
+ 	call CurlcurleCleanUp()
+    
+  end subroutine ModelOperatorCleanUp
 
   !**********************************************************************
   ! setEMsolveControl sets actual solver control parameters, using info

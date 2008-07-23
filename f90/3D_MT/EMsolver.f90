@@ -167,7 +167,10 @@ Contains
       call deall_EMsoln(e)
    endif
 
-   !  Need cleanup/deallocation routines for model operators
+   ! cleanup/deallocation routines for model operators
+   call ModelDataCleanUp() ! FWD/modelOperator3D.f90
+   call ModelOperatorCleanUp() ! FWD/EMsolve3D.f90
+   
    end subroutine exitSolver
 
    !**********************************************************************
