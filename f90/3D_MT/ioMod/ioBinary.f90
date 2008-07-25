@@ -34,7 +34,7 @@ module ioBinary
   use math_constants
   use emsolve3d
   use dataspace
-  use datagridinfo
+  use datafunc
   use emsolver, only: EMsolnMTX
   
   implicit none

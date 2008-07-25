@@ -4,9 +4,8 @@ module Main
 
   use modelparameter
   use dataspace ! dvecMTX
-  use datafunc ! to deallocate rxDict
-  use datagridinfo ! to deallocate txDict, typeDict
-  use emsolver ! EMsolnMTX
+  use datafunc ! to deallocate rxDict, typeDict
+  use emsolver ! txDict, EMsolnMTX
   use userctrl
   use ioascii
   implicit none
@@ -199,9 +198,9 @@ Contains
 	call deall_modelParam(sigma1)
 	deallocate(modes,periods,sites,STAT=istat)
 
+	call deall_txDict() ! 2D_MT/EMsolver.f90	
 	call deall_rxDict() ! 2D_MT/DataFunc.f90
-	deallocate(txDict,STAT=istat) ! 2D_MT/DataGridInfo.f90	
-	deallocate(typeDict,STAT=istat) ! 2D_MT/DataGridInfo.f90	
+	call deall_typeDict() ! 2D_MT/DataFunc.f90	
 	
 	if (associated(sigma)) then
 	   do i = 1,size(sigma)

@@ -34,7 +34,7 @@ module ioAscii
   use math_constants
   use emsolve3d
   use dataspace
-  use datagridinfo
+  use datafunc ! for data types
   use emsolver, only: EMsolnMTX
   
   implicit none

@@ -35,8 +35,7 @@ module datafunc
 					!  dependent function needed
 					!  for TM mode data
 					!  functionals
-  use solnrhs 
-  use datagridinfo
+  use solnrhs
  
   implicit none
 
@@ -62,6 +61,32 @@ module datafunc
   !  Note that the receiver dictionary is only used inside the
   !    data functional module
   type (MTrx), pointer, save, private, dimension(:) :: rxDict
+
+  type :: dataType
+
+     !  stores information about the "data type"
+     !   The following two attributes must be defined for all
+     !    data types; these are accessed and used by the top-level
+     !    inversion routines.
+     logical                    :: isComplex = .false.
+     logical                    :: calcQ = .false.
+     !    Other attributes might be different (different number,
+     !        different names, types, etc.) for  different applications.
+     character(2)                :: mode = ''! = 'TE' or 'TM'
+     character(80)               :: name = ''
+     !  could add rxDictNumber to keep track of reciever dictionary
+     !  number used for this dataType (only 1 receiver dictionary now,
+     !   so this is omitted)
+
+  end type dataType
+
+  ! data type dictionary must be public; some attributes are referenced
+  !   by top-level inversion routines
+  type (dataType), pointer, save, public, dimension(:) :: typeDict
+
+  ! add data types here ... this all needs work!
+  integer, parameter    :: TE_Impedance = 1
+  integer, parameter    :: TM_Impedance = 2
 
 Contains
 
@@ -96,6 +121,34 @@ Contains
     end if
 
   end subroutine deall_RXdict 
+
+!**************************************************************************
+! Initializes and sets up data type dictionary
+  subroutine TypeDictSetup()
+
+     allocate(typeDict(2))
+     typeDict(TE_Impedance)%name = 'TE Impedance'
+     typeDict(TE_Impedance)%isComplex = .true.
+     typeDict(TE_Impedance)%calcQ     = .false.
+     typeDict(TE_Impedance)%mode     = TE
+     typeDict(TM_Impedance)%name = 'TM Impedance'
+     typeDict(TM_Impedance)%isComplex = .true.
+     typeDict(TM_Impedance)%calcQ     = .true.
+     typeDict(TM_Impedance)%mode     = TM
+
+  end subroutine TypeDictSetUp
+
+! **************************************************************************
+! Cleans up and deletes type dictionary at end of program execution
+  subroutine deall_typeDict()
+
+	integer     :: istat
+
+    if (associated(typeDict)) then
+       deallocate(typeDict,STAT=istat)
+    end if
+
+  end subroutine deall_typeDict 
 
 !******************************************************************************
   subroutine nonLinDataFunc(ef,Sigma,iDT,iRX,Z)
@@ -137,16 +190,16 @@ Contains
 
   if(mode.eq.'TE') then
      ! electric field
-     call NodeInterpSetup2D(solnRHS_grid,x,mode,Le)
+     call NodeInterpSetup2D(ef%grid,x,mode,Le)
      ! magnetic field
-     call BfromESetUp_TE(solnRHS_grid,x,omega,Lb)
+     call BfromESetUp_TE(ef%grid,x,omega,Lb)
 
 
   elseif(mode.eq.'TM') then
      ! magnetic field
-     call NodeInterpSetup2D(solnRHS_grid,x,mode,Lb)
+     call NodeInterpSetup2D(ef%grid,x,mode,Lb)
      ! electric field
-     call EfromBSetUp_TM(solnRHS_grid,x,omega,Sigma,Le)
+     call EfromBSetUp_TM(ef%grid,x,omega,Sigma,Le)
   else
      call errStop('option not available in nonLinDataFunc')
   endif
@@ -209,14 +262,14 @@ Contains
   !   evaluate E, B, for background solution
   if(mode.eq.'TE') then
      ! electric field
-     call NodeInterpSetup2D(SolnRHS_grid,x,mode,Le)
+     call NodeInterpSetup2D(e0%grid,x,mode,Le)
      ! magnetic field
-     call BfromESetUp_TE(SolnRHS_grid,x,omega,Lb)
+     call BfromESetUp_TE(e0%grid,x,omega,Lb)
   elseif(mode.eq.'TM') then
      ! magnetic field
-     call NodeInterpSetup2D(SolnRHS_grid,x,mode,Lb)
+     call NodeInterpSetup2D(e0%grid,x,mode,Lb)
      ! electric field
-     call EfromBSetUp_TM(SolnRHS_grid,x,omega,Sigma0,Le,e0%vec,Qz(1)%L)
+     call EfromBSetUp_TM(e0%grid,x,omega,Sigma0,Le,e0%vec,Qz(1)%L)
   else
      call errStop('option not available in linDataFunc')
   endif
