@@ -76,10 +76,10 @@ Contains
       calcQ = typeDict(iDT)%calcQ
 
       !  manage any necessary initilization for this transmitter
-      call initSolver(iDT,iTx,sigma0,e0,e,comb)
+      call initSolver(iTx,sigma0,e0,e,comb)
 
       !  solve forward problem; result is stored in e0
-      call fwdSolve(itx,iDT,e0)
+      call fwdSolve(iTx,e0)
 
       ! get data type info for this dvec: here we allow for either
       !  real or complex data, though we always store as real
@@ -121,7 +121,7 @@ Contains
             call zero_EMrhs(comb)
             call add_EMsparseEMrhs(C_ONE,L(iFunc),comb)
 
-            call sensSolve(iTx,iDT,TRN,comb,e)
+            call sensSolve(iTx,TRN,comb,e)
 
             ! multiply by P^T (and add Q^T if appropriate)
             if(typeDict(iDT)%isComplex) then
@@ -194,14 +194,14 @@ Contains
       iDT = d%d(j)%dataType
    
       !  manage any necessary initilization for this transmitter
-      call initSolver(iDT,iTx,sigma0,e0,e,comb)
+      call initSolver(iTx,sigma0,e0,e,comb)
 
       if(savedSolns) then
          !e0 = eAll%solns(j)
          call copy_EMsoln(e0,eAll%solns(j))
       else
          !  solve forward problem; result is stored in e0
-         call fwdSolve(itx,iDT,e0)
+         call fwdSolve(iTx,e0)
       endif
       
       !  compute rhs (stored in comb) for forward sensitivity 
@@ -210,7 +210,7 @@ Contains
       call Pmult(e0,sigma0,delSig,comb)
 
       ! solve forward problem with source in comb
-      call sensSolve(iTx,iDT,FWD,comb,e)
+      call sensSolve(iTx,FWD,comb,e)
 
       ! finally apply linearized data functionals
       if(TypeDict(iDT)%calcQ) then
@@ -280,7 +280,7 @@ Contains
       iDT = d%d(j)%dataType
 
       !  manage any necessary initilization for this transmitter
-      call initSolver(iDT,iTx,sigma0,e0,e,comb)
+      call initSolver(iTx,sigma0,e0,e,comb)
       if(j.eq.1) then
         call copy_ModelParam(sigmaTemp,sigma0)
 	call zero_ModelParam(sigmaTemp)
@@ -291,7 +291,7 @@ Contains
 	     call copy_EMsoln(e0,eAll%solns(j))
       else
          !  solve forward problem; result is stored in e0
-         call fwdSolve(itx,iDT,e0)
+         call fwdSolve(iTx,e0)
       endif
       
       ! set up comb using linearized data functionals
@@ -319,7 +319,7 @@ Contains
           call linDataComb(e0,sigma0,d%d(j),comb)
       endif
       ! solve forward problem with source in comb
-      call sensSolve(iTx,iDT,TRN,comb,e)
+      call sensSolve(iTx,TRN,comb,e)
 
       ! map from nodes to conductivity space ... result in sigmaTemp
       !  HERE PmultT overwrites sigmaTemp
@@ -400,14 +400,14 @@ Contains
       iDT = d%d(j)%dataType
    
       !  manage any necessary initilization for this transmitter
-      call initSolver(iDT,iTx,sigma0,e0,e,comb)
+      call initSolver(iTx,sigma0,e0,e,comb)
 
       if(savedSolns) then
          ! e0 = eAll%solns(j)
          call copy_EMsoln(e0,eAll%solns(j))
       else
          !  solve forward problem; result is stored in e0
-         call fwdSolve(itx,iDT,e0)
+         call fwdSolve(iTx,e0)
       endif
       
       !  compute rhs (stored in comb) for forward sensitivity 
@@ -416,7 +416,7 @@ Contains
       call Pmult(e0,sigma0,delSig(j),comb)
 
       ! solve forward problem with source in comb
-      call sensSolve(iTx,iDT,FWD,comb,e)
+      call sensSolve(iTx,FWD,comb,e)
 
       ! finally apply linearized data functionals
       if(TypeDict(iDT)%calcQ) then
@@ -506,14 +506,14 @@ Contains
       iDT = d%d(j)%dataType
 
       !  manage any necessary initilization for this transmitter
-      call initSolver(iDT,iTx,sigma0,e0,e,comb)
+      call initSolver(iTx,sigma0,e0,e,comb)
 
       if(savedSolns) then
          ! e0 = eAll%solns(j)
 	     call copy_EMsoln(e0,eAll%solns(j))
       else
          !  solve forward problem; result is stored in e0
-         call fwdSolve(itx,iDT,e0)
+         call fwdSolve(iTx,e0)
       endif
       
       ! set up comb using linearized data functionals
@@ -527,7 +527,7 @@ Contains
       endif
 
       ! solve forward problem with source in comb
-      call sensSolve(iTx,iDT,TRN,comb,e)
+      call sensSolve(iTx,TRN,comb,e)
 
       ! map from nodes to conductivity space ... result in sigmaTemp
       !  HERE PmultT overwrites sigmaTemp
@@ -571,7 +571,7 @@ Contains
 
    ! local variables
    type(EMsoln)				:: e0
-   integer				:: iTx,iDT,j
+   integer				:: iTx,j
 
    if(.not.d%allocated) then
       call errStop('data vector not allocated on input to fwdPred')
@@ -597,13 +597,12 @@ Contains
    do j = 1,d%nTx
       !   get indices into dictionaries for this dvec
       iTx = d%d(j)%tx
-      iDT = d%d(j)%dataType
       
       !  do any necessary initialization for transmitter iTx
-      call initSolver(iDT,iTx,sigma,e0)
+      call initSolver(iTx,sigma,e0)
 
       ! compute forward solution
-      call fwdSolve(iTx,iDT,e0)
+      call fwdSolve(iTx,e0)
              
       ! apply data functionals
       call dataMeas(e0,sigma,d%d(j)) 

@@ -124,28 +124,22 @@ Contains
   end subroutine deall_txDict 
 
    !**********************************************************************
-   subroutine initSolver(iDT,iTx,sigma,e0,e,comb)
-   !   Initializes forward solver for data type iDt, transmitter iTx.
+   subroutine initSolver(iTx,sigma,e0,e,comb)
+   !   Initializes forward solver for transmitter iTx.
    !     Idea is to call this before calling fwdSolve or sensSolve,
    !     in particular before the first solution for each transmitter
    !     (frequency).  If called for the first time (in a program run,
    !     or after a call to exitSolver), full initialization 
    !     (after deallocation/cleanup if required) is performed.
    !     
-   !   iDt defines "data type" ... for 2D MT this provide info
-   !       about TE/TM mode;
-   !   iTx defines transmitter: for MT, just frequency 
+   !   iTx defines transmitter: for 2D MT, this provides info about 
+   !       frequency and TE/TM mode; for 3D MT just frequency
    !   
    !   This now does all setup (including matrix factorization) for
    !     the appropriate mode/frequency
    !   NOTE: e and comb are optional calling arguments;
    !     both should be present if one is
-   !   
-   !   For 3DMT initialization
-   !     of the solver does not depend on iDT which is not
-   !     used here.  (Used to distinguish TE/TM in 2D)
 
-   integer, intent(in)				:: iDT
    integer, intent(in)				:: iTx
    ! type(grid3d_t), intent(in)       :: grid
    type(modelParam_t),intent(in), target		:: sigma
@@ -247,7 +241,7 @@ Contains
    end subroutine exitSolver
 
    !**********************************************************************
-   subroutine fwdSolve(iTx,iDT,e0)
+   subroutine fwdSolve(iTx,e0)
 
    !  driver for 3d forward solver; sets up for transmitter iTx, returns
    !   solution in e0 ; rhs vector (b0) is generated locally--i.e.
@@ -256,10 +250,8 @@ Contains
    !    conditions.  Presently we set BC using WS approach.   
    !  NOTE that this routine calls UpdateFreq routine to complete
    !   initialization of solver for a particular frequency.
-   !  NOTE: iDT is actually not used in the 3DMT version, as solver does not
-   !       depend on data type
 
-   integer, intent(in)		:: iTx,iDT
+   integer, intent(in)		:: iTx
    type(EMsoln), intent(inout)	:: e0
 
    ! local variables
@@ -292,7 +284,7 @@ Contains
    end subroutine fwdSolve
 
    !**********************************************************************
-   subroutine sensSolve(iTx,iDT,FWDorADJ,comb,e)
+   subroutine sensSolve(iTx,FWDorADJ,comb,e)
    !   Uses forcing input from comb, which must be set before calling
    !    solves forward or adjoint problem, depending on comb%ADJ
    !  NOTE that this routine DOES NOT call UpdateFreq routine to complete
@@ -300,7 +292,7 @@ Contains
    !  This final initialization step must (at present) be done by 
    !    calling fwdSolve before calling this routine.
 
-   integer, intent(in)          	:: iTx,iDT
+   integer, intent(in)          	:: iTx
    character*3, intent(in)		:: FWDorADJ
    type(EMrhs), intent(inout)		:: comb
    type(EMsoln), intent(inout)		:: e

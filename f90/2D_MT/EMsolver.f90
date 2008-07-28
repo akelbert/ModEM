@@ -128,8 +128,8 @@ Contains
   end subroutine deall_txDict   
   
    !**********************************************************************
-   subroutine initSolver(iDT,iTx,sigma,e0,e,comb)
-   !   Initializes forward solver for data type iDt,
+   subroutine initSolver(iTx,sigma,e0,e,comb)
+   !   Initializes forward solver for
    !    transmitter iTx: in this instance TE or TM mode solvers 
    !    for the appropriate frequency depending on mode
    !   Idea is to call this before calling fwdSolve or sensSolve,
@@ -140,16 +140,14 @@ Contains
    !     mode) full initialization (after deallocation/cleanup if required)
    !     is performed.
    !     
-   !   iDt defines "data type" ... for 2D MT this provide info
-   !       about TE/TM mode;
-   !   iTx defines transmitter: for MT, just frequency 
+   !   iTx defines transmitter: for 2D MT, this provides info about 
+   !       frequency and TE/TM mode; for 3D MT just frequency
    !   
    !   This now does all setup (including matrix factorization) for
    !     the appropriate mode/frequency
    !   NOTE: e and comb are optional calling arguments;
    !     both should be present if one is
 
-   integer, intent(in)				:: iDT
    integer, intent(in)				:: iTx
    type(modelParam_t),intent(in), target		:: sigma
    !  following structures are initialized/created in this routine
@@ -274,7 +272,7 @@ Contains
    end subroutine exitSolver
 
    !**********************************************************************
-   subroutine fwdSolve(iTx,iDT,e0)
+   subroutine fwdSolve(iTx,e0)
 
    !  driver for 2d forward solver; sets up for transmitter iTx, returns
    !   solution in e0 ; rhs vector (b) is private to this module
@@ -282,7 +280,7 @@ Contains
    !   done with a call to initSolver before calling for the first
    !   time FOR EACH DATA TYPE/TRANSMITTER
 
-   integer, intent(in)		:: iTx,iDT
+   integer, intent(in)		:: iTx
    type(EMsoln), intent(inout)	:: e0
 
    ! local variables
@@ -327,14 +325,14 @@ Contains
    end subroutine fwdSolve
 
    !**********************************************************************
-   subroutine sensSolve(iTx,iDT,FWDorADJ,comb,e)
+   subroutine sensSolve(iTx,FWDorADJ,comb,e)
    !   Uses forcing input from comb, which must be set before calling
    !    solves forward or adjoint problem, depending on comb%ADJ
    !  NOTE that this routine now does no initialization: this must be
    !   done with a call to initSolver before calling for the first
    !   time FOR EACH DATA TYPE/TRANSMITTER
 
-   integer, intent(in)          	:: iTx,iDT
+   integer, intent(in)          	:: iTx
    character*3, intent(in)		    :: FWDorADJ
    type(EMrhs), intent(inout)		:: comb
    type(EMsoln), intent(inout)		:: e
