@@ -54,15 +54,27 @@ contains
 !           Basic EMsoln methods
 !**********************************************************************
 
-     subroutine create_EMsoln(grid,gridType,e)
+     subroutine create_EMsoln(grid,mode,e)
 
      !  does not set mode, transmitter, pointer to conductivity ????
        implicit none
        type(grid2d_t), intent(in), target	:: grid
-       character*80, intent(in)         :: gridType
+       character(2), intent(in)         :: mode
        type (EMsoln), intent(inout)	:: e
-      
-       call create_cvector(grid,gridtype,e%vec)
+
+       ! local
+       character(80)     :: gridType
+       
+       if(mode .eq. 'TE') then
+          gridType = NODE
+       else if(mode .eq. 'TM') then
+          gridType = NODE_EARTH
+       else
+          call errStop('Unknown mode in create_EMsoln')
+       endif
+       
+       call create_cvector(grid,gridType,e%vec)
+       e%mode = mode
        e%grid => grid
  
      end subroutine create_EMsoln
@@ -184,24 +196,30 @@ contains
 !**********************************************************************
      !  allocates and initializes arrays for the "rhs" structure
      !   set pointer to grid + mode/source fields of rhs before calling
-     subroutine create_EMrhs(grid,gridType,b)
+     subroutine create_EMrhs(grid,mode,b)
      
        type(grid2d_t), intent(in),target	:: grid
-       character*80, intent(in)         :: gridType
+       character(2), intent(in)         :: mode
        type (EMrhs), intent(inout)   	:: b
 
        !  local variables
+       character(80)    :: gridType
        integer ::       Nz,Ny,Nza,Nzi,nBC
 
        Nz = grid%Nz
        Ny = grid%Ny
        Nza = grid%Nza
 
-       if(b%mode .eq. 'TM') then
+       if(mode .eq. 'TE') then
+          gridType = NODE
+          Nzi = Nz
+       else if(mode .eq. 'TM') then
+          gridType = NODE_EARTH
           Nzi = Nz-Nza
        else
-          Nzi = Nz
+          call errStop('Unknown mode in create_EMrhs')
        endif
+
        nBC = 2*(Ny+1)+2*(Nzi+1)
 
        if (b%nonzero_BC) then
@@ -214,8 +232,9 @@ contains
            call create_cvector(grid,gridType,b%source)
        endif
 
-       b%allocated = .true.
+       b%mode = mode
        b%grid => grid
+       b%allocated = .true.
 
      end subroutine create_EMrhs
 

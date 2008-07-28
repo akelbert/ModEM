@@ -72,7 +72,7 @@ module datafunc
      logical                    :: calcQ = .false.
      !    Other attributes might be different (different number,
      !        different names, types, etc.) for  different applications.
-     character(2)                :: mode = ''! = 'TE' or 'TM'
+     ! character(2)                :: mode = ''! = 'TE' or 'TM'
      character(80)               :: name = ''
      !  could add rxDictNumber to keep track of reciever dictionary
      !  number used for this dataType (only 1 receiver dictionary now,
@@ -130,11 +130,9 @@ Contains
      typeDict(TE_Impedance)%name = 'TE Impedance'
      typeDict(TE_Impedance)%isComplex = .true.
      typeDict(TE_Impedance)%calcQ     = .false.
-     typeDict(TE_Impedance)%mode     = TE
      typeDict(TM_Impedance)%name = 'TM Impedance'
      typeDict(TM_Impedance)%isComplex = .true.
      typeDict(TM_Impedance)%calcQ     = .true.
-     typeDict(TM_Impedance)%mode     = TM
 
   end subroutine TypeDictSetUp
 
@@ -183,7 +181,7 @@ Contains
   character*80			:: msg
 
   !  get mode, frequency for transmitter used to compute solution ef
-  mode = typeDict(iDt)%mode
+  mode = ef%mode
   omega =  ef%omega
   ! get location from reciever dictionary
   x = rxDict(iRX)%x
@@ -254,7 +252,7 @@ Contains
   logical				:: Conj_case = .false.
 
   !  get mode, frequency for transmitter used to compute solution ef
-  mode = typeDict(iDT)%mode
+  mode = e0%mode
   omega =  e0%omega
   ! get location from reciever dictionary
   x = rxDict(iRX)%x

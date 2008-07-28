@@ -24,7 +24,7 @@ implicit none
      !   at present there does not seem to be much need for BC info ... add
      !    if needed.  Other sorts of EM data may have more
      !    complex tx descriptions
-     ! character(2)                :: mode = ''! = 'TE' or 'TM'
+     character(2)                :: mode = ''! = 'TE' or 'TM'
      ! angular frequency (radians/sec), and for convenience period (s)
      real(kind=selectedPrec)            :: omega = R_ZERO
      real(kind=selectedPrec)            :: period = R_ZERO
@@ -110,6 +110,7 @@ Contains
      do iTx = 1, nTx
         txDict(iTx)%period = Periods(iTx)
         txDict(iTx)%omega = (2*PI)/ txDict(iTx)%period
+        txDict(iTx)%mode = modes(iTx)
      enddo
 
   end subroutine TXdictSetUp
@@ -162,13 +163,12 @@ Contains
    !  local variables
    integer					:: IER
    real(kind=selectedPrec)			:: period
-   character*80         			:: gridType
    character*2          			:: mode
    logical					:: initForSens
 
    initForSens = present(comb)
 
-   mode = typeDict(iDT)%mode
+   mode = txDict(iTx)%mode
    period = txDict(iTx)%period
 
    if(currentMode .ne. mode) then
@@ -197,13 +197,11 @@ Contains
       select case(mode)
          case('TE')
             call FWD2DSetupTE(SolnRHS_grid,sigma,IER)
-            gridType = NODE
             if(IER.lt.0) then
               call errStop('initializing for TE mode in initSolver')
             endif
          case('TM')
             call FWD2DSetupTM(SolnRHS_grid,sigma,IER)
-            gridType = NODE_EARTH
             if(IER.lt.0) then
               call errStop('initializing for TM mode in initSolver')
             endif
@@ -212,23 +210,21 @@ Contains
       end select
    
       !  allocate for rhs for background, scratch sensitivity solutions
-      b0%mode = mode
       b0%nonzero_source = .false.
       b0%nonzero_bc = .true.
       b0%adj = 'FWD'
-      call create_EMrhs(SolnRHS_grid,gridType,b0)
+      call create_EMrhs(SolnRHS_grid,mode,b0)
 
       !  allocate for background solution
-      call create_EMsoln(SolnRHS_grid,gridType,e0)
+      call create_EMsoln(SolnRHS_grid,mode,e0)
 
       if(initForSens) then
          !  allocate for sensitivity solution, RHS
-         call create_EMsoln(solnRHS_grid,gridType,e)
-         comb%mode = mode
+         call create_EMsoln(solnRHS_grid,mode,e)
          comb%nonzero_source = .true.
          comb%nonzero_bc = .false.
          comb%adj = ''
-         call create_EMrhs(SolnRHS_grid,gridType,comb)
+         call create_EMrhs(SolnRHS_grid,mode,comb)
       endif
    endif
 
@@ -295,7 +291,7 @@ Contains
    complex(kind=selectedPrec)	:: i_omega_mu
    character*2          	:: mode
 
-   mode = typeDict(iDT)%mode
+   mode = txDict(iTx)%mode
    period = txDict(iTx)%period
    omega = txDict(iTx)%omega
    !  set period, complete setup of TE mode equation system
@@ -347,7 +343,7 @@ Contains
    integer      :: IER
 
    comb%adj = FWDorADJ
-   if(typeDict(iDT)%mode.eq.'TE') then
+   if(txDict(iTx)%mode.eq.'TE') then
        call Fwd2DsolveTE(comb,e%vec%v,IER)
 
        if(IER .LT. 0) then
@@ -370,7 +366,7 @@ Contains
 
       !  local variables
       integer                           :: j
-      character*80                      :: gridType
+      character(2)                      :: mode
 
       call deall_EMsolnMTX(eAll)
 
@@ -378,12 +374,8 @@ Contains
       allocate(eAll%solns(d%nTx))
       eAll%allocated = .true.
       do j = 1,d%nTx
-         if(typeDict(d%d(j)%dataType)%mode .eq. 'TE') then
-            gridType = NODE
-         else
-            gridType = NODE_EARTH
-         endif
-         call create_EMsoln(SolnRHS_grid,gridType,eAll%solns(j))
+         mode = txDict(d%d(j)%tx)%mode
+         call create_EMsoln(SolnRHS_grid,mode,eAll%solns(j))
       enddo
 
    end subroutine create_EMsolnMTX
@@ -395,7 +387,6 @@ Contains
 
       !  local variables
       integer                           :: j
-      character*80                      :: gridType
 
 	  do j = 1,eAll%nTx
 	  	call deall_EMsoln(eAll%solns(j))
