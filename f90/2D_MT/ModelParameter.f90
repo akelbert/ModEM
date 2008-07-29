@@ -716,9 +716,12 @@ contains
       type(modelParam_t), intent(in)	:: sigma(nSigma) 
 
       integer i
+      character(80) temp
+
+      temp = header
 
       open(unit=fid, file=cfile, form='unformatted')
-      write(fid) header
+      write(fid) temp
       write(fid) nSigma
       do i = 1,nSigma
          write(fid) sigma(i)%paramType
