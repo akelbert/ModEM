@@ -47,7 +47,7 @@ type(RHS), save, private		:: b0
 
 ! new type to store multiple EM solutions, one for each transmitter
 !  NOTE: creation routine for this data type cannot be at the level
-!   of the solnrhs module, since this depends on typeDict (not available
+!   of the solnrhs module, since this depends on txDict (not available
 !    for the lower level routine).  Might as well also leave the
 !    type definition here, since you can't use the type until instances
 !    can be created!

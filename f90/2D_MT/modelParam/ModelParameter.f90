@@ -52,6 +52,10 @@ interface operator (*)
    MODULE PROCEDURE scMult_modelParam
 end interface
 
+interface modelCov
+   MODULE PROCEDURE WScov
+end interface
+
 public	::	create_modelParam,deall_modelParam,dotProd_modelParam
 public	::	linComb_modelParam,zero_modelParam,copy_modelParam
 public  ::  scMult_modelParam, getValue_modelParam, getSize_modelParam
@@ -66,7 +70,7 @@ public  ::  maxNorm_modelParam
    public	:: rhoC, EdgeToCell, CellToEdge, QtoModelParam
 
 
-  public          ::  WScov
+!  public          ::  WScov
 !   include interface for model covariance
 !   include wscovar.hd
   type, private :: mCov
@@ -86,7 +90,7 @@ public  ::  maxNorm_modelParam
 contains
 
 !  The included file must contain subroutines create_CmSqrt, deall_CmSqrt, multBy...
-   include "modelCov_WS.inc"
+   include "modelCov/WS.inc"
    
 !************************************************************************
    !  allocateEarthCond allocates and initializes arrays for
@@ -690,17 +694,6 @@ contains
    end subroutine QtoModelParam
 !  include source code for covariance routines
 !  include wscovar.src
-
-!**********************************************************************
-
-  subroutine WScov(m)
-
-  type (modelParam_t), intent(inout) :: m
-
-  call setup1DCM(m%grid)
-	call solveDiff(m)
-
-  end subroutine WScov
 
 
 !  include source code for model parameter IO

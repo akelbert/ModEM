@@ -6,5 +6,5 @@ fi
 if [ -e $1 ]; then
     rm $1
 fi
-perl fmkmf.pl -f90 ifort -opt '-g -C' -l '-lblas -llapack' \
--p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/FWD:2D_MT/ioMod Mod2DMT.f90 > $1
+perl fmkmf.pl -f90 g95 -opt '-g -C' -l '-lblas -llapack' \
+-p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod Mod2DMT.f90 > $1

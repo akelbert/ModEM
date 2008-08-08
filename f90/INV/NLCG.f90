@@ -277,7 +277,7 @@ Contains
     m = m_in
 
 	! apply the operator Cm^(1/2) here
-	  call WScov(m)
+	  call modelCov(m)
    
 	  m_out = m
 
