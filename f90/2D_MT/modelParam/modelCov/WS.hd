@@ -1,0 +1,10 @@
+  type :: modelCov_t
+
+    private
+
+    real (kind=selectedPrec) :: ylen = R_ZERO
+    real (kind=selectedPrec) :: zlen = R_ZERO
+    real (kind=selectedPrec), pointer, dimension(:,:,:)   ::  YDIF
+    real (kind=selectedPrec), pointer, dimension(:,:,:)   ::  ZDIF
+
+  end type

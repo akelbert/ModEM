@@ -11,7 +11,7 @@
   end subroutine WScov
 
   !------------------------------------------------------------------------------
-	
+
   subroutine setup1DCM(gd)
 
   type (grid2d_t), intent(inout) :: gd
@@ -24,20 +24,20 @@
 
   Ny      = gd%Ny
   NzEarth = gd%Nz - gd%Nza
-  allocate(Cm%YDIF(2,gd%Ny,NzEarth))
-  allocate(Cm%ZDIF(2,gd%Ny,NzEarth))
-  Cm%ylen = 0.05
-  Cm%zlen = 0.05
+  allocate(CmSqrt%YDIF(2,gd%Ny,NzEarth))
+  allocate(CmSqrt%ZDIF(2,gd%Ny,NzEarth))
+  CmSqrt%ylen = 0.05
+  CmSqrt%zlen = 0.05
 
-  ylen = Cm%ylen
-  zlen = Cm%zlen
+  ylen = CmSqrt%ylen
+  zlen = CmSqrt%zlen
 
   ! horizontal diffusion
   do iz = 1,NzEarth
     call setupYCM(Ny,ylen,YDF)
     do iy = 1,Ny
-      Cm%YDIF(1,iy,iz) = YDF(1,iy)
-      Cm%YDIF(2,iy,iz) = YDF(2,iy)
+      CmSqrt%YDIF(1,iy,iz) = YDF(1,iy)
+      CmSqrt%YDIF(2,iy,iz) = YDF(2,iy)
     enddo
   enddo
 
@@ -45,8 +45,8 @@
   do iy = 1,Ny
     call setupZCM(NzEarth,zlen,ZDF)
     do iz = 1,NzEarth
-      Cm%ZDIF(1,iy,iz) = ZDF(1,iz)
-      Cm%ZDIF(2,iy,iz) = ZDF(2,iz)
+      CmSqrt%ZDIF(1,iy,iz) = ZDF(1,iz)
+      CmSqrt%ZDIF(2,iy,iz) = ZDF(2,iz)
     enddo
   enddo
 
@@ -177,12 +177,12 @@
 ! enddo
 
   do it = 1,dTime
-    call yDiff(CmJ) 
-    call zDiff(CmJ) 
+    call yDiff(CmJ)
+    call zDiff(CmJ)
   enddo
   do it = 1,dTime
-    call zDiff(CmJ) 
-    call yDiff(CmJ) 
+    call zDiff(CmJ)
+    call yDiff(CmJ)
   enddo
 
 ! do iz = 1,Nz
@@ -214,10 +214,10 @@
   do iz = 1,Nz
     do iy = 1,Ny
       uy(iy)    = CmJ%v(iy,iz)
-      YDF(1,iy) = Cm%YDIF(1,iy,iz)
-      YDF(2,iy) = Cm%YDIF(2,iy,iz)
+      YDF(1,iy) = CmSqrt%YDIF(1,iy,iz)
+      YDF(2,iy) = CmSqrt%YDIF(2,iy,iz)
     enddo
-  
+
     call dpbtrs('U',Ny,1,1,YDF,2,uy,Ny,info)
 
     do iy = 1,Ny
@@ -225,7 +225,7 @@
     enddo
 
   enddo
-  
+
   deallocate(YDF,STAT=istat)
   deallocate(uy,STAT=istat)
 
@@ -253,10 +253,10 @@
   do iy = 1,Ny
     do iz = 1,Nz
       uz(iz)    = CmJ%v(iy,iz)
-      ZDF(1,iz) = Cm%ZDIF(1,iy,iz)
-      ZDF(2,iz) = Cm%ZDIF(2,iy,iz)
+      ZDF(1,iz) = CmSqrt%ZDIF(1,iy,iz)
+      ZDF(2,iz) = CmSqrt%ZDIF(2,iy,iz)
     enddo
-  
+
     call dpbtrs('U',Nz,1,1,ZDF,2,uz,Nz,info)
 
     do iz = 1,Nz
