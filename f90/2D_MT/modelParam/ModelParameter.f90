@@ -57,10 +57,6 @@ interface operator (*)
    MODULE PROCEDURE scMult_modelParam
 end interface
 
-interface modelCov
-   MODULE PROCEDURE WScov
-end interface
-
 !  I/O interfaces
 
 interface write_Cond2D
@@ -79,11 +75,9 @@ interface readAll_Cond2D
    MODULE PROCEDURE readVec_modelParam_binary
 end interface
 
-! definition of the modelCov type, differs between implementations of covariance
+! definitions for CmSqrt: must be consistent with the include file below
 
 include "modelCov/WS.hd"
-
-type (modelCov_t), private,  save       ::  CmSqrt
 
 contains
 

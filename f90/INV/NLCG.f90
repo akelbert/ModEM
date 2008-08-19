@@ -3,7 +3,7 @@ module NLCG
 !use math_constants
 !use utilities
 use sensmatrix
-   ! inherits meascomb,  dataspace, dataFunc, solnrhs, 
+   ! inherits meascomb,  dataspace, dataFunc, solnrhs,
    !            modelspace, soln2d
 
 implicit none
@@ -49,7 +49,7 @@ Contains
    !   a file would be desireable.
 
    type(NLCGiterControl_t), intent(inout)	:: iterControl
- 
+
      ! maximum number of iterations in one call to iterative solver
      iterControl%maxIter = 120
      ! convergence criteria: return from solver if rms < rmsTol
@@ -72,11 +72,11 @@ Contains
 
 !**********************************************************************
    subroutine printf(comment,lambda,alpha,f,rms)
-   
+
    ! Compute the full penalty functional F
    ! Also output the predicted data and the EM solution
    ! that can be used for evaluating the gradient
-   
+
 	 character(*), intent(in)               :: comment
    real(kind=selectedPrec), intent(in)  :: lambda, alpha, f, rms
 
@@ -85,17 +85,17 @@ Contains
 		write(*,'(a5,f10.6)',advance='no') ' rms=',rms
 		write(*,'(a8,f9.6)',advance='no') ' lambda=',lambda
 		write(*,'(a7,f9.6)') ' alpha=',alpha
-      
+
    end subroutine printf
 
 
 !**********************************************************************
    subroutine func(lambda,d,m0,mHat,F,dHat,eAll,RMS)
-   
+
    ! Compute the full penalty functional F
    ! Also output the predicted data and the EM solution
    ! that can be used for evaluating the gradient
-   
+
    real(kind=selectedPrec), intent(in)  :: lambda
    type(dvecMTX), intent(in)              :: d
    type(modelParam_t), intent(in)           :: m0
@@ -110,44 +110,44 @@ Contains
    type(modelParam_t) :: m,JTd
    real(kind=selectedPrec) :: SS,mNorm
    integer :: Ndata
-   
-   ! compute the smoothed model parameter vector	
+
+   ! compute the smoothed model parameter vector
    call CmSqrtMult(mHat,m)
    call linComb_modelParam(ONE,m,ONE,m0,m)
-   
+
    !  create data structure to save solutions for all transmitters
    ! call create_EMSolnMTX(d,eAll)
-   
+
    ! initialize dHat
    dHat = d
-   
-   !  compute predicted data for current model parameter m 
+
+   !  compute predicted data for current model parameter m
    !   also sets up forward solutions for all transmitters in eAll
    call fwdPred(m,dHat,eAll)
-   
+
 !	call write_Z_ascii(fidWrite,cfile,nPer,periods,modes, &
 !			nSites,sites,allData)
- 
-       
+
+
    ! compute residual: res = d-dHat
    call linComb_DvecMTX(ONE,d,MinusONE,dHat,res)
 
    ! normalize residuals, compute sum of squares
    call CdInvMult(res,Nres)
    SS = dotProd(res,Nres)
-   
+
    ! compute the model norm
    mNorm = dotProd_modelParam(mHat,mHat)
-   
+
    ! penalty functional = sum of squares + scaled model norm
    F = SS + (lambda * mNorm)
-   
+
    ! if required, compute the Root Mean Squared misfit
    if (present(RMS)) then
    	Ndata = count_DvecMTX(res)
    	RMS = sqrt(SS/Ndata)
    end if
-      
+
    end subroutine func
 
 !**********************************************************************
@@ -159,7 +159,7 @@ Contains
    !  is normally referred to as \tilde{m} = C_m^{-1/2}(m - m_0),
    !  and the gradient is computed with respect to \tilde{m}.
    !  Before calling this routine, the forward solver must be run:
-   !  call create_EMsolnMTX(d,eAll) 
+   !  call create_EMsolnMTX(d,eAll)
    !  call CmSqrtMult(mHat,m)
    !  call linComb_modelParam(ONE,m,ONE,m0,m)
    !  call fwdPred(m,dHat,eAll)
@@ -175,22 +175,22 @@ Contains
    !  local variables
    type(dvecMTX)    :: res
    type(modelParam_t) :: m,JTd,CmJTd
- 
+
    ! integer :: j, Ny, NzEarth
-   
-   ! compute the smoothed model parameter vector	
+
+   ! compute the smoothed model parameter vector
    call CmSqrtMult(mHat,m)
    call linComb_modelParam(ONE,m,ONE,m0,m)
-   
+
    ! compute residual: res = d-dHat
    call linComb_DvecMTX(ONE,d,MinusONE,dHat,res)
-   
+
    ! loop over transmitters:
    !do j = 1,res%nTx
    !   call getSize_modelParam(eAll%solns(j)%sigma,Ny,NzEarth)
    !   print *, Ny, NzEarth
    !end do
-   
+
    ! multiply by J^T
    call CdInvMult(res)
    call JmultT(m,res,JTd,eAll)
@@ -198,7 +198,7 @@ Contains
    ! multiply by 2 (to be consistent with the formula)
    ! and add the gradient of the model norm
    call linComb_modelParam(MinusTWO,CmJTd,TWO*lambda,mHat,grad)
-   
+
    end subroutine gradient
 
 !**********************************************************************
@@ -214,7 +214,7 @@ Contains
 
    ! compute the model norm
    mNorm = dotProd_modelParam(mHat,mHat)
-   
+
    ! sum of squares = penalty functional - scaled model norm
    SS = F - (lambda * mNorm)
 
@@ -223,7 +223,7 @@ Contains
 
 	 ! update the damping parameter lambda
 	 lambda = iterControl%k * lambda
-   
+
    ! penalty functional = sum of squares + scaled model norm
    F = SS + (lambda * mNorm)
 
@@ -231,7 +231,7 @@ Contains
    call linComb_modelParam(ONE,dSS,TWO*lambda,mHat,grad)
 
    end subroutine update_damping_parameter
-	    
+
 !**********************************************************************
    subroutine CdInvMult(d_in,d_out)
 
@@ -243,16 +243,16 @@ Contains
    type(dvecMTX), optional, intent(out)   :: d_out
    type(dvecMTX)                          :: d
    !integer                                :: Ndata
-   
+
     d = d_in
-   
+
     ! divide each data component by its variance
     call normalize2_DvecMTX(d)
-   
+
     ! divide by the number of data
     !Ndata = count_DvecMTX(d)
     !call scDivide_DvecMTX(ONE*Ndata,d)
-   
+
    	if (present(d_out)) then
    		d_out = d
    	else
@@ -261,25 +261,25 @@ Contains
 
    end subroutine CdInvMult
 
-   
+
 !**********************************************************************
    subroutine CmSqrtMult(m_in,m_out)
 
    ! Multiplies by the square root of the model covariance,
    ! which is viewed as a smoothing operator. Intended
    ! to be used to compute m = C_m^{1/2} \tilde{m} + m_0.
-   ! This is a dummy subroutine at present.
+   ! For efficiency, CmSqrt is a saved, private variable inside
+   ! the modelParam module. Before this routine can be called,
+   ! it has to be initialized by calling create_CmSqrt(m).
+   ! Now that multBy_CmSqrt routine exists in modelParam,
+   ! this routine is no longer needed. Leaving it here for now,
+   ! to minimize changes.
 
    type(modelParam_t), intent(in)              :: m_in
    type(modelParam_t), intent(out)             :: m_out
-   type(modelParam_t)                          :: m
-   
-    m = m_in
 
 	! apply the operator Cm^(1/2) here
-	  call modelCov(m)
-   
-	  m_out = m
+	call multBy_CmSqrt(m_in, m_out)
 
    end subroutine CmSqrtMult
 
@@ -292,7 +292,7 @@ Contains
    !   Various flavours of the algorithm and of the line search
    !   can be called from this routine
    !
-   !  Note about the starting model: 
+   !  Note about the starting model:
    !  The starting model has to be in the smoothed model space,
    !  i.e. of the form m = C_m^{1/2} \tilde{m} + m_0.
    !  In order to compute \tilde{m} from the starting model,
@@ -300,7 +300,7 @@ Contains
    !  altogether, we are always starting from the prior,
    !  with \tilde{m} = 0. However, in general we could also
    !  start with the result of a previous search.
-   
+
    !  d is data; on output it contains the responses for the inverse model
    !  NOTE: trying to set d = dHat on exit results in a corrupted data structure
    !  that is not readable by Matlab. Have to figure out why!..
@@ -339,17 +339,17 @@ Contains
    m = m0
    mHat = m0
    call zero_modelParam(mHat)
-     
+
 
    !  compute the penalty functional and predicted data
    call func(lambda,d,m0,mHat,value,dHat,eAll,rms)
    call printf('START',lambda,alpha,value,rms)
 	 nfunc = 1
-      
+
    ! compute gradient of the full penalty functional
    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
    ! call writeModelParam(grad)
-   
+
    ! initialize CG: g = - grad; h = g
    nCG = 0
    iter = 0
@@ -361,7 +361,7 @@ Contains
       if((rms.lt.iterControl%rmsTol).or.(iter.ge.iterControl%maxIter)) then
          exit
       end if
-   
+
 	  iter = iter + 1
 
 	  ! save the values of the functional and the directional derivative
@@ -383,15 +383,15 @@ Contains
 		nfunc = nfunc + nLS
 	  gPrev = g
 	  call linComb_modelParam(MinusONE,grad,R_ZERO,grad,g)
-	  
+
 	  ! compute the starting step for the next line search
 	  alpha = 2*(value - valuePrev)/grad_dot_h
-	  
+
 	  ! adjust the starting step to ensure superlinear convergence properties
 	  alpha = min(ONE,(ONE+0.01)*alpha)
 		write(*,'(a25,i5)') 'Completed NLCG iteration ',iter
     call printf('with',lambda,alpha,value,rms)
-	  
+
 	  ! if alpha is too small, we are not making progress: update lambda
 	  if (abs(rmsPrev - rms) < iterControl%fdiffTol) then
 	  	! update lambda, penalty functional and gradient
@@ -403,7 +403,7 @@ Contains
 				! multiply by C^{1/2} and add m_0
                 call CmSqrtMult(mHat,m_minus_m0)
                 call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
-                !d = dHat	
+                !d = dHat
 				return
 			end if
 	  	! restart
@@ -412,19 +412,19 @@ Contains
 	  	h = g
 	  	nCG = 0
 	  	cycle
-	  end if	  
-	  
+	  end if
+
 	  g_dot_g = dotProd_modelParam(g,g)
 	  g_dot_gPrev = dotProd_modelParam(g,gPrev)
 	  gPrev_dot_gPrev = dotProd_modelParam(gPrev,gPrev)
-	  g_dot_h = dotProd_modelParam(g,h)	   
-	  
+	  g_dot_h = dotProd_modelParam(g,h)
+
 	  ! Polak-Ribiere variant
-	  beta = ( g_dot_g - g_dot_gPrev )/gPrev_dot_gPrev 
-	  
-	  ! restart CG if the orthogonality conditions fail. Using the fact that 
-		! h_{i+1} = g_{i+1} + beta * h_i. In order for the next directional 
-		! derivative = -g_{i+1}.dot.h_{i+1} to be negative, the condition 
+	  beta = ( g_dot_g - g_dot_gPrev )/gPrev_dot_gPrev
+
+	  ! restart CG if the orthogonality conditions fail. Using the fact that
+		! h_{i+1} = g_{i+1} + beta * h_i. In order for the next directional
+		! derivative = -g_{i+1}.dot.h_{i+1} to be negative, the condition
 		! g_{i+1}.dot.(g_{i+1}+beta*h_i) > 0 must hold. Alternatively, books
 		! say we can take beta > 0 (didn't work as well)
 	  if ((g_dot_g + beta*g_dot_h > 0).and.(nCG < iterControl%nCGmax)) then
@@ -444,7 +444,7 @@ Contains
    call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
    !d = dHat
    write(*,'(a25,i5,a25,i5)') 'NLCG iterations:',iter,' function evaluations:',nfunc
-   
+
    ! cleaning up
    call deall_dvecMTX(dHat)
    call deall_dvecMTX(res)
@@ -454,7 +454,7 @@ Contains
    call deall_modelParam(g)
    call deall_modelParam(h)
    call deall_modelParam(gPrev)
-   call deall_EMsolnMTX(eAll)  
+   call deall_EMsolnMTX(eAll)
 
    end subroutine NLCGsolver
 
@@ -474,7 +474,7 @@ Contains
    ! The initial step size is set outside of this routine (in the NLCG)
    ! but these are the good choices (ref. Michael Ferris, Chapter 3, p 59):
    ! alpha_1 = alpha_{k-1} dotProd(grad_{k-1},h_{k-1})/dotProd(grad_k,h_k})
-   ! or interpolate the quadratic to f(m_{k-1}), f(m_k) and 
+   ! or interpolate the quadratic to f(m_{k-1}), f(m_k) and
    ! dotProd(grad_{k-1},h_{k-1}) and find the minimizer
    ! alpha_1 = 2(f_k - f_{k-1})/dotProd(grad_{k-1},h_{k-1}),
    ! the update alpha_1 <- min(1.00,1.01 * alpha_1).
@@ -493,7 +493,7 @@ Contains
    !
    ! Our solution has to satisfy the sufficient decrease condition
    !     f(alpha) < f(0) + c alpha f'(0).
-   
+
    real(kind=selectedPrec), intent(in)     :: lambda
    type(dvecMTX), intent(in)		       :: d
    type(modelParam_t), intent(in)		       :: m0
@@ -519,26 +519,26 @@ Contains
    !k = iterControl%alpha_k
    !eps = iterControl%alpha_tol
 
-   ! initialize the line search     
+   ! initialize the line search
    niter = 0
    mHat_0 = mHat
    f_0 = f
    starting_guess = .false.
-   
+
    ! rescale the search direction
    !h_dot_h = dotProd_modelParam(h,h)
    !h = scMult_modelParam(ONE/sqrt(h_dot_h),h)
-   
-   ! g_0 is the directional derivative f'(0) = (df/dm).dot.h 
+
+   ! g_0 is the directional derivative f'(0) = (df/dm).dot.h
    g_0 = dotProd_modelParam(grad,h)
-   
+
    ! alpha_1 is the initial step size, which will in future be set in NLCG
    !alpha_1 = ONE/maxNorm_modelParam(h)
    alpha_1 = alpha
-      
+
    !  compute the trial parameter mHat_1
    call linComb_modelParam(ONE,mHat_0,alpha_1,h,mHat_1)
- 
+
    !  compute the penalty functional and predicted data at mHat_1
    call func(lambda,d,m0,mHat_1,f_1,dHat_1,eAll_1,rms_1)
    call printf('STARTLS',lambda,alpha,f_1,rms_1)
@@ -549,10 +549,10 @@ Contains
 		print *, 'Exiting...'
 		stop
 	 end if
-   
+
    f_i = f_1
    alpha_i = alpha_1
-   
+
    fit_quadratic: do
     a = (f_i - f_0 - g_0*alpha_i)/(alpha_i**2)
     b = g_0
@@ -563,13 +563,13 @@ Contains
     	exit
     end if
 	!	The step size alpha should not be adjusted manually at all!
-	! Even when it is too small or too close to the previous try, 
-	! adjusting it won't result in an improvement (it's better to exit 
+	! Even when it is too small or too close to the previous try,
+	! adjusting it won't result in an improvement (it's better to exit
 	! the line search in that case, if anything)...
   !  if ((alpha_i - alpha < eps).or.(alpha < k*alpha_i)) then
   !  	alpha = alpha_i/TWO ! reset alpha to ensure progress
-  !  end if 
-    call linComb_modelParam(ONE,mHat_0,alpha,h,mHat)  
+  !  end if
+    call linComb_modelParam(ONE,mHat_0,alpha,h,mHat)
     call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
     call printf('QUADLS',lambda,alpha,f,rms)
     niter = niter + 1
@@ -579,14 +579,14 @@ Contains
     end if
     ! if not, iterate, using the most recent value of f & alpha
     alpha_i = alpha
-    f_i = f 
+    f_i = f
    end do fit_quadratic
-   
+
    ! if the initial guess was better than what we found, take it
    if (f_1 < f) then
    	starting_guess = .true.
    end if
-   
+
    if (starting_guess) then
    	alpha = alpha_1
    	dHat = dHat_1
@@ -595,14 +595,14 @@ Contains
    	rms = rms_1
    	f = f_1
    end if
-   
+
    ! compute gradient of the full penalty functional and exit
    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	 print *, 'Gradient computed, line search finished'
-     
+
   end subroutine lineSearchQuadratic
-  
-  
+
+
   !**********************************************************************
   subroutine lineSearchCubic(lambda,d,m0,h,alpha,mHat,f,grad,rms,niter)
 
@@ -611,14 +611,14 @@ Contains
    ! decrease (Armijo) condition (ignoring the curvature condition).
    ! We first interpolate using a quadratic approximation; if the
    ! solution does not satisfy the condition, we backtrack using
-   ! cubic interpolation. This strategy only requires one gradient 
+   ! cubic interpolation. This strategy only requires one gradient
    ! evaluation and is very efficient when computing gradients is
    ! expensive.
    !
    ! The initial step size is set outside of this routine (in the NLCG)
    ! but these are the good choices (ref. Michael Ferris, Chapter 3, p 59):
    ! alpha_1 = alpha_{k-1} dotProd(grad_{k-1},h_{k-1})/dotProd(grad_k,h_k})
-   ! or interpolate the quadratic to f(m_{k-1}), f(m_k) and 
+   ! or interpolate the quadratic to f(m_{k-1}), f(m_k) and
    ! dotProd(grad_{k-1},h_{k-1}) and find the minimizer
    ! alpha_1 = 2(f_k - f_{k-1})/dotProd(grad_{k-1},h_{k-1}),
    ! the update alpha_1 <- min(1.00,1.01 * alpha_1).
@@ -639,7 +639,7 @@ Contains
    !
    ! Our solution has to satisfy the sufficient decrease condition
    !     f(alpha) < f(0) + c alpha f'(0).
-   
+
    real(kind=selectedPrec), intent(in)     :: lambda
    type(dvecMTX), intent(in)		       :: d
    type(modelParam_t), intent(in)		       :: m0
@@ -665,28 +665,28 @@ Contains
    !k = iterControl%alpha_k
    !eps = iterControl%alpha_tol
 
-   ! initialize the line search     
+   ! initialize the line search
    niter = 0
    mHat_0 = mHat
    f_0 = f
    starting_guess = .false.
-   
+
    ! rescale the search direction
    !h_dot_h = dotProd_modelParam(h,h)
    !h = scMult_modelParam(ONE/sqrt(h_dot_h),h)
-   
-   ! g_0 is the directional derivative f'(0) = (df/dm).dot.h 
+
+   ! g_0 is the directional derivative f'(0) = (df/dm).dot.h
    g_0 = dotProd_modelParam(grad,h)
-   
+
    ! alpha_1 is the initial step size, which will in future be set in NLCG
    alpha_1 = alpha
-     
+
    ! compute the trial mHat, f, dHat, eAll, rms
    call linComb_modelParam(ONE,mHat_0,alpha_1,h,mHat_1)
    call func(lambda,d,m0,mHat_1,f_1,dHat_1,eAll_1,rms_1)
    call printf('STARTLS',lambda,alpha,f_1,rms_1)
    niter = niter + 1
-   
+
 	 if (f_1 - f_0 >= LARGE_REAL) then
 		print *, 'Try a smaller starting value of alpha.'
 		print *, 'Exiting...'
@@ -710,10 +710,10 @@ Contains
 		print *, 'Gradient computed, exiting line search'
    	return
    end if
-   
+
    ! otherwise compute the functional at the minimizer of the quadratic
    alpha = - b/(TWO*a)
-   call linComb_modelParam(ONE,mHat_0,alpha,h,mHat)  
+   call linComb_modelParam(ONE,mHat_0,alpha,h,mHat)
    call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
    call printf('QUADLS',lambda,alpha,f,rms)
    niter = niter + 1
@@ -733,7 +733,7 @@ Contains
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	  print *, 'Gradient computed, exiting line search'
    	return
-   end if    
+   end if
 
 
    ! fit a cubic and backtrack (initialize)
@@ -741,7 +741,7 @@ Contains
    f_i = f_1
    alpha_j = alpha
    f_j = f
-      
+
    fit_cubic: do
     ! compute the minimizer
    	q1 = f_i - f_0 - g_0 * alpha_i
@@ -753,9 +753,9 @@ Contains
  	! if alpha is too close or too much smaller than its predecessor
   !  if ((alpha_j - alpha < eps).or.(alpha < k*alpha_j)) then
   !  	alpha = alpha_j/TWO ! reset alpha to ensure progress
-  !  end if 
+  !  end if
 	! compute the penalty functional
-    call linComb_modelParam(ONE,mHat_0,alpha,h,mHat)  
+    call linComb_modelParam(ONE,mHat_0,alpha,h,mHat)
     call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
     call printf('CUBICLS',lambda,alpha,f,rms)
     niter = niter + 1
@@ -769,11 +769,11 @@ Contains
     alpha_j = alpha
     f_j = f
    end do fit_cubic
-   
+
    if (f_1 < f) then
    	starting_guess = .true.
    end if
-   
+
    ! if the initial guess was better than what we found, take it
    if (starting_guess) then
    	alpha = alpha_1
@@ -783,12 +783,12 @@ Contains
    	rms = rms_1
    	f = f_1
    end if
-   
+
    ! compute gradient of the full penalty functional and exit
    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	 print *, 'Gradient computed, line search finished'
 
-     
+
   end subroutine lineSearchCubic
 
 end module NLCG

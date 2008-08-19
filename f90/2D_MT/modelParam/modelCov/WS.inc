@@ -1,20 +1,69 @@
-!**********************************************************************
-! WScov - CmSqrt by Weerachai Siripunvaraporn
+!-------------------------------------------------------------------!
+! 2D_MT model covariance by Weerachai Siripunvaraporn: procedures.  !
+!-------------------------------------------------------------------!
 
-  subroutine WScov(m)
+! *******************************************************************
+  subroutine multBy_CmSqrt(m1,m2)
 
-  type (modelParam_t), intent(inout) :: m
+   ! Multiplies by the square root of the model covariance,
+   ! which is viewed as a smoothing operator. Intended
+   ! to be used to compute m = C_m^{1/2} \tilde{m} + m_0.
+   ! For efficiency, CmSqrt is a saved, private variable inside
+   ! the modelParam module. Before this routine can be called,
+   ! it has to be initialized by calling create_CmSqrt(m).
 
-  call setup1DCM(m%grid)
-  call solveDiff(m)
+    type (modelParam_t), intent(in)     :: m1
+    type (modelParam_t), intent(out)    :: m2
 
-  end subroutine WScov
+    if (.not. CmSqrt%allocated) then
+    	call create_CmSqrt(m1)
+    end if
 
-  !------------------------------------------------------------------------------
+    m2 = m1
+    call solveDiff(CmSqrt,m2)
 
-  subroutine setup1DCM(gd)
+  end subroutine multBy_CmSqrt
 
-  type (grid2d_t), intent(inout) :: gd
+! *******************************************************************
+  subroutine create_CmSqrt(m,cfile)
+
+    type (modelParam_t), intent(in)     :: m
+    character(*), intent(in), optional  :: cfile
+
+    if (present(cfile)) then
+      ! do nothing: a placeholder for other covariance operators
+    end if
+
+    call setup1DCM(m%grid,CmSqrt)
+
+    CmSqrt%allocated = .true.
+
+  end subroutine create_CmSqrt
+
+! *******************************************************************
+  subroutine deall_CmSqrt()
+
+    integer                             :: istat
+
+    deallocate(CmSqrt%YDIF, STAT = istat)
+    deallocate(CmSqrt%ZDIF, STAT = istat)
+
+  end subroutine deall_CmSqrt
+
+! *******************************************************************
+!
+!...  Copyright (C) 2006 Weerachai Siripunvaraporn. All rights reserved.
+!
+!----------------------------------------------------------------------
+!
+!     SOLVING DIFFUSION EQU. IN EXPLICIT WAY.
+!...  Copyright (C) 2006 Weerachai Siripunvaraporn. All rights reserved.
+
+
+  subroutine setup1DCM(gd,Cm)
+
+  type (grid2d_t),   intent(in)    :: gd
+  type (modelCov_t), intent(out)   :: Cm
 
   real (kind=selectedPrec), pointer, dimension(:,:)   ::  YDF
   real (kind=selectedPrec), pointer, dimension(:,:)   ::  ZDF
@@ -24,34 +73,33 @@
 
   Ny      = gd%Ny
   NzEarth = gd%Nz - gd%Nza
-  allocate(CmSqrt%YDIF(2,gd%Ny,NzEarth))
-  allocate(CmSqrt%ZDIF(2,gd%Ny,NzEarth))
-  CmSqrt%ylen = 0.05
-  CmSqrt%zlen = 0.05
+  allocate(Cm%YDIF(2,gd%Ny,NzEarth),STAT = istat)
+  allocate(Cm%ZDIF(2,gd%Ny,NzEarth),STAT = istat)
+  Cm%ylen = 0.05
+  Cm%zlen = 0.05
 
-  ylen = CmSqrt%ylen
-  zlen = CmSqrt%zlen
+  ylen = Cm%ylen
+  zlen = Cm%zlen
 
   ! horizontal diffusion
   do iz = 1,NzEarth
     call setupYCM(Ny,ylen,YDF)
     do iy = 1,Ny
-      CmSqrt%YDIF(1,iy,iz) = YDF(1,iy)
-      CmSqrt%YDIF(2,iy,iz) = YDF(2,iy)
+      Cm%YDIF(1,iy,iz) = YDF(1,iy)
+      Cm%YDIF(2,iy,iz) = YDF(2,iy)
     enddo
+  	deallocate(YDF,STAT=istat)
   enddo
 
   ! vertical diffusion
   do iy = 1,Ny
     call setupZCM(NzEarth,zlen,ZDF)
     do iz = 1,NzEarth
-      CmSqrt%ZDIF(1,iy,iz) = ZDF(1,iz)
-      CmSqrt%ZDIF(2,iy,iz) = ZDF(2,iz)
+      Cm%ZDIF(1,iy,iz) = ZDF(1,iz)
+      Cm%ZDIF(2,iy,iz) = ZDF(2,iz)
     enddo
+    deallocate(ZDF,STAT=istat)
   enddo
-
-  deallocate(YDF,STAT=istat)
-  deallocate(ZDF,STAT=istat)
 
   end subroutine setup1DCM
 
@@ -64,12 +112,12 @@
   integer  :: Ny
   real (kind=selectedPrec) :: ylen
 
-  integer  :: iy,info
+  integer  :: iy,info,istat
   real (kind=selectedPrec) :: cr, cl
   real (kind=selectedPrec), allocatable, dimension(:)   ::  dfyc, dfyr
 
 
-  allocate(YDF(2,Ny))
+  allocate(YDF(2,Ny),STAT=istat)
   allocate(dfyc(Ny))
   allocate(dfyr(Ny))
   do iy = 1,Ny
@@ -115,12 +163,12 @@
   integer  :: Nzb
   real (kind=selectedPrec) :: zlen
 
-  integer  :: iz,info
+  integer  :: iz,info,istat
   real (kind=selectedPrec) :: cr, cl
   real (kind=selectedPrec), allocatable, dimension(:)   ::  dfzc, dfzr
 
 
-  allocate(ZDF(2,Nzb))
+  allocate(ZDF(2,Nzb),STAT=istat)
   allocate(dfzc(Nzb))
   allocate(dfzr(Nzb))
   do iz = 1,Nzb
@@ -159,8 +207,9 @@
 
 !------------------------------------------------------------------------------
 
-  subroutine solveDiff(CmJ)
+  subroutine solveDiff(Cm,CmJ)
 
+  type (modelCov_t),   intent(in)    :: Cm
   type (modelParam_t), intent(inout) :: CmJ
 
   integer            :: Ny,Nz,it, dTime
@@ -177,12 +226,12 @@
 ! enddo
 
   do it = 1,dTime
-    call yDiff(CmJ)
-    call zDiff(CmJ)
+    call yDiff(Cm,CmJ)
+    call zDiff(Cm,CmJ)
   enddo
   do it = 1,dTime
-    call zDiff(CmJ)
-    call yDiff(CmJ)
+    call zDiff(Cm,CmJ)
+    call yDiff(Cm,CmJ)
   enddo
 
 ! do iz = 1,Nz
@@ -195,9 +244,10 @@
 
 !------------------------------------------------------------------------------
 
-  subroutine yDiff(CmJ)
+  subroutine yDiff(Cm,CmJ)
 
   !use wsLAPACK
+  type (modelCov_t),   intent(in)    :: Cm
   type (modelParam_t), intent(inout) :: CmJ
 
   real (kind=selectedPrec), allocatable, dimension(:,:)   ::  YDF
@@ -214,8 +264,8 @@
   do iz = 1,Nz
     do iy = 1,Ny
       uy(iy)    = CmJ%v(iy,iz)
-      YDF(1,iy) = CmSqrt%YDIF(1,iy,iz)
-      YDF(2,iy) = CmSqrt%YDIF(2,iy,iz)
+      YDF(1,iy) = Cm%YDIF(1,iy,iz)
+      YDF(2,iy) = Cm%YDIF(2,iy,iz)
     enddo
 
     call dpbtrs('U',Ny,1,1,YDF,2,uy,Ny,info)
@@ -233,9 +283,10 @@
 
 !------------------------------------------------------------------------------
 
-  subroutine zDiff(CmJ)
+  subroutine zDiff(Cm,CmJ)
 
   !use wsLAPACK
+  type (modelCov_t),   intent(in)    :: Cm
   type (modelParam_t), intent(inout) :: CmJ
 
   real (kind=selectedPrec), allocatable, dimension(:,:)   ::  ZDF
@@ -253,8 +304,8 @@
   do iy = 1,Ny
     do iz = 1,Nz
       uz(iz)    = CmJ%v(iy,iz)
-      ZDF(1,iz) = CmSqrt%ZDIF(1,iy,iz)
-      ZDF(2,iz) = CmSqrt%ZDIF(2,iy,iz)
+      ZDF(1,iz) = Cm%ZDIF(1,iy,iz)
+      ZDF(2,iz) = Cm%ZDIF(2,iy,iz)
     enddo
 
     call dpbtrs('U',Nz,1,1,ZDF,2,uz,Nz,info)
