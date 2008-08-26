@@ -23,7 +23,7 @@ FFLAGS = -g -C
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
-OBJ = math_constants.o utilities.o DataSpace.o Grid3D.o sg_scalar.o sg_vector.o sg_sparse_vector.o ModelParameterCov.o sg_boundary.o SolnRHS.o InterpEB.o DataFunc.o MeasComb.o SensPDEcoeff.o sg_diff_oper.o WSfwd2Dpar.o WSutils.o WSfwd1Dmod.o WSfwd2Dmod.o FwdTEmod.o boundary_ws.o modelOperator3D.o solver.o EMsolve3D.o EMsolver.o SensMatrix.o UserCtrl.o ioAscii.o Main.o NLCG.o Mod3DMT.o 
+OBJ = math_constants.o utilities.o DataSpace.o Grid3D.o sg_scalar.o sg_vector.o sg_sparse_vector.o ModelParameter.o sg_boundary.o SolnRHS.o InterpEB.o DataFunc.o MeasComb.o SensPDEcoeff.o sg_diff_oper.o WSfwd2Dpar.o WSutils.o WSfwd1Dmod.o WSfwd2Dmod.o FwdTEmod.o boundary_ws.o modelOperator3D.o solver.o EMsolve3D.o EMsolver.o SensMatrix.o UserCtrl.o ioAscii.o Main.o NLCG.o Mod3DMT.o 
 
 
 all: Mod3DMT 
@@ -55,25 +55,25 @@ sg_vector.o:3D_MT/EMfield/sg_vector.f90 math_constants.o Grid3D.o
 sg_sparse_vector.o:3D_MT/EMfield/sg_sparse_vector.f90 math_constants.o Grid3D.o sg_vector.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/EMfield/sg_sparse_vector.f90 
 
-ModelParameterCov.o:3D_MT/ModelParameterCov.f90 Grid3D.o math_constants.o utilities.o sg_scalar.o sg_vector.o sg_sparse_vector.o 
-	 $(F90) -c $(FFLAGS) 3D_MT/ModelParameterCov.f90 
+ModelParameter.o:3D_MT/modelParam/ModelParameter.f90 Grid3D.o math_constants.o utilities.o sg_scalar.o sg_vector.o sg_sparse_vector.o 
+	 $(F90) -c $(FFLAGS) 3D_MT/modelParam/ModelParameter.f90 
 
 sg_boundary.o:3D_MT/EMfield/sg_boundary.f90 math_constants.o Grid3D.o sg_vector.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/EMfield/sg_boundary.f90 
 
-SolnRHS.o:3D_MT/SolnRHS.f90 math_constants.o utilities.o ModelParameterCov.o sg_vector.o sg_boundary.o sg_sparse_vector.o 
+SolnRHS.o:3D_MT/SolnRHS.f90 math_constants.o utilities.o ModelParameter.o sg_vector.o sg_boundary.o sg_sparse_vector.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/SolnRHS.f90 
 
-InterpEB.o:3D_MT/InterpEB.f90 utilities.o sg_sparse_vector.o ModelParameterCov.o 
+InterpEB.o:3D_MT/InterpEB.f90 utilities.o sg_sparse_vector.o ModelParameter.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/InterpEB.f90 
 
 DataFunc.o:3D_MT/DataFunc.f90 InterpEB.o SolnRHS.o math_constants.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/DataFunc.f90 
 
-MeasComb.o:SENS/MeasComb.f90 math_constants.o utilities.o DataSpace.o ModelParameterCov.o SolnRHS.o DataFunc.o 
+MeasComb.o:SENS/MeasComb.f90 math_constants.o utilities.o DataSpace.o ModelParameter.o SolnRHS.o DataFunc.o 
 	 $(F90) -c $(FFLAGS) SENS/MeasComb.f90 
 
-SensPDEcoeff.o:3D_MT/SensPDEcoeff.f90 math_constants.o utilities.o ModelParameterCov.o DataFunc.o sg_vector.o 
+SensPDEcoeff.o:3D_MT/SensPDEcoeff.f90 math_constants.o utilities.o ModelParameter.o DataFunc.o sg_vector.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/SensPDEcoeff.f90 
 
 sg_diff_oper.o:3D_MT/EMfield/sg_diff_oper.f90 math_constants.o sg_vector.o sg_scalar.o 
@@ -97,7 +97,7 @@ FwdTEmod.o:3D_MT/FWD/Mod2d/FwdTEmod.f90 WSfwd2Dmod.o
 boundary_ws.o:3D_MT/FWD/boundary_ws.f90 sg_vector.o sg_scalar.o sg_boundary.o FwdTEmod.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/FWD/boundary_ws.f90 
 
-modelOperator3D.o:3D_MT/FWD/modelOperator3D.f90 math_constants.o utilities.o Grid3D.o sg_vector.o sg_boundary.o ModelParameterCov.o boundary_ws.o 
+modelOperator3D.o:3D_MT/FWD/modelOperator3D.f90 math_constants.o utilities.o Grid3D.o sg_vector.o sg_boundary.o ModelParameter.o boundary_ws.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/FWD/modelOperator3D.f90 
 
 solver.o:3D_MT/FWD/solver.f90 math_constants.o sg_scalar.o modelOperator3D.o sg_vector.o modelOperator3D.o 
@@ -118,7 +118,7 @@ UserCtrl.o:./UserCtrl.f90
 ioAscii.o:3D_MT/ioMod/ioAscii.f90 Grid3D.o math_constants.o EMsolve3D.o DataSpace.o DataFunc.o EMsolver.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/ioMod/ioAscii.f90 
 
-Main.o:3D_MT/Main.f90 ModelParameterCov.o DataSpace.o DataFunc.o EMsolver.o UserCtrl.o ioAscii.o 
+Main.o:3D_MT/Main.f90 ModelParameter.o DataSpace.o DataFunc.o EMsolver.o UserCtrl.o ioAscii.o 
 	 $(F90) -c $(FFLAGS) 3D_MT/Main.f90 
 
 NLCG.o:INV/NLCG.f90 SensMatrix.o 

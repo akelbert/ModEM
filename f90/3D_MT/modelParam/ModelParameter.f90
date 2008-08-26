@@ -1,15 +1,23 @@
-!***********************************************************************
-!   module to define modelparam abstract data type,
-!    and all methods required for creation, algebra, and inner products,
-!    including covariances.  Attributes of the data type
-!    are private to this module to force coding of other modules
-!    to be completely independent of the specific parameterization
-!    instance/implementation
-!
-! Defines: modelParam
-! Uses: EMfield, Grid3D, UTILS
-
 module ModelParameter
+
+! Defines the modelParam_t and modelCov_t abstract data types.
+! Both have private attributes, to force coding of other modules
+! to be completely independent of the specific parameterization
+! instance/implementation. Contains all methods required for creation,
+! algebra, and inner products, including covariances.
+!
+! Must include the following public operations:
+!    create_modelParam, deall_modelParam, zero_modelParam, copy_modelParam,
+!    linComb_modelParam, scMult_modelParam, dotProd_modelParam
+!
+! and the following interfaces:
+!    assignment (=), operator (.dot.), operator (*),
+!    create_CmSqrt, deall_CmSqrt, multBy_CmSqrt,
+!    read_modelParam, write_modelParam.
+!
+! Also includes conductivity mappings on the grid:
+!    modelParamToCellCond, ModelParamToEdge, EdgeToModelParam,
+!    QtoModelParam, sigC
 
   use grid3d
   use math_constants
@@ -23,7 +31,7 @@ module ModelParameter
   ! supported model parameter types (conductivity only)
    character(len=80), parameter		:: LOGE = 'LOGE'
    character(len=80), parameter		:: LINEAR = 'LINEAR'
-   
+
   type :: modelParam_t
      !  Parameters which define conductivity distribution.
      !   for the present approach, with each cell of the computational grid
@@ -47,74 +55,56 @@ module ModelParameter
      !  supported paramType at present: LINEAR and LOGE
   end type modelParam_t
 
-!   ModelParameter module needs to contain routines of three general types
-!   1)   routines which define basic model parameter methods or operations:
-!       creation, destruction, zeroing, copying, linear algebra, dot products
 
-      interface assignment (=)
-         MODULE PROCEDURE copy_modelParam
-      end interface
+interface assignment (=)
+   MODULE PROCEDURE copy_modelParam
+end interface
 
-!      interface operator (.dot.)
-!         MODULE PROCEDURE dotProd_modelParam
-!      end interface
+interface operator (.dot.)
+   MODULE PROCEDURE dotProd_modelParam
+end interface
 
-      public  ::      create_modelParam,deall_modelParam,dotProd_modelParam
-      public  ::      linComb_modelParam,zero_modelParam,copy_modelParam
+interface operator (*)
+   MODULE PROCEDURE scMult_modelParam
+end interface
 
-!   2) routines which define mappings between the "natural" representation
-!        of conductivity/resistivity on the model grid and the formal
-!        model parameter structure: in general (allowing for a non-linear
-!        mapping, as will occur when log condutivity is used for inversion;
-!        in the implementation here,we combine the linear and non-linear 
-!        mappings in a single routine)
-!        one needs the non-linear mapping, a linearized mapping, and the
-!        adjoint of the linearized mapping.  If data functionals depend
-!        on conductivity or resistivity additional routines are needed--
-!        i.e., a real function (SigC here), with input arguments a conductivity 
-!        parameter and cell indicies, which returns the conductivity of 
-!        this cell (or resistivity), as well as what is essentially the
-!        adjoint of the linearization of this function (sort of ... 
-!         see below; this is called QtoModelParam here.)
-!       Note that the functionality is always needed, but names can be
-!        flexible ... these routines are called by the interpolation
-!        routines in InterpEB* (for the latter two only), by the forward
-!        modeling codes (the non-linear mapping only), and by SensPDEcoeff
-!        (the linearized mappings and adjoint) and thus names/interfaces
-!        need to be kept consistent with what is used in these routines.
-!        Note that for 2D MT different mapping routines are used for
-!        TE and TM modes, as the natural representations for the two cases
-!        are different (conductivity vs. resistivity)
-!        
-      public  ::  modelParamToEdge,edgeToModelParam,SigC
-      public  :: getSize_modelParam, setType_modelParam
-      public  :: setValue_modelParam, getValue_modelParam
+!  I/O interfaces
 
+interface write_Cond3D
+   MODULE PROCEDURE write_modelParam_mackie
+end interface
 
-!   3) model covariance opeartors; not implemented yet, so no documenetation!
+interface read_Cond3D
+   MODULE PROCEDURE read_modelParam_mackie
+end interface
 
-!      public  ::  modelCov,modelCovInit,modelCovDeall
+interface writeAll_Cond3D
+   MODULE PROCEDURE writeVec_modelParam_binary
+end interface
 
-!   include interface for model covariance
-!   include wscovar.hd
-  type, private :: mCov
-    ! model covariance 
-    real (kind=selectedPrec) :: ylen = R_ZERO
-    real (kind=selectedPrec) :: zlen = R_ZERO
-    real (kind=selectedPrec), pointer, dimension(:,:,:)   ::  YDIF
-    real (kind=selectedPrec), pointer, dimension(:,:,:)   ::  ZDIF
-  end type
+interface readAll_Cond3D
+   MODULE PROCEDURE readVec_modelParam_binary
+end interface
 
-  type (mCov), private,  save       ::  Cm
-  public          ::  WScov
+! definitions for CmSqrt: must be consistent with the include file below
 
-!   4) read and write routines (and/or some sort of routines for setting
-!       model parameters from input arrays); since attributes are private,
-!       these routines must be in this module.
-       public	:: writeAll_Cond3D
-       
+include "modelCov/RecursiveAR.hd"
+
 Contains
-!
+
+! *****************************************************************************
+!  routines which define mappings between the "natural" representation
+!  of conductivity/resistivity on the model grid and the formal
+!  model parameter structure
+   include "CondMap.inc"
+
+!  The included file must contain subroutines create_CmSqrt, deall_CmSqrt, multBy...
+   include "modelCov/RecursiveAR.inc"
+
+!  I/O choices
+   include "modelParamIO/Binary.inc"
+   include "modelParamIO/Mackie.inc"
+
 !**********************************************************************
 !
    !  create_modelParam allocates and initializes arrays for
@@ -146,7 +136,7 @@ Contains
      if(present(v)) then
         m%cellCond = v
      endif
-     
+
      if(present(vAir)) then
         m%AirCond = vAir
      else
@@ -154,7 +144,7 @@ Contains
 		   m%AirCond = log(SIGMA_AIR)
 		else
 		   m%AirCond = SIGMA_AIR
-		endif     
+		endif
      endif
 
    end subroutine create_modelParam
@@ -185,7 +175,7 @@ Contains
      if(.not.(m%allocated)) then
         call errstop('modelParam must be allocated before calling setType_modelParam')
      endif
-     
+
 	 if(trim(paramType) .eq. trim(m%paramType)) then
 	    ! we are done
 	 else if((paramType == LOGE) .and. (m%paramType == LINEAR)) then
@@ -197,7 +187,7 @@ Contains
 	    m%cellCond%v = exp(m%cellCond%v)
 	    m%AirCond=exp(m%AirCond)
 	 else
-        call errstop('unknown paramType in setType_modelParam')	      
+        call errstop('unknown paramType in setType_modelParam')
      endif
 
      m%paramType = paramType
@@ -226,7 +216,7 @@ Contains
      r = dotProd_rscalar_f(m1%cellCond, m2%cellCond)
 
    end function dotProd_modelParam
-   
+
 !**********************************************************************
 
    subroutine zero_modelParam(m)
@@ -238,7 +228,7 @@ Contains
      call zero_rscalar(m%cellCond)
 
    end subroutine zero_modelParam
- 
+
 !**********************************************************************
 
    subroutine linComb_modelParam(a1,m1,a2,m2,m)
@@ -279,14 +269,31 @@ Contains
      m%AirCond = m1%AirCond
 
    end subroutine linComb_modelParam
-   
+
+  ! **********************************************************************
+    function scMult_modelParam(a,mIn) result (mOut)
+  !  computes mOut = a * mIn for modelParam object m and real scalar a
+
+    real (kind=selectedPrec), intent(in)		:: a
+    type(modelParam_t), intent(in)	            :: mIn
+    type(modelParam_t)                          :: mOut
+
+    ! check to see that input m is allocated
+    if(.not.mIn%allocated) then
+       call errStop('input not allocated on call to scMult_modelParam')
+    endif
+
+	call linComb_modelParam(R_ZERO,mIn,a,mIn,mOut)
+
+  end function scMult_modelParam
+
    !**********************************************************************
    ! Sets cell conductivities in a model parameter object m
    !
    ! the values of v and vAir are determined by paramType;
    ! if different from that of the model parameter, returns
    ! an error. To avoid this error, first convert m to the
-   ! required paramType using setType_modelParam.   
+   ! required paramType using setType_modelParam.
    subroutine setValue_modelParam(m,paramType,v,vAir)
 
      type(modelParam_t), intent(inout)    :: m
@@ -297,14 +304,14 @@ Contains
      if(.not.(m%allocated)) then
         call errstop('output modelParam must be allocated before calling setValue_modelParam')
      endif
-     
+
      !  error checking
      if((m%Ny .ne. v%Ny).or. (m%Nx .ne. v%Nx) .or. (m%NzEarth .ne. v%Nz)) then
         call errstop('modelParam/rscalar dimensions disagree in setValue_modelParam')
      else if(paramType .ne. m%paramType) then
         call errstop('paramTypes not consistent in setValue_modelParam')
      endif
-     
+
 	 ! set values
 	 m%cellCond = v
 	 if(present(vAir)) then
@@ -333,27 +340,27 @@ Contains
      if(.not.(m%allocated)) then
         call errstop('input modelParam must be allocated before calling getValue_modelParam')
      endif
-     
+
      if(trim(paramType) .eq. '') then
      	paramType = m%paramType
      endif
-     
+
      if (v%allocated) then
         call deall_rscalar(v)
      endif
-     
+
      ! create a temporary copy
      mTemp = m
-         
+
      ! convert model to the required type
      call setType_modelParam(mTemp,paramType)
-     
+
 	 ! set values
 	 v = mTemp%cellCond
 	 if(present(vAir)) then
 	    vAir = mTemp%AirCond
 	 endif
-	 
+
 	 ! deallocate temporary model parameter
 	 call deall_modelParam(mTemp)
 
@@ -397,524 +404,7 @@ Contains
      Nx = m%Nx
      Ny = m%Ny
      NzEarth = m%NzEarth
- 
+
    end subroutine getSize_modelParam
-   
-   !**********************************************************************
-   subroutine modelParamToCellCond(m,cCond,paramType,grid,AirCond)
-
-     type(modelParam_t), intent(in)        :: m
-     type(rscalar), intent(inout)	       :: cCond
-     character(80), intent(out), optional  :: paramType
-     type(grid3d_t), intent(out), optional :: grid
-     real(kind=selectedPrec), intent(out), optional :: AirCond
-
-     if(cCond%allocated) then
-        if((cCond%Ny .ne. m%Ny).or. (cCond%Nx .ne. m%Nx) .or. &
-		(cCond%Nz .ne. m%grid%Nz)) then
-           call deall_rscalar(cCond)
-           call create_rscalar(m%grid,cCond,CENTER)
-        endif
-     else
-        call create_rscalar(m%grid,cCond,CENTER)
-     endif
-     if(m%paramType .eq. LOGE) then
-        cCond%v(:,:,1:m%grid%NzAir) = exp(m%AirCond)
-        cCond%v(:,:,m%grid%NzAir+1:m%grid%Nz) = exp(m%cellCond%v)
-     else
-        cCond%v(:,:,1:m%grid%NzAir) = m%AirCond
-        cCond%v(:,:,m%grid%NzAir+1:m%grid%Nz) = m%cellCond%v
-     endif
-     
-     if (present(paramType)) then
-        paramType = m%paramType
-     end if
-
-     if (present(grid)) then
-        if (grid%allocated) then
-           call deall_grid3d(grid)
-        end if
-        grid = m%grid
-     end if
-
-     if (present(AirCond)) then
-        AirCond = m%AirCond
-     end if
-          
-   end subroutine modelParamToCellCond
-
-  !**********************************************************************
-  
-  subroutine ModelParamToEdge(m, Econd,m0)
-  !  Maps conductivity defined on grid cells (prisms) to edge-nodes ... this
-  !   can be used for both non-linear and linearized mappings when 
-  !   paramtype = LOGE.  In this case, if optional argument m0 is present
-  !   the linearized mapping is used; otherwise the non-linear mappring is used.
-  !   If paramtype = LINEAR (linear conductivity) then the same linear mapping
-  !   is done in whether m0 is present or not (and in fact, m0 is not referenced
-  !   in this case)
-  !  NOTE: there is a subtlty (and possible source of error) associated with
-  !   treatement of air conductivity.  This is (in the present implementation)
-  !   viewed as a non-adjustable parameter, but when this routine is called for
-  !   the full (i.e., in general non-linear) mapping it must set the edges
-  !   in the air to airCond.  On the other hand, when called to implement the
-  !   linearization (i.e., to map perturbations in the model parameter) it
-  !   should leave air edges set to zero.  WHen the conductivity mapping is
-  !   linear, there is no way to distinguish between whether this is a linear
-  !   mapping of the perturbation, or the full linear mapping.
-  !   One should thus set airCond in perturbations to zero (or they will
-  !   be propagated to perturbation in the air edges, only for the linear
-  !   model parameter case).
-
-    implicit none
-    !  INPUTS:  model parameter 
-    type(modelParam_t), intent(in)            :: m 
-    !  OUTPUTS: conductivities on edge nodes, as needed for FD calc.
-    !    stored as rvector; allocate Econd before calling
-    type(rvector), intent(inout)         :: Econd 
-    !   OPTIONAL INPUT: background model parameter for linearization
-    type(modelParam_t), optional, intent(in)	:: m0
-
-    !   LOCAL Variables
-    integer		:: ix,iy,iz,ize,nx,ny,nz,nzE,nZa
-    logical		:: linearizedMapping
-    ! the prefix V are the volumes S is total over surrounding cells
-    !   common sides are ommited from volume calculation
-    real(kind=selectedPrec)            :: Vdr,Vdl,Vur,Vul,S
-    real(kind=selectedPrec)            :: Vdn,Vds,Vun,Vus
-    real(kind=selectedPrec)            :: Vnr,Vnl,Vsr,Vsl,airCond
-    real(kind=selectedPrec),pointer,dimension(:,:,:)	:: temp
-    
-    linearizedMapping = present(m0)
-
-    if ((.not.m%allocated).or.(.not.Econd%allocated)) then
-      write(0,*) 'Ccond or Econd in EdgeCond not allocated yet'
-      stop
-    end if
-
-    ! Could add code to check whether the bounds are the same ...
-    
-    nx = m%Nx
-    ny = m%Ny
-    nz = m%grid%nZ
-    nZE = m%nZEarth
-    nZa = Nz-nZE
-    
-    allocate(temp(nx,ny,nzE))
-    airCond = m%airCond
-    temp = m%cellCond%v
-   
-    if(m%paramType .EQ. LOGE) then 
-       if(linearizedMapping) then
-          temp = temp*exp(m0%cellCond%v)
-          airCond = R_ZERO
-       else
-          temp = exp(temp)
-          airCond = exp(m%airCond)
-       endif
-    endif
-    
-    ! Now map onto edges, x, y, then z ... first  zero output
-    ! Ex edges: (leave boundary edges set to 0)
-    Econd%x = 0.0
-    do ix = 1, nx
-       do iy = 2, ny
-          do iz = Nza+1,Nz
-             izE = iz-Nza 
-             Vdr = m%grid%dy(iy)*m%grid%dz(iz)
-             Vdl = m%grid%dy(iy-1)*m%grid%dz(iz)
-             Vur = m%grid%dy(iy)*m%grid%dz(iz-1)
-             Vul = m%grid%dy(iy-1)*m%grid%dz(iz-1)
-             S = Vdr+Vdl+Vur+Vul
-             if(izE.eq.1) then
-                Econd%x(ix,iy,iz) = (temp(ix,iy,izE)*Vdr + &
-                                  temp(ix,iy-1,izE)*Vdl)/S
-             else
-                Econd%x(ix,iy,iz) = (temp(ix,iy,izE)*Vdr + &
-                                  temp(ix,iy-1,izE)*Vdl + &
-                                  temp(ix,iy  ,izE-1)*Vur + &
-                                  temp(ix,iy-1,izE-1)*Vul)/S
-             endif
-          enddo
-	  do iz = 1,Nza
-             Econd%x(ix,iy,iz) = airCond
-          enddo
-       enddo
-     enddo
-
-     ! Ey edges
-     Econd%y = 0.0
-     do ix = 2, nx
-        do iy = 1, ny
-           do iz = Nza+1,Nz
-              izE = iz-Nza 
-              Vdn = m%grid%dx(ix)*m%grid%dz(iz)
-              Vds = m%grid%dx(ix-1)*m%grid%dz(iz)
-              Vun = m%grid%dx(ix)*m%grid%dz(iz-1)
-              Vus = m%grid%dx(ix-1)*m%grid%dz(iz-1)
-              S = Vdn+Vds+Vun+Vus
-              if(izE.eq.1) then
-                Econd%y(ix,iy,iz) = (temp(ix,iy,izE)*Vdn + &
-                                  temp(ix-1,iy,izE)*Vds)/S
-              else
-                Econd%y(ix,iy,iz) = (temp(ix,iy,izE)*Vdn + &
-                                  temp(ix-1,iy,izE)*Vds + &
-                                  temp(ix,iy  ,izE-1)*Vun + &
-                                  temp(ix-1,iy,izE-1)*Vus)/S
-              endif
-           enddo
-	   do iz = 1,Nza
-              Econd%y(ix,iy,iz) = airCond
-           enddo
-        enddo 
-     enddo
-      
-     ! Ez edges
-     Econd%z = 0.0
-     do ix = 2, nx
-        do iy = 2, ny
-           do iz = Nza+1,Nz
-              izE = iz-Nza 
-              Vnr = m%grid%dx(ix)*m%grid%dy(iy)
-              Vnl = m%grid%dx(ix)*m%grid%dy(iy-1)
-              Vsr = m%grid%dx(ix-1)*m%grid%dy(iy)
-              Vsl = m%grid%dx(ix-1)*m%grid%dy(iy-1)
-              S =  Vnr+Vnl+Vsr+Vsl
-              Econd%z(ix,iy,iz) = (temp(ix,iy,izE)*Vnr + &
-                                  temp(ix,iy-1,izE)*Vnl + &
-                                  temp(ix-1,iy  ,izE)*Vsr + &
-                                  temp(ix-1,iy-1,izE)*Vsl)/S
-           enddo
-	   do iz = 1,Nza
-              Econd%z(ix,iy,iz) = airCond
-           enddo
-        enddo
-      enddo
-      
-      deallocate(temp)
-
-  end subroutine ModelParamToEdge
-  
-   !**********************************************************************
-  
-  subroutine EdgeToModelParam(Econd,m,m0)
-  !  Maps from a real vector (defined on edges) to modelParam;
-  !    the adjoint of linear mapping implemented by ModelParamToEdge 
-  !  
-    implicit none
-    !  INPUTS:  real vector defined on edges
-    type(rvector), intent(in)            :: Econd 
-    !  OUTPUTS: model parameter
-    type(modelParam_t), intent(inout)         :: m 
-    !  INPUT (OPTIONAL) background model parameter, 
-    !         required if m%paramtype=LOGE
-    type(modelParam_t), optional, intent(in)	:: m0
-
-    !   LOCAL Variables
-    integer		:: ix,iy,iz,ize,nx,ny,nz,nzE,nZa
-    ! the prefix V are the volumes S is total over surrounding cells
-    !   common sides are ommited from volume calculation
-    real(kind=selectedPrec)            :: Vdr,Vdl,Vur,Vul,S
-    real(kind=selectedPrec)            :: Vdn,Vds,Vun,Vus
-    real(kind=selectedPrec)            :: Vnr,Vnl,Vsr,Vsl
-    real(kind=selectedPrec),pointer,dimension(:,:,:)	:: temp  
-
-    
-    if ((.not.m%allocated).or.(.not.Econd%allocated)) then
-      call errStop('m or Econd not allocated yet in EdgeToModelParam')
-      stop
-    end if
-    
-    if((m%paramtype.eq.LOGE).and. (.not.present(m0))) then
-       call errStop('Background conductivity required for paramType LOGE in EdgeToModelParam')
-    endif
-
-    ! Could add code to check whether the bounds are the same ...
-    
-    nx = m%Nx
-    ny = m%Ny
-    nz = m%grid%nZ
-    nZE = m%nZEarth
-    nZa = Nz-nZE
-    
-    allocate(temp(nx,ny,nzE))
-    temp = R_ZERO 
-    
-    ! Now map onto edges, x, y, then z ... first  zero output
-    ! Ex edges: (leave boundary edges set to 0)
-    do ix = 1, nx
-       do iy = 2, ny
-          do iz = Nza+1,Nz
-             izE = iz-Nza 
-             Vdr = m%grid%dy(iy)*m%grid%dz(iz)
-             Vdl = m%grid%dy(iy-1)*m%grid%dz(iz)
-             Vur = m%grid%dy(iy)*m%grid%dz(iz-1)
-             Vul = m%grid%dy(iy-1)*m%grid%dz(iz-1)
-             S = Vdr+Vdl+Vur+Vul
-             if(izE.gt.1) then
-                temp(ix,iy,izE-1) = temp(ix,iy,izE-1)+ Econd%x(ix,iy,iz)*Vur/S
-                temp(ix,iy-1,izE-1) = temp(ix,iy-1,izE-1)+Econd%x(ix,iy,iz)*Vul/S
-             endif
-             temp(ix,iy,izE) = temp(ix,iy,izE)+ Econd%x(ix,iy,iz)*Vdr/S
-             temp(ix,iy-1,izE) = temp(ix,iy-1,izE)+Econd%x(ix,iy,iz)*Vdl/S
-          enddo
-       enddo
-     enddo
-
-     ! Ey edges
-     do ix = 2, nx
-        do iy = 1, ny
-           do iz = Nza+1,Nz
-              izE = iz-Nza 
-              Vdn = m%grid%dx(ix)*m%grid%dz(iz)
-              Vds = m%grid%dx(ix-1)*m%grid%dz(iz)
-              Vun = m%grid%dx(ix)*m%grid%dz(iz-1)
-              Vus = m%grid%dx(ix-1)*m%grid%dz(iz-1)
-              S = Vdn+Vds+Vun+Vus
-              if(izE.gt.1) then
-	        temp(ix,iy,izE-1) = temp(ix,iy,izE-1)+ Econd%y(ix,iy,iz)*Vun/S
-                temp(ix-1,iy,izE-1) = temp(ix-1,iy,izE-1)+Econd%y(ix,iy,iz)*Vus/S
-              endif
-              temp(ix,iy,izE) = temp(ix,iy,izE)+ Econd%y(ix,iy,iz)*Vdn/S
-              temp(ix-1,iy,izE) = temp(ix-1,iy,izE)+Econd%y(ix,iy,iz)*Vds/S
-           enddo
-        enddo
-      enddo
-      
-     ! Ez edges
-     do ix = 2, nx
-        do iy = 2, ny
-           do iz = Nza+1,Nz
-              izE = iz-Nza 
-              Vnr = m%grid%dx(ix)*m%grid%dy(iy)
-              Vnl = m%grid%dx(ix)*m%grid%dy(iy-1)
-              Vsr = m%grid%dx(ix-1)*m%grid%dy(iy)
-              Vsl = m%grid%dx(ix-1)*m%grid%dy(iy-1)
-              S =  Vnr+Vnl+Vsr+Vsl
-              temp(ix,iy,izE) = temp(ix,iy,izE)+ Econd%z(ix,iy,iz)*Vnr/S
-              temp(ix,iy-1,izE) = temp(ix,iy-1,izE)+Econd%z(ix,iy,iz)*Vnl/S
-              temp(ix-1,iy,izE) = temp(ix-1,iy,izE)+ Econd%z(ix,iy,iz)*Vsr/S
-              temp(ix-1,iy-1,izE) = temp(ix-1,iy-1,izE)+Econd%z(ix,iy,iz)*Vsl/S
-           enddo
-        enddo
-      enddo  
-  
-    if(m%paramType .EQ. LOGE) then 
-       m%cellCond%v = temp*exp(m0%cellCond%v)
-    else
-       m%cellCond%v = temp
-    endif
-    
-    deallocate(temp)
-
-  end subroutine EdgeToModelParam
-
-!**********************************************************************
-   subroutine QtoModelParam(Qj,sigma0,dsigmaReal,dSigmaImag)
-
-   !  THIS IS NOT EVEN LOOKED AT WITH REGARD TO CORRECTNESS OF
-   !   FORMULAE FOR 3D!!!!! JUST COPIED FROM 2D-TM !!!!!!
-
-   !  given input sparse vector defined on cells,
-   !   compute vector defined on parameter space
-   !   add result to inputs dsigmaReal, dsigmaImag
-   !    Q_j^T \partial\rho_cell/\partial\theta
-
-   type (sparseVecC), intent(in)   :: Qj
-   type (modelParam_t), intent(in) :: sigma0
-   type (modelParam_t), intent(inout)    :: dsigmaReal
-   type (modelParam_t), intent(inout),optional    :: dsigmaImag
-
-   ! local variables
-   integer              :: jk,i,j,k
-
-   do jk = 1,Qj%nCoeff
-      i = Qj%I(jk)
-      j = Qj%J(jk)
-      k = Qj%K(jk)
-      if(sigma0%paramType .eq. LOGE) then
-         dsigmaReal%CellCond%v(i,j,k) = dSigmaReal%CellCond%v(i,j,k) &
-                        -real(Qj%C(jk))/exp(sigma0%CellCond%v(i,j,k))
-         if(present(dSigmaImag)) then
-            dsigmaImag%CellCond%v(i,j,k) = dSigmaImag%CellCond%v(i,j,k) &
-                        -imag(Qj%C(jk))/exp(sigma0%CellCond%v(i,j,k))
-         endif
-      else
-         dsigmaReal%CellCond%v(i,j,k) = dSigmaReal%CellCond%v(i,j,k) &
-           -real(Qj%C(jk))/(sigma0%CellCond%v(i,j,k)*sigma0%CellCond%v(i,j,k))
-         if(present(dSigmaImag)) then
-            dsigmaImag%CellCond%v(i,j,k) = dSigmaImag%CellCond%v(i,j,k) &
-             -imag(Qj%C(jk))/(sigma0%CellCond%v(i,j,k)*sigma0%CellCond%v(i,j,k))
-         endif
-      endif
-   enddo
-
-   end subroutine QtoModelParam
-
-  !**********************************************************************
-  function sigC(m,xyz,ix,iy,iz) result(r)
-  !   computes conductivity for edge xyz/i,j,k using input modelParam
-  !    structure m.  This function defines how the abstract
-  !     conductivity parameter is mapped to edge conductivities needed
-  !     for more accurate electric field interpolation.  The derivative
-  !     of this function is required for evaluation of linearized
-  !     data functionals, and for construction of the direct
-  !     parameter space part of the comb
-
-    type (modelParam_t), intent(in)     :: m
-    integer, intent(in)               :: xyz,ix,iy,iz
-    real(kind=selectedPrec)           :: r
- 
-    ! local variables
-    integer		:: izE,nx,ny,nz,nZE,nZa
-    real(kind=selectedPrec)           :: w11,w21,w12,w22,S,temp(2,2)
-
-    nx = m%Nx
-    ny = m%Ny
-    nz = m%grid%nZ
-    nZE = m%nZEarth
-    nZa = Nz-nZE
- 
-    izE = iz-Nza 
-    selectcase(xyz)
-    case(1)		 ! Ex edge
-       w11 = m%grid%dy(iy)*m%grid%dz(iz)
-       temp(1,1) = m%cellCond%v(ix,iy,izE)
-       w21 = m%grid%dy(iy-1)*m%grid%dz(iz)
-       temp(2,1) = m%cellCond%v(ix,iy-1,izE)
-       w12 = m%grid%dy(iy)*m%grid%dz(iz-1)
-       temp(1,2) = m%cellCond%v(ix,iy,izE-1)
-       w22 = m%grid%dy(iy-1)*m%grid%dz(iz-1)
-       temp(2,2) = m%cellCond%v(ix,iy-1,izE-1)
-       S = w11+w21+w12+w22
-       if(m%paramtype .eq. LOGE) then
-          temp = exp(temp)
-       endif
-       if(izE.eq.1) then
-          r = (temp(1,1)*w11+temp(1,2)*w21)/S
-       else
-          r = (temp(1,1)*w11 + temp(2,1)*w21+    &
-               temp(1,2)*w12 + temp(2,2)*w22)/S
-       endif
-
-    case(2)		 ! Ey edge
-       w11 = m%grid%dx(ix)*m%grid%dz(iz)
-       temp(1,1) = m%cellCond%v(ix,iy,izE)
-       w21 = m%grid%dx(ix-1)*m%grid%dz(iz)
-       temp(2,1) = m%cellCond%v(ix-1,iy,izE)
-       w12 = m%grid%dx(ix)*m%grid%dz(iz-1)
-       temp(1,2) = m%cellCond%v(ix,iy,izE-1)
-       w22 = m%grid%dx(ix-1)*m%grid%dz(iz-1)
-       temp(2,2) = m%cellCond%v(ix-1,iy,izE-1)
-       S = w11+w21+w12+w22
-       if(m%paramtype .eq. LOGE) then
-          temp = exp(temp)
-       endif
-       if(izE.eq.1) then
-          r = (temp(1,1)*w11+temp(1,2)*w21)/S
-       else
-          r = (temp(1,1)*w11 + temp(2,1)*w21+ &
-               temp(1,2)*w12 + temp(2,2)*w22)/S
-       endif
-
-    case(3)		 ! Ez edge
-       w11 = m%grid%dx(ix)*m%grid%dy(iy)
-       temp(1,1) = m%cellCond%v(ix,iy,izE)
-       w21 = m%grid%dx(ix)*m%grid%dy(iy-1)
-       temp(2,1) = m%cellCond%v(ix,iy-1,izE)
-       w12 = m%grid%dx(ix-1)*m%grid%dy(iy)
-       temp(1,2) = m%cellCond%v(ix-1,iy,izE)
-       w22 = m%grid%dx(ix-1)*m%grid%dy(iy-1)
-       temp(2,2) = m%cellCond%v(ix-1,iy-1,izE)
-       S = w11+w21+w12+w22
-       if(m%paramtype .eq. LOGE) then
-          temp = exp(temp)
-       endif
-       r = (temp(1,1)*w11 + temp(2,1)*w21+  &
-            temp(1,2)*w12 + temp(2,2)*w22)/S
-
-    endselect
-  end function sigC
-
-     !******************************************************************
-      subroutine writeAll_Cond3D(fid,cfile,nSigma,m,header)
-
-      !  open cfile on unit fid, writes out nSigma objects of
-      !   type modelParam , closes file  
-
-      integer, intent(in)               :: fid,nSigma
-      character(*), intent(in)          :: cfile, header
-      type(modelParam_t), intent(in)      :: m(nSigma)
-
-      integer 		:: i,Nz,NzAir
-
-      open(unit=fid, file=cfile, form='unformatted')
-      write(fid) header
-      write(fid) nSigma
-   
-      do i = 1,nSigma
-         Nz = m(i)%grid%Nz
-         NzAir = m(i)%grid%Nz-m(i)%NzEarth
-         write(fid) m(i)%paramType
-         write(fid) m(i)%Nx,m(i)%Ny,m(i)%NzEarth
-         write(fid) m(i)%grid%dx
-         write(fid) m(i)%grid%dy
-         write(fid) m(i)%grid%dz(NzAir+1:Nz)
-         write(fid) m(i)%AirCond
-         write(fid) m(i)%CellCond%v
-      enddo
-      close(fid)
-      end subroutine writeAll_Cond3D
-
-     !******************************************************************
-      subroutine readAll_Cond3D(fid,cfile,nSigma,m,header)
-
-      !  open cfile on unit fid, writes out nSigma objects of
-      !   type modelParam , closes file  
-
-      integer, intent(in)               :: fid
-      integer, intent(in)              :: nSigma
-      character(*), intent(in)          :: cfile
-      character(80), intent(out)        :: header
-      type(modelParam_t), intent(inout)   :: m(nSigma)
-
-      integer 		:: i,nS,Nx,Ny,Nz,NzAir,NzEarth,istat
-
-      open(unit=fid, file=cfile, form='unformatted')
-      read(fid) header
-      read(fid) nS
-      
-      if(nS .NE. nSigma) then
-          call errStop('size of sigma does not agree with contents of file in readAll_Cond2D')
-      endif
-
-      do i = 1,nSigma
-         read(fid) m(i)%paramType
-         read(fid) Nx,Ny,NzEarth
-         if((m(i)%Nx .NE. Nx) .OR. (m(i)%Ny .NE. Ny) .OR. (m(i)%NzEarth .NE. NzEarth)) then
-            close(fid)
-            call errStop('Size of cond does not agree with contents of file in readAll_Cond2D')
-         else
-            Nz = m(i)%grid%Nz
-            NzAir = m(i)%grid%Nz-m(i)%NzEarth
-            read(fid) m(i)%grid%dx
-            read(fid) m(i)%grid%dy
-            read(fid) m(i)%grid%dz(NzAir+1:Nz)
-            read(fid) m(i)%AirCond
-            read(fid) m(i)%CellCond%v
-         endif
-      enddo
-      close(fid)
-      end subroutine readAll_Cond3D
-!**********************************************************************
-
-  subroutine WScov(m)
-
-  type (modelParam_t), intent(inout) :: m
-
-    !call setup1DCM(m%grid)
-	!call solveDiff(m)
-
-  end subroutine WScov
 
 end module modelParameter

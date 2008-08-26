@@ -1,9 +1,9 @@
 ! *****************************************************************************
 module sg_scalar
   ! This module creates data types for scalar fields defined on
-  ! scalar (center or corner) nodes of a staggered Cartesian grid, along with 
+  ! scalar (center or corner) nodes of a staggered Cartesian grid, along with
   ! basic algebraic (scalar) operations. Such basic operations are: allocation,
-  ! deallocation, initialization, copying, and algebraic operations (linear 
+  ! deallocation, initialization, copying, and algebraic operations (linear
   ! combinations, scalar products, dot products).
   ! Belongs to SG_Basics class: staggered cartesian grid, data
   ! types defined on this grid, and operations defined on these data types. Not
@@ -18,12 +18,28 @@ module sg_scalar
   INTERFACE create
      module procedure create_rscalar
      module procedure create_cscalar
+     module procedure create_iscalar
   END INTERFACE
 
   ! deallocates the scalar (center or corner) nodes
   INTERFACE deall
      module procedure deall_rscalar
      module procedure deall_cscalar
+     module procedure deall_iscalar
+  END INTERFACE
+
+  ! reads the scalar (center or corner) nodes from fid
+  INTERFACE read
+     module procedure read_rscalar
+     module procedure read_cscalar
+     module procedure read_iscalar
+  END INTERFACE
+
+  ! writes the scalar (center or corner) nodes to fid
+  INTERFACE write
+     module procedure write_rscalar
+     module procedure write_cscalar
+     module procedure write_iscalar
   END INTERFACE
 
   ! a real scalar multiplies the scalar (center or corner) nodes
@@ -98,12 +114,14 @@ module sg_scalar
      MODULE PROCEDURE diagMult_rscalar_f
      MODULE PROCEDURE diagMult_cscalar_f
      MODULE PROCEDURE diagMult_rcscalar_f
-     MODULE PROCEDURE diagMult_crscalar_f 
+     MODULE PROCEDURE diagMult_crscalar_f
   END INTERFACE
 
 
-  public		::   create_rscalar,  create_cscalar, &
-       deall_rscalar, deall_cscalar, &
+  public		::   create_rscalar,  create_cscalar, create_iscalar, &
+       deall_rscalar, deall_cscalar, deall_iscalar, &
+       read_rscalar, read_cscalar, read_iscalar, &
+       write_rscalar, write_cscalar, write_iscalar, &
        copy_rscalar, copy_cscalar, &
        zero_rscalar, zero_cscalar, &
        scMult_rscalar, scMult_cscalar, &
@@ -121,7 +139,7 @@ module sg_scalar
   linComb_cscalar, scMultAdd_cscalar, CornerVolume
 
   ! ***************************************************************************
-  ! type scalar defines scalar for either edge or face in a staggered grid as
+  ! type cscalar defines scalar for either edge or face in a staggered grid as
   ! a complex field
   type :: cscalar
 
@@ -129,13 +147,13 @@ module sg_scalar
      ! in Grid3D as a parameter: CENTER, CORNER, CELL_EARTH
      character (len=80)	                               :: gridType
 
-     ! Note that the arrays are defined through dynamic memory allocation  
+     ! Note that the arrays are defined through dynamic memory allocation
      complex(kind=selectedPrec), pointer, dimension(:,:,:)    :: v
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction
      ! ny is grid dimension (number of cells) in the y-direction
-     ! nz is grid dimension (number of cells) in the z-direction: 
+     ! nz is grid dimension (number of cells) in the z-direction:
      integer                                           :: nx = 0, ny = 0, nz = 0
 
      ! allocated:  .true.  v array has been allocated
@@ -143,12 +161,12 @@ module sg_scalar
 
      ! pointer to parent grid
      type (grid3d_t), pointer                              :: grid
-     
+
   end type cscalar
 
 
   ! ***************************************************************************
-  ! type scalar defines scalar for either edge or face in a staggered grid as
+  ! type rscalar defines scalar for either edge or face in a staggered grid as
   ! a real field
   type :: rscalar
 
@@ -159,13 +177,13 @@ module sg_scalar
      ! Typical usage:  conductivity averaged on centers of
      ! staggered grid
      ! v: dimension Nx, Ny, Nz
-     ! Note that the arrays are defined through dynamic memory allocation  
+     ! Note that the arrays are defined through dynamic memory allocation
      real(kind=selectedPrec), pointer, dimension(:,:,:)        :: v
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction
      ! ny is grid dimension (number of cells) in the y-direction
-     ! nz is grid dimension (number of cells) in the z-direction: 
+     ! nz is grid dimension (number of cells) in the z-direction:
      integer                                            :: nx = 0, ny = 0, nz =0
 
      ! allocated:  .true.  v array has been allocated
@@ -177,20 +195,61 @@ module sg_scalar
   end type rscalar
 
 
+  ! ***************************************************************************
+  ! type iscalar defines scalar for either edge or face in a staggered grid as
+  ! an integer field; useful for mask arrays, so only create and deall needed
+  type :: iscalar
+
+     ! store the intention of the use in a character string defined
+     ! in Grid3D as a parameter: CENTER, CORNER, CELL_EARTH
+     character (len=80)	                           	:: gridType
+
+     ! Typical usage:  conductivity averaged on centers of
+     ! staggered grid
+     ! v: dimension Nx, Ny, Nz
+     ! Note that the arrays are defined through dynamic memory allocation
+     integer(kind=selectedPrec), pointer, dimension(:,:,:)        :: v
+
+     ! Grid Dimensions:
+     ! nx is grid dimension (number of cells) in the x-direction
+     ! ny is grid dimension (number of cells) in the y-direction
+     ! nz is grid dimension (number of cells) in the z-direction:
+     integer                                            :: nx = 0, ny = 0, nz =0
+
+     ! allocated:  .true.  v array has been allocated
+     logical		                                :: allocated = .false.
+
+     ! pointer to parent grid
+     type (grid3d_t), pointer                               :: grid
+
+  end type iscalar
+
 Contains
   ! CREATE GRID_scalar
   ! * subroutine create_rscalar(igrid, E, gridType)
   ! * subroutine create_cscalar(igrid, E, gridType)
+  ! * subroutine create_iscalar(igrid, E, gridType)
 
   ! DEALLOCATE GRID_scalar
   ! * subroutine deall_rscalar(E)
   ! * subroutine deall_cscalar(E)
+  ! * subroutine deall_iscalar(E)
+
+  ! READ GRID_scalar
+  ! * subroutine read_rscalar(fid, E)
+  ! * subroutine read_cscalar(fid, E)
+  ! * subroutine read_iscalar(fid, E)
+
+  ! WRITE GRID_scalar
+  ! * subroutine write_rscalar(fid, E)
+  ! * subroutine write_cscalar(fid, E)
+  ! * subroutine write_iscalar(fid, E)
 
   ! COPY GRID_scalar:  (=)
   ! * subroutine copy_rscalar(E2,E1)
   ! * subroutine copy_cscalar(E2,E1)
 
-  ! ZERO GRID_scalar  
+  ! ZERO GRID_scalar
   ! * subroutine zero_rscalar(E)
   ! * subroutine zero_cscalar(E)
 
@@ -218,7 +277,7 @@ Contains
   ! * function subtract_rscalar_f(E1, E2) result(E3)
   ! * function subtract_cscalar_f(E1, E2) result(E3)
 
-  ! POINTWISE MULTIPLICATION OF scalars: 
+  ! POINTWISE MULTIPLICATION OF scalars:
   ! * subroutine diagMult_rscalar(E1, E2, E3)
   ! * subroutine diagMult_cscalar(E1, E2, E3)
 
@@ -249,7 +308,7 @@ Contains
 
   ! The algebraic routines expect all input and output
   ! variables to be of the correct type, already allocated,
-  ! and of the correct size.  
+  ! and of the correct size.
 
 
   !****************************************************************************
@@ -261,7 +320,7 @@ Contains
 
     implicit none
     type(grid3d_t), target, intent(in)    :: igrid
-    ! the grid for which an scalar (center or corner) node field is being 
+    ! the grid for which an scalar (center or corner) node field is being
     ! initialized
     type (rscalar), intent(out)        :: E
 
@@ -270,7 +329,7 @@ Contains
     character (len=80)                 :: gridType
 
     if(E%allocated) then
-       ! first deallocate memory for v 
+       ! first deallocate memory for v
        deallocate(E%v, STAT=status)
     end if
 
@@ -297,7 +356,7 @@ Contains
        E%nz = nzEarth
        allocate(E%v(nx,ny,nzEarth), STAT=status)
     else
-       write (0, *) 'not a known tag: create_rscalar'    
+       write (0, *) 'gridType == ',trim(E%gridType),' undefined in create_rscalar'
     end if
     E%allocated = status .EQ. 0
 
@@ -316,7 +375,7 @@ Contains
 
     implicit none
     type(grid3d_t), target, intent(in)     :: igrid
-    ! the grid for which an scalar (center or corner) node field is being 
+    ! the grid for which an scalar (center or corner) node field is being
     ! initialized
     type (cscalar), intent(out)         :: E
 
@@ -325,7 +384,7 @@ Contains
     character (len=80)                  :: gridType
 
     if(E%allocated) then
-       ! first deallocate memory for v 
+       ! first deallocate memory for v
        deallocate(E%v,STAT=status)
     end if
 
@@ -341,15 +400,15 @@ Contains
     E%nz = nz
     E%gridType = gridType
 
-    ! allocate memory for v ; 
+    ! allocate memory for v ;
     ! E%allocated will be true if all allocations succeed
     E%allocated = .true.
     if (E%gridType == CENTER) then
        allocate(E%v(nx,ny,nz), STAT=status)
     else if (E%gridType == CORNER) then
        allocate(E%v(nx+1,ny+1,nz+1), STAT=status)
-    else 
-       write (0, *) 'not a known tag: create_cscalar'    
+    else
+       write (0, *) 'gridType == ',trim(E%gridType),' undefined in create_cscalar'
     end if
     E%allocated = E%allocated .and. (status .EQ. 0)
 
@@ -360,6 +419,55 @@ Contains
 
   end subroutine create_cscalar  ! create_cscalar
 
+  !****************************************************************************
+  ! create_iscalar creates variable of derived type iscalar,
+  ! using grid definition in structure "grid" ;
+  ! allocates memory in v component array
+  ! gridType is a character string to describe intended usage; but iscalar
+  ! is only useful for gridType == CELL_EARTH
+  subroutine create_iscalar(igrid, E, gridType)
+
+    implicit none
+    type (grid3d_t), target, intent(in)    :: igrid
+    type (iscalar),  intent(out)        :: E
+
+    integer                            :: status,nx,ny,nz,nzEarth
+
+    character (len=80)                 :: gridType
+
+    if(E%allocated) then
+       ! first deallocate memory for v
+       deallocate(E%v, STAT=status)
+    end if
+
+    ! Set pointer
+    E%grid => igrid
+
+    ! Grid dimensions
+    nx = igrid%nx
+    ny = igrid%ny
+    nz = igrid%nz
+    nzEarth = igrid%nzEarth
+    E%nx = nx
+    E%ny = ny
+    E%nz = nz
+    E%gridType = gridType
+
+    ! allocate memory for v
+    ! E%allocated will be true if all allocations succeed
+    if(E%gridType == CELL_EARTH) then
+       E%nz = nzEarth
+       allocate(E%v(nx,ny,nzEarth), STAT=status)
+    else
+       write (0, *) 'gridType == ',trim(E%gridType),' undefined in create_iscalar'
+    end if
+    E%allocated = status .EQ. 0
+
+    if (E%allocated) then
+       E%v = 0
+    end if
+
+  end subroutine create_iscalar  ! create_iscalar
 
   !****************************************************************************
   ! deall_rscalar destoys variable of derived type rscalar,
@@ -371,7 +479,7 @@ Contains
     integer	    :: status
 
     if(E%allocated) then
-       ! deallocate memory for v 
+       ! deallocate memory for v
        deallocate(E%v,STAT=status)
     end if
 
@@ -393,9 +501,9 @@ Contains
     type (cscalar)  :: E
     integer	    :: status
 
-    ! deallocate memory for v 
+    ! deallocate memory for v
     if(E%allocated) then
-       ! deallocate memory for v 
+       ! deallocate memory for v
        deallocate(E%v,STAT=status)
     end if
 
@@ -409,7 +517,343 @@ Contains
 
 
   !****************************************************************************
-  ! copy_rscalar makes an exact copy of derived data type 
+  ! deall_iscalar destoys variable of derived type iscalar,
+  ! deallocating memory
+  subroutine deall_iscalar(E)
+
+    implicit none
+    type (iscalar)  :: E
+    integer	    :: status
+
+    ! deallocate memory for v
+    if(E%allocated) then
+       ! deallocate memory for v
+       deallocate(E%v,STAT=status)
+    end if
+
+    E%nx = 0
+    E%ny = 0
+    E%nz = 0
+    E%gridType = ''
+    E%allocated = .false.
+
+  end subroutine deall_iscalar  ! deall_iscalar
+
+  !****************************************************************************
+  ! read_rscalar reads in an rscalar in a simple ASCII format; rscalar has
+  ! to exist and be allocated before calling this routine, and the file unit
+  ! must already be available for reading; also need to be careful that
+  ! dimensions in the input file match those of the rscalar
+  subroutine read_rscalar(fid, E)
+
+      integer,        intent(in)		:: fid
+      type (rscalar), intent(inout)		:: E
+
+      !  local variables
+      integer 		                    :: Nx, Ny, Nz
+      integer                           :: i, j, k, k1, k2, istat
+      real (kind(E%v)), allocatable     :: temp(:)
+
+      if(.not. E%allocated) then
+         write(0, *) 'rscalar must be allocated before call to read_rscalar'
+         stop
+      endif
+
+	  Nx = size(E%v,1)
+	  Ny = size(E%v,2)
+	  Nz = size(E%v,3)
+
+	  allocate(temp(Nx),STAT=istat)
+	  do
+	    i = 1
+	    read(fid,*,iostat=istat) k1, k2
+	    if (istat /= 0) exit
+	    if ((k1 < 0) .or. (k2 > Nz)) then
+	    	write(0, *) 'Error reading the ',i,'th block in read_rscalar'
+	    	stop
+	    else if (k1 > k2) then
+	    	write(0, *) 'Warning: block ',i,' in read_rscalar will be ignored'
+	    end if
+	    do j = 1,Ny
+	    	read(fid,*,iostat=istat) temp
+	    	if (istat /= 0) then
+	    	  	write(0, *) 'Error reading the ',j,'th row in ',i,'th block in read_rscalar'
+	    	  	stop
+	    	end if
+	    	do k = k1,k2
+	    	  	E%v(:,j,k) = temp
+	    	end do
+	    	i = i+1
+	    end do
+      end do
+	  deallocate(temp,STAT=istat)
+
+  end subroutine read_rscalar
+
+  !****************************************************************************
+  ! read_cscalar reads in an cscalar in a simple ASCII format; cscalar has
+  ! to exist and be allocated before calling this routine, and the file unit
+  ! must already be available for reading; also need to be careful that
+  ! dimensions in the input file match those of the cscalar. Each complex
+  ! value must be of the form (v1, v2)
+  subroutine read_cscalar(fid, E)
+
+      integer,        intent(in)		:: fid
+      type (cscalar), intent(inout)		:: E
+
+      !  local variables
+      integer 		                    :: Nx, Ny, Nz
+      integer                           :: i, j, k, k1, k2, istat
+      complex (kind(E%v)), allocatable  :: temp(:)
+
+      if(.not. E%allocated) then
+         write(0, *) 'cscalar must be allocated before call to read_cscalar'
+         stop
+      endif
+
+	  Nx = size(E%v,1)
+	  Ny = size(E%v,2)
+	  Nz = size(E%v,3)
+
+	  allocate(temp(Nx),STAT=istat)
+	  do
+	    i = 1
+	    read(fid,*,iostat=istat) k1, k2
+	    if (istat /= 0) exit
+	    if ((k1 < 0) .or. (k2 > Nz)) then
+	    	write(0, *) 'Error reading the ',i,'th block in read_cscalar'
+	    	stop
+	    else if (k1 > k2) then
+	    	write(0, *) 'Warning: block ',i,' in read_cscalar will be ignored'
+	    end if
+	    do j = 1,Ny
+	    	read(fid,*,iostat=istat) temp
+	    	if (istat /= 0) then
+	    	  	write(0, *) 'Error reading the ',j,'th row in ',i,'th block in read_cscalar'
+	    	  	stop
+	    	end if
+	    	do k = k1,k2
+	    	  	E%v(:,j,k) = temp
+	    	end do
+	    	i = i+1
+	    end do
+      end do
+	  deallocate(temp,STAT=istat)
+
+  end subroutine read_cscalar
+
+  !****************************************************************************
+  ! read_iscalar reads in an iscalar in a simple ASCII format; iscalar has
+  ! to exist and be allocated before calling this routine, and the file unit
+  ! must already be available for reading; also need to be careful that
+  ! dimensions in the input file match those of the iscalar
+  subroutine read_iscalar(fid, E)
+
+      integer,        intent(in)		:: fid
+      type (iscalar), intent(inout)		:: E
+
+      !  local variables
+      integer 		                    :: Nx, Ny, Nz
+      integer                           :: i, j, k, k1, k2, istat
+      integer, allocatable              :: temp(:)
+
+      if(.not. E%allocated) then
+         write(0, *) 'iscalar must be allocated before call to read_iscalar'
+         stop
+      endif
+
+	  Nx = size(E%v,1)
+	  Ny = size(E%v,2)
+	  Nz = size(E%v,3)
+
+	  allocate(temp(Nx),STAT=istat)
+	  do
+	    i = 1
+	    read(fid,*,iostat=istat) k1, k2
+	    if (istat /= 0) exit
+	    if ((k1 < 0) .or. (k2 > Nz)) then
+	    	write(0, *) 'Error reading the ',i,'th block in read_iscalar'
+	    	stop
+	    else if (k1 > k2) then
+	    	write(0, *) 'Warning: block ',i,' in read_iscalar will be ignored'
+	    end if
+	    do j = 1,Ny
+	    	read(fid,*,iostat=istat) temp
+	    	if (istat /= 0) then
+	    	  	write(0, *) 'Error reading the ',j,'th row in ',i,'th block in read_iscalar'
+	    	  	stop
+	    	end if
+	    	do k = k1,k2
+	    	  	E%v(:,j,k) = temp
+	    	end do
+	    	i = i+1
+	    end do
+      end do
+	  deallocate(temp,STAT=istat)
+
+  end subroutine read_iscalar
+
+  !****************************************************************************
+  ! write_rscalar writes an iscalar in a simple ASCII format; rscalar has
+  ! to exist and be allocated before calling this routine, and the file unit
+  ! must already be available for writing
+  subroutine write_rscalar(fid, E)
+
+      integer,        intent(in)		:: fid
+      type (rscalar), intent(in)		:: E
+
+      !  local variables
+      integer 		                    :: Nx, Ny, Nz
+      integer                           :: i, j, k, k1, k2, istat
+      real (kind(E%v)), allocatable     :: temp(:,:)
+
+      if(.not. E%allocated) then
+         write(0, *) 'rscalar must be allocated before call to write_rscalar'
+         stop
+      endif
+
+	  Nx = size(E%v,1)
+	  Ny = size(E%v,2)
+	  Nz = size(E%v,3)
+
+	  allocate(temp(Nx,Ny),STAT=istat)
+      k1 = 1
+	  do
+	    do k = k1,Nz-1
+	    	temp = abs(E%v(:,:,k+1) - E%v(:,:,k))
+	    	if (maxval(temp) > TOL6) then
+	    		k2 = k
+	    		exit
+	    	end if
+	    end do
+	    write(fid,'(2i5)',iostat=istat) k1, k2
+	    if (istat /= 0) then
+	    	write(0, *) 'Error writing to file in write_rscalar'
+	    	stop
+	    end if
+	    temp = E%v(:,:,k1)
+	    do j = 1,Ny
+	    	do i = 1,Nx
+	    		write(fid,'(es13.5)',iostat=istat,advance='no') E%v(i,j,k1)
+	    	end do
+	    	write(fid,*)
+	    end do
+	    k1 = k2+1
+      end do
+	  deallocate(temp,STAT=istat)
+
+  end subroutine write_rscalar
+
+  !****************************************************************************
+  ! write_cscalar writes an iscalar in a simple ASCII format; cscalar has
+  ! to exist and be allocated before calling this routine, and the file unit
+  ! must already be available for writing
+  subroutine write_cscalar(fid, E)
+
+      integer,        intent(in)		:: fid
+      type (cscalar), intent(in)		:: E
+
+      !  local variables
+      integer 		                    :: Nx, Ny, Nz
+      integer                           :: i, j, k, k1, k2, istat
+      complex (kind(E%v)), allocatable  :: temp(:,:)
+
+      if(.not. E%allocated) then
+         write(0, *) 'cscalar must be allocated before call to write_cscalar'
+         stop
+      endif
+
+	  Nx = size(E%v,1)
+	  Ny = size(E%v,2)
+	  Nz = size(E%v,3)
+
+	  allocate(temp(Nx,Ny),STAT=istat)
+      k1 = 1
+	  do
+	    do k = k1,Nz-1
+	    	temp = abs(E%v(:,:,k+1) - E%v(:,:,k))
+	    	if ((maxval(real(temp)) > TOL6) .or. (maxval(imag(temp)) > TOL6)) then
+	    		k2 = k
+	    		exit
+	    	end if
+	    end do
+	    write(fid,'(2i5)',iostat=istat) k1, k2
+	    if (istat /= 0) then
+	    	write(0, *) 'Error writing to file in write_cscalar'
+	    	stop
+	    end if
+	    temp = E%v(:,:,k1)
+	    do j = 1,Ny
+	    	do i = 1,Nx
+	    		write(fid,'(es13.5)',iostat=istat,advance='no') E%v(i,j,k1)
+	    	end do
+	    	write(fid,*)
+	    end do
+	    k1 = k2+1
+      end do
+	  deallocate(temp,STAT=istat)
+
+  end subroutine write_cscalar
+
+  !****************************************************************************
+  ! write_iscalar writes an iscalar in a simple ASCII format; iscalar has
+  ! to exist and be allocated before calling this routine, and the file unit
+  ! must already be available for writing
+  subroutine write_iscalar(fid, E)
+
+      integer,        intent(in)		:: fid
+      type (iscalar), intent(in)		:: E
+
+      !  local variables
+      integer 		                    :: Nx, Ny, Nz
+      integer                           :: i, j, k, k1, k2, istat
+      integer, allocatable              :: temp(:,:)
+      character(4)                      :: fmt
+
+      if(.not. E%allocated) then
+         write(0, *) 'iscalar must be allocated before call to write_iscalar'
+         stop
+      endif
+
+	  Nx = size(E%v,1)
+	  Ny = size(E%v,2)
+	  Nz = size(E%v,3)
+
+	  allocate(temp(Nx,Ny),STAT=istat)
+      k1 = 1
+	  do
+	    do k = k1,Nz-1
+	    	temp = abs(E%v(:,:,k+1) - E%v(:,:,k))
+	    	if (maxval(temp) > 0) then
+	    		k2 = k
+	    		exit
+	    	end if
+	    end do
+	    write(fid,'(2i5)',iostat=istat) k1, k2
+	    if (istat /= 0) then
+	    	write(0, *) 'Error writing to file in write_iscalar'
+	    	stop
+	    end if
+	    temp = E%v(:,:,k1)
+   		if (maxval(temp) <= 9) then
+   			fmt = '(i2)'
+   		else
+   			fmt = '(i6)'
+   		end if
+	    do j = 1,Ny
+	    	do i = 1,Nx
+	    		write(fid,fmt,iostat=istat,advance='no') E%v(i,j,k1)
+	    	end do
+	    	write(fid,*)
+	    end do
+	    k1 = k2+1
+      end do
+	  deallocate(temp,STAT=istat)
+
+  end subroutine write_iscalar
+
+  !****************************************************************************
+  ! copy_rscalar makes an exact copy of derived data type
   ! rscalar;   NOTE: first argument is output
   subroutine copy_rscalar(E2, E1)
 
@@ -438,7 +882,7 @@ Contains
        else
 
           if(E2%allocated) then
-             ! first deallocate memory for v 
+             ! first deallocate memory for v
              deallocate(E2%v,STAT=status)
           end if
 
@@ -456,9 +900,9 @@ Contains
 
 
   !****************************************************************************
-  ! copy_cscalar makes an exact copy of derived data type 
-  ! cscalar; 
-  subroutine copy_cscalar(E2, E1) 
+  ! copy_cscalar makes an exact copy of derived data type
+  ! cscalar;
+  subroutine copy_cscalar(E2, E1)
 
     implicit none
     type (cscalar), intent(in)            :: E1
@@ -485,7 +929,7 @@ Contains
        else
 
           if(E2%allocated) then
-             ! first deallocate memory for v 
+             ! first deallocate memory for v
              deallocate(E2%v, STAT=status)
           end if
 
@@ -503,7 +947,7 @@ Contains
 
 
   !****************************************************************************
-  ! zero_rscalar zeros variable of derived data type 
+  ! zero_rscalar zeros variable of derived data type
   ! rscalar;
   subroutine zero_rscalar(E)
 
@@ -523,7 +967,7 @@ Contains
 
 
   !****************************************************************************
-  ! zero_cscalar zeros variable of derived data type 
+  ! zero_cscalar zeros variable of derived data type
   ! cscalar;
 
   subroutine zero_cscalar(E)
@@ -550,10 +994,10 @@ Contains
   subroutine scMult_cscalar(c, E1, E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                      :: c          
+    complex(kind=selectedPrec), intent(in)                      :: c
     ! a complex scalar to be multiplied with
-    type (cscalar), intent(in)                       :: E1            
-    type (cscalar), intent(inout)                    :: E2 
+    type (cscalar), intent(in)                       :: E1
+    type (cscalar), intent(inout)                    :: E2
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_cscalar'
@@ -592,10 +1036,10 @@ Contains
   function scMult_cscalar_f(c, E1) result(E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                      :: c          
+    complex(kind=selectedPrec), intent(in)                      :: c
     ! a complex scalar to be multiplied with
-    type (cscalar), intent(in)                       :: E1            
-    type (cscalar)                                   :: E2             
+    type (cscalar), intent(in)                       :: E1
+    type (cscalar)                                   :: E2
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_cscalar_f'
@@ -638,10 +1082,10 @@ Contains
   subroutine scMult_rscalar(c, E1, E2)
 
     implicit none
-    real (kind=selectedPrec), intent(in)                         :: c          
+    real (kind=selectedPrec), intent(in)                         :: c
     ! a real scalar to be multiplied with
-    type (rscalar), intent(in)                       :: E1            
-    type (rscalar), intent(inout)                    :: E2             
+    type (rscalar), intent(in)                       :: E1
+    type (rscalar), intent(inout)                    :: E2
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_rscalar'
@@ -681,10 +1125,10 @@ Contains
   function scMult_rscalar_f(c, E1) result(E2)
 
     implicit none
-    real (kind=selectedPrec), intent(in)                         :: c          
+    real (kind=selectedPrec), intent(in)                         :: c
     ! a complex scalar to be multiplied with
-    type (rscalar), intent(in)                       :: E1            
-    type (rscalar)                                   :: E2             
+    type (rscalar), intent(in)                       :: E1
+    type (rscalar)                                   :: E2
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_rscalar_f'
@@ -728,12 +1172,12 @@ Contains
 
     implicit none
     type (rscalar), intent(in)               :: E1, E2
-    type (rscalar), intent(inout)            :: E3     
-    
+    type (rscalar), intent(inout)            :: E3
+
    if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_rscalar'
        stop
-    endif        
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -770,12 +1214,12 @@ Contains
 
     implicit none
     type (rscalar), intent(in)               :: E1, E2
-    type (rscalar)                           :: E3             
+    type (rscalar)                           :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_rscalar_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_rscalar(E1%grid, E3, E1%gridType)
@@ -815,12 +1259,12 @@ Contains
 
     implicit none
     type (cscalar), intent(in)               :: E1, E2
-    type (cscalar), intent(inout)            :: E3             
+    type (cscalar), intent(inout)            :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_cscalar'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -857,12 +1301,12 @@ Contains
 
     implicit none
     type (cscalar), intent(in)               :: E1, E2
-    type (cscalar)                           :: E3             
+    type (cscalar)                           :: E3
 
      if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_cscalar_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cscalar(E1%grid, E3, E1%gridType)
@@ -902,12 +1346,12 @@ Contains
 
     implicit none
     type (rscalar), intent(in)               :: E1, E2
-    type (rscalar), intent(inout)            :: E3             
+    type (rscalar), intent(inout)            :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for subtract_rscalar'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -944,12 +1388,12 @@ Contains
 
     implicit none
     type (rscalar), intent(in)               :: E1, E2
-    type (rscalar)                           :: E3             
+    type (rscalar)                           :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_rscalar_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_rscalar(E1%grid, E3, E1%gridType)
@@ -989,12 +1433,12 @@ Contains
 
     implicit none
     type (cscalar), intent(in)               :: E1, E2
-    type (cscalar), intent(inout)            :: E3             
+    type (cscalar), intent(inout)            :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for subtract_cscalar'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E2) is active (allocated)
     if(.not.E3%allocated) then
@@ -1031,12 +1475,12 @@ Contains
 
     implicit none
     type (cscalar), intent(in)               :: E1, E2
-    type (cscalar)                           :: E3             
+    type (cscalar)                           :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for subtract_cscalar_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cscalar(E1%grid, E3, E1%gridType)
@@ -1069,7 +1513,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_rscalar multiplies two scalars E1, E2 stored as devired data 
+  ! diagMult_rscalar multiplies two scalars E1, E2 stored as devired data
   ! type rscalar pointwise; subroutine version
   ! E3 can overwrite E1 or E2
   subroutine diagMult_rscalar(E1, E2, E3)
@@ -1081,7 +1525,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rscalar'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1112,7 +1556,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_rscalar_f multiplies two scalars E1, E2 stored as devired 
+  ! diagMult_rscalar_f multiplies two scalars E1, E2 stored as devired
   ! data type rscalar pointwise; function version
   function diagMult_rscalar_f(E1, E2) result(E3)
 
@@ -1123,7 +1567,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rscalar_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_rscalar(E1%grid, E3, E1%gridType)
@@ -1156,7 +1600,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_cscalar multiplies two scalars E1, E2 stored as devired data 
+  ! diagMult_cscalar multiplies two scalars E1, E2 stored as devired data
   ! type cscalar pointwise; subroutine version
   ! E3 can overwrite E1 or E2
   subroutine diagMult_cscalar(E1, E2, E3)
@@ -1164,11 +1608,11 @@ Contains
     implicit none
     type (cscalar), intent(in)               :: E1, E2
     type (cscalar), intent(inout)            :: E3
-    
+
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_cscalar'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1199,7 +1643,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_cscalar_f multiplies two scalars E1, E2 stored as devired 
+  ! diagMult_cscalar_f multiplies two scalars E1, E2 stored as devired
   ! data  type cscalar pointwise; function version
   function diagMult_cscalar_f(E1, E2) result(E3)
 
@@ -1210,7 +1654,7 @@ Contains
    if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_cscalar_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cscalar(E1%grid, E3, E1%gridType)
@@ -1243,20 +1687,20 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_crscalar multiplies scalar E1 with scalar E2 stored as 
+  ! diagMult_crscalar multiplies scalar E1 with scalar E2 stored as
   ! devired type cscalar pointwise; subroutine version
   ! E3 can overwrite E1 or E2
   subroutine diagMult_crscalar(E1, E2, E3)
 
     implicit none
     type (cscalar), intent(in)               :: E1
-    type (rscalar), intent(in)               :: E2    
+    type (rscalar), intent(in)               :: E2
     type (cscalar), intent(inout)            :: E3
-    
+
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_crscalar'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1287,7 +1731,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_crscalar_f multiplies scalar E1 with scalar E2 stored as 
+  ! diagMult_crscalar_f multiplies scalar E1 with scalar E2 stored as
   ! derived data type cscalar pointwise; function version
   function diagMult_crscalar_f(E1, E2) result(E3)
 
@@ -1299,7 +1743,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_crscalar_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cscalar(E1%grid, E3, E1%gridType)
@@ -1332,20 +1776,20 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_rcscalar multiplies scalar E1 with scalar E2 stored as 
+  ! diagMult_rcscalar multiplies scalar E1 with scalar E2 stored as
   ! derived type cscalar pointwise; subroutine version
   ! E3 can overwrite E1 or E2
   subroutine diagMult_rcscalar(E1, E2, E3)
 
     implicit none
     type (rscalar), intent(in)               :: E1
-    type (cscalar), intent(in)               :: E2    
+    type (cscalar), intent(in)               :: E2
     type (cscalar), intent(inout)            :: E3
 
    if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rcscalar'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1376,7 +1820,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_rcscalar_f multiplies scalar E1 with scalar E2 stored as 
+  ! diagMult_rcscalar_f multiplies scalar E1 with scalar E2 stored as
   ! derived data type cscalar pointwise; function version
   function diagMult_rcscalar_f(E1, E2) result(E3)
 
@@ -1388,7 +1832,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rcscalar_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cscalar(E1%grid, E3, E1%gridType)
@@ -1427,14 +1871,14 @@ Contains
 
     implicit none
     type (rscalar), intent(in)   :: E1, E2
-    real (kind=selectedPrec)		     :: r 
+    real (kind=selectedPrec)		     :: r
 
     r = 0.0
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProd_rscalar'
        stop
-    endif  
+    endif
 
     ! Check whether both input scalars are of the same size
     if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
@@ -1470,7 +1914,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProd_cscalar'
        stop
-    endif  
+    endif
 
     ! Check whether both input scalars are of the same size
     if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
@@ -1500,15 +1944,15 @@ Contains
 
     implicit none
     !   input scalars
-    type (cscalar), intent(in)             :: E1, E2     
+    type (cscalar), intent(in)             :: E1, E2
     !  input complex scalars
     complex (kind=8), intent(in)           :: inc1, inc2
     type (cscalar), intent(inout)          :: E3
-    
+
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for linComb_cscalar'
        stop
-    endif                
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1522,7 +1966,7 @@ Contains
           if ((E1%gridType == E2%gridType).and.(E1%gridType == E3%gridType)) then
 
              ! form linear combinatoin
-             E3%v = inc1*E1%v + inc2*E2%v 
+             E3%v = inc1*E1%v + inc2*E2%v
 
           else
              write (0, *) 'not compatible usage for linComb_cscalar'
@@ -1544,15 +1988,15 @@ Contains
   subroutine scMultAdd_cscalar(c, E1, E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                      :: c          
+    complex(kind=selectedPrec), intent(in)                      :: c
     ! a complex scalar to be multiplied with
-    type (cscalar), intent(in)                       :: E1            
-    type (cscalar), intent(inout)                    :: E2             
+    type (cscalar), intent(in)                       :: E1
+    type (cscalar), intent(inout)                    :: E2
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMultAdd_cscalar'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E2) is active (allocated)
     if(.not.E2%allocated) then
@@ -1583,13 +2027,13 @@ Contains
   ! *************************************************************************
   ! * CornerVolume creates volume elements centered around the corners of
   ! * the grid, and stores them as real scalars with gridType=CORNER.
-  
+
   subroutine CornerVolume(inGr, cV)
 
     implicit none
     type (grid3d_t), intent(in)          :: inGr  ! input grid
     type (rscalar), intent(inout)      :: cV    ! center volume as output
-    integer                            :: ix, iy, iz        
+    integer                            :: ix, iy, iz
     ! dummy variables
 
     ! Checks whether the size is the same

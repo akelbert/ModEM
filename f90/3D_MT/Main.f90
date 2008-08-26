@@ -9,26 +9,26 @@ module Main
   use userctrl
   use ioascii
   implicit none
-  
-      ! I/O units ... reuse generic read/write units if 
-     !   possible; for those kept open during program run, 
-     !   reserve a specific unit here 
+
+      ! I/O units ... reuse generic read/write units if
+     !   possible; for those kept open during program run,
+     !   reserve a specific unit here
      integer (kind=4), save :: fidRead = 1
      integer (kind=4), save :: fidWrite = 2
      integer (kind=4), save :: fidError = 99
 
      integer (kind=4), save :: nPer, nSites
-       
+
   ! ***************************************************************************
   ! * fwdCtrls: User-specified information about the forward solver relaxations
   !type (emsolve_control), save								:: fwdCtrls
   !type (inverse_control), save								:: invCtrls
-  
+
   ! forward solver control defined in EMsolve3D
   type(EMsolve_control)  :: solverParams
-  
+
   integer, save                                             :: output_level
-  
+
   real (kind=selectedPrec), pointer, dimension(:), save	:: periods
   real (kind=selectedPrec), pointer, dimension(:,:), save	:: sites
   character(2), pointer, dimension(:), save    		:: modes
@@ -50,9 +50,9 @@ module Main
 
   !  storage for EM solutions
   type(EMsolnMTX), save            :: eAll
-  
+
   logical                   :: write_model, write_data, write_EMsoln
-    
+
 
 
 Contains
@@ -79,31 +79,34 @@ Contains
 
 	!--------------------------------------------------------------------------
 	! Check whether model parametrization file exists and read it, if exists
-	inquire(FILE=cUserDef%rFile_Model,EXIST=exists) 
+	inquire(FILE=cUserDef%rFile_Model,EXIST=exists)
 
 	if (exists) then
 	   ! Read input files and set up basic grid geometry & conductivities
        call read_Cond3D(fidRead,cUserDef%rFile_Model,sigma0,paramType,grid)
 
+       ! Finish setting up the grid (if that is not done in the read subroutine)
+       call gridCalcs(grid)
+
        !  set grid for higher level solver routines
        call set_SolnRHS_grid(grid)
-     
+
        !  set solver control (currently using defaults)
        solverParams%UseDefaults= .true.
        call setEMsolveControl(solverParams)
 	else
 	  call warning('No input model parametrization')
 	end if
-	
+
 	!--------------------------------------------------------------------------
 	!  Read in data file (only a template on input--periods/sites)
-	inquire(FILE=cUserDef%rFile_Data,EXIST=exists) 
+	inquire(FILE=cUserDef%rFile_Data,EXIST=exists)
 
 	if (exists) then
 	   call read_Z(fidRead,cUserDef%rFile_Data,nPer,periods,nSites,sites,allData)
        !  Using periods, sites obtained from data file
        !     set up transmitter and receiver dictionaries
-       call TXdictSetUp(nPer,periods) 
+       call TXdictSetUp(nPer,periods)
        call RXdictSetUp(nSites,sites)
        call TypeDictSetup()
     else
@@ -127,7 +130,7 @@ Contains
         nTx = allData%nTx
         paramtype = ''
         allocate(sigma(nTx),STAT=istat)
-        do i = 1,nTx 
+        do i = 1,nTx
            call create_ModelParam(grid,paramtype,sigma(i))
         enddo
         inquire(FILE=cUserDef%rFile_dModelMTX,EXIST=exists)
@@ -137,9 +140,16 @@ Contains
 	       call warning('The input model perturbation file does not exist')
 	    end if
 
-        
+     case (INVERSE_NLCG)
+	   inquire(FILE=cUserDef%rFile_Cov,EXIST=exists)
+	   if (exists) then
+          call create_CmSqrt(sigma0,cUserDef%rFile_Cov)
+       else
+          call create_CmSqrt(sigma0)
+       end if
+
     end select
-    			
+
 	!--------------------------------------------------------------------------
 	!  Set the level of output based on the user input
 	select case (cUserDef%verbose)
@@ -179,7 +189,7 @@ Contains
     if (len_trim(cUserDef%wFile_EMsoln)>0) then
        write_EMsoln = .true.
     end if
-     
+
 	return
 
   end subroutine initGlobalData	! initGlobalData
@@ -187,7 +197,7 @@ Contains
 
   ! ***************************************************************************
   ! * DeallGlobalData deallocates all allocatable data defined globally.
-  
+
   subroutine deallGlobalData()
 
 	integer	:: i, istat
@@ -201,21 +211,23 @@ Contains
 	call deall_modelParam(sigma1)
 	deallocate(modes,periods,sites,STAT=istat)
 
-	call deall_txDict() ! 3D_MT/EMsolver.f90	
+	call deall_txDict() ! 3D_MT/EMsolver.f90
 	call deall_rxDict() ! 3D_MT/DataFunc.f90
-	call deall_typeDict() ! 3D_MT/DataFunc.f90	
-	
+	call deall_typeDict() ! 3D_MT/DataFunc.f90
+
 	if (associated(sigma)) then
 	   do i = 1,size(sigma)
 	       call deall_modelParam(sigma(i))
 	   end do
 	   deallocate(sigma,STAT=istat)
 	end if
-	
+
 	call delete_SolnRHS_grid() ! 3D_MT/EMsolver.f90
 	call deallEMsolveControl() ! 3D_MT/FWD/EMsolve3D.f90
 
+	call deall_CmSqrt()
+
   end subroutine deallGlobalData	! deallGlobalData
-  
+
 
 end module Main

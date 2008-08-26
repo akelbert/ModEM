@@ -1,4 +1,4 @@
-module modelparameter
+module ModelParameter
 
 ! Defines the modelParam_t and modelCov_t abstract data types.
 ! Both have private attributes, to force coding of other modules
@@ -15,7 +15,9 @@ module modelparameter
 !    create_CmSqrt, deall_CmSqrt, multBy_CmSqrt,
 !    read_modelParam, write_modelParam.
 !
-! Also includes condictivity mappings on the grid.
+! Also includes condictivity mappings on the grid:
+!    CellToNode, NodeToCell, CondParamToArray,
+!    rhoC, CellToEdge, EdgeToCell, QtoModelParam
 
 use math_constants
 use utilities
@@ -77,9 +79,9 @@ end interface
 
 ! definitions for CmSqrt: must be consistent with the include file below
 
-include "modelCov/WS.hd"
+include "modelCov/Diffusion.hd"
 
-contains
+Contains
 
 ! *****************************************************************************
 !  conductivity mappings and adjoints for 2D MT modeling and inversion code
@@ -87,11 +89,11 @@ contains
    include "CondMap.inc"
 
 !  The included file must contain subroutines create_CmSqrt, deall_CmSqrt, multBy...
-   include "modelCov/WS.inc"
+   include "modelCov/Diffusion.inc"
 
 !  I/O choices
-   include "modelParamIO/binary.inc"
-   include "modelParamIO/mackie.inc"
+   include "modelParamIO/Binary.inc"
+   include "modelParamIO/Mackie.inc"
 
 !************************************************************************
    !  allocateEarthCond allocates and initializes arrays for
@@ -258,7 +260,7 @@ contains
 
     ! check to see that input m is allocated
     if(.not.mIn%allocated) then
-       call errStop('input not allocated on call to scDivide_DvecMTX')
+       call errStop('input not allocated on call to scMult_modelParam')
     endif
 
 	call linComb_modelParam(R_ZERO,mIn,a,mIn,mOut)
@@ -343,4 +345,4 @@ contains
    end subroutine getValue_modelParam
 
 
-end module modelparameter
+end module ModelParameter

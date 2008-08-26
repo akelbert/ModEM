@@ -33,13 +33,13 @@ implicit none
   ! transmitter dictionary txDict for 3D-MT data will be an array of
   ! type MTtx (one element  for each frequency)
   ! Perhaps this should be moved to EMsolver module (and be private
-  !    to that module?)   
+  !    to that module?)
   ! NOTE: could have multiple transmitter dictionaries, each of which
   !    could constist of elements of different types; nothing about
   !    the dictionary or the elements that it consists of is used
   !    in higher level routines
   type (MTtx), pointer, save, private, dimension (:)   :: txDict
-  
+
 !    keep data structures used only by
 !    routines in this module private
 !   rhs data structures for solving forward, sensitivity probs
@@ -65,14 +65,14 @@ end type EMsolnMTX
 !    changes from the previous solver call, appropriate solver
 !    coefficients are updated, matrices factored, etc.).  This
 !    functionality needs to be maintained in implementations for new
-!    problems! 
+!    problems!
 public initSolver
 
 !  cleanup/deallocation routines
 public exitSolver
 
 ! solver routines
-public fwdSolve, sensSolve, create_EMsolnMTX 
+public fwdSolve, sensSolve, create_EMsolnMTX
 
 logical, save, private		:: modelDataInitialized = .false.
 !  logical, save, private		:: sigmaNotCurrent = .true.
@@ -85,7 +85,7 @@ logical, save, private		:: modelDataInitialized = .false.
 type(grid3d_t), target, save, private         :: SolnRHS_grid
 
 Contains
-   
+
 !**********************************************************************
 
 ! Initializes and sets up transmitter dictionary for MT,
@@ -99,7 +99,7 @@ Contains
 
      integer, intent(in)         :: nTx
      real*8, intent(in)          :: periods(nTx)
- 
+
      ! local variables
      integer                     :: iTx
 
@@ -121,7 +121,7 @@ Contains
        deallocate(txDict,STAT=istat)
     end if
 
-  end subroutine deall_txDict 
+  end subroutine deall_txDict
 
    !**********************************************************************
    subroutine initSolver(iTx,sigma,e0,e,comb)
@@ -129,12 +129,12 @@ Contains
    !     Idea is to call this before calling fwdSolve or sensSolve,
    !     in particular before the first solution for each transmitter
    !     (frequency).  If called for the first time (in a program run,
-   !     or after a call to exitSolver), full initialization 
+   !     or after a call to exitSolver), full initialization
    !     (after deallocation/cleanup if required) is performed.
-   !     
-   !   iTx defines transmitter: for 2D MT, this provides info about 
+   !
+   !   iTx defines transmitter: for 2D MT, this provides info about
    !       frequency and TE/TM mode; for 3D MT just frequency
-   !   
+   !
    !   This now does all setup (including matrix factorization) for
    !     the appropriate mode/frequency
    !   NOTE: e and comb are optional calling arguments;
@@ -160,7 +160,7 @@ Contains
    ! SolnRHS_grid = grid
 
    initForSens = present(comb)
-   
+
 	 !  allocate for scratch EMrhs structure for background, sensitivity
    b0%nonzero_Source = .false.
    b0%nonzero_bc = .true.
@@ -237,7 +237,9 @@ Contains
    ! cleanup/deallocation routines for model operators
    call ModelDataCleanUp() ! FWD/modelOperator3D.f90
    call ModelOperatorCleanUp() ! FWD/EMsolve3D.f90
-   
+
+   modelDataInitialized = .false.
+
    end subroutine exitSolver
 
    !**********************************************************************
@@ -247,7 +249,7 @@ Contains
    !   solution in e0 ; rhs vector (b0) is generated locally--i.e.
    !   boundary conditions are set internally (NOTE: could use transmitter
    !   dictionary to indireclty provide information about boundary
-   !    conditions.  Presently we set BC using WS approach.   
+   !    conditions.  Presently we set BC using WS approach.
    !  NOTE that this routine calls UpdateFreq routine to complete
    !   initialization of solver for a particular frequency.
 
@@ -275,7 +277,7 @@ Contains
 				' problem for freq ',omega/(2*PI),' & mode # ',imode
       call FWDsolve3D(b0,omega,e0%pol(imode))
    enddo
-   !  set transmitter index for this solution 
+   !  set transmitter index for this solution
    !          (sigma is set at initialization)
    e0%tx = iTx
    e0%period = period
@@ -289,7 +291,7 @@ Contains
    !    solves forward or adjoint problem, depending on comb%ADJ
    !  NOTE that this routine DOES NOT call UpdateFreq routine to complete
    !   initialization of solver for a particular frequency.
-   !  This final initialization step must (at present) be done by 
+   !  This final initialization step must (at present) be done by
    !    calling fwdSolve before calling this routine.
 
    integer, intent(in)          	:: iTx
@@ -316,7 +318,7 @@ Contains
 	 e%period = period
 	 e%omega = omega
 
-   end subroutine sensSolve   
+   end subroutine sensSolve
 
 !**********************************************************************
    subroutine create_EMsolnMTX(d,eAll)
@@ -354,7 +356,7 @@ Contains
       eAll%allocated = .false.
 
    end subroutine deall_EMsolnMTX
-   
+
 !**********************************************************************
     subroutine set_SolnRHS_grid(grid)
 !    Call this routine to set basic grid geometry parameters
@@ -366,7 +368,7 @@ Contains
        SolnRHS_grid = grid
 
     end subroutine set_SolnRHS_grid
-    
+
 !**********************************************************************
     subroutine delete_SolnRHS_grid
 !    Call this routine when SolnRHS_grid is no longer needed
@@ -374,6 +376,6 @@ Contains
        call deall_grid3d(SolnRHS_grid)
 
     end subroutine delete_SolnRHS_grid
-    
-   
+
+
 end module emsolver

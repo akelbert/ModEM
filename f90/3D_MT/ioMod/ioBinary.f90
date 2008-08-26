@@ -5,7 +5,7 @@
 !    to codes originally written by Kush Tandon.
 !
 !   Comments following are from file_io:
-!   CHANGES FROM KUSH VERION: 
+!   CHANGES FROM KUSH VERION:
 !    1) Input is input, does not ever compare to
 !   expected array sizes etc.  (as it was the input routine can only be
 !    used when you already know sizes; it's useful to be able to just read the
@@ -30,13 +30,13 @@ module ioBinary
   ! This module contains io routines for boundary nodes,
   ! electric field solutions, impedances, and solver diagnostics
 
-  use grid3d 
+  use grid3d
   use math_constants
   use emsolve3d
   use dataspace
   use datafunc
   use emsolver, only: EMsolnMTX
-  
+
   implicit none
 
   public                   :: FileReadInit, FileWriteInit
@@ -46,7 +46,6 @@ module ioBinary
   public                   :: DfileWrite
   public                   :: ZfileRead, ZfileWrite
   public                   :: read_Z,write_Z
-  public                   :: write_Cond3D, read_Cond3D
 
 Contains
 
@@ -77,7 +76,7 @@ Contains
     else
        ! read the header
        read(ioNum) fileVersion, filePer, fileMode, &
-	fileGrid%nx, fileGrid%ny, fileGrid%nz, fileGrid%nzAir, & 
+	fileGrid%nx, fileGrid%ny, fileGrid%nz, fileGrid%nzAir, &
 	fileGrid%ox, fileGrid%oy, fileGrid%oz, fileGrid%rotdeg
 
        ! the basic grid information is also stored in the header
@@ -133,7 +132,7 @@ Contains
 
     implicit none
     !  input file name and io unit number
-    character (len=80), intent(in)		:: inFile            
+    character (len=80), intent(in)		:: inFile
     integer, intent(in)				:: ioNum
 
     ! output info from header
@@ -142,9 +141,9 @@ Contains
     integer, intent(out)			:: ios
     logical, intent(out)			:: ifBzTF
     real(kind=selectedPrec), pointer, dimension(:,:) :: sites
-    
+
     integer		:: k
- 
+
     open (unit=ioNum,file=inFile,status='old', form ='unformatted',&
          iostat=ios)
 
@@ -158,7 +157,7 @@ Contains
     !  read in site locations
     allocate(sites(3,nSites))
     read(ioNum) (sites(:,k),k=1,nSites)
-    
+
   end subroutine ZfileReadInit
 
   ! ***************************************************************************
@@ -168,8 +167,8 @@ Contains
     implicit none
     character (len=20), intent(in)		:: version
     ! the version of the software in use
-    character (len=80), intent(in)		:: outFile            
-    ! the filename 
+    character (len=80), intent(in)		:: outFile
+    ! the filename
     type(grid3d_t), intent(in)			:: inGrid
     integer, intent(in)				:: nPer
     integer, intent(in)				:: nMode
@@ -198,7 +197,7 @@ Contains
 
     implicit none
     ! file name and io unit
-    character (len=80), intent(in)		:: inFile            
+    character (len=80), intent(in)		:: inFile
     integer, intent(in)				:: ioNum
 
     ! header contents
@@ -208,7 +207,7 @@ Contains
 
     !  iostatus
     integer, intent(out)			:: ios
-    
+
     ! local variables
     integer	:: k
 
@@ -224,16 +223,16 @@ Contains
 
     write(ioNum) (sites(:,k),k=1,nSites)
 
-  end subroutine ZfileWriteInit 
+  end subroutine ZfileWriteInit
 
   ! ***************************************************************************
-  ! read BCs for one mode, frequency; open unit ioNum first ... 
+  ! read BCs for one mode, frequency; open unit ioNum first ...
   subroutine BCfileRead(ioNum, ifreq, imode, fileOmega, inBC)
 
     implicit none
     integer, intent(in)				:: ioNum,ifreq,imode
 
-    real (kind=selectedPrec), intent(out)			:: fileOmega 
+    real (kind=selectedPrec), intent(out)			:: fileOmega
     type (cboundary), intent(inout)		:: inBC
 
     !  local variables
@@ -246,12 +245,12 @@ Contains
 
     !  hard code number of modes for now
     integer		:: nMode = 2
-    
+
     ! calculate number of records before the header for this frequency/mode
     nRecSkip = ((ifreq-1)*nMode+(imode-1))*13+4
 
     ! rewind file, and skip to header record
-    rewind(ioNum)  
+    rewind(ioNum)
     do iskip = 1,nRecSkip
        read(ioNum)
     enddo
@@ -260,20 +259,20 @@ Contains
     read(ioNum) fileOmega, fileIfreq, fileMode, ModeName
 
     ! read BC data for one frequency/mode - 12 records
-    read(ioNum) inBC%xYMax 
-    read(ioNum) inBC%zYMax 
-    read(ioNum) inBC%xYMin 
-    read(ioNum) inBC%zYMin 
-    read(ioNum) inBC%yXMax 
-    read(ioNum) inBC%zXMax 
-    read(ioNum) inBC%yXMin 
-    read(ioNum) inBC%zXMin 
-    read(ioNum) inBC%xZMin 
-    read(ioNum) inBC%yZMin 
-    read(ioNum) inBC%xZMax 
-    read(ioNum) inBC%yZMax 
+    read(ioNum) inBC%xYMax
+    read(ioNum) inBC%zYMax
+    read(ioNum) inBC%xYMin
+    read(ioNum) inBC%zYMin
+    read(ioNum) inBC%yXMax
+    read(ioNum) inBC%zXMax
+    read(ioNum) inBC%yXMin
+    read(ioNum) inBC%zXMin
+    read(ioNum) inBC%xZMin
+    read(ioNum) inBC%yZMin
+    read(ioNum) inBC%xZMax
+    read(ioNum) inBC%yZMax
 
-  end subroutine BCfileRead 
+  end subroutine BCfileRead
 
   ! ***************************************************************************
   ! write BCs for one mode, frequency; open unit ioNum first ...
@@ -282,7 +281,7 @@ Contains
   subroutine BCfileWrite(ioNum, Omega, iFreq, iMode, ModeName, outBC)
 
     implicit none
-    real (kind=selectedPrec), intent(in)	:: Omega 
+    real (kind=selectedPrec), intent(in)	:: Omega
     integer, intent(in)				:: ioNum
     integer, intent(in)				:: ifreq,imode
     character (len=20), intent(in)		:: ModeName
@@ -292,29 +291,29 @@ Contains
     write(ioNum) Omega, iFreq, iMode, ModeName
 
     ! write the BC data - 12 records
-    write(ioNum) outBC%xYMax 
-    write(ioNum) outBC%zYMax 
-    write(ioNum) outBC%xYMin 
-    write(ioNum) outBC%zYMin 
-    write(ioNum) outBC%yXMax 
-    write(ioNum) outBC%zXMax 
-    write(ioNum) outBC%yXMin 
-    write(ioNum) outBC%zXMin 
-    write(ioNum) outBC%xZMin 
-    write(ioNum) outBC%yZMin 
-    write(ioNum) outBC%xZMax 
-    write(ioNum) outBC%yZMax 
+    write(ioNum) outBC%xYMax
+    write(ioNum) outBC%zYMax
+    write(ioNum) outBC%xYMin
+    write(ioNum) outBC%zYMin
+    write(ioNum) outBC%yXMax
+    write(ioNum) outBC%zXMax
+    write(ioNum) outBC%yXMin
+    write(ioNum) outBC%zXMin
+    write(ioNum) outBC%xZMin
+    write(ioNum) outBC%yZMin
+    write(ioNum) outBC%xZMax
+    write(ioNum) outBC%yZMax
 
-  end subroutine BCfileWrite 
+  end subroutine BCfileWrite
 
   ! ***************************************************************************
-  ! read electric field solution for one mode, frequency; open unit ioNum first ... 
+  ! read electric field solution for one mode, frequency; open unit ioNum first ...
   subroutine EfileRead(ioNum, ifreq, imode, fileOmega, inE)
 
     implicit none
     integer, intent(in)				:: ioNum,ifreq,imode
     type (cvector), intent(inout)		:: inE
-    real (kind=selectedPrec), intent(out)	:: fileOmega 
+    real (kind=selectedPrec), intent(out)	:: fileOmega
 
     !  local variables
     integer					:: nRecSkip, iskip
@@ -326,12 +325,12 @@ Contains
 
     !  hard code number of modes for now
     integer		:: nMode = 2
-    
+
     ! calculate number of records before the header for this frequency/mode
     nRecSkip = ((ifreq-1)*nMode+(imode-1))*4+4
 
     ! rewind the file, skip to header record
-    rewind(ioNum)  
+    rewind(ioNum)
     do iskip = 1,nRecSkip
        read(ioNum)
     enddo
@@ -340,11 +339,11 @@ Contains
     read(ioNum) fileOmega, fileIfreq, fileMode, ModeName
 
     ! read electrical field data - 3 records
-    read(ioNum) inE%x 
-    read(ioNum) inE%y 
+    read(ioNum) inE%x
+    read(ioNum) inE%y
     read(ioNum) inE%z
 
-  end subroutine EfileRead 
+  end subroutine EfileRead
 
   ! ***************************************************************************
   ! write electrical field solution for one frequency/mode
@@ -352,7 +351,7 @@ Contains
   subroutine EfileWrite(ioNum,Omega, iFreq, iMode, ModeName, outE)
 
     implicit none
-    real (kind=selectedPrec), intent(in)	:: Omega 
+    real (kind=selectedPrec), intent(in)	:: Omega
     integer, intent(in)				:: ioNum,iFreq,iMode
     character (len=20), intent(in)		:: ModeName
     type (cvector), intent(in)			:: outE
@@ -361,11 +360,11 @@ Contains
     write(ioNum) Omega, iFreq, iMode,ModeName
 
     ! write the electrical field data - 3 records
-    write(ioNum) outE%x 
-    write(ioNum) outE%y 
-    write(ioNum) outE%z 
+    write(ioNum) outE%x
+    write(ioNum) outE%y
+    write(ioNum) outE%z
 
-  end subroutine EfileWrite 
+  end subroutine EfileWrite
 
   ! ***************************************************************************
   ! read impedances for nSites for one frequency
@@ -376,33 +375,33 @@ Contains
     logical, intent(in)				:: ifBzTF
     integer, intent(in)				:: nSites
     complex (kind=selectedPrec), intent(out)	:: Z(3,2,nSites)
-    real (kind=selectedPrec), intent(out)	:: fileOmega 
-    
+    real (kind=selectedPrec), intent(out)	:: fileOmega
+
     integer					:: nRecSkip,fileIfreq
     integer					:: iskip,i,j,k
 
     ! rewind file, skip past records for other frequencies
     nRecSkip = ifreq*2
-    rewind(ioNum)  
+    rewind(ioNum)
     do iskip = 1,nRecSkip
        read(ioNum)
     enddo
 
     ! read the frequency header - 1 record
     read(ioNum) fileOmega, fileIfreq
-    
+
     if (ifBzTF) then
         read(ioNum) Z
     else
         read(ioNum)(((Z(i,j,k),i=1,2),j=1,2),k=1,nSites)
-    end if  
+    end if
 
   end subroutine ZfileRead
 
   ! ***************************************************************************
   ! writes impedances for nSites for one frequency
   subroutine ZfileWrite(ioNum,Omega,ifreq,nSites,Z,ifBzTF)
-  !   NOTE: impedances are stored in real dvec structure: 
+  !   NOTE: impedances are stored in real dvec structure:
   !    first dimension is mode, second component (real/imag for
   !     two impedance components + BzTF  ... rows and
   !     columns are switched compared to usual impedance
@@ -411,13 +410,13 @@ Contains
 
     implicit none
     integer, intent(in)				:: ioNum
-    real (kind=selectedPrec), intent(in)	:: Omega 
+    real (kind=selectedPrec), intent(in)	:: Omega
     integer, intent(in)				:: ifreq
     integer, intent(in)				:: nSites
     real (kind=selectedPrec), intent(in)	:: Z(2,6,nSites)
     logical, intent(in)				:: ifBzTF
     integer					:: i,j,k,nComp
-    
+
     ! write the frequency header - 1 record
     write(ioNum) Omega, iFreq
 
@@ -432,12 +431,12 @@ Contains
   end subroutine ZfileWrite
 
   ! ***************************************************************************
-  ! writes solution diagnostics from unit opened by FileWriteInit. The prefix D 
+  ! writes solution diagnostics from unit opened by FileWriteInit. The prefix D
   ! is for diagnostics.
   subroutine DfileWrite(ioNum,Omega, iFreq, iMode, ModeName,solverDiag)
 
     implicit none
-    real (kind=selectedPrec), intent(in)		:: Omega 
+    real (kind=selectedPrec), intent(in)		:: Omega
     integer, intent(in)				:: ifreq,imode
     character (len=20), intent(in)		:: ModeName
     integer, intent(in)				:: ioNum
@@ -467,13 +466,13 @@ Contains
 !*******************************************************************************
 !*******************************************************************************
 
-!   Routines to read and write dvecMTX objects; these are generalized 
-!   versions of write_Z and read_Z from Modular2D  ... 
+!   Routines to read and write dvecMTX objects; these are generalized
+!   versions of write_Z and read_Z from Modular2D  ...
 !    BUT NOTE: we still have to work on a more generic way to deal with
 !    IO of dvec objects (issue is meta-data, which is stored in transmitter
 !    and receiver dictionaries for use by the program, but which here is
-!    kept with the data in the file    
-! 
+!    kept with the data in the file
+!
    !**********************************************************************
    subroutine write_Z(fid,cfile,nTx,periods,nSites,sites,allData)
    ! writes impedance file, including list of periods, siteLocations
@@ -560,9 +559,9 @@ Contains
 
          selectcase(nComp)
             case(8)
-               allData%d(iTx)%datatype =  Full_Impedance 
+               allData%d(iTx)%datatype =  Full_Impedance
             case(12)
-               allData%d(iTx)%datatype =  Impedance_Plus_Hz 
+               allData%d(iTx)%datatype =  Impedance_Plus_Hz
             case(4)
                allData%d(iTx)%datatype =  Off_Diagonal_Impedance
          endselect
@@ -612,95 +611,6 @@ Contains
       close(fid)
       end subroutine read_Z
 
-  !******************************************************************
-   subroutine write_Cond3D(fid,cfile,m)
-
-   !  open cfile on unit fid, writes out object of
-   !   type modelParam in standard *binary* format (comparable
-   !   format written by write_Cond3D), then close file
-   ! NOTE: uses grid for the model size; needs to be thought
-   !       about if we decide to decouple grid and the model
-
-      integer, intent(in)               :: fid
-      character(*), intent(in)  :: cfile
-      type(modelParam_t), intent(in)              :: m
-
-      type(rscalar)           :: ccond
-      type(grid3d_t)          :: grid
-      real(kind=selectedPrec) :: AirCond
-      character(80)           :: paramType
- 
-      paramType = LOGE
-
-      call getValue_modelParam(m,paramType,ccond,AirCond)
-
-      grid = ccond%grid
-
-      open(unit=fid, file=cfile, form='unformatted')
-      write(fid) grid%nx,grid%ny,grid%nzEarth,grid%nzAir
-      write(fid) grid%dx
-      write(fid) grid%dy
-      write(fid) grid%dz(grid%NzAir+1:grid%Nz)
-      write(fid) paramType
-      write(fid) AirCond
-      write(fid) ccond%v
-      close(fid)
-      
-      call deall_rscalar(ccond)
-      call deall_grid3d(grid)
-      
-      end subroutine write_Cond3D
-  !******************************************************************
-   subroutine read_Cond3D(fid,cfile,m,paramType,grid)
-
-   !  open cfile on unit fid, writes out object of
-   !   type modelParam in standard *binary* format (comparable
-   !   format written by write_Cond3D), then close file
-
-      integer, intent(in)                  :: fid
-      character(*), intent(in) 		       :: cfile
-      type(modelParam_t), intent(out)      :: m
-      character(80), intent(in)            :: paramType
-      type(grid3d_t), intent(inout), optional :: grid
-
-      integer		:: NzAir,Nz,Nx,Ny,NzEarth
-      real(kind=selectedPrec) 	:: AirCond
-      type(rscalar)             :: ccond
-      character(80)             :: gridType,rParamType
-
-      open(unit=fid, file=cfile, form='unformatted',status='old')
-       
-      read(fid) Nx,Ny,NzEarth,NzAir
-
-      call create_grid3d(Nx,Ny,NzAir,NzEarth,grid)
-      read(fid)  grid%dx
-      read(fid)  grid%dy
-      read(fid)  grid%dz(NzAir+1:NzAir+NzEarth)
-      call gridCalcs(grid)
-
-      read(fid) rParamType
-
-      gridType = CELL_EARTH
-      call create_rscalar(grid,ccond,gridType)
-
-      read(fid) AirCond
-      read(fid) ccond%v
-
-      close(fid)
-
-      ! move cell conductivities read into rscalar object into a modelParam
-	  ! object ... this dance needed to keep modelParam attributes private
-	  !   First need to create model parameter
-	  call create_modelParam(grid,rParamType,m,ccond,AirCond)
-	  
-	  ! convert modelParam to the required paramType
-	  call setType_modelParam(m,paramType)
-	
-	  ! now done with ccond, so deallocate
-	  call deall_rscalar(ccond)
-	  
-      end subroutine read_Cond3D
-      
 !******************************************************************
       subroutine write_EMsolnMTX(fid,cfile,eAll)
 

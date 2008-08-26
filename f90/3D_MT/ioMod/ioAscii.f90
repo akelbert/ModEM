@@ -5,7 +5,7 @@
 !    to codes originally written by Kush Tandon.
 !
 !   Comments following are from file_io:
-!   CHANGES FROM KUSH VERION: 
+!   CHANGES FROM KUSH VERION:
 !    1) Input is input, does not ever compare to
 !   expected array sizes etc.  (as it was the input routine can only be
 !    used when you already know sizes; it's useful to be able to just read the
@@ -30,13 +30,13 @@ module ioAscii
   ! This module contains io routines for boundary nodes,
   ! electric field solutions, impedances, and solver diagnostics
 
-  use grid3d 
+  use grid3d
   use math_constants
   use emsolve3d
   use dataspace
   use datafunc ! for data types
   use emsolver, only: EMsolnMTX
-  
+
   implicit none
 
   public                   :: FileReadInit, FileWriteInit
@@ -46,7 +46,6 @@ module ioAscii
   public                   :: DfileWrite
   public                   :: ZfileRead, ZfileWrite
   public                   :: read_Z,write_Z
-  public                   :: write_Cond3D, read_Cond3D
 
 Contains
 
@@ -77,7 +76,7 @@ Contains
     else
        ! read the header
        read(ioNum) fileVersion, filePer, fileMode, &
-	fileGrid%nx, fileGrid%ny, fileGrid%nz, fileGrid%nzAir, & 
+	fileGrid%nx, fileGrid%ny, fileGrid%nz, fileGrid%nzAir, &
 	fileGrid%ox, fileGrid%oy, fileGrid%oz, fileGrid%rotdeg
 
        ! the basic grid information is also stored in the header
@@ -133,7 +132,7 @@ Contains
 
     implicit none
     !  input file name and io unit number
-    character (len=80), intent(in)		:: inFile            
+    character (len=80), intent(in)		:: inFile
     integer, intent(in)				:: ioNum
 
     ! output info from header
@@ -142,9 +141,9 @@ Contains
     integer, intent(out)			:: ios
     logical, intent(out)			:: ifBzTF
     real(kind=selectedPrec), pointer, dimension(:,:) :: sites
-    
+
     integer		:: k
- 
+
     open (unit=ioNum,file=inFile,status='old', form ='unformatted',&
          iostat=ios)
 
@@ -158,7 +157,7 @@ Contains
     !  read in site locations
     allocate(sites(3,nSites))
     read(ioNum) (sites(:,k),k=1,nSites)
-    
+
   end subroutine ZfileReadInit
 
   ! ***************************************************************************
@@ -168,8 +167,8 @@ Contains
     implicit none
     character (len=20), intent(in)		:: version
     ! the version of the software in use
-    character (len=80), intent(in)		:: outFile            
-    ! the filename 
+    character (len=80), intent(in)		:: outFile
+    ! the filename
     type(grid3d_t), intent(in)			:: inGrid
     integer, intent(in)				:: nPer
     integer, intent(in)				:: nMode
@@ -198,7 +197,7 @@ Contains
 
     implicit none
     ! file name and io unit
-    character (len=80), intent(in)		:: inFile            
+    character (len=80), intent(in)		:: inFile
     integer, intent(in)				:: ioNum
 
     ! header contents
@@ -208,7 +207,7 @@ Contains
 
     !  iostatus
     integer, intent(out)			:: ios
-    
+
     ! local variables
     integer	:: k
 
@@ -224,16 +223,16 @@ Contains
 
     write(ioNum) (sites(:,k),k=1,nSites)
 
-  end subroutine ZfileWriteInit 
+  end subroutine ZfileWriteInit
 
   ! ***************************************************************************
-  ! read BCs for one mode, frequency; open unit ioNum first ... 
+  ! read BCs for one mode, frequency; open unit ioNum first ...
   subroutine BCfileRead(ioNum, ifreq, imode, fileOmega, inBC)
 
     implicit none
     integer, intent(in)				:: ioNum,ifreq,imode
 
-    real (kind=selectedPrec), intent(out)			:: fileOmega 
+    real (kind=selectedPrec), intent(out)			:: fileOmega
     type (cboundary), intent(inout)		:: inBC
 
     !  local variables
@@ -246,12 +245,12 @@ Contains
 
     !  hard code number of modes for now
     integer		:: nMode = 2
-    
+
     ! calculate number of records before the header for this frequency/mode
     nRecSkip = ((ifreq-1)*nMode+(imode-1))*13+4
 
     ! rewind file, and skip to header record
-    rewind(ioNum)  
+    rewind(ioNum)
     do iskip = 1,nRecSkip
        read(ioNum)
     enddo
@@ -260,20 +259,20 @@ Contains
     read(ioNum) fileOmega, fileIfreq, fileMode, ModeName
 
     ! read BC data for one frequency/mode - 12 records
-    read(ioNum) inBC%xYMax 
-    read(ioNum) inBC%zYMax 
-    read(ioNum) inBC%xYMin 
-    read(ioNum) inBC%zYMin 
-    read(ioNum) inBC%yXMax 
-    read(ioNum) inBC%zXMax 
-    read(ioNum) inBC%yXMin 
-    read(ioNum) inBC%zXMin 
-    read(ioNum) inBC%xZMin 
-    read(ioNum) inBC%yZMin 
-    read(ioNum) inBC%xZMax 
-    read(ioNum) inBC%yZMax 
+    read(ioNum) inBC%xYMax
+    read(ioNum) inBC%zYMax
+    read(ioNum) inBC%xYMin
+    read(ioNum) inBC%zYMin
+    read(ioNum) inBC%yXMax
+    read(ioNum) inBC%zXMax
+    read(ioNum) inBC%yXMin
+    read(ioNum) inBC%zXMin
+    read(ioNum) inBC%xZMin
+    read(ioNum) inBC%yZMin
+    read(ioNum) inBC%xZMax
+    read(ioNum) inBC%yZMax
 
-  end subroutine BCfileRead 
+  end subroutine BCfileRead
 
   ! ***************************************************************************
   ! write BCs for one mode, frequency; open unit ioNum first ...
@@ -282,7 +281,7 @@ Contains
   subroutine BCfileWrite(ioNum, Omega, iFreq, iMode, ModeName, outBC)
 
     implicit none
-    real (kind=selectedPrec), intent(in)	:: Omega 
+    real (kind=selectedPrec), intent(in)	:: Omega
     integer, intent(in)				:: ioNum
     integer, intent(in)				:: ifreq,imode
     character (len=20), intent(in)		:: ModeName
@@ -292,29 +291,29 @@ Contains
     write(ioNum) Omega, iFreq, iMode, ModeName
 
     ! write the BC data - 12 records
-    write(ioNum) outBC%xYMax 
-    write(ioNum) outBC%zYMax 
-    write(ioNum) outBC%xYMin 
-    write(ioNum) outBC%zYMin 
-    write(ioNum) outBC%yXMax 
-    write(ioNum) outBC%zXMax 
-    write(ioNum) outBC%yXMin 
-    write(ioNum) outBC%zXMin 
-    write(ioNum) outBC%xZMin 
-    write(ioNum) outBC%yZMin 
-    write(ioNum) outBC%xZMax 
-    write(ioNum) outBC%yZMax 
+    write(ioNum) outBC%xYMax
+    write(ioNum) outBC%zYMax
+    write(ioNum) outBC%xYMin
+    write(ioNum) outBC%zYMin
+    write(ioNum) outBC%yXMax
+    write(ioNum) outBC%zXMax
+    write(ioNum) outBC%yXMin
+    write(ioNum) outBC%zXMin
+    write(ioNum) outBC%xZMin
+    write(ioNum) outBC%yZMin
+    write(ioNum) outBC%xZMax
+    write(ioNum) outBC%yZMax
 
-  end subroutine BCfileWrite 
+  end subroutine BCfileWrite
 
   ! ***************************************************************************
-  ! read electric field solution for one mode, frequency; open unit ioNum first ... 
+  ! read electric field solution for one mode, frequency; open unit ioNum first ...
   subroutine EfileRead(ioNum, ifreq, imode, fileOmega, inE)
 
     implicit none
     integer, intent(in)				:: ioNum,ifreq,imode
     type (cvector), intent(inout)		:: inE
-    real (kind=selectedPrec), intent(out)	:: fileOmega 
+    real (kind=selectedPrec), intent(out)	:: fileOmega
 
     !  local variables
     integer					:: nRecSkip, iskip
@@ -326,12 +325,12 @@ Contains
 
     !  hard code number of modes for now
     integer		:: nMode = 2
-    
+
     ! calculate number of records before the header for this frequency/mode
     nRecSkip = ((ifreq-1)*nMode+(imode-1))*4+4
 
     ! rewind the file, skip to header record
-    rewind(ioNum)  
+    rewind(ioNum)
     do iskip = 1,nRecSkip
        read(ioNum)
     enddo
@@ -340,11 +339,11 @@ Contains
     read(ioNum) fileOmega, fileIfreq, fileMode, ModeName
 
     ! read electrical field data - 3 records
-    read(ioNum) inE%x 
-    read(ioNum) inE%y 
+    read(ioNum) inE%x
+    read(ioNum) inE%y
     read(ioNum) inE%z
 
-  end subroutine EfileRead 
+  end subroutine EfileRead
 
   ! ***************************************************************************
   ! write electrical field solution for one frequency/mode
@@ -352,7 +351,7 @@ Contains
   subroutine EfileWrite(ioNum,Omega, iFreq, iMode, ModeName, outE)
 
     implicit none
-    real (kind=selectedPrec), intent(in)	:: Omega 
+    real (kind=selectedPrec), intent(in)	:: Omega
     integer, intent(in)				:: ioNum,iFreq,iMode
     character (len=20), intent(in)		:: ModeName
     type (cvector), intent(in)			:: outE
@@ -361,11 +360,11 @@ Contains
     write(ioNum) Omega, iFreq, iMode,ModeName
 
     ! write the electrical field data - 3 records
-    write(ioNum) outE%x 
-    write(ioNum) outE%y 
-    write(ioNum) outE%z 
+    write(ioNum) outE%x
+    write(ioNum) outE%y
+    write(ioNum) outE%z
 
-  end subroutine EfileWrite 
+  end subroutine EfileWrite
 
   ! ***************************************************************************
   ! read impedances for nSites for one frequency
@@ -376,33 +375,33 @@ Contains
     logical, intent(in)				:: ifBzTF
     integer, intent(in)				:: nSites
     complex (kind=selectedPrec), intent(out)	:: Z(3,2,nSites)
-    real (kind=selectedPrec), intent(out)	:: fileOmega 
-    
+    real (kind=selectedPrec), intent(out)	:: fileOmega
+
     integer					:: nRecSkip,fileIfreq
     integer					:: iskip,i,j,k
 
     ! rewind file, skip past records for other frequencies
     nRecSkip = ifreq*2
-    rewind(ioNum)  
+    rewind(ioNum)
     do iskip = 1,nRecSkip
        read(ioNum)
     enddo
 
     ! read the frequency header - 1 record
     read(ioNum) fileOmega, fileIfreq
-    
+
     if (ifBzTF) then
         read(ioNum) Z
     else
         read(ioNum)(((Z(i,j,k),i=1,2),j=1,2),k=1,nSites)
-    end if  
+    end if
 
   end subroutine ZfileRead
 
   ! ***************************************************************************
   ! writes impedances for nSites for one frequency
   subroutine ZfileWrite(ioNum,Omega,ifreq,nSites,Z,ifBzTF)
-  !   NOTE: impedances are stored in real dvec structure: 
+  !   NOTE: impedances are stored in real dvec structure:
   !    first dimension is mode, second component (real/imag for
   !     two impedance components + BzTF  ... rows and
   !     columns are switched compared to usual impedance
@@ -411,13 +410,13 @@ Contains
 
     implicit none
     integer, intent(in)				:: ioNum
-    real (kind=selectedPrec), intent(in)	:: Omega 
+    real (kind=selectedPrec), intent(in)	:: Omega
     integer, intent(in)				:: ifreq
     integer, intent(in)				:: nSites
     real (kind=selectedPrec), intent(in)	:: Z(2,6,nSites)
     logical, intent(in)				:: ifBzTF
     integer					:: i,j,k,nComp
-    
+
     ! write the frequency header - 1 record
     write(ioNum) Omega, iFreq
 
@@ -432,12 +431,12 @@ Contains
   end subroutine ZfileWrite
 
   ! ***************************************************************************
-  ! writes solution diagnostics from unit opened by FileWriteInit. The prefix D 
+  ! writes solution diagnostics from unit opened by FileWriteInit. The prefix D
   ! is for diagnostics.
   subroutine DfileWrite(ioNum,Omega, iFreq, iMode, ModeName,solverDiag)
 
     implicit none
-    real (kind=selectedPrec), intent(in)		:: Omega 
+    real (kind=selectedPrec), intent(in)		:: Omega
     integer, intent(in)				:: ifreq,imode
     character (len=20), intent(in)		:: ModeName
     integer, intent(in)				:: ioNum
@@ -467,13 +466,13 @@ Contains
 !*******************************************************************************
 !*******************************************************************************
 
-!   Routines to read and write dvecMTX objects; these are generalized 
-!   versions of write_Z and read_Z from Modular2D  ... 
+!   Routines to read and write dvecMTX objects; these are generalized
+!   versions of write_Z and read_Z from Modular2D  ...
 !    BUT NOTE: we still have to work on a more generic way to deal with
 !    IO of dvec objects (issue is meta-data, which is stored in transmitter
 !    and receiver dictionaries for use by the program, but which here is
-!    kept with the data in the file    
-! 
+!    kept with the data in the file
+!
 
    !**********************************************************************
    subroutine write_Z(fid,cfile,nTx,periods,nSites,sites,allData)
@@ -508,7 +507,7 @@ Contains
       write(fid,*) trim(units)
       write(fid,'(a17,i3)') 'Sign convention: ',ISIGN
       write(fid,*)
-      
+
       write(fid,'(i5)') allData%nTx
       ! loop over periods
       do iTx = 1,allData%nTx
@@ -531,22 +530,22 @@ Contains
 		 write(fid,'(a8)',advance='no') ' '
 		 ! write the descriptor
 		 select case (allData%d(iTx)%datatype)
-		 
+
             case(Full_Impedance) ! 4 complex data
                  write(fid,'(8a15)') &
                  'Re(Ex/Hx)','Im(Ex/Hx)','Re(Ex/Hy)','Im(Ex/Hy)','Re(Ey/Hx)','Im(Ey/Hx)','Re(Ey/Hy)','Im(Ey/Hy)'
-                 
+
             case(Impedance_Plus_Hz) ! 6 complex data
                 write(fid,'(12a15)') &
                  'Re(Ex/Hx)','Im(Ex/Hx)','Re(Ex/Hy)','Im(Ex/Hy)','Re(Ey/Hx)','Im(Ey/Hx)','Re(Ey/Hy)','Im(Ey/Hy)', &
-                 'Re(Ez/Hx)','Im(Ez/Hx)','Re(Ez/Hy)','Im(Ez/Hy)'   
-                              
+                 'Re(Ez/Hx)','Im(Ez/Hx)','Re(Ez/Hy)','Im(Ez/Hy)'
+
             case(Off_Diagonal_Impedance) ! 2 complex data
                 write(fid,'(4a15)') &
                  'Re(Ex/Hy)','Im(Ex/Hy)','Re(Ey/Hx)','Im(Ey/Hx)'
-                
+
          end select
-         
+
          ! write data
          do isite = 1,ns
          	! Note: temporarily, we write site id's according to their number;
@@ -590,13 +589,13 @@ Contains
       integer   :: sign_in_file
       real(kind=8) :: SI_factor
       logical      :: conjugate
-      
+
       open(unit=fid,file=cfile,form='formatted',status='old')
       read(fid,'(a13,a80)') temp,description
       read(fid,'(a7,a80)') temp,units
       read(fid,'(a17,i3)') temp,sign_in_file
       read(fid,*)
-      
+
       if (index(units,'[V/m]/[A/m]')>0) then
          SI_factor = 1.0
       else if (index(units,'[mV/km]/[nT]')>0) then
@@ -604,7 +603,7 @@ Contains
       else
          call errStop('Unknown units in input data file '//cfile)
       end if
-      
+
       if (sign_in_file == ISIGN) then
         conjugate = .false.
       else if (abs(sign_in_file) == 1) then
@@ -612,7 +611,7 @@ Contains
       else
         call errStop('Unknown sign convention in the data file '//cfile)
       end if
-      
+
       read(fid,*) nTx
      ! write(6,*) nTx
       allocate(periods(nTx))
@@ -632,11 +631,11 @@ Contains
 
          ! read in site locations
          allocate(siteTemp(3,ns))
-         
+
           read(fid,*) (siteTemp(1,j),j=1,ns)
           read(fid,*) (siteTemp(2,j),j=1,ns)
           read(fid,*) (siteTemp(3,j),j=1,ns)
-      
+
          ! create dvec object, read in data
          allData%d(iTx)%errorBar = .true.
          call create_Dvec(nComp,ns,allData%d(iTx))
@@ -645,9 +644,9 @@ Contains
 
          select case (nComp)
             case(8)
-               allData%d(iTx)%datatype =  Full_Impedance 
+               allData%d(iTx)%datatype =  Full_Impedance
             case(12)
-               allData%d(iTx)%datatype =  Impedance_Plus_Hz 
+               allData%d(iTx)%datatype =  Impedance_Plus_Hz
             case(4)
                allData%d(iTx)%datatype =  Off_Diagonal_Impedance
          end select
@@ -660,14 +659,14 @@ Contains
         ! convert data to SI units
          allData%d(iTx)%data = SI_factor * allData%d(iTx)%data
          allData%d(iTx)%err  = SI_factor * allData%d(iTx)%err
-         
+
          ! conjugate data as necessary
          if (conjugate) then
            do j=1,nComp,2
               allData%d(iTx)%data(j,:) = - allData%d(iTx)%data(j,:)
            end do
          end if
-         
+
          if(iTx .eq. 1) then
            ! allocate temporary storage for full sites list
            ! (this might not always work ... I am assuming that the
@@ -711,302 +710,6 @@ Contains
       deallocate(siteTempAll,STAT=istat)
       end subroutine read_Z
 
-  ! ***************************************************************************
-  subroutine ReadRMgridCond(fidRM,inputFile,Cond,grid,paramType)
-  ! this routine reads files in Mackie's 3D formats, returning the basic
-  !   grid components, and optionally also conductivity
-  !   If present, Cond is created during call
-
-    implicit none
-
-    integer,intent(in)                          :: fidRM
-    character(len=80), intent(in)               :: inputFile
-    type (grid3d_t), intent(inout)             :: grid
-    type (rscalar), intent(inout), optional     :: Cond
-    character (len=80), intent(out), optional   :: paramType
-
-    real(kind=selectedPrec)                     :: origin(3)
-    real(kind=selectedPrec),pointer,dimension(:)    :: res
-    integer                                     :: whichLayer
-    integer                                     :: ix,iy,iz,ip,i,j
-    real(kind=selectedPrec)                     :: alpha = 3.
-    integer                                     :: jj,Nx,Ny,Nz,NzEarth,NzAir
-    integer                                     :: status, ioerr
-
-    character (len=80)                          :: ifValues = ''
-    character (len=80)                          :: someChar = ''
-    integer                                     :: jOne, jTwo
-    logical                                     :: returnCond
-
-    returnCond = present(Cond)
-    paramType = ''
-
-    ! Open file and read grid
-    open(unit=fidRM,file=inputFile,status='old',ERR=9000)
-    
-    read(fidRM,'(a80)') someChar
-    read(someChar,*) Nx, Ny, NzEarth, nzAir, ifValues
-
-    if (ifValues(1:6) /= 'VALUES') then
-        write(0, *) 'Mapping not supported yet in:ReadGridInputRM'
-        stop
-    end if
-
-	! By default assume 'LINEAR RHO' - Randie Mackie's linear resistivity format
-    if (index(someChar,'LOGE')>0) then
-       paramType = 'LOGE'
-    else
-       paramType = 'LINEAR'
-    end if
-
-    call create_Grid3D(Nx,Ny,NzAir,NzEarth,grid)
-
-    ! In Randy Mackie's format, dx is read forwwards, as is dy and dz
-    read(fidRM,*) (grid%dx(ix),ix=1,grid%nx)
-    read(fidRM,*) (grid%dy(iy),iy=1,grid%ny)
-    read(fidRM,*) (grid%dz(iz),iz=grid%nzAir+1,grid%nzAir+grid%nzEarth)
-
-    !   Following is Kush's approach to setting air layers:
-    ! mirror imaging the dz values in the air layer with respect to
-    ! earth layer as far as we can using the following formulation
-    ! air layer(bottom:top) = (alpha)^(j-1) * earth layer(top:bottom)
-    i = grid%nzAir+1
-    j = 0
-    do iz = grid%nzAir, 1, -1
-        j = j + 1
-        grid%dz(iz) = ((alpha)**(j-1))*grid%dz(i)
-        i = i + 1
-    end do
-
-    ! the topmost air layer has to be atleast 30 km
-    if (grid%dz(1).lt.30000) then
-        grid%dz(1) = 30000
-    end if
-
-    if(returnCond) then
-       call create_rscalar(grid,Cond,CELL_EARTH)
-    endif
-
-    allocate(res(grid%Nx))
-    do iz = 1,grid%nzEarth
-       read(fidRM, *) whichLayer
-       do iy = 1,grid%ny
-          ! in Randy Mackie's format, x varies the fastest
-          read(fidRM,*) res
-          if(returnCond) then
-            if(index(paramType,'LOGE')>0) then
-              Cond%v(:,iy,iz) = - res
-            else
-              Cond%v(:,iy,iz) = 1./res
-            endif
-          endif
-       enddo     !iy
-    enddo        !iz
-    deallocate(res)
-
-    ! skip the three lines: a) WINGLINK, b) site name, and c) block numbers
-    ! read WINGLINK (it can also be a blank line).
-    read(fidRM, *, IOSTAT = ioerr) someChar
-    ! a) WINGLINK
-    if (ioerr /= 0) then
-        if (index(someChar,'WINGLINK')>0) then
-           write(0, *) 'Model file created by Winglink'
-        else if (index(someChar,'MATLAB')>0) then
-           write(0, *) 'Model file created by Matlab'
-        else if (index(someChar,'ModEM')>0) then
-           write(0, *) 'Model file created by ModEM'
-        end if
-    end if
-
-    someChar = ''
-    ! b) site name
-    read(fidRM, *, IOSTAT = ioerr) someChar
-    ! c) the block numbers
-    read(fidRM, *, IOSTAT = ioerr) jOne, jTwo
-
-    read(fidRM, *, IOSTAT = ioerr) grid%ox, grid%oy
-    ! the defualt from a file read through Randy Mackie's format
-    ! in Randy Mackie's format, real coordinates are in kilometers
-    ! defaults in case of missing data
-    if (ioerr /= 0) then
-        grid%ox = 0.0
-        grid%oy = 0.0
-        grid%oz = 0.0
-    else
-       grid%ox = grid%ox*1000.0
-       grid%oy = grid%oy*1000.0
-       grid%oz = 0.0
-    endif
-
-    read(fidRM, *, IOSTAT = ioerr) grid%rotdeg
-    if (ioerr /= 0) then
-        grid%rotdeg = 0.0
-    end if
-
-    CLOSE(fidRM)
-
-    GOTO 9999
-
-9000 CONTINUE
-    WRITE(0,*) '!!! FILE CANNOT BE FOUND !!!'
-    STOP
-
-9999 CONTINUE
-
-  end subroutine ReadRMgridCond
-      
- ! ***************************************************************************
-  subroutine writeRMgridCond(fidRM,cFile,Cond,grid,paramType)
-  ! this routine writes files in Mackie's 3D formats, including the basic
-  !   grid components and conductivity
-
-    implicit none
-
-    integer,intent(in)                          :: fidRM
-    character(len=80), intent(in)               :: cFile
-    type (grid3d_t), intent(inout)             :: grid
-    type (rscalar), intent(inout)     			:: Cond
-    character(*), intent(in)         			:: paramType
-    real(kind=selectedPrec), allocatable       :: value(:,:,:)
-    integer                                    :: i,j,k,ioerr
-    integer                                    :: Nx,Ny,NzEarth,Nza,Nz
-    logical                                    :: newFile
-
-      if (len_trim(cfile)>0) then
-         newFile = .true.
-         open(unit=fidRM,file=cfile,status='unknown')
-      end if
-      
-      ! write grid geometry definitions
-      Nx=grid%nx
-      Ny=grid%ny
-      Nz = grid%nz
-      NzEarth=grid%nz - grid%nzAir
-      Nza = grid%nzAir
-      allocate(value(Nx,Ny,NzEarth))
-            
-      write(fidRM,'(4i5,a8)',advance='no') Nx,Ny,NzEarth,Nza,'VALUES'
-      write(fidRM,*) trim(paramType)
-
-      ! write grid spacings      
-      do j=1,Nx
-      	write(fidRM,'(f12.3)',advance='no') grid%Dx(j)
-	  end do
-	  write(fidRM, *)
-	  do j=1,Ny
-      	write(fidRM,'(f12.3)',advance='no') grid%Dy(j)
-	  end do
-	  write(fidRM, *)
-	  do j=Nza+1,Nz
-      	write(fidRM,'(f12.3)',advance='no') grid%Dz(j)
-	  end do
-	  write(fidRM, *)
-	  
-      ! convert from conductivity to resistivity
-      if (index(paramType,'LOGE')>0) then
-      	value = - Cond%v
-      else if (index(paramType,'LINEAR')>0) then
-       	value = ONE/Cond%v
-      else
-        ! assume resistivity and do nothing
- 	  end if      
-      
-      ! write out resistivity values
-      do k=1,nzEarth
-      	write(fidRM,'(i5)') k
-      	do j=1,Ny
-        	write(fidRM,'(a2)',advance='no') '  '
-        	do i=1,Nx
-      			write(fidRM,'(es13.5)',advance='no') value(i,j,k)
-      		end do
-      		write(fidRM, *)
-      	end do
-      end do
-      
-      ! written by ModEM
-      write(fidRM, *, iostat = ioerr) 'ModEM'
-      
-      ! some crap for Winglink: site name and block numbers
-      write(fidRM, *, iostat = ioerr) 'site'
-      write(fidRM, *, iostat = ioerr) '1 1'
-      
-      ! origin
-      write(fidRM, '(3f12.3)', iostat = ioerr) grid%ox/1000.0, grid%oy/1000.0, grid%oz/1000.0
- 
- 	  ! rotation
-      write(fidRM,  '(f12.3)', iostat = ioerr) grid%rotdeg
-    
-      if (newFile) then
-         close(fidRM)
-      end if     
-      deallocate(value)
-      
-  end subroutine writeRMgridCond
-
-      !******************************************************************
-      subroutine read_Cond3D(fid,cfile,m,type,grid)
-
-      !  open cfile on unit fid, writes out object of
-      !   type modelParam in Randie Mackie's format, closes file
-      ! note that while this is in general a good interface for
-      ! a write subroutine for modelParam, we do not have to write
-      ! out the grid unless we want to do so
-
-      integer, intent(in)		           :: fid
-      character(*), intent(in)             :: cfile
-      type(modelParam_t), intent(out)	   :: m
-      type(grid3d_t), intent(inout)        :: grid
-      character(80), intent(out)           :: type
-      type(rscalar)                        :: ccond
- 
- 	  ! Read input files and set up basic grid geometry, conductivities,
-	  ! and frequencies (stored in the transmitter dictionary, txDictMT)
-	  call ReadRMgridCond(fid,cfile,ccond,grid,type)
-	
-	  ! move cell conductivities read into rscalar object into a modelParam
-	  ! object ... this dance needed to keep modelParam attributes private
-	  !   First need to create model parameter
-	  call create_modelParam(grid,type,m,ccond)
-	  
-	  ! convert modelParam to the required paramType
-	  ! call setType_modelParam(m,paramType)
-	
-	  ! now done with ccond, so deallocate
-	  call deall_rscalar(ccond)
-        
-      end subroutine read_Cond3D      
-
-      !******************************************************************
-      subroutine write_Cond3D(fid,cfile,m)
-
-      !  open cfile on unit fid, writes out object of
-      !   type modelParam in Randie Mackie's format, closes file
-      ! note that while this is in general a good interface for
-      ! a write subroutine for modelParam, we do not have to write
-      ! out the grid unless we want to do so
-
-      integer, intent(in)		           :: fid
-      character(*), intent(in)             :: cfile
-      type(modelParam_t), intent(in)	   :: m
-      type(rscalar)                        :: ccond
-      type(grid3d_t)                       :: grid
-      character(80)                        :: type = ''
- 
- 	  ! Read input files and set up basic grid geometry, conductivities,
-	  ! and frequencies (stored in the transmitter dictionary, txDictMT)
-	  ! call modelParamToCellCond(m,ccond,paramType,grid)
-	  
-	  call getValue_modelParam(m,type,ccond)
-	  
-	  grid = ccond%grid
-	  
-	  call writeRMgridCond(fid,cfile,ccond,grid,type)
-
-	  ! now done with ccond and grid, so deallocate
-	  call deall_rscalar(ccond)
-	  call deall_grid3d(grid)
-	        
-      end subroutine write_Cond3D
 !******************************************************************
       subroutine write_EMsolnMTX(fid,cfile,eAll)
 

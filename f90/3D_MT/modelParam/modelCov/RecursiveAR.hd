@@ -1,0 +1,29 @@
+!----------------------------------------------------------------------!
+! 3D_MT model covariance by Gary Egbert and Anna Kelbert: definitions. !
+!----------------------------------------------------------------------!
+
+! 1) modelCov_t data type with private attributes
+
+  type :: modelCov_t
+
+    private
+
+	! Full smoothing and scaling information. We set allocated == .true.
+	! after these arrays are allocated, initialized and ready to use.
+    type (rscalar)                    :: Sx, Sy, Sz, C
+
+    logical                           :: allocated
+
+  end type
+
+! 2) CmSqrt (an instance of modelCov_t), saved and private to the modelParam module
+
+  type (modelCov_t), private, save      ::  CmSqrt
+
+! 3) public procedures to create, deallocate and multiply by CmSqrt
+
+  public    :: create_CmSqrt, deall_CmSqrt, multBy_CmSqrt, read_CmSqrt
+
+! 4) any private procedures required for the model covariance
+
+! private   :: SmoothX, SmoothY, SmoothZ, Scaling
