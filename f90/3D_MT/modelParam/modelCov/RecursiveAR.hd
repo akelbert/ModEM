@@ -8,17 +8,36 @@
 
     private
 
-	! Full smoothing and scaling information. We set allocated == .true.
-	! after these arrays are allocated, initialized and ready to use.
-    type (rscalar)                    :: Sx, Sy, Sz, C
+	! dimensions of the grid
+	integer                                           :: Nx, Ny, NzEarth
 
-    logical                           :: allocated
+	! general rules for smoothing in the X and Y-directions, dimension(NzEarth)
+	real (kind=selectedPrec), pointer, dimension(:)   :: Sx
+	real (kind=selectedPrec), pointer, dimension(:)   :: Sy
+
+	! general rule for vertical smoothing
+	real (kind=selectedPrec)                          :: Sz
+
+	! special rules for smoothing across a surface stored as a sparse array
+    type (sparsevecc)                                 :: S
+
+	! an integer array that defines regions for smoothing and scaling purposes
+    type (iscalar)                                    :: mask
+
+	! true when all arrays are allocated, initialized and ready to use
+    logical                                           :: allocated
 
   end type
 
+  ! define the mask for air and ocean here. By default, we do not switch off
+  ! the smoothing between the air & ocean and the rest of the model. However,
+  ! we do set the scaling to zero for both of these regions.
+  integer, parameter, private                         :: AIR   = 0
+  integer, parameter, private                         :: OCEAN = 1
+
 ! 2) CmSqrt (an instance of modelCov_t), saved and private to the modelParam module
 
-  type (modelCov_t), private, save      ::  CmSqrt
+  type (modelCov_t), private, save                    ::  CmSqrt
 
 ! 3) public procedures to create, deallocate and multiply by CmSqrt
 
@@ -26,4 +45,4 @@
 
 ! 4) any private procedures required for the model covariance
 
-! private   :: SmoothX, SmoothY, SmoothZ, Scaling
+  private   :: RecursiveAR, SmoothX, SmoothY, SmoothZ, Scaling

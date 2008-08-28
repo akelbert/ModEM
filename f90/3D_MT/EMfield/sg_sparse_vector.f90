@@ -21,7 +21,11 @@ module sg_sparse_vector
   INTERFACE deall
      module procedure deall_sparsevecc
   END INTERFACE
-  
+
+  INTERFACE reall
+     module procedure reall_sparsevecc
+  END INTERFACE
+
   INTERFACE scMult
      module procedure scMult_sparsevecc
   END INTERFACE
@@ -43,14 +47,14 @@ module sg_sparse_vector
      MODULE PROCEDURE dotProd_noConj_scvector_f
      !MODULE PROCEDURE dotProd_noConj_csvector_f
   END INTERFACE
-	
+
   interface assignment (=)
      MODULE PROCEDURE copy_sparsevecc
      MODULE PROCEDURE copy_csvector
   end interface
 
   public	:: sparsevecc
-  public	:: create_sparsevecc, deall_sparsevecc 
+  public	:: create_sparsevecc, deall_sparsevecc, reall_sparsevecc
   public  :: copy_csvector
   public	:: copy_sparsevecc, linComb_sparsevecc, scMult_sparsevecc
   public	:: dotProd_scvector_f, dotProd_csvector_f
@@ -66,7 +70,7 @@ module sg_sparse_vector
      character (len=80)	                             	:: gridType=''
      ! nCoeff is number of non-zero nodes
      integer 						:: nCoeff  = 0
-     ! xyz = 1,2,3 refers to x, y or z components, 
+     ! xyz = 1,2,3 refers to x, y or z components,
      ! i,j,k are arrays of indices that defines grid location
      integer , pointer, dimension(:) 		:: i,j,k,xyz
      ! c is complex array of coefficients
@@ -104,12 +108,12 @@ Contains
   ! create an object of type sparsevecc of length nCoeff
   subroutine create_sparsevecc(nCoeff,newLC, gridType)
 
-    implicit none	
+    implicit none
     integer, intent(in) 			:: nCoeff
     type (sparsevecc), intent(inout) 		:: newLC
     character (len=80), intent(in)     		:: gridType
     integer					:: status
-    
+
     ! the old baggage is out of the door
     if(newLC%allocated) then
        deallocate(newLC%i, STAT = status)
@@ -122,15 +126,15 @@ Contains
     endif
 
     newLC%allocated = .true.
-    allocate(newLC%i(nCoeff),STAT=status) 
+    allocate(newLC%i(nCoeff),STAT=status)
     newLC%allocated = newLC%allocated .and. (status .eq. 0)
-    allocate(newLC%j(nCoeff),STAT=status) 
+    allocate(newLC%j(nCoeff),STAT=status)
     newLC%allocated = newLC%allocated .and. (status .eq. 0)
-    allocate(newLC%k(nCoeff),STAT=status) 
+    allocate(newLC%k(nCoeff),STAT=status)
     newLC%allocated = newLC%allocated .and. (status .eq. 0)
-    allocate(newLC%xyz(nCoeff),STAT=status) 
+    allocate(newLC%xyz(nCoeff),STAT=status)
     newLC%allocated = newLC%allocated .and. (status .eq. 0)
-    allocate(newLC%c(nCoeff),STAT=status) 
+    allocate(newLC%c(nCoeff),STAT=status)
     newLC%allocated = newLC%allocated .and. (status .eq. 0)
 
     newLC%nCoeff = nCoeff
@@ -143,6 +147,81 @@ Contains
 
   end subroutine create_sparsevecc
 
+  ! **********************************************************************
+  ! Reallocates an object of type sparsevecc. The object has to already be
+  ! allocated. If allocated and shorter than nCoeff, more memory is
+  ! allocated at the end and the contents are preserved.
+  ! If allocated and longer than nCoeff, truncates to the first nCoeff values.
+  ! This is useful when we need to store the information somewhere, but do
+  ! not yet know the final length of the vector. Once it is fully read and
+  ! the number of coefficients is known, use this routine to truncate
+  ! to the correct length preserving all the values already stored.
+  subroutine reall_sparsevecc(nCoeff,newLC)
+
+    implicit none
+    integer, intent(in) 						:: nCoeff
+    type (sparsevecc), intent(inout) 			:: newLC
+    type (sparsevecc)                           :: tempLC
+    integer					                    :: n, status
+
+    ! the old baggage is out of the door
+    if(.not. newLC%allocated) then
+    	write(0, *) 'The input sparsevecc has to be allocated in reall_sparsevecc'
+    	stop
+    end if
+
+	tempLC = newLC
+
+	if (tempLC%nCoeff .eq. nCoeff) then
+		! do nothing
+	else
+		call deall_sparsevecc(newLC)
+    	newLC%allocated = .true.
+    	allocate(newLC%i(nCoeff),STAT=status)
+    	newLC%allocated = newLC%allocated .and. (status .eq. 0)
+    	allocate(newLC%j(nCoeff),STAT=status)
+    	newLC%allocated = newLC%allocated .and. (status .eq. 0)
+    	allocate(newLC%k(nCoeff),STAT=status)
+    	newLC%allocated = newLC%allocated .and. (status .eq. 0)
+    	allocate(newLC%xyz(nCoeff),STAT=status)
+    	newLC%allocated = newLC%allocated .and. (status .eq. 0)
+    	allocate(newLC%c(nCoeff),STAT=status)
+    	newLC%allocated = newLC%allocated .and. (status .eq. 0)
+    	newLC%gridType = tempLC%gridType
+    	newLC%nCoeff = nCoeff
+	end if
+
+	if (tempLC%nCoeff > nCoeff) then
+		! new vector will be shorter
+		do n = 1,nCoeff
+    		newLC%i(n) = tempLC%i(n)
+    		newLC%j(n) = tempLC%j(n)
+    		newLC%k(n) = tempLC%k(n)
+    		newLC%xyz(n) = tempLC%xyz(n)
+    		newLC%c(n) = tempLC%c(n)
+    	end do
+	else if (tempLC%nCoeff < nCoeff) then
+		! new vector will be longer; copy the old values
+		do n = 1,tempLC%nCoeff
+    		newLC%i(n) = tempLC%i(n)
+    		newLC%j(n) = tempLC%j(n)
+    		newLC%k(n) = tempLC%k(n)
+    		newLC%xyz(n) = tempLC%xyz(n)
+    		newLC%c(n) = tempLC%c(n)
+    	end do
+    	! ... then pad with zeroes
+    	do n = tempLC%nCoeff+1,nCoeff
+    		newLC%i(n) = 0
+    		newLC%j(n) = 0
+    		newLC%k(n) = 0
+    		newLC%xyz(n) = 0
+    		newLC%c(n) = C_ZERO
+    	end do
+	end if
+
+    call deall_sparsevecc(tempLC)
+
+  end subroutine reall_sparsevecc
 
   ! **********************************************************************
   ! this will copy a sparse complex vector from SV1 to SV2 ...
@@ -187,7 +266,7 @@ Contains
 	  ! internal memory allocation is strongly discouraged. But this
 	  ! is an exception
           if(SV2%allocated) then
-             ! first deallocate memory for all the components 
+             ! first deallocate memory for all the components
              deallocate(SV2%i, SV2%j, SV2%k, SV2%xyz, SV2%c ,STAT=status)
 	     SV2%gridType = ''
        	     SV2%allocated = .false.
@@ -242,7 +321,7 @@ Contains
     if (Lic1%gridType == Lic2%gridType) then
 
        ! count common indices
-       nCoeffSum = Lic1%nCoeff+Lic2%nCoeff 
+       nCoeffSum = Lic1%nCoeff+Lic2%nCoeff
        do m = 1,Lic2%nCoeff
           Lic1oldIndex(m) = 0
           do n = 1,Lic1%nCoeff
@@ -262,7 +341,7 @@ Contains
     end if
 
     Call create_sparsevecc(nCoeffsum,Loc3, Lic1%gridType)
-    Loc3%grid => Lic1%grid    
+    Loc3%grid => Lic1%grid
     nm = Lic1%nCoeff
     Loc3%i(1:nm) = Lic1%i
     Loc3%j(1:nm) = Lic1%j
@@ -365,7 +444,7 @@ Contains
              zi = SV%k(i)
              c = c + conjg(SV%c(i)) * V%x(xi, yi, zi)
 
-             ! dealing with y-component 
+             ! dealing with y-component
           else if (SV%xyz(i) == 2) then
              xi = SV%i(i)
              yi = SV%j(i)
@@ -429,7 +508,7 @@ Contains
              zi = SV%k(i)
              c = c + SV%c(i) * conjg(V%x(xi, yi, zi))
 
-             ! dealing with y-component 
+             ! dealing with y-component
           else if (SV%xyz(i) == 2) then
              xi = SV%i(i)
              yi = SV%j(i)
@@ -494,7 +573,7 @@ Contains
              zi = SV%k(i)
              c = c + SV%c(i) * V%x(xi, yi, zi)
 
-             ! dealing with y-component 
+             ! dealing with y-component
           else if (SV%xyz(i) == 2) then
              xi = SV%i(i)
              yi = SV%j(i)
@@ -560,7 +639,7 @@ Contains
              zi = SV%k(i)
              c = c + SV%c(i) * V%x(xi, yi, zi)
 
-             ! dealing with y-component 
+             ! dealing with y-component
           else if (SV%xyz(i) == 2) then
              xi = SV%i(i)
              yi = SV%j(i)
@@ -586,11 +665,11 @@ Contains
 
 
   ! **********************************************************************
-  ! compute sum cs*SV + V where SV is a complex sparse vector. V is a full 
-  ! complex vector of type cvector, and cs is a complex scalar; result 
-  ! overwrites V. Can also be used to construct a complex full vector 
+  ! compute sum cs*SV + V where SV is a complex sparse vector. V is a full
+  ! complex vector of type cvector, and cs is a complex scalar; result
+  ! overwrites V. Can also be used to construct a complex full vector
   ! from a sparse complex vector if cs = (1.0, 0.0) and V = 0 (initially)
-  ! or copy from a sparse vector to a full vector 
+  ! or copy from a sparse vector to a full vector
   subroutine add_scvector(cs,SV,V)
 
     implicit none
@@ -611,7 +690,7 @@ Contains
     endif
 
     ! loop over non-zero terms in sparse vector, adding to
-    ! corresponding terms in full vector 
+    ! corresponding terms in full vector
     ! (need to check component xyz ...)
     do i = 1,SV%nCoeff
 
@@ -626,7 +705,7 @@ Contains
              zi = SV%k(i)
              V%x(xi, yi, zi) = cs*SV%c(i) + V%x(xi, yi, zi)
 
-             ! dealing with y-component 
+             ! dealing with y-component
           else if (SV%xyz(i) == 2) then
              xi = SV%i(i)
              yi = SV%j(i)
@@ -652,7 +731,7 @@ Contains
 
 
   ! **********************************************************************
-  ! copy from a full vector to a sparse vector, this routine has quite a 
+  ! copy from a full vector to a sparse vector, this routine has quite a
   ! limited functionality as it assumes one knows the total number of
   ! non-zero vectors in full vector description
   subroutine copy_csvector(SV,V)
@@ -678,7 +757,7 @@ Contains
        stop
     endif
 
-    if (V%gridType == EDGE) then 
+    if (V%gridType == EDGE) then
     i = 0
     ! for x - component
     do xi = 1, V%nx
@@ -704,7 +783,7 @@ Contains
        do yi = 1, V%ny
 	  do zi = 1, V%nz+1
 	     if (V%y(xi, yi, zi) /= 0.0) then
-                i = i + 1 
+                i = i + 1
                 if (i > SV%nCoeff) then
                    write(0, *) 'outside sparse vector nCoeff: copy_csvector'
                    stop
@@ -723,7 +802,7 @@ Contains
        do yi = 1, V%ny+1
 	  do zi = 1, V%nz
 	     if (V%z(xi, yi, zi) /= 0.0) then
-                i = i + 1 
+                i = i + 1
                 if (i > SV%nCoeff) then
                    write(0, *) 'outside sparse vector nCoeff: copy_csvector'
                    stop
@@ -797,12 +876,12 @@ Contains
        end do
     end do
 
- else 
+ else
 
-    write (0, *) 'Vector (full) use not proper in copy_csvector' 
+    write (0, *) 'Vector (full) use not proper in copy_csvector'
 
- end if 
- 
+ end if
+
  SV%grid => V%grid
 
 end subroutine copy_csvector

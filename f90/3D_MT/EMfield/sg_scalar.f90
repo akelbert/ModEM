@@ -718,6 +718,7 @@ Contains
 
 	  allocate(temp(Nx,Ny),STAT=istat)
       k1 = 1
+      k2 = Nz
 	  do
 	    do k = k1,Nz-1
 	    	temp = abs(E%v(:,:,k+1) - E%v(:,:,k))
@@ -739,6 +740,7 @@ Contains
 	    	write(fid,*)
 	    end do
 	    k1 = k2+1
+	    if (k1 > Nz) exit
       end do
 	  deallocate(temp,STAT=istat)
 
@@ -769,6 +771,7 @@ Contains
 
 	  allocate(temp(Nx,Ny),STAT=istat)
       k1 = 1
+      k2 = Nz
 	  do
 	    do k = k1,Nz-1
 	    	temp = abs(E%v(:,:,k+1) - E%v(:,:,k))
@@ -790,6 +793,7 @@ Contains
 	    	write(fid,*)
 	    end do
 	    k1 = k2+1
+	    if (k1 > Nz) exit
       end do
 	  deallocate(temp,STAT=istat)
 
@@ -808,7 +812,7 @@ Contains
       integer 		                    :: Nx, Ny, Nz
       integer                           :: i, j, k, k1, k2, istat
       integer, allocatable              :: temp(:,:)
-      character(4)                      :: fmt
+      character(10)                     :: fmt
 
       if(.not. E%allocated) then
          write(0, *) 'iscalar must be allocated before call to write_iscalar'
@@ -821,6 +825,7 @@ Contains
 
 	  allocate(temp(Nx,Ny),STAT=istat)
       k1 = 1
+      k2 = Nz
 	  do
 	    do k = k1,Nz-1
 	    	temp = abs(E%v(:,:,k+1) - E%v(:,:,k))
@@ -829,7 +834,12 @@ Contains
 	    		exit
 	    	end if
 	    end do
-	    write(fid,'(2i5)',iostat=istat) k1, k2
+	    if (Nz < 1000) then
+	    	fmt = '(2i4)'
+	    else
+	    	fmt = '(2i6)'
+	    end if
+	    write(fid,fmt,iostat=istat) k1, k2
 	    if (istat /= 0) then
 	    	write(0, *) 'Error writing to file in write_iscalar'
 	    	stop
@@ -847,6 +857,7 @@ Contains
 	    	write(fid,*)
 	    end do
 	    k1 = k2+1
+	    if (k1 > Nz) exit
       end do
 	  deallocate(temp,STAT=istat)
 
