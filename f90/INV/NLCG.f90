@@ -36,6 +36,10 @@ public  :: NLCGsolver
      ! real (kind=selectedPrec)   :: alpha_k ! 0.1
      ! if alpha_{i+1} - alpha_i < tol_{alpha}, set alpha_{i+1} = alpha_i/2
      ! real (kind=selectedPrec)   :: alpha_tol ! 1.0e-2
+     ! model output file name
+     character(80)              :: modelFile
+     ! fid for output files (in the future will not need this)
+     integer                    :: fid
   end type NLCGiterControl_t
 
   type(NLCGiterControl_t), private, save :: iterControl
@@ -66,6 +70,10 @@ Contains
      iterControl%nCGmax = 8
      ! the starting step for the line search
      iterControl%alpha_1 = 0.001
+     ! model output file name
+     iterControl%modelFile = 'ModEM_NLCG'
+     ! fid for output files (in the future will not need this)
+     iterControl%fid = 30
 
    end subroutine set_NLCGiterControl
 
@@ -279,6 +287,7 @@ Contains
    type(modelParam_t), intent(out)             :: m_out
 
 	! apply the operator Cm^(1/2) here
+	! m_out = m_in
 	call multBy_CmSqrt(m_in, m_out)
 
    end subroutine CmSqrtMult
@@ -325,6 +334,7 @@ Contains
    real(kind=selectedPrec)		:: value, valuePrev, rms, rmsPrev, beta
    real(kind=selectedPrec)      :: grad_dot_h, g_dot_g, g_dot_gPrev, gPrev_dot_gPrev, g_dot_h
    integer				:: iter, nCG, nLS, nfunc
+   character(3)         :: iterChar
    type(EMsolnMTX)      :: eAll
 
    call set_NLCGiterControl(iterControl)
@@ -389,8 +399,14 @@ Contains
 
 	  ! adjust the starting step to ensure superlinear convergence properties
 	  alpha = min(ONE,(ONE+0.01)*alpha)
-		write(*,'(a25,i5)') 'Completed NLCG iteration ',iter
-    call printf('with',lambda,alpha,value,rms)
+	  write(*,'(a25,i5)') 'Completed NLCG iteration ',iter
+      call printf('with',lambda,alpha,value,rms)
+
+      ! write out the intermediate model solution
+      call CmSqrtMult(mHat,m_minus_m0)
+   	  call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
+   	  write(iterChar,'(i03)') iter
+      call write_Cond3D(iterControl%fid,iterControl%modelFile//iterChar//'.cpr',m)
 
 	  ! if alpha is too small, we are not making progress: update lambda
 	  if (abs(rmsPrev - rms) < iterControl%fdiffTol) then
@@ -432,7 +448,7 @@ Contains
       	nCG = nCG + 1
 	  else
    	    ! restart
-				write(*,'(a45)') 'Restarting NLCG to restore orthogonality'
+		write(*,'(a45)') 'Restarting NLCG to restore orthogonality'
         h = g
         nCG = 0
    	  end if

@@ -125,7 +125,7 @@ Contains
         write(*,*) '  Multiples d_i by J_i^T separately for each transmitter,'
         write(*,*) '  to yield a bunch of models, one for each transmitter'
         write(*,*) '[INVERSE_NLCG]'
-        write(*,*) ' -I  rFile_Model rFile_Data wFile_Model [wFile_Data lambda alpha]'
+        write(*,*) ' -I  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda]'
         write(*,*) '  Runs an NLCG inversion to yield an inverse model'
         write(*,*)
         stop
@@ -224,7 +224,7 @@ Contains
 
       case (INVERSE_NLCG) ! I
         if (narg < 3) then
-           write(0,*) 'Usage: -I  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda]'
+           write(0,*) 'Usage: -I  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda alpha]'
            stop
         else
 	       ctrl%rFile_Model = temp(1)

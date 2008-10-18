@@ -37,14 +37,13 @@
     character(*), intent(in), optional  :: cfile
     integer                             :: istat
     logical                             :: exists
-    integer                             :: Nx, Ny, NzEarth
 
 	! initializing CmSqrt
-	Nx = m%Nx
-	Ny = m%Ny
-	NzEarth = m%NzEarth
-	allocate(CmSqrt%Sx(NzEarth), STAT=istat)
-	allocate(CmSqrt%Sy(NzEarth), STAT=istat)
+	CmSqrt%Nx = m%Nx
+	CmSqrt%Ny = m%Ny
+	CmSqrt%NzEarth = m%NzEarth
+	allocate(CmSqrt%Sx(CmSqrt%NzEarth), STAT=istat)
+	allocate(CmSqrt%Sy(CmSqrt%NzEarth), STAT=istat)
 	CmSqrt%Sx = 0.1
 	CmSqrt%Sy = 0.1
 	CmSqrt%Sz = 0.1

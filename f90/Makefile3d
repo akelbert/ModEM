@@ -18,8 +18,8 @@
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-F90 = g95 
-FFLAGS = -g -C
+F90 = ifort
+FFLAGS = -O3
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
