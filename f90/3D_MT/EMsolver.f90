@@ -232,13 +232,13 @@ Contains
    if(initForSens) then
       call deall_EMrhs(comb)
       call deall_EMsoln(e)
+
+      ! cleanup/deallocation routines for model operators
+      call ModelDataCleanUp() ! FWD/modelOperator3D.f90
+      call ModelOperatorCleanUp() ! FWD/EMsolve3D.f90
+
+      modelDataInitialized = .false.
    endif
-
-   ! cleanup/deallocation routines for model operators
-   call ModelDataCleanUp() ! FWD/modelOperator3D.f90
-   call ModelOperatorCleanUp() ! FWD/EMsolve3D.f90
-
-   modelDataInitialized = .false.
 
    end subroutine exitSolver
 

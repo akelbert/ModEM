@@ -1,7 +1,7 @@
 
 ! *****************************************************************************
 ! model_data is used for sharing the data for the joint forward modeling-
-! inversion scheme. Data module where the current model definition (grid, 
+! inversion scheme. Data module where the current model definition (grid,
 ! conductivity, frequency) is stored. This module is sued by SetUp routines
 ! (for initialization, modification of any parameter values), and PDE coefficient
 ! initialization routines.
@@ -12,7 +12,7 @@ module modelOperator3D
   !     operators including the full EM operator and operators needed for
   !     divergence correction and preconditioning.  Everything that
   !     initializes or uses the equation coefficients are now in this module
-  !     allowing arrays of equation coefficients, etc. to be private 
+  !     allowing arrays of equation coefficients, etc. to be private
   !       and essentially global to this module
 
   use math_constants
@@ -24,17 +24,17 @@ module modelOperator3D
   use boundary_ws          ! sets the boundary conditions
   implicit none
 
-  ! * These variables are used by model equation 
+  ! * These variables are used by model equation
   ! * and preconditioner modules;
   ! * All variables are saved until changed/deallocated
 
   save
   !!!!!!!>>>>>>>>> FROM model_data
   type(grid3d_t), private, target 	::	mGrid   ! THE model grid
-  type(rvector), public			::	volE    ! THE volume elements 
+  type(rvector), public			::	volE    ! THE volume elements
   type(rvector), private		::	condE   ! THE edge conductivities
   real(kind=selectedPrec),private	::      omega   ! THE (active) frequency
-  
+
   ! NOTE: THIS VARIABLE IS TEMPORARILY REQUIRED TO SET THE BOUNDARY CONDITIONS
   type(rscalar), private        :: Cond3D
 
@@ -43,7 +43,7 @@ module modelOperator3D
   ! The two array elements correspond to coefficients required to form
   !   the derivative using adjacent faces
   ! E.g., xXY --> coefficient for the Ex equation using Ex variables
-  ! in the y direction. 
+  ! in the y direction.
   ! xY is the product of grid spacings in X and Y-directions, etc.
   ! The two array elements again correspond to adjacent faces
   ! xXO is the sum of the all the products for the spacing in all the
@@ -70,8 +70,8 @@ module modelOperator3D
   type (cvector), private		               :: Dilu
 
   !!!!!!>>>>>>>>> FROM divcorr
-  ! coefficients for operators div sigma grad 
-  !  (which acts on scalars used for corner nodes), 
+  ! coefficients for operators div sigma grad
+  !  (which acts on scalars used for corner nodes),
   !  and the diagonal of the ilu preconditoner
 
   type (rvector) , private	:: db1, db2
@@ -93,31 +93,31 @@ module modelOperator3D
   public                                :: UpdateFreqCond
   public                                :: ModelDataInit
   !   These are used to initialize the modules grid, and to set/modify
-  !     conductivity and/or frequency 
+  !     conductivity and/or frequency
 
   !  routine to set the boundary conditions (a wrapper for BC_x0_WS for now)
   public                                :: SetBound
-  
+
   !  routines from multA
   public                             	:: CurlcurleSetUp, CurlcurlE, CurlcurleCleanUp
   public                                :: AdiagInit, AdiagSetUp, deall_Adiag, Maxwell
   public                                :: MultA_O, MultA_N, AdjtBC
   !   These are used to initialize differential equation coefficients, and
   !    then to apply the differential operator
- 
+
   ! routines from precondtioner
   public                      :: DiluInit, DiluSetUp, DeallocateDilu
   public                      :: M1Solve, M2Solve
 
   ! routines from divcorr
-  public                :: DivCorrInit, DivCorrSetUp, Deallocate_DivCorr 
+  public                :: DivCorrInit, DivCorrSetUp, Deallocate_DivCorr
   public                :: DivCgradILU, DivCgrad, DivC
 
   ! interface for data_update  ... is this needed ?
   INTERFACE updateModelData
-     module procedure UpdateFreq 
+     module procedure UpdateFreq
      module procedure UpdateCond
-     module procedure UpdateFreqCond	
+     module procedure UpdateFreqCond
   END INTERFACE
 
 Contains
@@ -127,41 +127,41 @@ Contains
   ! *   Copies grid to mGrid
   !      and/or compute variables stored in model_data module:
   !         create: allocate for edge conductivity
-  !              volume weights; 
+  !              volume weights;
   !         EdgeVolume:  compute volume weights for edge-centered prisms
   !
-  !**********************************************************************         
-    
+  !**********************************************************************
+
     implicit none
     !  INPUTS:
     type (grid3d_t), intent(in)		  :: inGrid
 
-    !   copy inGrid to mGrid 
-    call copy_grid3D(mGrid,inGrid)    
-    
+    !   copy inGrid to mGrid
+    call copy_grid3D(mGrid,inGrid)
+
     ! Allocate data structure for volume elements, and compute these
     Call create(mGrid, volE, EDGE)
     Call EdgeVolume(mGrid, volE)
 
     !  Allocate condE, conductivity defined on computational cell edges
     !   condE is also kept in module model_data
-    Call create(mGrid, condE, EDGE) 
-    
-    ! set a default omega 
+    Call create(mGrid, condE, EDGE)
+
+    ! set a default omega
     omega = 0.0
 
   end subroutine ModelDataInit
-  
-  
+
+
   subroutine ModelDataCleanUp
-  
+
     call deall_grid3d(mGrid)
     call deall_rvector(volE)
     call deall_rvector(condE)
 
     ! Cond3D is temporary
     call deall_rscalar(Cond3D)
-  
+
   end subroutine ModelDataCleanUp
 
   ! **************************************************************************
@@ -174,7 +174,7 @@ Contains
     omega = inOmega
     Call AdiagSetUp()
     Call DiluSetUp()
-    
+
   end subroutine UpdateFreq  ! UpdateFreq
 
   ! ***************************************************************************
@@ -182,11 +182,11 @@ Contains
   subroutine UpdateCond(CondParam)
 
     implicit none
-    type(modelParam_t), intent(in)      :: CondParam      ! input conductivity 
+    type(modelParam_t), intent(in)      :: CondParam      ! input conductivity
 
     ! structure on the center of the grid
 
-    !  ModelParamToEdge is to be interpreted as an abstract routine 
+    !  ModelParamToEdge is to be interpreted as an abstract routine
     !    that maps from the external conductivity parameter to the
     !    internal edge representation  ... the type of CondParam
     !    is now fixed as rscalar;  if a different representation is
@@ -195,11 +195,11 @@ Contains
     Call ModelParamToEdge(CondParam, condE)
 
     Call DivCorrSetUp()
-    
+
     ! TEMPORARY; REQUIRED FOR BOUNDARY CONDITIONS
     !  set static array for cell conductivities
     call modelParamToCellCond(CondParam,Cond3D)
-  
+
   end subroutine UpdateCond  ! UpdateCond
 
   ! ***************************************************************************
@@ -209,89 +209,89 @@ Contains
 
     implicit none
     real(kind=selectedPrec)                 :: inOmega
-    type(modelParam_t), intent(in)            :: CondParam      ! input conductivity 
+    type(modelParam_t), intent(in)            :: CondParam      ! input conductivity
     ! structure on the center of the grid
 
     omega = inOmega
 
-    !  ModelParamToEdge is to be interpreted as an abstract routine 
+    !  ModelParamToEdge is to be interpreted as an abstract routine
     !    that maps from the external conductivity parameter to the
-    !    internal edge representation  ... 
+    !    internal edge representation  ...
     Call ModelParamToEdge(CondParam, condE)
 
     Call AdiagSetUp()
     Call DiluSetUp()
-    Call DivCorrSetUp()    
+    Call DivCorrSetUp()
 
     ! TEMPORARY; REQUIRED FOR BOUNDARY CONDITIONS
     !  set static array for cell conductivities
     call modelParamToCellCond(CondParam,Cond3D)
- 
+
   end subroutine UpdateFreqCond  ! UpdateFreqCond
 
 !**********************************************************************
 ! Sets boundary conditions. Currently a wrapper for BC_x0_WS.
 ! Uses input 3D conductivity in cells Cond3D, that has to be initialized
-! by updateCond before calling this routine. Also uses mGrid set by 
+! by updateCond before calling this routine. Also uses mGrid set by
 ! ModelDataInit. Could use omega, which is set by updateFreq.
   Subroutine SetBound(imode,period,E0,BC)
 
-    !  Input mode, period 
+    !  Input mode, period
     integer, intent(in)		:: imode
     real(kind=selectedPrec)	:: period
-     
+
     ! Output electric field first guess (for iterative solver)
     type(cvector), intent(inout)	:: E0
-    ! Output boundary conditions 
+    ! Output boundary conditions
     type(cboundary), intent(inout)	:: BC
 
     call BC_x0_WS(imode,period,mGrid,Cond3D,E0,BC)
-    
+
     ! Cell conductivity array is no longer needed
     ! NOT TRUE: needed for imode=2
-    ! call deall_rscalar(Cond3D) 
+    ! call deall_rscalar(Cond3D)
 
-  end subroutine SetBound   
-         
+  end subroutine SetBound
+
 ! ****************************************************************************
-! Routines from multA; set up finite difference operator for quasi-static 
+! Routines from multA; set up finite difference operator for quasi-static
 !   frequency domain 3D EM induction equations, apply in various ways for forward,
 !   adjoint Krylov solvers
 
   ! ***************************************************************************
-  ! * CurlcurleSetUp sets up all the coefficients for finite difference 
+  ! * CurlcurleSetUp sets up all the coefficients for finite difference
   ! * approximations for del X del X E. In SetUp routines, one may do memory
-  ! * allocation inside. SetUp routines does basic calculations 
+  ! * allocation inside. SetUp routines does basic calculations
   ! * (maybe one time deal or sometimes more than once)
-  
+
   subroutine CurlcurleSetUp()
 
     implicit none
     ! Output coefficients for curlcurlE (del X del X E)
     integer                     :: status     ! for dynamic memory allocation
     integer                     :: ix, iy, iz ! dummy variables
-  
+
 
     ! Allocate memory for del x del operator coefficient arrays
     ! Coefficients for difference equation only uses interior
     ! nodes. however, we need boundary nodes for the adjoint problem
     allocate(xXY(mGrid%ny+1, 2), STAT=status)   ! Allocate memory
     allocate(xXZ(mGrid%nz+1, 2), STAT=status)   ! Allocate memory
-    allocate(xY(mGrid%nx, mGrid%ny+1), STAT=status)   
-    allocate(xZ(mGrid%nx, mGrid%nz+1), STAT=status)   
-    allocate(xXO(mGrid%ny, mGrid%nz), STAT=status)   
+    allocate(xY(mGrid%nx, mGrid%ny+1), STAT=status)
+    allocate(xZ(mGrid%nx, mGrid%nz+1), STAT=status)
+    allocate(xXO(mGrid%ny, mGrid%nz), STAT=status)
 
     allocate(yYZ(mGrid%nz+1, 2), STAT=status)   ! Allocate memory
     allocate(yYX(mGrid%nx+1, 2), STAT=status)   ! Allocate memory
-    allocate(yZ(mGrid%ny, mGrid%nz+1), STAT=status)   
-    allocate(yX(mGrid%nx+1, mGrid%ny), STAT=status)   
-    allocate(yYO(mGrid%nx, mGrid%nz), STAT=status)   
+    allocate(yZ(mGrid%ny, mGrid%nz+1), STAT=status)
+    allocate(yX(mGrid%nx+1, mGrid%ny), STAT=status)
+    allocate(yYO(mGrid%nx, mGrid%nz), STAT=status)
 
     allocate(zZX(mGrid%nx+1, 2), STAT=status)   ! Allocate memory
     allocate(zZY(mGrid%ny+1, 2), STAT=status)   ! Allocate memory
-    allocate(zX(mGrid%nx+1, mGrid%nz), STAT=status)   
-    allocate(zY(mGrid%ny+1, mGrid%nz), STAT=status)   
-    allocate(zZO(mGrid%nx, mGrid%ny), STAT=status)   
+    allocate(zX(mGrid%nx+1, mGrid%nz), STAT=status)
+    allocate(zY(mGrid%ny+1, mGrid%nz), STAT=status)
+    allocate(zZO(mGrid%nx, mGrid%ny), STAT=status)
 
 
     ! initalize all coefficients to zero (some remain zero)
@@ -340,7 +340,7 @@ Contains
           xZ(ix, iz) = 1.0/ (mGrid%delZ(iz)*mGrid%dx(ix))
        enddo
     enddo
-    ! End of Ex coefficients 
+    ! End of Ex coefficients
 
     ! coefficents for calculating Ey; only loop over internal edges
     do iz = 2, mGrid%nz
@@ -371,7 +371,7 @@ Contains
           yX(ix, iy) = 1.0/ (mGrid%delX(ix)*mGrid%dy(iy))
        enddo
     enddo
-    ! End of Ey coefficients 
+    ! End of Ey coefficients
 
     ! coefficents for calculating Ez; only loop over internal edges
     do ix = 2, mGrid%nx
@@ -402,13 +402,13 @@ Contains
           zY(iy, iz) = 1.0/ (mGrid%delY(iy)*mGrid%dz(iz))
        enddo
     enddo
-    ! End of Ez coefficients 
+    ! End of Ez coefficients
 
   end subroutine CurlcurleSetUp   ! CurlcurleSetUp
 
 
   ! ***************************************************************************
-  ! * CurlcurlE computes the finite difference equation in complex vectors 
+  ! * CurlcurlE computes the finite difference equation in complex vectors
   ! * for del X del X E. Note that the difference equation is only for interior
   ! * edges. However, it does use the contribution from the boundary edges. The
   ! * coefficients are calculated in CurlcurleSetUp. Remember, in the operators
@@ -416,13 +416,13 @@ Contains
   subroutine CurlcurlE(inE, outE)
 
     implicit none
-    type (cvector), intent(in)             :: inE    
+    type (cvector), intent(in)             :: inE
     ! input electrical field as complex vector
-    type (cvector), target, intent(inout)  :: outE   
+    type (cvector), target, intent(inout)  :: outE
     ! output electrical field as complex vector
-    integer                                :: ix, iy, iz       
+    integer                                :: ix, iy, iz
     ! dummy variables
-    
+
     if (.not.inE%allocated) then
       write(0,*) 'inE in CurlcurlE not allocated yet'
       stop
@@ -438,7 +438,7 @@ Contains
          (inE%ny == outE%ny).and.&
          (inE%nz == outE%nz)) then
 
-       if ((inE%gridType == outE%gridType)) then 
+       if ((inE%gridType == outE%gridType)) then
 
           ! Apply difference equation to compute Ex (only on interior nodes)
           do ix = 1, inE%nx
@@ -509,47 +509,47 @@ Contains
   end subroutine CurlcurlE        ! CurlcurlE
 
   ! ***************************************************************************
-  ! * CurlcurlE computes the finite difference equation in complex vectors 
+  ! * CurlcurlE computes the finite difference equation in complex vectors
   ! * for del X del X E. Deallocate these vectors when they are no longer needed.
   subroutine CurlcurleCleanUp()
 
     implicit none
 
-    integer                     :: status     ! for dynamic memory deallocation  
+    integer                     :: status     ! for dynamic memory deallocation
 
     ! Deallocate memory for del x del operator coefficient arrays
     ! Coefficients for difference equation only uses interior
     ! nodes. however, we need boundary nodes for the adjoint problem
     deallocate(xXY, STAT=status)
     deallocate(xXZ, STAT=status)
-    deallocate(xY, STAT=status)   
-    deallocate(xZ, STAT=status)   
-    deallocate(xXO, STAT=status)   
+    deallocate(xY, STAT=status)
+    deallocate(xZ, STAT=status)
+    deallocate(xXO, STAT=status)
 
     deallocate(yYZ, STAT=status)
     deallocate(yYX, STAT=status)
-    deallocate(yZ, STAT=status)   
-    deallocate(yX, STAT=status)   
-    deallocate(yYO, STAT=status)   
+    deallocate(yZ, STAT=status)
+    deallocate(yX, STAT=status)
+    deallocate(yYO, STAT=status)
 
     deallocate(zZX, STAT=status)
     deallocate(zZY, STAT=status)
-    deallocate(zX, STAT=status)   
-    deallocate(zY, STAT=status)   
+    deallocate(zX, STAT=status)
+    deallocate(zY, STAT=status)
     deallocate(zZO, STAT=status)
-    
+
   end subroutine CurlcurleCleanUp
-  
+
   ! ***************************************************************************
   ! * AdiagInit initializes the memory for the diagonal nodes being added
-  ! * with the imaginary part. Init routines mostly do memory allocation, 
+  ! * with the imaginary part. Init routines mostly do memory allocation,
   ! * reading and setting up the data
   subroutine AdiagInit()
 
     implicit none
 
     Call create_cvector(mGrid, Adiag, EDGE)
-    
+
   end subroutine AdiagInit
 
 
@@ -560,7 +560,7 @@ Contains
 
     implicit  none
     integer                   :: ix, iy, iz       ! dummy variables
-    
+
     if (.not.Adiag%allocated) then
       write(0,*) 'Adiag in AdiagSetUp not allocated yet'
       stop
@@ -577,7 +577,7 @@ Contains
     do iz = 1, mGrid%nz
        Adiag%z(:,:,iz) = CMPLX(0.0, 1.0, 8)*omega*MU*condE%z(:,:,iz)
     enddo
-    
+
 
   end subroutine AdiagSetUp
 
@@ -589,26 +589,26 @@ Contains
     implicit none
 
     Call deall_cvector(Adiag)
-    
+
   end subroutine deall_Adiag
 
   ! ***************************************************************************
   ! * Maxwell computes the finite difference equation in complex vectors
   ! * for del X del X E +/- i*omega*mu*conductivity*E in unsymmetrical form.
   ! * Note that the difference equation is only for interior edges. However,
-  ! * it does use the contribution from the boundary edges. The coefficients 
-  ! * are  calculated in CurlcurleSetUp. Remember, in the operators that are 
+  ! * it does use the contribution from the boundary edges. The coefficients
+  ! * are  calculated in CurlcurleSetUp. Remember, in the operators that are
   ! * used in iterative fashion, output is always initialized outside
   subroutine Maxwell(inE, adjt, outE)
 
     implicit none
-    type (cvector), intent(in)               :: inE    
+    type (cvector), intent(in)               :: inE
     ! input electrical field as complex vector
     logical, intent (in)                     :: adjt
-    type (cvector), target, intent(inout)    :: outE   
+    type (cvector), target, intent(inout)    :: outE
     ! output electrical field as complex vector
     integer                                  :: diag_sign
-    integer                                  :: ix, iy, iz       
+    integer                                  :: ix, iy, iz
     ! dummy variables
 
     if (.not.inE%allocated) then
@@ -626,7 +626,7 @@ Contains
          (inE%ny == outE%ny).and.&
          (inE%nz == outE%nz)) then
 
-       if ((inE%gridType == outE%gridType)) then 
+       if ((inE%gridType == outE%gridType)) then
 
           if (adjt) then
              diag_sign = -1*isign
@@ -701,10 +701,10 @@ Contains
 
 
   ! **************************************************************************
-  ! * Gets the Maxwell's equation in the complete symmetrical form, 
-  ! * del X del X E +/- i*omega*mu*conductivity*E. E is the complex vector 
-  ! * defining the electrical field _O is to denote that this is the original 
-  ! * subroutine. Diagonally multiplied by weights for symmetry.  
+  ! * Gets the Maxwell's equation in the complete symmetrical form,
+  ! * del X del X E +/- i*omega*mu*conductivity*E. E is the complex vector
+  ! * defining the electrical field _O is to denote that this is the original
+  ! * subroutine. Diagonally multiplied by weights for symmetry.
   subroutine MultA_O(inE, adjt, outE)
 
     implicit none
@@ -714,9 +714,9 @@ Contains
     type (cvector)                           :: workE
     ! workE is the complex vector that is used as a work space
     integer                                  :: diag_sign
-    complex(kind=selectedPrec)               :: c2         
+    complex(kind=selectedPrec)               :: c2
     ! a complex multiplier
-    
+
     if (.not.inE%allocated) then
       write(0,*) 'inE in MultA_O not allocated yet'
       stop
@@ -726,7 +726,7 @@ Contains
       write(0,*) 'outE in MultA_O not allocated yet'
       stop
     end if
-    
+
     Call create_cvector(mGrid, workE, EDGE)
 
     ! Check whether the bounds are the same
@@ -738,7 +738,7 @@ Contains
          (inE%nz == workE%nz)) then
 
        if ((inE%gridType == outE%gridType).and.(inE%gridType == workE%gridType)) &
-            then 
+            then
 
           Call CurlcurlE(inE, workE)
           ! done with preparing del X del X E
@@ -771,11 +771,11 @@ Contains
 
 
   ! ***************************************************************************
-  ! * Gets the Maxwell's equation in the complete symmetrical form, 
-  ! * del X del X E +/- i*omega*mu*conductivity*E. E is the complex vector 
-  ! * defining the electrical field _N is to denote that this is the new 
+  ! * Gets the Maxwell's equation in the complete symmetrical form,
+  ! * del X del X E +/- i*omega*mu*conductivity*E. E is the complex vector
+  ! * defining the electrical field _N is to denote that this is the new
   ! * subroutine where the imaginary part at the at the diagonal is inbuilt
-  ! *  Diagonally multiplied by weights for symmetry.     
+  ! *  Diagonally multiplied by weights for symmetry.
   subroutine MultA_N(inE, adjt, outE)
 
     implicit none
@@ -798,8 +798,8 @@ Contains
          (inE%ny == outE%ny).and.&
          (inE%nz == outE%nz)) then
 
-       if ((inE%gridType == outE%gridType)) then 
-	
+       if ((inE%gridType == outE%gridType)) then
+
           Call Maxwell(inE, adjt, outE)
           ! done with preparing del X del X E +/- i*omega*mu*conductivity*E
 
@@ -817,21 +817,21 @@ Contains
   end subroutine MultA_N
 
   subroutine AdjtBC(eIn, BC)
-  !  subroutine AdjtBC uses (adjoint) interior node solution to compute 
+  !  subroutine AdjtBC uses (adjoint) interior node solution to compute
   !  boundary node values for adjoint (or transpose) solution
-  !   (NOTE: because off-diagonal part of EM operator is real this works 
+  !   (NOTE: because off-diagonal part of EM operator is real this works
   !  Assuming boundary conditions for forward problem are
   !  specified tangential E fields, adjoint BC are  homogeneous (to solve for
   !   interior nodes), and solution on boundary nodes is determined from
   !   interior solution via:    E_B - adjt(A_IB)*E_I = 0
-  !    where E_B is boundary part of adjoint system rhs, and E_I 
+  !    where E_B is boundary part of adjoint system rhs, and E_I
   !    is the interior node solution of the adjoint system (solved with
   !    homogeneous tangential BC). This operator computes adjt(A_IB)*E_I.
   !   Output is required for calculating sensitivities
   !     of data to errors in specified BC (and potentially for other sorts
   !     of sensitivities which require the boundary nodes of the adjoint or
   !     transpose solution).
-  !    NOTE: this routine can be used for both complex conjugate 
+  !    NOTE: this routine can be used for both complex conjugate
   !         transpose and transpose cases.
 
   !   Uses curl_curl coefficients, available to all routines in this module
@@ -839,7 +839,7 @@ Contains
 
     implicit none
 
-    ! INPUT: electrical fields stored as cvector 
+    ! INPUT: electrical fields stored as cvector
     type (cvector), intent(in)             		:: eIn
     ! OUTPUT: boundary condition structure: should be allocated
     !   and initialized before call to this routine
@@ -847,10 +847,10 @@ Contains
 
     ! local variables
     integer                   :: ix,iy,iz,nx,ny,nz
-   
+
     !  Multiply FD electric field vector defined on interior nodes (eIn) by
     !  adjoint of A_IB, the interior/boundary sub-block of the differential
-    !  operator.  
+    !  operator.
 
     nx = eIn%nx
     ny = eIn%ny
@@ -866,14 +866,14 @@ Contains
        do iz = 2, nz
           BC%xYmin(ix,iz) = - yX(ix,1)*Ein%y(ix,1,iz)       &
                             + yX(ix+1,1)*Ein%y(ix+1,1,iz)   &
-                            + xXY(2,1)*Ein%x(ix,2,iz)       
-          BC%xYmax(ix,iz) = + yX(ix,ny)*Ein%y(ix,ny,iz)     & 
+                            + xXY(2,1)*Ein%x(ix,2,iz)
+          BC%xYmax(ix,iz) = + yX(ix,ny)*Ein%y(ix,ny,iz)     &
                             - yX(ix+1,ny)*Ein%y(ix+1,ny,iz) &
                             + xXY(ny,2)*Ein%x(ix,ny,iz)
         enddo
      enddo
 
-!  Ez components in x/z plane (iy=1; iy = ny+1)                                       
+!  Ez components in x/z plane (iy=1; iy = ny+1)
     BC%zYMin(1,:) = C_ZERO
     BC%zYmax(1,:) = C_ZERO
     BC%zYmin(nx+1,:) = C_ZERO
@@ -883,7 +883,7 @@ Contains
           BC%zYmin(ix,iz) = - yZ(1,iz)*Ein%y(ix,1,iz)        &
                             + yZ(1,iz+1)*Ein%y(ix,1,iz+1)    &
                             + zZY(2,1)*Ein%z(ix,2,iz)
-          BC%zYmax(ix,iz) = + yZ(ny,iz)*Ein%y(ix,ny,iz)      & 
+          BC%zYmax(ix,iz) = + yZ(ny,iz)*Ein%y(ix,ny,iz)      &
                             - yZ(ny,iz+1)*Ein%y(ix,ny,iz+1)  &
                             + zZY(ny,2)*Ein%z(ix,ny,iz)
         enddo
@@ -897,7 +897,7 @@ Contains
     do iy = 1, ny
        do iz = 2, nz
           BC%yXmin(iy,iz) = - xY(1,iy)*Ein%x(1,iy,iz)        &
-                            + xY(1,iy+1)*Ein%x(1,iy+1,iz)    &                  
+                            + xY(1,iy+1)*Ein%x(1,iy+1,iz)    &
                             + yYX(2,1)*Ein%y(2,iy,iz)
           BC%yXmax(iy,iz) = + xY(nx,iy)*Ein%x(nx,iy,iz)      &
                             - xY(nx,iy+1)*Ein%x(nx,iy+1,iz)  &
@@ -921,7 +921,7 @@ Contains
         enddo
      enddo
 
-!  Ex components in x/y plane (iz=1; iz = nz+1)                  
+!  Ex components in x/y plane (iz=1; iz = nz+1)
     BC%xZmin(:,1) = C_ZERO
     BC%xZmax(:,1) = C_ZERO
     BC%xZmin(:,ny+1) = C_ZERO
@@ -937,7 +937,7 @@ Contains
         enddo
      enddo
 
-!  Ey components in x/y plane (iz=1; iz = nz+1) 
+!  Ey components in x/y plane (iz=1; iz = nz+1)
     BC%yZmin(:,1) = C_ZERO
     BC%yZmax(:,1) = C_ZERO
     BC%yZmin(nx+1,:) = C_ZERO
@@ -947,7 +947,7 @@ Contains
           BC%yZmin(ix,iy) = - zY(iy,1)*Ein%z(ix,iy,1)        &
                             + zY(iy+1,1)*Ein%z(ix,iy+1,1)    &
                             + yYZ(2,1)*Ein%y(ix,iy,2)
-          BC%yZmax(ix,iy) = + zY(iy,nz)*Ein%z(ix,iy,nz)      & 
+          BC%yZmax(ix,iy) = + zY(iy,nz)*Ein%z(ix,iy,nz)      &
                             - zY(iy+1,nz)*Ein%z(ix,iy+1,nz)  &
                             + yYZ(nz,2)*Ein%y(ix,iy,nz)
         enddo
@@ -956,14 +956,14 @@ Contains
   end subroutine AdjtBC
 
 ! ****************************************************************************
-! PRECONDITIONER ROUTINES: set up ILU-Level I preconditioner for 
+! PRECONDITIONER ROUTINES: set up ILU-Level I preconditioner for
 !     Maxwell's equation, solve lower and upper triangular systems to
 !      apply preconditioner
   !****************************************************************************
   ! initializes a diagonal of preconditioner for A operator
   subroutine DiluInit()
 
-    implicit none 
+    implicit none
     integer                                 :: status
     integer                                 :: ix, iy, iz
 
@@ -971,7 +971,7 @@ Contains
 
        Call create(mGrid, Dilu, EDGE)
 
-    else		
+    else
 
        if ((Dilu%nx /= mGrid%nx).or.(Dilu%ny /= mGrid%ny).or.&
             (Dilu%nz /= mGrid%nz)) then
@@ -981,24 +981,24 @@ Contains
 
        end if
     end if
-    
+
   end subroutine DiluInit ! DiluInit
 
   !****************************************************************************
   ! sets up a diagonal of preconditioner for A operator
   subroutine DiluSetUp()
 
-    implicit none 
+    implicit none
     integer                                 :: status
     integer                                 :: ix, iy, iz
 
     if (.not.Dilu%allocated) then
        write (0, *) 'Dilu not allocated yet'
-    else		
+    else
 
        if ((Dilu%nx /= mGrid%nx).or.(Dilu%ny /= mGrid%ny).or.&
             (Dilu%nz /= mGrid%nz)) then
-         write (0, *) 'Dilu that is right now existing has the wrong size' 
+         write (0, *) 'Dilu that is right now existing has the wrong size'
        end if
     end if
 
@@ -1031,7 +1031,7 @@ Contains
     !  but need to initialize edges for recursive algorithm
     do iy = 1, mGrid%ny
        do iz = 2, mGrid%nz
-          do ix = 2, mGrid%nx   
+          do ix = 2, mGrid%nx
 
              Dilu%y(ix, iy, iz) = yYO(ix,iz) - &
                   CMPLX(0.0, 1.0, 8)*omega*MU*condE%y(ix, iy, iz) &
@@ -1058,7 +1058,7 @@ Contains
           enddo
        enddo
     enddo
-    
+
   end subroutine DiluSetUp  ! DiluSetUp
 
 
@@ -1068,7 +1068,7 @@ Contains
     implicit none
     integer                                 :: status
 
-    deallocate(Dilu%x, Dilu%y, Dilu%z, STAT = status)   
+	call deall_cvector(Dilu)
 
   end subroutine DeallocateDilu  ! DeallocateDilu
 
@@ -1083,7 +1083,7 @@ Contains
     logical, intent(in)		        :: adjt
     type (cvector), intent(inout) 	:: outE
     integer                             :: ix, iy, iz
-    
+
     if (.not.inE%allocated) then
       write(0,*) 'inE in M1solve not allocated yet'
       stop
@@ -1103,7 +1103,7 @@ Contains
           if (.not.adjt) then
 	     ! adjoint = .false.
              Call diagDiv(inE, volE, outE)
-   
+
              do ix = 1, inE%nx
                 do iy = 2, inE%ny
                    do iz = 2, inE%nz
@@ -1214,7 +1214,7 @@ Contains
     logical, intent(in)		:: adjt
     type (cvector), intent(inout) 	:: outE
     integer                         :: ix, iy, iz
-    
+
     if (.not.inE%allocated) then
       write(0,*) 'inE in M2solve not allocated yet'
       stop
@@ -1333,12 +1333,12 @@ Contains
   end subroutine M2solve ! M2solve
 
 ! *****************************************************************************
-! Routines used by divergence correction for 3D finite difference 
+! Routines used by divergence correction for 3D finite difference
 ! EM modeling code. Initialization and application of operator used
-! for divergence correction. These routines are used by the divergence 
+! for divergence correction. These routines are used by the divergence
 ! correction driver routine to (1) compute divergence of currents
 ! rho =  div sigma E ; (2) set up coefficient matrix for the PDE
-! div sigma grad phi = rho ; (3) apply the operator div sigma grad 
+! div sigma grad phi = rho ; (3) apply the operator div sigma grad
 ! The PDE is solved using conjugate gradients with a D-ILU preconditoner.
 ! The inverse of the pre-conditioner diagonal is set up at the
 ! same time as the coefficients.  Note that the potential phi that is
@@ -1366,48 +1366,48 @@ Contains
     ! initialize volume weights centered at corners
     Call create_rscalar(mGrid, volC, CORNER)
     Call CornerVolume(mGrid, volC)
-    
+
    end subroutine DivCorrInit  ! DivCorrInit
-    
-    
-   !**********************************************************************   
+
+
+   !**********************************************************************
    ! SetUp routines do calculations (maybe once; possibly more than once)
    ! DivCorrSetup must be called once for each conductivity distribuition
    !  (i.e., before first forward run; after any change to conductivity)
   subroutine DivCorrSetUp()
-  
+
     implicit none
     integer                               :: ix, iy, iz
     real(kind=selectedPrec)	:: D0 = 0.0
-    
+
     IF(.not.condE%allocated) THEN
  	WRITE(0,*) 'condE not allocated yet: DivCorrSetUp'
  	STOP
-    ENDIF 
-    
+    ENDIF
+
     IF(.not.db1%allocated) THEN
  	WRITE(0,*) 'db1 not allocated yet: DivCorrSetUp'
  	STOP
-    ENDIF 
-    
+    ENDIF
+
     IF(.not.db2%allocated) THEN
  	WRITE(0,*) 'db2 not allocated yet: DivCorrSetUp'
  	STOP
-    ENDIF 
-    
+    ENDIF
+
         IF(.not.c%allocated) THEN
  	WRITE(0,*) 'c not allocated yet: DivCorrSetUp'
  	STOP
-    ENDIF 
-    
+    ENDIF
+
     IF(.not.d%allocated) THEN
  	WRITE(0,*) 'd not allocated yet: DivCorrSetUp'
  	STOP
-    ENDIF 
-    
+    ENDIF
+
     ! conductivity of air is modified for computing divergence correction
     ! operator coefficients ...
-    do ix = 1, mGrid%nx    
+    do ix = 1, mGrid%nx
        do iy = 1, mGrid%ny
           do iz = 1, mGrid%nzAir
              condE%x(ix, iy, iz) = SIGMA_AIR
@@ -1448,8 +1448,8 @@ Contains
        enddo
     enddo
 
-    ! change conductivity of air back to zero 
-    do ix = 1, mGrid%nx    
+    ! change conductivity of air back to zero
+    do ix = 1, mGrid%nx
        do iy = 1, mGrid%ny
           do iz = 1, mGrid%nzAir
              condE%x(ix, iy, iz) = D0
@@ -1497,14 +1497,14 @@ Contains
 
              d%v(ix, iy, iz) = c%v(ix, iy, iz) - &
                   db1%x(ix,iy,iz)*db2%x(ix-1,iy,iz)*d%v(ix-1,iy,iz)-&
-                  db1%y(ix,iy,iz)*db2%y(ix,iy-1,iz)*d%v(ix,iy-1,iz)-& 
+                  db1%y(ix,iy,iz)*db2%y(ix,iy-1,iz)*d%v(ix,iy-1,iz)-&
                   db1%z(ix,iy,iz)*db2%z(ix,iy,iz-1)*d%v(ix,iy,iz-1)
 	     d%v(ix, iy, iz) = 1.0/ d%v(ix, iy, iz)
 
           enddo
        enddo
     enddo
-    
+
   end subroutine DivCorrSetUp	! DivCorrSetUp
 
 
@@ -1533,20 +1533,20 @@ Contains
     type (cscalar), intent(in)                :: inPhi
     type (cscalar), intent(inout)             :: outPhi
     integer                                   :: ix, iy, iz
-    
+
     IF(.not.inPhi%allocated) THEN
  	WRITE(0,*) 'inPhi not allocated in DivCgradILU'
  	STOP
-    ENDIF 
-    
+    ENDIF
+
     IF(.not.outPhi%allocated) THEN
  	WRITE(0,*) 'outPhi not allocated in DivCgradILU'
  	STOP
-    ENDIF  
-       
+    ENDIF
+
     if (outPhi%allocated) then
 
-       ! Check whether all the inputs/ outputs involved are even of the same 
+       ! Check whether all the inputs/ outputs involved are even of the same
        ! size
        if ((inPhi%nx == outPhi%nx).and.&
             (inPhi%ny == outPhi%ny).and.&
@@ -1567,7 +1567,7 @@ Contains
                            - outPhi%v(ix,iy-1,iz)*db1%y(ix,iy,iz)&
                            *d%v(ix,iy-1,iz) &
                            - outPhi%v(ix,iy,iz-1)*db1%z(ix,iy,iz)&
-                           *d%v(ix,iy,iz-1)  
+                           *d%v(ix,iy,iz-1)
 
                    enddo
                 enddo
@@ -1613,20 +1613,20 @@ Contains
     type (cscalar), intent(in)                :: inPhi
     type (cscalar), intent(inout)             :: outPhi
     integer                                   :: ix, iy, iz
-    
+
    IF(.not.inPhi%allocated) THEN
  	WRITE(0,*) 'inPhi not allocated in DivCgrad'
  	STOP
-    ENDIF 
-    
+    ENDIF
+
     IF(.not.outPhi%allocated) THEN
  	WRITE(0,*) 'outPhi not allocated in DivCgrad'
  	STOP
-    ENDIF         
+    ENDIF
 
     if (outPhi%allocated) then
 
-       ! Check whether all the inputs/ outputs involved are even of the same 
+       ! Check whether all the inputs/ outputs involved are even of the same
        ! size
        if ((inPhi%nx == outPhi%nx).and.&
             (inPhi%ny == outPhi%ny).and.&
@@ -1668,33 +1668,33 @@ Contains
 
 
   !**********************************************************************
-  ! Purpose is to compute div sigma inE (input electrical field)  
-  ! where sigma is the edge conductivity. Thus, in practice, this computes 
-  ! divergence of currents. 
-  ! NOTE that conductivity in air is modified to SIGMA_AIR for this 
-  ! subroutine. 
-  ! This is done as a separate specialized routine to avoid carrying 
+  ! Purpose is to compute div sigma inE (input electrical field)
+  ! where sigma is the edge conductivity. Thus, in practice, this computes
+  ! divergence of currents.
+  ! NOTE that conductivity in air is modified to SIGMA_AIR for this
+  ! subroutine.
+  ! This is done as a separate specialized routine to avoid carrying
   ! around multiple edge conductivities
   subroutine DivC(inE, outSc)
 
     implicit none
     type (cvector), intent(in)		         :: inE
     type (cscalar), intent(inout)		 :: outSc
-    integer                                      :: ix, iy, iz  
-	
+    integer                                      :: ix, iy, iz
+
     IF(.not.inE%allocated) THEN
  	WRITE(0,*) 'inE not allocated in DivC'
  	STOP
-    ENDIF 
-    
+    ENDIF
+
     IF(.not.outSc%allocated) THEN
  	WRITE(0,*) 'outSc not allocated in DivC'
  	STOP
-    ENDIF         
+    ENDIF
 
     if (outSc%gridType == CORNER) then
 
-       ! Check whether all the inputs/ outputs involved are even of the same 
+       ! Check whether all the inputs/ outputs involved are even of the same
        ! size
        if ((inE%nx == outSc%nx).and.&
             (inE%ny == outSc%ny).and.&
@@ -1703,7 +1703,7 @@ Contains
           ! computation done only for internal nodes
           do ix = 2, outSc%nx
              do iy = 2, outSc%ny
-	     
+
 	        ! FOR NODES IN THE AIR ONLY
                 do iz = 2,outSc%grid%nzAir
                    outSc%v(ix, iy, iz) = &
@@ -1714,9 +1714,9 @@ Contains
                         + SIGMA_AIR*(inE%z(ix,iy,iz)-inE%z(ix,iy,iz - 1)) * &
                         inE%grid%delZinv(iz)
                 enddo   ! iz
-	     
+
 	        ! FOR NODES AT THE AIR-EARTH INTERFACE
-                iz = outSc%grid%nzAir+1 
+                iz = outSc%grid%nzAir+1
                    outSc%v(ix, iy, iz) = &
                         (condE%x(ix,iy,iz)*inE%x(ix, iy, iz) -         &
                         condE%x(ix - 1,iy,iz)*inE%x(ix - 1, iy, iz)) * &
@@ -1729,7 +1729,7 @@ Contains
                         inE%grid%delZinv(iz)
 
                 ! FOR NODES INSIDE THE EARTH ONLY
-		! THE TOP MOST EARTH NODE HAS AN INTERFACE WITH 
+		! THE TOP MOST EARTH NODE HAS AN INTERFACE WITH
 		! AIR, THEREFORE THAT ONE IS SKIPPED HERE
                 do iz = outSc%grid%nzAir+2, outSc%nz
                    outSc%v(ix, iy, iz) = &
@@ -1745,7 +1745,7 @@ Contains
                 enddo   ! iz
 
              enddo      ! iy
-          enddo         ! ix	
+          enddo         ! ix
 
        else
           write(0, *) 'Error: DivC: scalars not same size'
