@@ -335,6 +335,7 @@ Contains
    real(kind=selectedPrec)      :: grad_dot_h, g_dot_g, g_dot_gPrev, gPrev_dot_gPrev, g_dot_h
    integer				:: iter, nCG, nLS, nfunc
    character(3)         :: iterChar
+   character(100)       :: modelFile
    type(EMsolnMTX)      :: eAll
 
    call set_NLCGiterControl(iterControl)
@@ -405,8 +406,9 @@ Contains
       ! write out the intermediate model solution
       call CmSqrtMult(mHat,m_minus_m0)
    	  call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
-   	  write(iterChar,'(i03)') iter
-      call write_Cond3D(iterControl%fid,iterControl%modelFile//iterChar//'.cpr',m)
+   	  write(iterChar,'(i3.3)') iter
+   	  modelFile = trim(iterControl%modelFile)//'_'//iterChar//'.cpr'
+      call write_Cond3D(iterControl%fid,trim(modelFile),m)
 
 	  ! if alpha is too small, we are not making progress: update lambda
 	  if (abs(rmsPrev - rms) < iterControl%fdiffTol) then
