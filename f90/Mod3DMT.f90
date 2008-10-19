@@ -85,6 +85,11 @@ program Mod3DMT
         	call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,allData)
         end if
         
+     case (TEST_COV)
+        write(*,*) 'Multiplying input model parameter by covariance ...'
+        call multBy_CmSqrt(sigma0,sigma1)
+        call write_Cond3D(fidWrite,cUserDef%wFile_Model,sigma1)
+
      case default
      
         write(0,*) 'No job ',trim(cUserDef%job),' defined.'

@@ -12,6 +12,7 @@ module UserCtrl
   character*1, parameter	:: MULT_BY_J_MTX = 'L'
   character*1, parameter	:: MULT_BY_J_T_MTX = 'K'
   character*1, parameter	:: INVERSE_NLCG = 'I'
+  character*1, parameter	:: TEST_COV = 'C'
 
   ! ***************************************************************************
   ! * input_info contains the list of all essential input information currently
@@ -19,7 +20,7 @@ module UserCtrl
   type :: userdef_control
 
 	! Options: FORWARD, COMPUTE_J, MULT_BY_J, MULT_BY_J_T,
-	!          MULT_BY_J_MTX, MULT_BY_J_T_MTX, NLCG
+	!          MULT_BY_J_MTX, MULT_BY_J_T_MTX, NLCG, TEST_COV
 	character(80)       :: job
 
 	! File to set up inversion controls
@@ -127,6 +128,8 @@ Contains
         write(*,*) '[INVERSE_NLCG]'
         write(*,*) ' -I  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda]'
         write(*,*) '  Runs an NLCG inversion to yield an inverse model'
+        write(*,*) '[TEST_COV]'
+        write(*,*) ' -C  rFile_Model wFile_Model [rFile_Cov]'
         write(*,*)
         stop
      endif
@@ -242,6 +245,18 @@ Contains
         end if
         if (narg > 6) then
           read(temp(7),*) ctrl%alpha
+        end if
+
+      case (TEST_COV) ! C
+        if (narg < 2) then
+           write(0,*) 'Usage: -C  rFile_Model wFile_Model [rFile_Cov]' 
+           stop
+        else
+	    ctrl%rFile_Model = temp(1)
+	    ctrl%wFile_Model = temp(2)
+        end if
+        if (narg > 2) then
+            ctrl%rFile_Cov = temp(3)
         end if
 
       case default

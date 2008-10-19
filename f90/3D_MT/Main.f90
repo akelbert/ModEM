@@ -148,6 +148,15 @@ Contains
           call create_CmSqrt(sigma0)
        end if
 
+     case (TEST_COV)
+	   inquire(FILE=cUserDef%rFile_Cov,EXIST=exists)
+	   if (exists) then
+          call create_CmSqrt(sigma0,cUserDef%rFile_Cov)
+       else
+          call create_CmSqrt(sigma0)
+       end if
+       call create_ModelParam(grid,paramtype,sigma1)
+
     end select
 
 	!--------------------------------------------------------------------------
