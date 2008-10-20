@@ -1,7 +1,7 @@
 !----------------------------------------------------------------------!
 ! 3D_MT model covariance by Gary Egbert and Anna Kelbert: procedures.  !
 !                                                                      !
-! Recursive autoregression.
+! Recursive autoregression.                                            !
 !----------------------------------------------------------------------!
 
 ! *******************************************************************
@@ -23,7 +23,7 @@
 
     mhat = m
 
-    call RecursiveAR(m%cellCond%v, mhat%cellCond%v)
+    call RecursiveAR(m%cellCond%v, mhat%cellCond%v, CmSqrt%N)
 
   end subroutine multBy_CmSqrt
 
@@ -49,6 +49,7 @@
 	CmSqrt%Sz = 0.1
 	call create_iscalar(m%grid,CmSqrt%mask,CELL_EARTH)
 	CmSqrt%mask%v = 9
+	CmSqrt%N = 1
     CmSqrt%allocated = .true.
 
     if (.not. present(cfile)) then
@@ -85,6 +86,23 @@
 !
 !...  Copyright (C) 2008 Anna Kelbert. All rights reserved.
 !
+!+-----------------------------------------------------------------------------+
+!| This file defines model covariance for a recursive autoregression scheme.   |
+!| The model space may be divided into distinct areas using integer masks.     |
+!| Mask 0 is reserved for air; mask 1 is reserved for ocean. Smoothing between |
+!| air, ocean and the rest of the model is turned off automatically. You can   |
+!| also define exceptions to override smoothing between any two model areas.   |
+!| To turn off smoothing set it to zero. This header is 16 lines long.         |
+!| 1. Grid dimensions excluding air layers (Nx, Ny, NzEarth)                   |
+!| 2. Smoothing in the X direction (NzEarth real values)                       |
+!| 3. Smoothing in the Y direction (NzEarth real values)                       |
+!| 4. Vertical smoothing (1 real value)                                        |
+!| 5. Number of times the smoothing should be applied (1 integer >= 0)         |
+!| 6. Number of exceptions (1 integer >= 0)                                    |
+!| 7. Exceptions in the form e.g. 2 3 0. (to turn off smoothing between 3 & 4) |
+!| 8. Two integer layer indices and Nx x Ny block of masks, repeated as needed.|
+!+-----------------------------------------------------------------------------+
+
   subroutine read_CmSqrt(cfile)
 
 	! The minimal covariance information includes the AR parameters
@@ -118,8 +136,8 @@
 
     open(unit=fid,file=cfile,form='formatted',status='old')
 
-    ! skip the 15 lines header
-    do j = 1,15
+    ! skip the 16 lines header
+    do j = 1,16
        read(fid,*)
     end do
 
@@ -133,6 +151,9 @@
     read(fid,*) CmSqrt%Sx
     read(fid,*) CmSqrt%Sy
     read(fid,*) CmSqrt%Sz
+
+	! read number of times to apply the smoothing
+	read(fid,*) CmSqrt%N
 
 	! read exception rules for smoothing across surfaces
     read(fid,*) nrules
@@ -203,7 +224,7 @@
 !
 !...  Copyright (C) 2008 Anna Kelbert. All rights reserved.
 !
-  subroutine RecursiveAR(w,v)
+  subroutine RecursiveAR(w,v,n)
 
    ! Implements the recursive autoregression algorithm for a 3D real array.
    ! In our case, the assumed-shape array would be e.g. conductivity
@@ -211,7 +232,8 @@
 
     real (kind=selectedPrec), intent(in)     :: w(:,:,:)
     real (kind=selectedPrec), intent(out)    :: v(:,:,:)
-    integer                                  :: Nx, Ny, NzEarth, i, j, k
+    integer, intent(in)                      :: n
+    integer                                  :: Nx, Ny, NzEarth, i, j, k, iSmooth
 
     Nx      = size(w,1)
 	Ny      = size(w,2)
@@ -221,34 +243,68 @@
 		call errStop('The input arrays should be of the same shapes in RecursiveAR')
 	end if
 
-	! smooth in the X-direction (Sx)
-    do k = 1,NzEarth
-    	do j = 1,Ny
-    		v(1,j,k) = w(1,j,k)
-    		do i = 2,Nx
-				v(i,j,k) = SmoothX(i-1,j,k) * v(i-1,j,k) + w(i,j,k)
-    		end do
-    	end do
-    end do
+	do iSmooth = 1,n
 
-	! smooth in the Y-direction (Sy)
-    do k = 1,NzEarth
-    	do i = 1,Nx
-    		! v(i,1,k) = v(i,1,k)
-    		do j = 2,Ny
-				v(i,j,k) = SmoothY(i,j-1,k) * v(i,j-1,k) + v(i,j,k)
-    		end do
-    	end do
-    end do
+		! smooth in the X-direction (Sx)
+	    do k = 1,NzEarth
+	    	do j = 1,Ny
+	    		v(1,j,k) = w(1,j,k)
+	    		do i = 2,Nx
+					v(i,j,k) = SmoothX(i-1,j,k) * v(i-1,j,k) + w(i,j,k)
+	    		end do
+	    	end do
+	    end do
 
-	! smooth in the Z-direction (Sz)
-    do j = 1,Ny
-    	do i = 1,Nx
-    		! v(i,j,1) = v(i,j,1)
-    		do k = 2,NzEarth
-				v(i,j,k) = SmoothZ(i,j,k-1) * v(i,j,k-1) + v(i,j,k)
-    		end do
-    	end do
+		! smooth in the Y-direction (Sy)
+	    do k = 1,NzEarth
+	    	do i = 1,Nx
+	    		! v(i,1,k) = v(i,1,k)
+	    		do j = 2,Ny
+					v(i,j,k) = SmoothY(i,j-1,k) * v(i,j-1,k) + v(i,j,k)
+	    		end do
+	    	end do
+	    end do
+
+		! smooth in the Z-direction (Sz)
+	    do j = 1,Ny
+	    	do i = 1,Nx
+	    		! v(i,j,1) = v(i,j,1)
+	    		do k = 2,NzEarth
+					v(i,j,k) = SmoothZ(i,j,k-1) * v(i,j,k-1) + v(i,j,k)
+	    		end do
+	    	end do
+	    end do
+
+		! smooth in the Z-direction (Sz^T)
+	    do j = Ny,1,-1
+	    	do i = Nx,1,-1
+	    		! v(i,j,NzEarth) = v(i,j,NzEarth)
+	    		do k = NzEarth,2,-1
+					v(i,j,k-1) = v(i,j,k-1) + SmoothZ(i,j,k-1) * v(i,j,k)
+	    		end do
+	    	end do
+	    end do
+
+		! smooth in the Y-direction (Sy^T)
+	    do k = NzEarth,1,-1
+	    	do i = Nx,1,-1
+	    		! v(i,Ny,k) = v(i,Ny,k)
+	    		do j = Ny,2,-1
+					v(i,j-1,k) = v(i,j-1,k) + SmoothY(i,j-1,k) * v(i,j,k)
+	    		end do
+	    	end do
+	    end do
+
+	    ! smooth in the X-direction (Sx^T)
+	    do k = NzEarth,1,-1
+	    	do j = Ny,1,-1
+	    		! v(Nx,j,k) = v(Nx,j,k)
+	    		do i = Nx,2,-1
+					v(i-1,j,k) = v(i-1,j,k) + SmoothX(i-1,j,k) * v(i,j,k)
+	    		end do
+	    	end do
+	    end do
+
     end do
 
 	! apply the scaling operator C
