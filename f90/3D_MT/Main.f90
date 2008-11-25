@@ -83,7 +83,7 @@ Contains
 
 	if (exists) then
 	   ! Read input files and set up basic grid geometry & conductivities
-       call read_Cond3D(fidRead,cUserDef%rFile_Model,sigma0,paramType,grid)
+       call read_modelParam(fidRead,cUserDef%rFile_Model,sigma0,paramType,grid)
 
        ! Finish setting up the grid (if that is not done in the read subroutine)
        call gridCalcs(grid)
@@ -120,7 +120,7 @@ Contains
      case (MULT_BY_J)
 	   inquire(FILE=cUserDef%rFile_dModel,EXIST=exists)
 	   if (exists) then
-	   	  call read_Cond3D(fidRead,cUserDef%rFile_dModel,dsigma,paramType,grid)
+	   	  call read_modelParam(fidRead,cUserDef%rFile_dModel,dsigma,paramType,grid)
 	   else
 	      call warning('The input model perturbation file does not exist')
 	   end if
@@ -135,7 +135,7 @@ Contains
         enddo
         inquire(FILE=cUserDef%rFile_dModelMTX,EXIST=exists)
 	    if (exists) then
-           call readAll_Cond3D(fidRead,cUserDef%rFile_dModelMTX,nTx,sigma,header)
+           call readVec_modelParam(fidRead,cUserDef%rFile_dModelMTX,nTx,sigma,header)
         else
 	       call warning('The input model perturbation file does not exist')
 	    end if

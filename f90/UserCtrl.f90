@@ -41,14 +41,14 @@ module UserCtrl
 	! Specify damping parameter for the inversion
 	real(8)             :: lambda
 
+	! Initial step size parameter for inversions
+	real(8)             :: delta
+
 	! Specify covariance configuration
 	character(80)       :: rFile_Cov
 
 	! Indicate how much output you want
 	character(80)       :: verbose
-
-	! Starting parameter for NLCG (TEMPORARY; FOR DEVELOPMENT ONLY)
-	real(8)             :: alpha
 
   end type userdef_control
 
@@ -74,9 +74,9 @@ Contains
   	ctrl%wFile_EMsoln = ''
   	ctrl%wFile_Sens = ''
   	ctrl%lambda = 1
+  	ctrl%delta = 1
   	ctrl%rFile_Cov = ''
   	ctrl%verbose = 'regular'
-  	ctrl%alpha = 0.1
 
   end subroutine initUserCtrl
 
@@ -126,8 +126,10 @@ Contains
         write(*,*) '  Multiples d_i by J_i^T separately for each transmitter,'
         write(*,*) '  to yield a bunch of models, one for each transmitter'
         write(*,*) '[INVERSE_NLCG]'
-        write(*,*) ' -I  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda]'
+        write(*,*) ' -I  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda delta]'
         write(*,*) '  Runs an NLCG inversion to yield an inverse model'
+        write(*,*) '  Here, lambda =  the initial damping parameter'
+        write(*,*) '        delta  =  the initial line search step size in the model units'
         write(*,*) '[TEST_COV]'
         write(*,*) ' -C  rFile_Model wFile_Model [rFile_Cov]'
         write(*,*)
@@ -227,7 +229,7 @@ Contains
 
       case (INVERSE_NLCG) ! I
         if (narg < 3) then
-           write(0,*) 'Usage: -I  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda alpha]'
+           write(0,*) 'Usage: -I  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda sigma]'
            stop
         else
 	       ctrl%rFile_Model = temp(1)
@@ -244,12 +246,12 @@ Contains
           read(temp(6),*) ctrl%lambda
         end if
         if (narg > 6) then
-          read(temp(7),*) ctrl%alpha
+          read(temp(7),*) ctrl%delta
         end if
 
       case (TEST_COV) ! C
         if (narg < 2) then
-           write(0,*) 'Usage: -C  rFile_Model wFile_Model [rFile_Cov]' 
+           write(0,*) 'Usage: -C  rFile_Model wFile_Model [rFile_Cov]'
            stop
         else
 	    ctrl%rFile_Model = temp(1)

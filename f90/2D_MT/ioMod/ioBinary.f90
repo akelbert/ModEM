@@ -1,6 +1,6 @@
 ! *****************************************************************************
 !  Module for basic input and output of standard data structures
-!  for 2D MT modeling and inversion code 
+!  for 2D MT modeling and inversion code
 module ioBinary
    use math_constants
    use emfield
@@ -11,21 +11,20 @@ module ioBinary
 
    !  routines that are public
    public	::  read_cvector,write_cvector,write_EMsolnMTX, &
-		read_Grid2D, write_Z, read_Z, &
-		read_cond2d, write_cond2d
+		read_Grid2D, write_Z, read_Z
 
    Contains
      !******************************************************************
       subroutine read_cvector(fid,cfile,vec)
 
       !  open cfile on unit fid, read in object of
-      !   type cvector in standard format 
+      !   type cvector in standard format
       !   vec must be allocated before calling
- 
+
 
       integer, intent(in)		:: fid
       character*80, intent(in)	:: cfile
-      type(cvector), intent(inout)		:: vec 
+      type(cvector), intent(inout)		:: vec
 
       !  local variables
       integer 		:: N1, N2
@@ -68,17 +67,17 @@ module ioBinary
      !******************************************************************
       subroutine cvectorRead(fid,vec)
 
-      !  reads one object of type cvector from unit fid 
+      !  reads one object of type cvector from unit fid
       !  by default, just reads next object ... might modify to
       !   allow skipping to read an arbitrary record number
 
       integer, intent(in)		:: fid
-      type(cvector), intent(inout)	:: vec 
-   
+      type(cvector), intent(inout)	:: vec
+
       ! local variables:
       character*80	:: gridType, msg
       integer		:: N1,N2
- 
+
       if(vec%allocated) then
          read(fid) gridType
          read(fid) N1,N2
@@ -118,8 +117,8 @@ module ioBinary
       !  writes one object of type cvector to unit fid, already opened
 
       integer, intent(in)		:: fid
-      type(cvector), intent(in) 		:: vec 
- 
+      type(cvector), intent(in) 		:: vec
+
       write(fid) vec%gridType
       write(fid) vec%N1,vec%N2
       write(fid) vec%v
@@ -135,7 +134,7 @@ module ioBinary
 
       integer, intent(in)		:: fid
       character*80, intent(in)		:: cfile
-      type(cvector), intent(in)		:: vec 
+      type(cvector), intent(in)		:: vec
 
       open(unit=fid, file=cfile, form='unformatted',status='unknown')
       write(fid) vec%gridType
@@ -156,12 +155,12 @@ module ioBinary
 
       integer, intent(in)		:: fid
       character*80, intent(in)		:: cfile
-      type(EMsolnMTX), intent(in)		:: eAll 
-  
+      type(EMsolnMTX), intent(in)		:: eAll
+
       integer		:: j
-    
+
       open(unit=fid, file=cfile, form='unformatted',status='unknown')
-      
+
       write(fid) eAll%nTx
       do j = 1,eAll%nTx
          write(fid) eAll%solns(j)%vec%gridType
@@ -174,14 +173,14 @@ module ioBinary
 
      !**********************************************************************
       subroutine read_Grid2D(fid,cfile,grid)
-     !  reads in basic grid, allocating for Dy, Dz 
+     !  reads in basic grid, allocating for Dy, Dz
       integer, intent(in)		:: fid
       character*80, intent(in)		:: cfile
       type(grid2d_t), intent(inout)	:: grid
 
       ! local variables:
       integer				:: Ny, Nz, Nza
-      
+
       open(unit=fid,file=cfile,form='unformatted',status='OLD')
       !  Read in grid geometry definitions, store in structure TEgrid
       !    first grid dimensions ...

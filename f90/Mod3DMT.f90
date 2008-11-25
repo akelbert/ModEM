@@ -6,38 +6,38 @@ program Mod3DMT
      use main
      use nlcg
      !use mtinvsetup
-        
+
      implicit none
 
      ! Character-based information specified by the user
      type (userdef_control)	:: cUserDef
-     
+
      ! Variables required for storing the date and time
 	 real					:: rtime  ! run time
 	 real					:: ftime  ! run time per frequency
 	 real					:: stime, etime ! start and end times
      integer, dimension(8)	:: tarray ! utility variable
-        
+
      call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
-     
+
      call initGlobalData(cUserDef)
-     
+
 	 ! Start the (portable) clock
 	 call date_and_time(values=tarray)
      stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-             
+
      select case (cUserDef%job)
 
      case (READ_WRITE)
         if (write_model .and. write_data) then
         	write(*,*) 'Writing model and data files and exiting...'
-        	call write_Cond3D(fidWrite,cUserDef%wFile_Model,sigma0)
+        	call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma0)
         	call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,allData)
 		else if (write_model) then
         	write(*,*) 'Writing model and exiting...'
-        	call write_Cond3D(fidWrite,cUserDef%wFile_Model,sigma0)		
+        	call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma0)
 		end if
-        
+
      case (FORWARD)
         write(*,*) 'Calculating predicted data...'
         call fwdPred(sigma0,allData,eAll)
@@ -52,48 +52,48 @@ program Mod3DMT
      case (COMPUTE_J)
         write(*,*) 'Calculating the full sensitivity matrix...'
         call calcSensMatrix(allData,sigma0,sigma)
-        call writeAll_Cond3D(fidWrite,cUserDef%wFile_Sens,   &
+        call writeVec_modelParam(fidWrite,cUserDef%wFile_Sens,   &
                         allData%nData,sigma,'Sensitivity matrix')
 
      case (MULT_BY_J)
         write(*,*) 'Multiplying by J...'
-        call Jmult(dsigma,sigma0,allData) 
+        call Jmult(dsigma,sigma0,allData)
         call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,allData)
 
      case (MULT_BY_J_T)
         write(*,*) 'Multiplying by J^T...'
-        call JmultT(sigma0,allData,dsigma) 
-        call write_Cond3D(fidWrite,cUserDef%wFile_dModel,dsigma)
+        call JmultT(sigma0,allData,dsigma)
+        call write_modelParam(fidWrite,cUserDef%wFile_dModel,dsigma)
 
      case (MULT_BY_J_MTX)
         write(*,*) 'Multiplying by J (all transmitters)...'
-        call Jmult_MTX(sigma,sigma0,allData) 
+        call Jmult_MTX(sigma,sigma0,allData)
         call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,allData)
-			
+
      case (MULT_BY_J_T_MTX)
         write(*,*) 'Multiplying by J^T (all transmitters)...'
-        call JmultT_MTX(sigma0,allData,sigma) 
-        call writeAll_Cond3D(fidWrite,cUserDef%wFile_dModelMTX,   &
+        call JmultT_MTX(sigma0,allData,sigma)
+        call writeVec_modelParam(fidWrite,cUserDef%wFile_dModelMTX,   &
                         allData%nTx,sigma,'J^T x d (all transmitters)')
 
      case (INVERSE_NLCG)
         write(*,*) 'Starting the NLCG search...'
-        call NLCGsolver(allData,cUserDef%lambda,sigma0,sigma1,cUserDef%alpha)
-        call write_Cond3D(fidWrite,cUserDef%wFile_Model,sigma1)
+        call NLCGsolver(allData,cUserDef%lambda,sigma0,sigma1,cUserDef%delta)
+        call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma1)
         if (write_data) then
         	call fwdPred(sigma1,allData)
         	call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,allData)
         end if
-        
+
      case (TEST_COV)
         write(*,*) 'Multiplying input model parameter by covariance ...'
         call multBy_CmSqrt(sigma0,sigma1)
-        call write_Cond3D(fidWrite,cUserDef%wFile_Model,sigma1)
+        call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma1)
 
      case default
-     
+
         write(0,*) 'No job ',trim(cUserDef%job),' defined.'
-     
+
      end select
 
 	 ! cleaning up

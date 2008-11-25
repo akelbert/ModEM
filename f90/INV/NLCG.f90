@@ -36,6 +36,8 @@ public  :: NLCGsolver
      ! real (kind=selectedPrec)   :: alpha_k ! 0.1
      ! if alpha_{i+1} - alpha_i < tol_{alpha}, set alpha_{i+1} = alpha_i/2
      ! real (kind=selectedPrec)   :: alpha_tol ! 1.0e-2
+     ! maximum initial delta mHat (overrides alpha_1)
+     real (kind=selectedPrec)   :: startdm
      ! model output file name
      character(80)              :: modelFile
      ! fid for output files (in the future will not need this)
@@ -70,6 +72,8 @@ Contains
      iterControl%nCGmax = 8
      ! the starting step for the line search
      iterControl%alpha_1 = 0.001
+     ! maximum initial delta mHat (overrides alpha_1)
+     iterControl%startdm = 1e0
      ! model output file name
      iterControl%modelFile = 'ModEM_NLCG'
      ! fid for output files (in the future will not need this)
@@ -293,7 +297,7 @@ Contains
    end subroutine CmSqrtMult
 
 !**********************************************************************
-   subroutine NLCGsolver(d,lambda,m0,m,alpha)
+   subroutine NLCGsolver(d,lambda,m0,m,startdm)
 
    ! computes inverse solution minimizing penalty functional
    !   for fixed value of regularization parameter, using
@@ -320,8 +324,8 @@ Contains
    type(modelParam_t), intent(in)		       :: m0
    !  m is solution parameter ... on input m contains starting guess
    type(modelParam_t), intent(inout)	       :: m
-   !  alpha is the initial step size
-   real(kind=selectedPrec), intent(inout), optional  :: alpha
+   !  initial step size in the line search direction in model units
+   real(kind=selectedPrec), intent(inout), optional  :: startdm
    !  flavor is a string that specifies the algorithm to use
    ! character(80), intent(in)               :: flavor
    character(80)                           :: flavor = 'Cubic'
@@ -330,21 +334,24 @@ Contains
    type(dvecMTX)			:: dHat, res
    type(modelParam_t)			:: mHat, m_minus_m0, grad, g, h, gPrev
    !type(NLCGiterControl_t)			:: iterControl
-   !real(kind=selectedPrec)		:: value, valuePrev, rms, rmsPrev, alpha, beta
-   real(kind=selectedPrec)		:: value, valuePrev, rms, rmsPrev, beta
+   real(kind=selectedPrec)		:: value, valuePrev, rms, rmsPrev, alpha, beta, gnorm
    real(kind=selectedPrec)      :: grad_dot_h, g_dot_g, g_dot_gPrev, gPrev_dot_gPrev, g_dot_h
    integer				:: iter, nCG, nLS, nfunc
    character(3)         :: iterChar
-   character(100)       :: modelFile
+   character(100)       :: modelFile, gradFile
    type(EMsolnMTX)      :: eAll
 
    call set_NLCGiterControl(iterControl)
 
    ! initialize the line search
+   alpha = iterControl%alpha_1
+
    !if (.not.present(flavor)) flavor = 'Cubic'
-   if (.not.present(alpha)) then
-      alpha = iterControl%alpha_1
+
+   if (.not.present(startdm)) then
+      startdm = iterControl%startdm
    end if
+   write(*,'(a55,f9.6)') 'The initial line search step size (in model units) is ',startdm
 
    ! starting from the prior hardcoded by setting mHat = 0 and m = m0
    m = m0
@@ -359,7 +366,15 @@ Contains
 
    ! compute gradient of the full penalty functional
    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-   ! call writeModelParam(grad)
+   gradFile = trim(iterControl%modelFile)//'_initial_gradient.cpr'
+   call write_modelParam(iterControl%fid,trim(gradFile),grad)
+
+   ! update the initial value of alpha if necessary
+   gnorm = sqrt(dotProd_modelParam(grad,grad))
+   if (alpha * gnorm > startdm) then
+      	alpha = startdm / gnorm
+ 		! write(*,'(a39,f9.6)') 'The initial value of alpha updated to ',alpha
+   end if
 
    ! initialize CG: g = - grad; h = g
    nCG = 0
@@ -408,7 +423,7 @@ Contains
    	  call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
    	  write(iterChar,'(i3.3)') iter
    	  modelFile = trim(iterControl%modelFile)//'_'//iterChar//'.cpr'
-      call write_Cond3D(iterControl%fid,trim(modelFile),m)
+      call write_modelParam(iterControl%fid,trim(modelFile),m)
 
 	  ! if alpha is too small, we are not making progress: update lambda
 	  if (abs(rmsPrev - rms) < iterControl%fdiffTol) then

@@ -1,7 +1,7 @@
 ! *****************************************************************************
 !  Module for basic input and output of standard data structures
 !  for 2D MT modeling and inversion code
-!  
+!
 !  Here, we are using Randie Mackie's model format for input
 !  and output of the model and the grid, and Naser Meqbel's
 !  format for the data files.
@@ -21,8 +21,8 @@ module ioAscii
    !  routines that are public
    private	::  read_cvector,write_cvector, &
 		read_grid2d, write_grid2d
-		
-   public   :: write_Z, read_Z, read_Cond2D, write_Cond2D, write_EMsolnMTX
+
+   public   :: write_Z, read_Z, write_EMsolnMTX
 
 
    Contains
@@ -30,13 +30,13 @@ module ioAscii
       subroutine read_cvector(fid,cfile,vec)
 
       !  open cfile on unit fid, read in object of
-      !   type cvector in standard format 
+      !   type cvector in standard format
       !   vec must be allocated before calling
- 
+
 
       integer, intent(in)		:: fid
       character*80, intent(in)	:: cfile
-      type(cvector), intent(inout)		:: vec 
+      type(cvector), intent(inout)		:: vec
 
       !  local variables
       integer 		:: N1, N2
@@ -79,17 +79,17 @@ module ioAscii
      !******************************************************************
       subroutine cvectorRead(fid,vec)
 
-      !  reads one object of type cvector from unit fid 
+      !  reads one object of type cvector from unit fid
       !  by default, just reads next object ... might modify to
       !   allow skipping to read an arbitrary record number
 
       integer, intent(in)		:: fid
-      type(cvector), intent(inout)	:: vec 
-   
+      type(cvector), intent(inout)	:: vec
+
       ! local variables:
       character*80	:: gridType, msg
       integer		:: N1,N2
- 
+
       if(vec%allocated) then
          read(fid) gridType
          read(fid) N1,N2
@@ -129,8 +129,8 @@ module ioAscii
       !  writes one object of type cvector to unit fid, already opened
 
       integer, intent(in)		:: fid
-      type(cvector), intent(in) 		:: vec 
- 
+      type(cvector), intent(in) 		:: vec
+
       write(fid) vec%gridType
       write(fid) vec%N1,vec%N2
       write(fid) vec%v
@@ -146,7 +146,7 @@ module ioAscii
 
       integer, intent(in)		:: fid
       character*80, intent(in)		:: cfile
-      type(cvector), intent(in)		:: vec 
+      type(cvector), intent(in)		:: vec
 
       open(unit=fid, file=cfile, form='unformatted',status='unknown')
       write(fid) vec%gridType
@@ -167,12 +167,12 @@ module ioAscii
 
       integer, intent(in)		:: fid
       character*80, intent(in)		:: cfile
-      type(EMsolnMTX), intent(in)		:: eAll 
-  
+      type(EMsolnMTX), intent(in)		:: eAll
+
       integer		:: j
-    
+
       open(unit=fid, file=cfile, form='unformatted',status='unknown')
-      
+
       write(fid) eAll%nTx
       do j = 1,eAll%nTx
          write(fid) eAll%solns(j)%vec%gridType
@@ -218,7 +218,7 @@ module ioAscii
       write(fid,*) trim(units)
       write(fid,'(a17,i3)') 'Sign convention: ',ISIGN
       write(fid,*)
-      
+
       write(fid,'(i5)') allData%nTx
       ! loop over periods
       do iTx = 1,allData%nTx
@@ -265,7 +265,7 @@ module ioAscii
 			! Calculating apparent resistivities and phases
       !temp=dcmplx(allData%d(iTx)%data(1,k),allData%d(iTx)%data(2,k))
       !write(fid,*)tab, ((periods(iTx)*MU)/(2.0*PI))*abs(temp)**2, abs(atan(allData%d(iTx)%data(2,k)/allData%d(iTx)%data(1,k)))*(180/PI)
-      
+
       end subroutine write_Z
 
 
@@ -301,7 +301,7 @@ module ioAscii
       read(fid,'(a7,a80)') temp,units
       read(fid,'(a17,i3)') temp,sign_in_file
       read(fid,*)
-      
+
       if (index(units,'[V/m]/[A/m]')>0) then
          SI_factor = 1.0
       else if (index(units,'[mV/km]/[nT]')>0) then
@@ -309,7 +309,7 @@ module ioAscii
       else
          call errStop('Unknown units in input data file '//cfile)
       end if
-      
+
       if (sign_in_file == ISIGN) then
         conjugate = .false.
       else if (abs(sign_in_file) == 1) then
@@ -317,7 +317,7 @@ module ioAscii
       else
         call errStop('Unknown sign convention in the data file '//cfile)
       end if
-      
+
       read(fid,*) nTx
       allocate(periods(nTx))
       allocate(modes(nTx))
@@ -328,7 +328,7 @@ module ioAscii
      ! loop over transmitters (periods/modes)
       Ndata = 0
       do iTx = 1,nTx
-      
+
          ! read in number of sites for this period
          read(fid,*) periods(iTx),modes(iTx),ns
          ! read in site locations
@@ -336,10 +336,10 @@ module ioAscii
 
          read(fid,*) (siteTemp(1,k),k=1,ns)
          read(fid,*) (siteTemp(2,k),k=1,ns)
-             
+
          ! read comment line just before the data block
          read(fid,*)
-            
+
          ! create dvec object, read in data
          allData%d(iTx)%errorBar = .true.
          call create_Dvec(nComp,ns,allData%d(iTx))
@@ -352,24 +352,24 @@ module ioAscii
 	     endif
          do k=1,ns
              read(fid,*)siteid, (allData%d(iTx)%data(j,k),j=1,nComp)
-             read(fid,*)        (allData%d(iTx)%err(j,k),j=1,nComp)   
+             read(fid,*)        (allData%d(iTx)%err(j,k),j=1,nComp)
 						! TEMPORARY: set error bounds
 						!do j=1,nComp
 						!	allData%d(iTx)%err(j,k) = max(allData%d(iTx)%err(j,k),0.05*abs(allData%d(iTx)%data(j,k)))
 						!end do
          end do
-         
+
          ! convert data to SI units
          allData%d(iTx)%data = SI_factor * allData%d(iTx)%data
          allData%d(iTx)%err  = SI_factor * allData%d(iTx)%err
-         
+
          ! conjugate data as necessary
          if (conjugate) then
            do j=1,nComp,2
               allData%d(iTx)%data(j,:) = - allData%d(iTx)%data(j,:)
            end do
-         end if 
-         
+         end if
+
          if(iTx .eq. 1) then
            ! allocate temporary storage for full sites list
            ! (this might not always work ... I am assuming that the
@@ -417,7 +417,7 @@ module ioAscii
 
      !**********************************************************************
       subroutine read_grid2d(fid,cfile,grid)
-     !  reads in basic grid, allocating for Dy, Dz 
+     !  reads in basic grid, allocating for Dy, Dz
       integer, intent(in)		:: fid
       character(*), intent(in)		:: cfile
       type(grid2d_t), intent(inout)	:: grid
@@ -425,16 +425,16 @@ module ioAscii
       ! local variables:
       integer				:: Ny, Nz, Nza, NzEarth, j
       logical               :: newFile
-      
+
       ! We are using Randie Mackie's format, which does not have information
       ! about the air layers. So we make it equal 10 in this routine.
       Nza = 10
-      
+
       if (len_trim(cfile)>0) then
          newFile = .true.
          open(unit=fid,file=cfile,status='OLD')
       end if
-      
+
       !  Read in grid geometry definitions, store in structure TEgrid
       !    first grid dimensions ...
       read(fid,*) Ny,NzEarth
@@ -447,7 +447,7 @@ module ioAscii
         read(fid,*) (grid%Dy(j),j=1,Ny)
 
         read(fid,*) (grid%Dz(j),j=Nza+1,Nz)
-        
+
         ! set the air layers spacing to that of the top 10 Earth layers
         if (NzEarth <= Nza) then
         	close(fid)
@@ -455,18 +455,18 @@ module ioAscii
         else
         	do j = 1,Nza
         		grid%Dz(Nza-j+1) = grid%Dz(Nza+j)
-        	end do    
+        	end do
         end if
-      
+
       if (newFile) then
          close(fid)
       end if
-      
+
       ! complete grid definition
       call gridCalcs(grid)
-      
+
       end subroutine read_grid2d
-      
+
      !**********************************************************************
       subroutine write_grid2d(fid,cfile,grid)
      !  writes basic grid, if cfile is empty, assumes file already open
@@ -477,7 +477,7 @@ module ioAscii
       ! local variables:
       integer				:: Ny, Nz, Nza, NzEarth, j
       logical               :: newFile
-      
+
       if (len_trim(cfile)>0) then
          newFile = .true.
          open(unit=fid,file=cfile,status='unknown')
@@ -501,7 +501,7 @@ module ioAscii
       if (newFile) then
          close(fid)
       end if
-      
+
       end subroutine write_grid2d
-            
+
 end module ioAscii

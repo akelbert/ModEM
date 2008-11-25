@@ -70,19 +70,19 @@ end interface
 
 !  I/O interfaces
 
-interface write_Cond3D
+interface write_modelParam
    MODULE PROCEDURE write_modelParam_mackie
 end interface
 
-interface read_Cond3D
+interface read_modelParam
    MODULE PROCEDURE read_modelParam_mackie
 end interface
 
-interface writeAll_Cond3D
+interface writeVec_modelParam
    MODULE PROCEDURE writeVec_modelParam_binary
 end interface
 
-interface readAll_Cond3D
+interface readVec_modelParam
    MODULE PROCEDURE readVec_modelParam_binary
 end interface
 

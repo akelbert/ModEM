@@ -1,10 +1,10 @@
 ! *****************************************************************************
-! module containing iterative equation solvers. Uses operators and 
-! pre-conditioners defined in SG3DFWC1 to solve equations for divergence 
+! module containing iterative equation solvers. Uses operators and
+! pre-conditioners defined in SG3DFWC1 to solve equations for divergence
 ! correction, induction operator. Source code is completely general; only the
 ! module interface is  specific to implementation of operators in SG3DFWC1
 module solver
- 
+
    use math_constants	! math/ physics constants
    !use grid3d	! staggered grid definitions
    !use sg_scalar
@@ -30,7 +30,7 @@ Contains
 
 
 ! *****************************************************************************
-! Solver contains subroutines for: a) PCG- a quasi-generic pre-conditioned 
+! Solver contains subroutines for: a) PCG- a quasi-generic pre-conditioned
 ! congugate gradient, and b) QMR - Quasi-Minimal Residual method
 ! (pre-conditioned, no look-ahead)
 ! *****************************************************************************
@@ -60,7 +60,7 @@ subroutine PCG(b,x, PCGiter)
   complex(kind=selectedPrec)	:: beta,alpha,delta,deltaOld
   complex(kind=selectedPrec)	:: bnorm, rnorm
   integer		:: i
-  
+
   if (.not.b%allocated) then
       write(0,*) 'b in PCG not allocated yet'
       stop
@@ -79,8 +79,8 @@ subroutine PCG(b,x, PCGiter)
 
   Call A(x,r)
   Call linComb(C_ONE,b,C_MinusOne,r,r)
-  bnorm = dotProd(b,b) 
-  rnorm = dotProd(r,r) 
+  bnorm = dotProd(b,b)
+  rnorm = dotProd(r,r)
   i = 1
   PCGiter%rerr(i) = real(rnorm/bnorm)
 
@@ -100,7 +100,7 @@ subroutine PCG(b,x, PCGiter)
      Call scMultAdd(-alpha,q,r)
      deltaOld = delta
      i = i + 1
-     rnorm = dotProd(r,r) 
+     rnorm = dotProd(r,r)
      PCGiter%rerr(i) = real(rnorm/bnorm)
 
   end do loop
@@ -118,7 +118,7 @@ end subroutine PCG ! PCG
 
 ! *****************************************************************************
 subroutine QMR(b,x, QMRiter)
-  ! Purpose ... a quasi-minimal residual method routine, set up for solving 
+  ! Purpose ... a quasi-minimal residual method routine, set up for solving
   ! A x = b using routines in  multA. Actual code is generic, but interface
   ! is fairly specific
 
@@ -127,8 +127,8 @@ subroutine QMR(b,x, QMRiter)
   ! generic routines for vector operations for edge/ face nodes
   ! in a staggered grid
   use sg_vector
-     
-  ! routines for solving Maxwell's equation   
+
+  ! routines for solving Maxwell's equation
   use modeloperator3D, only: A => multA_N, M1solve, M2solve
 
   implicit none
@@ -150,12 +150,12 @@ subroutine QMR(b,x, QMRiter)
   integer                   :: iter
 
   if (.not.b%allocated) then
-      write(0,*) 'b in QMR not allocated yet'
+      write(0,*) 'Error: b in QMR not allocated yet'
       stop
   end if
 
   if (.not.x%allocated) then
-      write(0,*) 'x in QMR not allocated yet'
+      write(0,*) 'Error: x in QMR not allocated yet'
       stop
   end if
 
@@ -181,7 +181,7 @@ subroutine QMR(b,x, QMRiter)
   ! "Templates for the solution of linear systems of equations:
   ! Building blocks for iterative methods"
   ! Note that there are a couple of small differences, due to
-  ! the fact that our system is complex (agrees with 
+  ! the fact that our system is complex (agrees with
   ! matlab6 version of qmr)
 
   adjoint = .false.
@@ -193,15 +193,22 @@ subroutine QMR(b,x, QMRiter)
   ! Norm of rhs, residual
   bnorm = CDSQRT(dotProd(b, b))
   rnorm = CDSQRT(dotProd(R, R))
+
+  ! this usually means an inadequate model, in which case Maxwell's fails
+  if (isnan(abs(bnorm))) then
+      write(0,*) 'Error: b in QMR contains NaNs; exiting...'
+      stop
+  endif
+
   !  iter is iteration counter
   iter = 1
-  QMRiter%rerr(iter) = real(rnorm/bnorm) 
+  QMRiter%rerr(iter) = real(rnorm/bnorm)
 
   VT = R
   ilu_adjt = .false.
   Call M1solve(VT,ilu_adjt,Y)
   RHO = CDSQRT(dotProd(Y,Y))
-  
+
   WT = R
   ilu_adjt = .true.
   Call M2solve(WT,ilu_adjt,Z)
@@ -213,7 +220,7 @@ subroutine QMR(b,x, QMRiter)
   ! and the iterations are less than maxIt
   loop: do while ((QMRiter%rerr(iter).gt.QMRiter%tol).and.&
        (iter.lt.QMRiter%maxIt))
-      if ((RHO.eq.C_ZERO).or.(PSI.eq.C_ZERO)) then      
+      if ((RHO.eq.C_ZERO).or.(PSI.eq.C_ZERO)) then
 	QMRiter%failed = .true.
 	write(0,*) 'QMR FAILED TO CONVERGE : RHO'
         write(0,*) 'QMR FAILED TO CONVERGE : PSI'
@@ -264,14 +271,14 @@ subroutine QMR(b,x, QMRiter)
         QMRiter%failed = .true.
         write(0,*) 'QMR FAILED TO CONVERGE : BETA'
         exit
-      endif      
+      endif
       Call linComb(C_ONE,PT,-BETA,V,VT)
 
       RHO1 = RHO
       ilu_adjt = .false.
       Call M1solve(VT, ilu_adjt, Y)
       RHO = CDSQRT(dotProd(Y,Y))
-      
+
       adjoint = .true.
       Call A(Q, adjoint, WT)
       Call scMultAdd(-conjg(BETA),W,WT)
@@ -300,19 +307,19 @@ subroutine QMR(b,x, QMRiter)
         Call linComb(ETA,P,TM2,D,D)
         Call linComb(ETA,PT,TM2,S,S)
       endif
-     
+
       Call scMultAdd(C_ONE,D,x)
       Call scMultAdd(C_MinusONE,S,R)
       ! A new AX
       rnorm = CDSQRT(dotProd(R,R))
       iter = iter + 1
-      
+
       ! Keeping track of errors
       ! QMR book-keeping between divergence correction calls
       QMRiter%rerr(iter) = real(rnorm/bnorm)
-      
+
   end do loop
-  
+
   QMRiter%niter = iter
 
   ! deallocate all the work arrays
