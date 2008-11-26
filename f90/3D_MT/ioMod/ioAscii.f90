@@ -662,7 +662,7 @@ Contains
 
          ! conjugate data as necessary
          if (conjugate) then
-           do j=1,nComp,2
+           do j=2,nComp,2
               allData%d(iTx)%data(j,:) = - allData%d(iTx)%data(j,:)
            end do
          end if
