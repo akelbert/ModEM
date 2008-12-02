@@ -38,6 +38,8 @@ public  :: NLCGsolver
      ! real (kind=selectedPrec)   :: alpha_tol ! 1.0e-2
      ! maximum initial delta mHat (overrides alpha_1)
      real (kind=selectedPrec)   :: startdm
+     ! optional relaxation parameter (Renormalised Steepest Descent algorithm)
+     real (kind=selectedPrec)   :: gamma
      ! model output file name
      character(80)              :: modelFile
      ! fid for output files (in the future will not need this)
@@ -74,8 +76,10 @@ Contains
      iterControl%alpha_1 = 0.001
      ! maximum initial delta mHat (overrides alpha_1)
      iterControl%startdm = 1e0
+     ! optional relaxation parameter (Renormalised Steepest Descent algorithm)
+     iterControl%gamma = 0.99
      ! model output file name
-     iterControl%modelFile = 'ModEM_NLCG'
+     iterControl%modelFile = 'ModEM'
      ! fid for output files (in the future will not need this)
      iterControl%fid = 30
 
@@ -366,7 +370,8 @@ Contains
 
    ! compute gradient of the full penalty functional
    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-   gradFile = trim(iterControl%modelFile)//'_initial_gradient.cpr'
+   write(iterChar,'(i3.3)') 0
+   gradFile = trim(iterControl%modelFile)//'_NLCG_'//iterChar//'.grt'
    call write_modelParam(iterControl%fid,trim(gradFile),grad)
 
    ! update the initial value of alpha if necessary
@@ -422,7 +427,7 @@ Contains
       call CmSqrtMult(mHat,m_minus_m0)
    	  call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
    	  write(iterChar,'(i3.3)') iter
-   	  modelFile = trim(iterControl%modelFile)//'_'//iterChar//'.cpr'
+   	  modelFile = trim(iterControl%modelFile)//'_NLCG_'//iterChar//'.cpr'
       call write_modelParam(iterControl%fid,trim(modelFile),m)
 
 	  ! if alpha is too small, we are not making progress: update lambda
@@ -492,7 +497,7 @@ Contains
    end subroutine NLCGsolver
 
 !**********************************************************************
-  subroutine lineSearchQuadratic(lambda,d,m0,h,alpha,mHat,f,grad,rms,niter)
+  subroutine lineSearchQuadratic(lambda,d,m0,h,alpha,mHat,f,grad,rms,niter,gamma)
 
    ! Line search that imitates the strategy of Newman & Alumbaugh (2000),
    ! except without the errors. In particular, we only test the sufficient
@@ -526,6 +531,11 @@ Contains
    !
    ! Our solution has to satisfy the sufficient decrease condition
    !     f(alpha) < f(0) + c alpha f'(0).
+   !
+   ! The optional relaxation parameter gamma is needed for algorithms
+   ! like the Renormalised Steepest Descent (RSD). See the dynamical
+   ! systems in optimisation research (Pronzato et al [2000, 2001]).
+   ! To the best of my knowledge, it is not useful for NLCG.
 
    real(kind=selectedPrec), intent(in)     :: lambda
    type(dvecMTX), intent(in)		       :: d
@@ -538,9 +548,13 @@ Contains
    real(kind=selectedPrec), intent(out)    :: rms
    integer,intent(out)                     :: niter
 
+   ! optionally add relaxation (e.g. for Renormalised Steepest Descent)
+   real(kind=selectedPrec), intent(in), optional :: gamma
+
    ! local variables
    real(kind=selectedPrec)                 :: alpha_1,alpha_i
    logical                                 :: starting_guess
+   logical                                 :: relaxation
    real(kind=selectedPrec)                 :: eps,k,c,a,b
    real(kind=selectedPrec)                 :: g_0,f_0,f_1,f_i,rms_1
    type(modelParam_t)                        :: mHat_0,mHat_1
@@ -568,6 +582,14 @@ Contains
    ! alpha_1 is the initial step size, which will in future be set in NLCG
    !alpha_1 = ONE/maxNorm_modelParam(h)
    alpha_1 = alpha
+
+   ! with relaxation, we specify gamma = 1 - eps, eps > 0 small; then the final
+   ! solution is f(gamma*alpha) = func(mHat + gamma*alpha*h)
+   if (present(gamma)) then
+      relaxation = .true.
+   else
+      relaxation = .false.
+   end if
 
    !  compute the trial parameter mHat_1
    call linComb_modelParam(ONE,mHat_0,alpha_1,h,mHat_1)
@@ -630,14 +652,19 @@ Contains
    end if
 
    ! compute gradient of the full penalty functional and exit
-   call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-	 print *, 'Gradient computed, line search finished'
+    if (relaxation) then
+   		call linComb_modelParam(ONE,mHat_0,gamma*alpha,h,mHat)
+    	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,rms)
+   	end if
+    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
+	print *, 'Gradient computed, line search finished'
 
   end subroutine lineSearchQuadratic
 
 
   !**********************************************************************
-  subroutine lineSearchCubic(lambda,d,m0,h,alpha,mHat,f,grad,rms,niter)
+  subroutine lineSearchCubic(lambda,d,m0,h,alpha,mHat,f,grad,rms,niter,gamma)
 
    ! Line search that is based on the Numerical Recipes and on the
    ! text by Michael Ferris, Chapter 3, p 59. We only test the sufficient
@@ -672,6 +699,11 @@ Contains
    !
    ! Our solution has to satisfy the sufficient decrease condition
    !     f(alpha) < f(0) + c alpha f'(0).
+   !
+   ! The optional relaxation parameter gamma is needed for algorithms
+   ! like the Renormalised Steepest Descent (RSD). See the dynamical
+   ! systems in optimisation research (Pronzato et al [2000, 2001]).
+   ! To the best of my knowledge, it is not useful for NLCG.
 
    real(kind=selectedPrec), intent(in)     :: lambda
    type(dvecMTX), intent(in)		       :: d
@@ -684,9 +716,13 @@ Contains
    real(kind=selectedPrec), intent(out)    :: rms
    integer, intent(out)                    :: niter
 
+   ! optionally add relaxation (e.g. for Renormalised Steepest Descent)
+   real(kind=selectedPrec), intent(in), optional :: gamma
+
     ! local variables
    real(kind=selectedPrec)                 :: alpha_1,alpha_i,alpha_j
    logical                                 :: starting_guess
+   logical                                 :: relaxation
    real(kind=selectedPrec)                 :: eps,k,c,a,b,q1,q2,q3
    real(kind=selectedPrec)                 :: g_0,f_0,f_1,f_i,f_j,rms_1
    type(modelParam_t)                        :: mHat_0,mHat_1
@@ -714,6 +750,14 @@ Contains
    ! alpha_1 is the initial step size, which will in future be set in NLCG
    alpha_1 = alpha
 
+   ! with relaxation, we specify gamma = 1 - eps, eps > 0 small; then the final
+   ! solution is f(gamma*alpha) = func(mHat + gamma*alpha*h)
+   if (present(gamma)) then
+      relaxation = .true.
+   else
+      relaxation = .false.
+   end if
+
    ! compute the trial mHat, f, dHat, eAll, rms
    call linComb_modelParam(ONE,mHat_0,alpha_1,h,mHat_1)
    call func(lambda,d,m0,mHat_1,f_1,dHat_1,eAll_1,rms_1)
@@ -739,8 +783,13 @@ Contains
    	rms = rms_1
    	f = f_1
     ! compute the gradient and exit
+    if (relaxation) then
+   		call linComb_modelParam(ONE,mHat_0,gamma*alpha,h,mHat)
+    	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,rms)
+   	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-		print *, 'Gradient computed, exiting line search'
+	print *, 'Gradient computed, exiting line search'
    	return
    end if
 
@@ -763,8 +812,13 @@ Contains
    		f = f_1
     end if
     ! compute the gradient and exit
+    if (relaxation) then
+   		call linComb_modelParam(ONE,mHat_0,gamma*alpha,h,mHat)
+    	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,rms)
+   	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-	  print *, 'Gradient computed, exiting line search'
+	print *, 'Gradient computed, exiting line search'
    	return
    end if
 
@@ -818,8 +872,13 @@ Contains
    end if
 
    ! compute gradient of the full penalty functional and exit
-   call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-	 print *, 'Gradient computed, line search finished'
+    if (relaxation) then
+   		call linComb_modelParam(ONE,mHat_0,gamma*alpha,h,mHat)
+    	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,rms)
+   	end if
+    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
+	print *, 'Gradient computed, line search finished'
 
 
   end subroutine lineSearchCubic
