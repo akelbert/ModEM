@@ -140,13 +140,21 @@ Contains
 	       call warning('The input model perturbation file does not exist')
 	    end if
 
-     case (INVERSE_NLCG)
+     case (INVERSE)
 	   inquire(FILE=cUserDef%rFile_Cov,EXIST=exists)
 	   if (exists) then
           call create_CmSqrt(sigma0,cUserDef%rFile_Cov)
        else
           call create_CmSqrt(sigma0)
        end if
+       select case (cUserDef%search)
+       case ('NLCG')
+       case ('DCG')
+       case ('Hybrid')
+       case default
+          ! a placeholder for anything specific to a particular inversion algorithm;
+          ! currently empty
+       end select
 
      case (TEST_COV)
 	   inquire(FILE=cUserDef%rFile_Cov,EXIST=exists)

@@ -134,7 +134,7 @@ Contains
 	       call warning('The input model perturbation file does not exist')
 	    end if
 
-     case (INVERSE_NLCG)
+     case (INVERSE)
         call create_CmSqrt(sigma0)
 
 

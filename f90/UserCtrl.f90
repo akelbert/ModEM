@@ -11,7 +11,7 @@ module UserCtrl
   character*1, parameter	:: MULT_BY_J_T = 'T'
   character*1, parameter	:: MULT_BY_J_MTX = 'L'
   character*1, parameter	:: MULT_BY_J_T_MTX = 'K'
-  character*1, parameter	:: INVERSE_NLCG = 'I'
+  character*1, parameter	:: INVERSE = 'I'
   character*1, parameter	:: TEST_COV = 'C'
 
   ! ***************************************************************************
@@ -47,6 +47,9 @@ module UserCtrl
 	! Specify covariance configuration
 	character(80)       :: rFile_Cov
 
+	! Choose the inverse search algorithm
+	character(80)       :: search
+
 	! Indicate how much output you want
 	character(80)       :: verbose
 
@@ -76,6 +79,7 @@ Contains
   	ctrl%lambda = 1
   	ctrl%delta = 1
   	ctrl%rFile_Cov = ''
+  	ctrl%search = 'NLCG'
   	ctrl%verbose = 'regular'
 
   end subroutine initUserCtrl
@@ -125,9 +129,9 @@ Contains
         write(*,*) ' -K  rFile_Model rFile_Data wFile_dModelMTX'
         write(*,*) '  Multiples d_i by J_i^T separately for each transmitter,'
         write(*,*) '  to yield a bunch of models, one for each transmitter'
-        write(*,*) '[INVERSE_NLCG]'
-        write(*,*) ' -I  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda delta]'
-        write(*,*) '  Runs an NLCG inversion to yield an inverse model'
+        write(*,*) '[INVERSE]'
+        write(*,*) ' -I NLCG  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda delta]'
+        write(*,*) '  Runs an inverse search to yield an inverse model'
         write(*,*) '  Here, lambda =  the initial damping parameter'
         write(*,*) '        delta  =  the initial line search step size in the model units'
         write(*,*) '[TEST_COV]'
@@ -227,26 +231,34 @@ Contains
 	       ctrl%wFile_dModelMTX = temp(3)
 	    end if
 
-      case (INVERSE_NLCG) ! I
-        if (narg < 3) then
-           write(0,*) 'Usage: -I  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda sigma]'
+      case (INVERSE) ! I
+        if (narg < 4) then
+           write(0,*) 'Usage: -I NLCG  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda sigma]'
            stop
         else
-	       ctrl%rFile_Model = temp(1)
-	       ctrl%rFile_Data = temp(2)
-	       ctrl%wFile_Model = temp(3)
-	    end if
-	    if (narg > 3) then
-	       ctrl%wFile_Data = temp(4)
+           ctrl%search = temp(1)
+           select case (ctrl%search)
+           case ('NLCG','DCG','Hybrid')
+              	! write(0,*) 'Inverse search ',trim(ctrl%search),' selected.'
+           case default
+				write(0,*) 'Unknown inverse search. Usage: -I [NLCG | DCG | Hybrid]'
+				stop
+           end select
+	       ctrl%rFile_Model = temp(2)
+	       ctrl%rFile_Data = temp(3)
+	       ctrl%wFile_Model = temp(4)
 	    end if
 	    if (narg > 4) then
-	       ctrl%rFile_Cov = temp(5)
+	       ctrl%wFile_Data = temp(5)
 	    end if
 	    if (narg > 5) then
-          read(temp(6),*) ctrl%lambda
+	       ctrl%rFile_Cov = temp(6)
+	    end if
+	    if (narg > 6) then
+          read(temp(7),*) ctrl%lambda
         end if
-        if (narg > 6) then
-          read(temp(7),*) ctrl%delta
+        if (narg > 7) then
+          read(temp(8),*) ctrl%delta
         end if
 
       case (TEST_COV) ! C

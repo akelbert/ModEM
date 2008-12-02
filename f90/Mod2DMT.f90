@@ -100,9 +100,14 @@ program Mod2DMT
         call writeVec_modelParam(fidWrite,cUserDef%wFile_dModelMTX,   &
                         allData%nTx,sigma,'J^T x d (all transmitters)')
 
-     case (INVERSE_NLCG)
-        write(*,*) 'Starting the NLCG search...'
-        call NLCGsolver(allData,cUserDef%lambda,sigma0,sigma1,cUserDef%delta)
+     case (INVERSE)
+     	if (trim(cUserDef%search) == 'NLCG') then
+        	write(*,*) 'Starting the NLCG search...'
+        	call NLCGsolver(allData,cUserDef%lambda,sigma0,sigma1,cUserDef%delta)
+        else
+        	write(*,*) 'Inverse search ',trim(cUserDef%search),' not yet implemented. Exiting...'
+        	stop
+        end if
         call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma1)
         if (write_data) then
         	call fwdPred(sigma1,allData)
