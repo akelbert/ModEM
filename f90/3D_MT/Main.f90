@@ -31,7 +31,10 @@ module Main
 
   real (kind=selectedPrec), pointer, dimension(:), save	:: periods
   real (kind=selectedPrec), pointer, dimension(:,:), save	:: sites
+  character(80), pointer, dimension(:,:), save        :: siteids
   character(2), pointer, dimension(:), save    		:: modes
+  character(200), save                              :: data_comments
+  character(80), save                               :: data_units
 
   ! grid geometry data structure
   type(grid3d_t), target, save	:: grid
@@ -103,11 +106,11 @@ Contains
 	inquire(FILE=cUserDef%rFile_Data,EXIST=exists)
 
 	if (exists) then
-	   call read_Z(fidRead,cUserDef%rFile_Data,nPer,periods,nSites,sites,allData)
+	   call read_Z(fidRead,cUserDef%rFile_Data,nPer,periods,nSites,sites,siteids,data_units,data_comments,allData)
        !  Using periods, sites obtained from data file
        !     set up transmitter and receiver dictionaries
        call TXdictSetUp(nPer,periods)
-       call RXdictSetUp(nSites,sites)
+       call RXdictSetUp(nSites,sites,siteids)
        call TypeDictSetup()
     else
        call warning('No input data file - unable to set up dictionaries')

@@ -32,7 +32,7 @@ program Mod3DMT
         if (write_model .and. write_data) then
         	write(*,*) 'Writing model and data files and exiting...'
         	call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma0)
-        	call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,allData)
+        	call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,siteids,data_units,data_comments,allData)
 		else if (write_model) then
         	write(*,*) 'Writing model and exiting...'
         	call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma0)
@@ -47,7 +47,7 @@ program Mod3DMT
         	call write_EMsolnMTX(fidWrite,cUserDef%wFile_EMsoln,eAll)
         end if
         ! write out all impedances
-        call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,allData)
+        call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,siteids,data_units,data_comments,allData)
 
      case (COMPUTE_J)
         write(*,*) 'Calculating the full sensitivity matrix...'
@@ -58,7 +58,7 @@ program Mod3DMT
      case (MULT_BY_J)
         write(*,*) 'Multiplying by J...'
         call Jmult(dsigma,sigma0,allData)
-        call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,allData)
+        call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,siteids,data_units,data_comments,allData)
 
      case (MULT_BY_J_T)
         write(*,*) 'Multiplying by J^T...'
@@ -68,7 +68,7 @@ program Mod3DMT
      case (MULT_BY_J_MTX)
         write(*,*) 'Multiplying by J (all transmitters)...'
         call Jmult_MTX(sigma,sigma0,allData)
-        call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,allData)
+        call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,siteids,data_units,data_comments,allData)
 
      case (MULT_BY_J_T_MTX)
         write(*,*) 'Multiplying by J^T (all transmitters)...'
@@ -87,7 +87,7 @@ program Mod3DMT
         call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma1)
         if (write_data) then
         	call fwdPred(sigma1,allData)
-        	call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,allData)
+        	call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,siteids,data_units,data_comments,allData)
         end if
 
      case (TEST_COV)

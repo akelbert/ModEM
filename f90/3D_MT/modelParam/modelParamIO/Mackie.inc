@@ -74,7 +74,7 @@
     implicit none
 
     integer,intent(in)                          :: fidRM
-    character(len=80), intent(in)               :: inputFile
+    character(*), intent(in)                   :: inputFile
     type (grid3d_t), intent(inout)             :: grid
     type (rscalar), intent(inout), optional     :: Cond
     character (len=80), intent(out), optional   :: paramType
@@ -178,7 +178,7 @@
     ! c) the block numbers
     read(fidRM, *, IOSTAT = ioerr) jOne, jTwo
 
-    read(fidRM, *, IOSTAT = ioerr) grid%ox, grid%oy
+    read(fidRM, *, IOSTAT = ioerr) grid%ox, grid%oy, grid%oz
     ! the defualt from a file read through Randy Mackie's format
     ! in Randy Mackie's format, real coordinates are in kilometers
     ! defaults in case of missing data
@@ -189,7 +189,7 @@
     else
        grid%ox = grid%ox*1000.0
        grid%oy = grid%oy*1000.0
-       grid%oz = 0.0
+       grid%oz = grid%oz*1000.0
     endif
 
     read(fidRM, *, IOSTAT = ioerr) grid%rotdeg
@@ -217,7 +217,7 @@
     implicit none
 
     integer,intent(in)                          :: fidRM
-    character(len=80), intent(in)               :: cFile
+    character(*), intent(in)                   :: cFile
     type (grid3d_t), intent(inout)             :: grid
     type (rscalar), intent(inout)     			:: Cond
     character(*), intent(in)         			:: paramType

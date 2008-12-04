@@ -475,7 +475,7 @@ Contains
 !
 
    !**********************************************************************
-   subroutine write_Z(fid,cfile,nTx,periods,nSites,sites,allData)
+   subroutine write_Z(fid,cfile,nTx,periods,nSites,sites,siteids,units,comments,allData)
    ! writes impedance file, including list of periods, siteLocations
    !   NOTE: this assumes that the arrays "sites" and "periods" are
      !    essentially identical to the receiver and transmitter dictionaries
@@ -488,17 +488,32 @@ Contains
       integer, intent(in)			:: nTx,nSites
       real(kind=selectedPrec),intent(in)	:: periods(nTx)
       real(kind=selectedPrec),intent(in)	:: sites(3,nSites)
+      character(*), intent(in)              :: siteids(:,:)
+      character(*), intent(in)              :: units
+      character(*), intent(in)              :: comments
       type(dvecMTX),intent(in)			:: allData
       real(kind=selectedPrec), dimension(:,:), pointer :: siteTemp
 
      ! local variables
-      character(80)   :: info,units
+      character(80)   :: info
+      real(kind=8)    :: SI_factor
       integer   :: ns,iTx,k,j,nComp,icomp,isite
       character(10) :: siteid, tab='           '
       character(80) :: header
 
       info = 'Impedance responses from ModEM'
-      units = '[V/m]/[A/m]'
+      if (index(units,'[V/m]/[T]')>0) then
+         ! SI units for E/B
+         SI_factor = 1.0
+      else if (index(units,'[mV/km]/[nT]')>0) then
+         ! practical units for E/B
+         SI_factor = 1000.0
+      else if ((index(units,'[V/m]/[A/m]')>0) .or. (index(units,'Ohm')>0)) then
+         ! SI units for E/H
+         SI_factor = 1000.0 * 10000.0/(4*PI) ! approx. 796000.0
+      else
+         call errStop('Unknown units in output data file '//cfile)
+      end if
 
       open(unit=fid,file=cfile,form='formatted',status='unknown')
       write(fid,'(a12)',advance='no') 'Description:'
@@ -529,38 +544,23 @@ Contains
 		 enddo
 		 write(fid,'(a8)',advance='no') ' '
 		 ! write the descriptor
-		 select case (allData%d(iTx)%datatype)
-
-            case(Full_Impedance) ! 4 complex data
-                 write(fid,'(8a15)') &
-                 'Re(Ex/Hx)','Im(Ex/Hx)','Re(Ex/Hy)','Im(Ex/Hy)','Re(Ey/Hx)','Im(Ey/Hx)','Re(Ey/Hy)','Im(Ey/Hy)'
-
-            case(Impedance_Plus_Hz) ! 6 complex data
-                write(fid,'(12a15)') &
-                 'Re(Ex/Hx)','Im(Ex/Hx)','Re(Ex/Hy)','Im(Ex/Hy)','Re(Ey/Hx)','Im(Ey/Hx)','Re(Ey/Hy)','Im(Ey/Hy)', &
-                 'Re(Ez/Hx)','Im(Ez/Hx)','Re(Ez/Hy)','Im(Ez/Hy)'
-
-            case(Off_Diagonal_Impedance) ! 2 complex data
-                write(fid,'(4a15)') &
-                 'Re(Ex/Hy)','Im(Ex/Hy)','Re(Ey/Hx)','Im(Ey/Hx)'
-
-         end select
+         write(fid,*) typeDict(allData%d(iTx)%dataType)%comment !comments
 
          ! write data
          do isite = 1,ns
          	! Note: temporarily, we write site id's according to their number;
          	! in the future, they will be stored in the receiver dictionary
          	write(siteid,'(i5)') isite
-         	write(fid,'(a10)',advance='no') trim(siteid)
+         	write(fid,'(a10)',advance='no') trim(siteids(iTx,isite))
          	!  note that each data field in a dvec (i.e., allData%d(iTx)%data)
          	!   is a real array of size (nComp,ns)
          	do icomp = 1,ncomp
-         		write(fid,'(es15.6)',advance='no') allData%d(iTx)%data(icomp,isite)
+         		write(fid,'(es15.6)',advance='no') allData%d(iTx)%data(icomp,isite)/SI_factor
          	enddo
          	write(fid,*)
          	write(fid,'(a10)',advance='no') tab
          	do icomp = 1,ncomp
-         		write(fid,'(es15.6)',advance='no') allData%d(iTx)%err(icomp,isite)
+         		write(fid,'(es15.6)',advance='no') allData%d(iTx)%err(icomp,isite)/SI_factor
          	enddo
          	write(fid,*)
          enddo
@@ -569,7 +569,7 @@ Contains
       close(fid)
       end subroutine write_Z
       !******************************************************************
-     subroutine read_Z(fid,cfile,nTx,periods,nSites,sites,allData)
+     subroutine read_Z(fid,cfile,nTx,periods,nSites,sites,siteids,units,comments,allData)
      ! reads in data file, returns list of periods, , siteLocations, and
      !   sets up data vector structure, including data and error bars
      !   Also returns a list of periods, and sites ... not very general!
@@ -578,6 +578,9 @@ Contains
       integer, intent(out)      			:: nTx,nSites
       real(kind=selectedPrec),dimension(:), pointer     :: periods
       real(kind=selectedPrec),dimension(:,:), pointer   :: sites
+      character(*), dimension(:,:), pointer   :: siteids
+      character(*), intent(out)             :: units
+      character(*), intent(out)             :: comments
       type(dvecMTX), intent(inout)   			:: allData
 
      ! local variables
@@ -585,7 +588,7 @@ Contains
       character(10) :: siteid
       real(kind=selectedPrec), pointer, dimension(:,:) :: siteTemp,siteTempAll
       logical		:: newSite
-      character(80) temp, description, units
+      character(80) temp, description
       integer   :: sign_in_file
       real(kind=8) :: SI_factor
       logical      :: conjugate
@@ -596,10 +599,15 @@ Contains
       read(fid,'(a17,i3)') temp,sign_in_file
       read(fid,*)
 
-      if (index(units,'[V/m]/[A/m]')>0) then
+      if (index(units,'[V/m]/[T]')>0) then
+         ! SI units for E/B
          SI_factor = 1.0
       else if (index(units,'[mV/km]/[nT]')>0) then
+         ! practical units for E/B
          SI_factor = 1000.0
+      else if ((index(units,'[V/m]/[A/m]')>0) .or. (index(units,'Ohm')>0)) then
+         ! SI units for E/H
+         SI_factor = 1000.0 * 10000.0/(4*PI) ! approx. 796000.0
       else
          call errStop('Unknown units in input data file '//cfile)
       end if
@@ -616,6 +624,7 @@ Contains
      ! write(6,*) nTx
       allocate(periods(nTx))
       allocate(allData%d(nTx))
+      allocate(siteids(nTx,1000))
       allData%allocated = .true.
       allData%errorBar = .true.
       allData%nTx = nTx
@@ -650,10 +659,10 @@ Contains
             case(4)
                allData%d(iTx)%datatype =  Off_Diagonal_Impedance
          end select
-         read(fid,*) ! header line: will need to parse this in the future
+         read(fid,'(a100)') comments ! header line: will need to parse this in the future
          do k=1,ns
-         read(fid,*)siteid, (allData%d(iTx)%data(j,k),j=1,nComp)
-         read(fid,*)        (allData%d(iTx)%err(j,k),j=1,nComp)
+         read(fid,*)siteids(iTx,k), (allData%d(iTx)%data(j,k),j=1,nComp)
+         read(fid,*)                (allData%d(iTx)%err(j,k),j=1,nComp)
          end do
 
         ! convert data to SI units

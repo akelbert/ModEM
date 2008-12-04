@@ -15,7 +15,7 @@ module grid3d
   INTERFACE ASSIGNMENT (=)
      MODULE PROCEDURE copy_grid3d
   END INTERFACE
-  
+
   ! Initialization routines
   public                             	:: create_grid3D,deall_grid3D, &
                                 GridCalcs, copy_grid3D
@@ -42,8 +42,8 @@ module grid3d
      ! nx is grid dimension (number of cells) in the x-direction
      ! ny is grid dimension (number of cells) in the y-direction
      ! nzEarth is number of earth layers used in the grid modeling
-     ! nzAir is number of air layers 
-     ! nz is grid dimension (number of cells) in the z-direction: 
+     ! nzAir is number of air layers
+     ! nz is grid dimension (number of cells) in the z-direction:
      ! nz = nzAir + nzEarth
      integer               :: nx, ny, nz, nzEarth, nzAir
 
@@ -70,24 +70,24 @@ module grid3d
      delZinv
 
      ! Book-keeping on cumulative distances
-     ! xEdge is the array for cumulative distance of the edge faces from the 
+     ! xEdge is the array for cumulative distance of the edge faces from the
      ! coordinate axis with dimensions nx+1
-     ! xCenter is the array for cumulative distance of the edge center from 
+     ! xCenter is the array for cumulative distance of the edge center from
      ! the coordinate axis with dimensions nx
      ! yEdge, yCenter, zEdge, zCenter are analagous arrays for other directions
      ! Note that the arrays are allocated dynamically
      real (kind=selectedPrec), pointer, dimension(:)        :: xEdge, yEdge, zEdge
      real (kind=selectedPrec), pointer, dimension(:)        :: xCenter, yCenter, &
      zCenter
-     
-     ! total thickness of the air above 
+
+     ! total thickness of the air above
      real (kind=selectedPrec)				     :: zAirThick
 
      ! allocated:  .true.  all the arrays have been allocated
      logical		                             :: allocated = .false.
-     
+
   end type grid3d_t
-  
+
 Contains
 
   !************************************************************************
@@ -98,7 +98,7 @@ Contains
     implicit none
     integer, intent(in)				:: Nx,Ny,NzAir,NzEarth
     type (grid3d_t) , intent(inout)		:: grid
-    
+
     !local variables
     integer					:: Nz
 
@@ -154,7 +154,7 @@ Contains
 
      if(gridOut%allocated) then
         !  just deallocate, and start over cleanly
-        call deall_grid3D(gridOut) 
+        call deall_grid3D(gridOut)
      endif
 
      call create_Grid3D(gridIn%Nx,gridIn%Ny,gridIn%NzAir, &
@@ -163,6 +163,11 @@ Contains
      gridOut%Dz = gridIn%Dz
      gridOut%Dy = gridIn%Dy
      gridOut%Dx = gridIn%Dx
+     gridOut%ox = gridIn%ox
+     gridOut%oy = gridIn%oy
+     gridOut%oz = gridIn%oz
+
+     gridOut%rotdeg = gridIn%rotdeg
 
      call gridCalcs(gridOut)
 
@@ -213,7 +218,7 @@ Contains
   !    then call GridCalcs to do all other computations.  By including the optional
   !    origin argument, grid centers and edges are given in absolute coordinates
   !    (i.e., the origin of the grid at the Earth surface is set to the origin,
-  !      and variables like xCenter, yEdge, etc. are given in the same coordinate 
+  !      and variables like xCenter, yEdge, etc. are given in the same coordinate
   !      system).  If argument origin is not present, whatever is set already in the grid
   !      origin is used; by default this is initialized to zero.
   subroutine gridCalcs(grid, origin)
@@ -221,9 +226,9 @@ Contains
     implicit none
     type(grid3d_t), target, intent(inout)    :: grid
     real(kind=selectedPrec), intent(in), optional	  :: origin(3)
-              
+
     integer                               :: ix,iy,iz,i,j
-    integer                               :: status 
+    integer                               :: status
     real (kind=selectedPrec)                         :: xCum, yCum, zCum
     real(kind=selectedPrec)                     :: alpha = 3.
 
@@ -256,7 +261,7 @@ Contains
     	grid%oy = origin(2)
     	grid%oz = origin(3)
     end if
-    
+
     grid%xEdge(1) = grid%ox
     grid%yEdge(1) = grid%oy
     grid%zEdge(1) = grid%oz
@@ -280,20 +285,20 @@ Contains
     grid%zAirThick = grid%zEdge(grid%nzAir+1)
 
     ! distance between center of the grids
-    grid%delX(1) = grid%dx(1)      
+    grid%delX(1) = grid%dx(1)
     DO ix = 2,grid%nx
        grid%delX(ix) = grid%dx(ix-1) + grid%dx(ix)
     ENDDO
     grid%delX(grid%nx+1) = grid%dx(grid%nx)
     grid%delX = grid%delX/2.0
-    
+
     grid%delY(1)    = grid%dy(1)
     DO iy = 2,grid%ny
        grid%delY(iy) = grid%dy(iy-1) + grid%dy(iy)
     ENDDO
     grid%delY(grid%ny+1) = grid%dy(grid%ny)
     grid%delY = grid%delY/2.0
-    
+
     grid%delZ(1)    = grid%dz(1)
     DO iz = 2,grid%nz
        grid%delZ(iz) = grid%dz(iz-1) + grid%dz(iz)
@@ -311,7 +316,7 @@ Contains
     ! cumulative distance between the centers, adjusted to model origin
     do ix = 1, grid%nx
        xCum = xCum + grid%delX(ix)
-       grid%xCenter(ix) = xCum + grid%ox 
+       grid%xCenter(ix) = xCum + grid%ox
     enddo
     do iy = 1, grid%ny
        yCum = yCum + grid%delY(iy)
@@ -321,7 +326,7 @@ Contains
        zCum = zCum + grid%delZ(iz)
        grid%zCenter(iz) = zCum
     enddo
-           
+
     !  need to be careful here ... grid origin is given at Earth's surface,
     !   not top of model domain!
     do iz = 1, grid%nz
@@ -329,7 +334,7 @@ Contains
        grid%zEdge(iz) = grid%zEdge(iz)-grid%zAirThick+grid%oz
     enddo
     grid%zEdge(grid%nz+1) = grid%zEdge(grid%nz+1)-grid%zAirThick+grid%oz
-    
+
 
   end subroutine GridCalcs
 
