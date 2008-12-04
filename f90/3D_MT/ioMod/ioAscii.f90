@@ -544,7 +544,7 @@ Contains
 		 enddo
 		 write(fid,'(a8)',advance='no') ' '
 		 ! write the descriptor
-         write(fid,*) typeDict(allData%d(iTx)%dataType)%comment !comments
+         write(fid,'(a200)') typeDict(allData%d(iTx)%dataType)%comment !comments
 
          ! write data
          do isite = 1,ns
@@ -659,7 +659,7 @@ Contains
             case(4)
                allData%d(iTx)%datatype =  Off_Diagonal_Impedance
          end select
-         read(fid,'(a100)') comments ! header line: will need to parse this in the future
+         read(fid,'(a200)') comments ! header line: will need to parse this in the future
          do k=1,ns
          read(fid,*)siteids(iTx,k), (allData%d(iTx)%data(j,k),j=1,nComp)
          read(fid,*)                (allData%d(iTx)%err(j,k),j=1,nComp)
