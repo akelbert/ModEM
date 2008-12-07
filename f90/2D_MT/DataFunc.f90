@@ -46,6 +46,7 @@ module datafunc
   public			:: EMSparseQtoModelParam
 
   type :: MTrx
+   SEQUENCE
      ! x gives location of EM measurements
      !  multiple receiver dictionaries can be defined, and
      !   different dictionaries can be used for different data types
@@ -63,6 +64,7 @@ module datafunc
   type (MTrx), pointer, save, private, dimension(:) :: rxDict
 
   type :: dataType
+   SEQUENCE
 
      !  stores information about the "data type"
      !   The following two attributes must be defined for all

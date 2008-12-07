@@ -143,7 +143,7 @@ module sg_vector
   ! type vector defines vector for either edge or face in a staggered grid as
   ! a complex field
   type :: cvector
-
+SEQUENCE
      ! store the intention of the use in a character string defined
      ! in Grid3D as a parameter: EDGE or FACE are two possibilities
      character (len=80)	                             :: gridType
@@ -175,7 +175,7 @@ module sg_vector
   ! type vector defines vector for either edge or face in a staggered grid as
   ! a real field
   type :: rvector
-
+SEQUENCE
      ! store the intention of the use in a character string defined
      ! in Grid3D as a parameter: EDGE or FACE are two possibilities
      character (len=80)	                              :: gridType

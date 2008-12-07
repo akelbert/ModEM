@@ -293,6 +293,16 @@ Contains
 	clean = dnint(x*KM2M)/KM2M
 
   end function nearest_meter
-            
+  
+  
+logical function isnan(a)
+        real*8 ::a
+        if (a.ne.a) then
+        isnan = .true.
+        else
+        isnan = .false.
+        end if
+        return
+end             
       
 end module utilities

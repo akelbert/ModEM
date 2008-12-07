@@ -63,7 +63,7 @@ module sg_sparse_vector
 
 !**************************************************************************
   type :: sparsevecc
-
+SEQUENCE
      ! complex vector defined on edge/ face nodes;
      ! store the intention of the use in a character string defined
      ! as in Grid3D as a parameter: EDGE or FACE

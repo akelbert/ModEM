@@ -19,6 +19,7 @@ use emsolve3d
 implicit none
 
  type :: MTtx
+ SEQUENCE
      !  An MT source is defined by frequency and boundary conditions
      !   at present there does not seem to be much need for BC info ... add
      !    if needed.  Other sorts of EM data may have more
@@ -52,6 +53,7 @@ type(RHS), save, private		:: b0
 !    type definition here, since you can't use the type until instances
 !    can be created!
 type :: EMsolnMTX
+SEQUENCE
   !  derived data type for storing solutions from multiple transmitters
   integer			:: nTx = 0
   type(EMsoln), pointer		:: solns(:)

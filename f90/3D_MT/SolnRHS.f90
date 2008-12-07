@@ -16,6 +16,7 @@ use sg_sparse_vector
 implicit none
 
   type :: EMsoln
+  SEQUENCE
     !!   Generic solution type, same name must be used to allow
     !!   use of higher level inversion modules on different problems.
     !!
@@ -46,6 +47,7 @@ implicit none
   end type EMsoln
 
   type :: EMsparse
+  SEQUENCE
     !!   Generic solution type, same name must be used to allow
     !!   use of higher level inversion modules on different problems.
     !!   Here we need two sparse vectors, one for each polarization
@@ -55,6 +57,7 @@ implicit none
   end type EMsparse
 
   type :: RHS
+  SEQUENCE
      ! merges internal sources and boundary conditions into a single
      ! data structure; this is a compact representation of the right
      !  hand side for the induction equations for ONE mode
@@ -72,6 +75,7 @@ implicit none
   end type RHS
 
   type :: EMrhs
+  SEQUENCE
      ! rhs data structure for multiple polarizations, the abstract
      !  full rhs used for the abstract full EMsoln
 

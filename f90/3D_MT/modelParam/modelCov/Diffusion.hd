@@ -5,7 +5,7 @@
 ! 1) modelCov_t data type with private attributes
 
   type :: modelCov_t
-
+SEQUENCE
     private
 
     real (kind=selectedPrec) :: XLen = R_ZERO

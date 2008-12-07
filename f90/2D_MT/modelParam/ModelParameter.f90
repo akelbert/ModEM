@@ -30,6 +30,7 @@ implicit none
    character(len=80), parameter		:: LINEAR = 'LINEAR'
 
 type ::  modelParam_t
+ SEQUENCE
    !  modelParam is derived data type used to store parameters that
    !   determine conductivity/resistivity model
    !   This specific implementation is based on blocks
