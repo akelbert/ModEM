@@ -14,7 +14,6 @@ public  :: NLCGsolver
 ! and saved in the module to be used by most subroutines
 
   type  :: NLCGiterControl_t
-   SEQUENCE
      ! maximum number of iterations in one call to iterative solver
      integer					:: maxIter
      ! convergence criteria: return from solver if rms < rmsTol

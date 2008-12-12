@@ -25,7 +25,7 @@ Contains
      write(0,*) 'Warning: ',msg
 
      end subroutine warning
-    
+
 ! *****************************************************************************
 
       integer function findstr(str1,str2)
@@ -51,7 +51,7 @@ Contains
 10       continue
          findstr=i
          return
-20    continue 
+20    continue
 
       findstr=0
       return
@@ -61,13 +61,13 @@ Contains
 
 ! *****************************************************************************
 
-      integer function begwrd(string,iwrd) 
+      integer function begwrd(string,iwrd)
       integer iwrd
       character*(*) string
 
 !     Returns the index of the first non-blank character in the iwrd'th
 !     non-blank word (word are seperated by spaces, tabs or commas).
-!     Returns len if iwrd'th word is not found. integer i, nword 
+!     Returns len if iwrd'th word is not found. integer i, nword
 
       logical wasblk
       intrinsic len
@@ -83,8 +83,8 @@ Contains
 !           /* current character is blank
              wasblk=.true.
 	 else
-	     if (wasblk) then 
-		nword= nword + 1 
+	     if (wasblk) then
+		nword= nword + 1
 	     endif
 	     wasblk= .false.
 	     if(nword.eq.iwrd)then
@@ -187,8 +187,8 @@ Contains
 !       endif
 !    enddo
 !
-!  end function minNode      
-      
+!  end function minNode
+
     ! **************************************************************************
   ! * BOP
   function minNode(x, xNode) result(ix)
@@ -222,7 +222,7 @@ Contains
     enddo
 
   end function minNode
-  
+
 
   ! **************************************************************************
   ! * BOP
@@ -257,7 +257,7 @@ Contains
     enddo
 
   end function maxNode
-   
+
   ! **************************************************************************
   ! * BOP
   function clean(x)
@@ -265,7 +265,7 @@ Contains
 	! against machine error problems. It returns the same real or real(8)
 	! as the input, but without the extra digits at the end that are often
 	! a cause of wrong comparisons in the if statements. ALWAYS use clean(x)
-	! instead of x in an inequality!!!	 
+	! instead of x in an inequality!!!
 	! LARGE_REAL is defined in the module math_constants
 	! A.K.
     implicit none
@@ -276,7 +276,7 @@ Contains
 	clean = dnint(x*LARGE_REAL)/LARGE_REAL
 
   end function clean
- 
+
   ! **************************************************************************
   ! * BOP
   function nearest_meter(x) result(clean)
@@ -293,16 +293,20 @@ Contains
 	clean = dnint(x*KM2M)/KM2M
 
   end function nearest_meter
-  
-  
-logical function isnan(a)
-        real*8 ::a
-        if (a.ne.a) then
-        isnan = .true.
+
+  ! **************************************************************************
+  ! Naser Meqbel included this function: apparently, it is not supported by
+  ! all compilers as an intrinsic
+  logical function isnan(a)
+
+        real (kind=selectedPrec), intent(in) ::a
+
+        if (a .ne. a) then
+        	isnan = .true.
         else
-        isnan = .false.
+        	isnan = .false.
         end if
-        return
-end             
-      
+
+  end function isnan
+
 end module utilities

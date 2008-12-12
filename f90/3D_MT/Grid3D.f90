@@ -32,7 +32,7 @@ module grid3d
   ! type grid_param consists of parameters that define the basic grid geometry
   ! used for three dimensional numerical modeling
   type :: grid3d_t
-SEQUENCE
+
      ! For possible future flexibility, store grid type as a character string
      ! Right now, the default is 'Cartesian Staggered'
      !  IS THIS EVER USED????   Makes no real sense.

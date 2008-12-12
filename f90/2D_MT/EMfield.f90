@@ -22,7 +22,6 @@ use grid2d
 implicit none
 
  type :: cvector
-  SEQUENCE
     !!   generic 2D array for storing solution vectors, etc
 
     logical           :: allocated
@@ -30,16 +29,14 @@ implicit none
     integer   :: N1=0
     integer   :: N2=0
     complex(kind=selectedPrec), pointer, dimension(:,:)      :: v
-
+    type(grid2d_t), pointer		:: grid
     !   corners, cells, sides ... full ...interior, whatever
     !   supported types at present:
     !         CELL, NODE, CELL_EARTH, NODE_EARTH, EDGE_EARTH
     character*80			:: gridType = ''
-    type(grid2d_t), pointer		:: grid
   end type cvector
 
   type :: sparsevecc
-   SEQUENCE
 
      ! complex sparse vector for 2D EM -- represents scalar field
      character (len=80)			:: gridType=''

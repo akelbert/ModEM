@@ -92,7 +92,7 @@ module sg_boundary
   ! type cboundary defines complex 2D vector for boundary edge in a staggered 
   ! grid
   type :: cboundary
-      SEQUENCE
+
      ! the boundary data are stored in two dimensional data structures 
      ! xYMax are the boundary conditions for x component on the maximum Y end
      ! zYMax are the boundary conditions for z component on the maximum Y end

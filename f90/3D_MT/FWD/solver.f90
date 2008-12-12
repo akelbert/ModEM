@@ -14,7 +14,6 @@ module solver
   ! solverControl_t as a data type controls diagnostic tools for joint forward
   ! modeling-inversion scheme
   type  :: solverControl_t
-  SEQUENCE
      ! maximum number of iterations in one call to iterative solver
      integer                                               :: maxIt
      ! convergence criteria: return from solver if relative error < tol

@@ -33,7 +33,6 @@ module ModelParameter
    character(len=80), parameter		:: LINEAR = 'LINEAR'
 
   type :: modelParam_t
-  SEQUENCE
      !  Parameters which define conductivity distribution.
      !   for the present approach, with each cell of the computational grid
      !   allowed a separate (constant) conductivity) a separate type here
@@ -49,13 +48,12 @@ module ModelParameter
      private
      integer			:: Nx,Ny,NzEarth
      type(rscalar)		:: cellCond
-
+     type(grid3d_t),pointer    :: grid
      real (kind=selectedPrec)   :: AirCond
      logical			:: allocated = .false.
      character (len=80)		:: paramType = ''
      !  supported paramType at present: LINEAR and LOGE
-       type(grid3d_t),pointer    :: grid
-    end type modelParam_t
+  end type modelParam_t
 
 
 interface assignment (=)

@@ -26,7 +26,6 @@ module dataspace
 
   !  vector containing data for a single "transmitter"
   type :: dvec
-   SEQUENCE
 
       ! nComp is number of EM components observed (e.g., 2 (3) for
       ! MT (with verticl field TFs)) times 2 to allow for real/imag
@@ -59,7 +58,6 @@ module dataspace
 
   ! collection of dvec objects for all transmitters
   type :: dvecMTX
-   SEQUENCE
       ! nTX is number of transmitters, number of frequencies for MT
       integer		:: nTX = 0
       ! Ndata is total number of REAL data (dimension of data vector)

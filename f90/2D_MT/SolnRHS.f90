@@ -11,7 +11,6 @@ use modelparameter
 implicit none
 
  type :: EMsoln
-  SEQUENCE
     !!   Generic solution type, same name must be used to allow
     !!   use of higher level inversion modules on different problems.
     !!
@@ -30,7 +29,6 @@ implicit none
   end type EMsoln
 
   type :: EMsparse
-   SEQUENCE
     !!   Generic solution type, same name must be used to allow
     !!   use of higher level inversion modules on different problems.
     type(sparsevecc)			:: L
@@ -38,7 +36,6 @@ implicit none
 
 
   type :: EMrhs
-   SEQUENCE
      !!   right hand side for solving both TE and TM mode equations,
      !!   forward or adjoint problems
      character*3			:: adj = ''

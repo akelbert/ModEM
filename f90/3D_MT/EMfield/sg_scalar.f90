@@ -142,7 +142,6 @@ module sg_scalar
   ! type cscalar defines scalar for either edge or face in a staggered grid as
   ! a complex field
   type :: cscalar
-  SEQUENCE
 
      ! store the intention of the use in a character string defined
      ! in Grid3D as a parameter: CENTER, CORNER, CELL_EARTH
@@ -170,7 +169,6 @@ module sg_scalar
   ! type rscalar defines scalar for either edge or face in a staggered grid as
   ! a real field
   type :: rscalar
-  SEQUENCE
 
      ! store the intention of the use in a character string defined
      ! in Grid3D as a parameter: CENTER, CORNER, CELL_EARTH
@@ -201,7 +199,6 @@ module sg_scalar
   ! type iscalar defines scalar for either edge or face in a staggered grid as
   ! an integer field; useful for mask arrays, so only create and deall needed
   type :: iscalar
-  SEQUENCE
 
      ! store the intention of the use in a character string defined
      ! in Grid3D as a parameter: CENTER, CORNER, CELL_EARTH

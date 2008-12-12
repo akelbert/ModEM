@@ -15,7 +15,6 @@ module grid2d
    character(len=80), parameter		:: EDGE_EARTH = 'EDGE EARTH'
 
    type ::  grid2d_t
-    SEQUENCE
       !  grid2d_t is derived data type used to store grid geometry
       integer   :: Nz = 0
       integer   :: Ny = 0

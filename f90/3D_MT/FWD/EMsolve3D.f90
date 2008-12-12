@@ -20,7 +20,6 @@ module EMsolve3D
   private	:: SdivCorr
 
   type :: emsolve_control
-  SEQUENCE
     ! Values of solver control parameters, e.g., read in from file
     !   plus other information on how the solver is to be initialized, called, etc.
     !  idea is that this is the public access version of this info, which is
@@ -34,7 +33,6 @@ module EMsolve3D
   end type emsolve_control
 
   type :: emsolve_diag
-  SEQUENCE
     ! Solver diagnostic arrays, computed during run of forward solver.
     !  idea is that this is the public access version of this info, which is
     !   copied from the private version in module em_solve where this info is

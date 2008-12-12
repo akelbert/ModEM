@@ -18,7 +18,6 @@ module UserCtrl
   ! * input_info contains the list of all essential input information currently
   ! * read in from fn_startup.
   type :: userdef_control
-   SEQUENCE
 
 	! Options: FORWARD, COMPUTE_J, MULT_BY_J, MULT_BY_J_T,
 	!          MULT_BY_J_MTX, MULT_BY_J_T_MTX, NLCG, TEST_COV
