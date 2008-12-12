@@ -48,7 +48,7 @@
 	CmSqrt%Sy = 0.1
 	CmSqrt%Sz = 0.1
 	call create_iscalar(m%grid,CmSqrt%mask,CELL_EARTH)
-	CmSqrt%mask%v = 9
+	CmSqrt%mask%v = FREE
 	CmSqrt%N = 1
     CmSqrt%allocated = .true.
 
