@@ -71,11 +71,11 @@ end interface
 !  I/O interfaces
 
 interface write_modelParam
-   MODULE PROCEDURE write_modelParam_mackie
+   MODULE PROCEDURE write_modelParam_WS
 end interface
 
 interface read_modelParam
-   MODULE PROCEDURE read_modelParam_mackie
+   MODULE PROCEDURE read_modelParam_WS
 end interface
 
 interface writeVec_modelParam
@@ -104,6 +104,7 @@ Contains
 !  I/O choices
    include "modelParamIO/Binary.inc"
    include "modelParamIO/Mackie.inc"
+   include "modelParamIO/WS.inc"
 
 !**********************************************************************
 !
@@ -182,7 +183,7 @@ Contains
 	    ! convert to log
 	    m%cellCond%v = log(m%cellCond%v)
 	    m%AirCond=log(m%AirCond)
-	 else if((paramType == LINEAR) .and. (m%paramType == 'LOGE')) then
+	 else if((paramType == LINEAR) .and. (m%paramType == LOGE)) then
 	    ! convert to cell
 	    m%cellCond%v = exp(m%cellCond%v)
 	    m%AirCond=exp(m%AirCond)

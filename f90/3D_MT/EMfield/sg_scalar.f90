@@ -543,7 +543,9 @@ Contains
   ! read_rscalar reads in an rscalar in a simple ASCII format; rscalar has
   ! to exist and be allocated before calling this routine, and the file unit
   ! must already be available for reading; also need to be careful that
-  ! dimensions in the input file match those of the rscalar
+  ! dimensions in the input file match those of the rscalar;
+  ! assuming the "intuitive geographic" file convention by reading
+  ! x from the bottom up (x points North), y left to right (y points East)
   subroutine read_rscalar(fid, E)
 
       integer,        intent(in)		:: fid
@@ -563,28 +565,29 @@ Contains
 	  Ny = size(E%v,2)
 	  Nz = size(E%v,3)
 
-	  allocate(temp(Nx),STAT=istat)
+	  allocate(temp(Ny),STAT=istat)
+	  i = 1
 	  do
-	    i = 1
-	    read(fid,*,iostat=istat) k1, k2
+	    read(fid,*,iostat=istat) k1, k2 ! block numbers have to be there to read
 	    if (istat /= 0) exit
-	    if ((k1 < 0) .or. (k2 > Nz)) then
+		if ((k1 < 0) .or. (k2 > Nz)) then
 	    	write(0, *) 'Error reading the ',i,'th block in read_rscalar'
 	    	stop
 	    else if (k1 > k2) then
 	    	write(0, *) 'Warning: block ',i,' in read_rscalar will be ignored'
 	    end if
-	    do j = 1,Ny
+	    do j = Nx,1,-1
 	    	read(fid,*,iostat=istat) temp
 	    	if (istat /= 0) then
 	    	  	write(0, *) 'Error reading the ',j,'th row in ',i,'th block in read_rscalar'
 	    	  	stop
 	    	end if
 	    	do k = k1,k2
-	    	  	E%v(:,j,k) = temp
+	    	  	E%v(j,:,k) = temp
 	    	end do
-	    	i = i+1
 	    end do
+	    if (k == Nz) exit
+	    i = i+1
       end do
 	  deallocate(temp,STAT=istat)
 
@@ -595,7 +598,9 @@ Contains
   ! to exist and be allocated before calling this routine, and the file unit
   ! must already be available for reading; also need to be careful that
   ! dimensions in the input file match those of the cscalar. Each complex
-  ! value must be of the form (v1, v2)
+  ! value must be of the form (v1, v2);
+  ! assuming the "intuitive geographic" file convention by reading
+  ! x from the bottom up (x points North), y left to right (y points East)
   subroutine read_cscalar(fid, E)
 
       integer,        intent(in)		:: fid
@@ -615,28 +620,29 @@ Contains
 	  Ny = size(E%v,2)
 	  Nz = size(E%v,3)
 
-	  allocate(temp(Nx),STAT=istat)
+	  allocate(temp(Ny),STAT=istat)
+	  i = 1
 	  do
-	    i = 1
-	    read(fid,*,iostat=istat) k1, k2
+	    read(fid,*,iostat=istat) k1, k2 ! block numbers have to be there to read
 	    if (istat /= 0) exit
-	    if ((k1 < 0) .or. (k2 > Nz)) then
+		if ((k1 < 0) .or. (k2 > Nz)) then
 	    	write(0, *) 'Error reading the ',i,'th block in read_cscalar'
 	    	stop
 	    else if (k1 > k2) then
 	    	write(0, *) 'Warning: block ',i,' in read_cscalar will be ignored'
 	    end if
-	    do j = 1,Ny
+	    do j = Nx,1,-1
 	    	read(fid,*,iostat=istat) temp
 	    	if (istat /= 0) then
 	    	  	write(0, *) 'Error reading the ',j,'th row in ',i,'th block in read_cscalar'
 	    	  	stop
 	    	end if
 	    	do k = k1,k2
-	    	  	E%v(:,j,k) = temp
+	    	  	E%v(j,:,k) = temp
 	    	end do
-	    	i = i+1
 	    end do
+	    if (k == Nz) exit
+	    i = i+1
       end do
 	  deallocate(temp,STAT=istat)
 
@@ -646,7 +652,10 @@ Contains
   ! read_iscalar reads in an iscalar in a simple ASCII format; iscalar has
   ! to exist and be allocated before calling this routine, and the file unit
   ! must already be available for reading; also need to be careful that
-  ! dimensions in the input file match those of the iscalar
+  ! dimensions in the input file match those of the iscalar;
+  ! assuming the "intuitive geographic" file convention by reading
+  ! x from the bottom up (x points North), y left to right (y points East)
+  ! ... conforms to the model format of Weerachai Siripunvaraporn
   subroutine read_iscalar(fid, E)
 
       integer,        intent(in)		:: fid
@@ -666,10 +675,10 @@ Contains
 	  Ny = size(E%v,2)
 	  Nz = size(E%v,3)
 
-	  allocate(temp(Nx),STAT=istat)
+	  allocate(temp(Ny),STAT=istat)
+	  i = 1
 	  do
-	    i = 1
-	    read(fid,*,iostat=istat) k1, k2
+	    read(fid,*,iostat=istat) k1, k2 ! block numbers have to be there to read
 	    if (istat /= 0) exit
 	    if ((k1 < 0) .or. (k2 > Nz)) then
 	    	write(0, *) 'Error reading the ',i,'th block in read_iscalar'
@@ -677,17 +686,18 @@ Contains
 	    else if (k1 > k2) then
 	    	write(0, *) 'Warning: block ',i,' in read_iscalar will be ignored'
 	    end if
-	    do j = 1,Ny
+	    do j = Nx,1,-1
 	    	read(fid,*,iostat=istat) temp
 	    	if (istat /= 0) then
 	    	  	write(0, *) 'Error reading the ',j,'th row in ',i,'th block in read_iscalar'
 	    	  	stop
 	    	end if
 	    	do k = k1,k2
-	    	  	E%v(:,j,k) = temp
+	    	  	E%v(j,:,k) = temp
 	    	end do
-	    	i = i+1
 	    end do
+	    if (k == Nz) exit
+	    i = i+1
       end do
 	  deallocate(temp,STAT=istat)
 
@@ -696,7 +706,9 @@ Contains
   !****************************************************************************
   ! write_rscalar writes an iscalar in a simple ASCII format; rscalar has
   ! to exist and be allocated before calling this routine, and the file unit
-  ! must already be available for writing
+  ! must already be available for writing;
+  ! assuming the "intuitive geographic" file convention by writing
+  ! x from the bottom up (x points North), y left to right (y points East)
   subroutine write_rscalar(fid, E)
 
       integer,        intent(in)		:: fid
@@ -718,8 +730,8 @@ Contains
 
 	  allocate(temp(Nx,Ny),STAT=istat)
       k1 = 1
-      k2 = Nz
 	  do
+	  	k2 = Nz
 	    do k = k1,Nz-1
 	    	temp = abs(E%v(:,:,k+1) - E%v(:,:,k))
 	    	if (maxval(temp) > TOL6) then
@@ -733,8 +745,8 @@ Contains
 	    	stop
 	    end if
 	    temp = E%v(:,:,k1)
-	    do j = 1,Ny
-	    	do i = 1,Nx
+	    do i = Nx,1,-1
+	    	do j = 1,Ny
 	    		write(fid,'(es13.5)',iostat=istat,advance='no') E%v(i,j,k1)
 	    	end do
 	    	write(fid,*)
@@ -749,7 +761,9 @@ Contains
   !****************************************************************************
   ! write_cscalar writes an iscalar in a simple ASCII format; cscalar has
   ! to exist and be allocated before calling this routine, and the file unit
-  ! must already be available for writing
+  ! must already be available for writing;
+  ! assuming the "intuitive geographic" file convention by writing
+  ! x from the bottom up (x points North), y left to right (y points East)
   subroutine write_cscalar(fid, E)
 
       integer,        intent(in)		:: fid
@@ -771,8 +785,8 @@ Contains
 
 	  allocate(temp(Nx,Ny),STAT=istat)
       k1 = 1
-      k2 = Nz
 	  do
+	  	k2 = Nz
 	    do k = k1,Nz-1
 	    	temp = abs(E%v(:,:,k+1) - E%v(:,:,k))
 	    	if ((maxval(real(temp)) > TOL6) .or. (maxval(imag(temp)) > TOL6)) then
@@ -786,8 +800,8 @@ Contains
 	    	stop
 	    end if
 	    temp = E%v(:,:,k1)
-	    do j = 1,Ny
-	    	do i = 1,Nx
+	    do i = Nx,1,-1
+	    	do j = 1,Ny
 	    		write(fid,'(es13.5)',iostat=istat,advance='no') E%v(i,j,k1)
 	    	end do
 	    	write(fid,*)
@@ -802,7 +816,10 @@ Contains
   !****************************************************************************
   ! write_iscalar writes an iscalar in a simple ASCII format; iscalar has
   ! to exist and be allocated before calling this routine, and the file unit
-  ! must already be available for writing
+  ! must already be available for writing;
+  ! assuming the "intuitive geographic" file convention by writing
+  ! x from the bottom up (x points North), y left to right (y points East)
+  ! ... conforms to the model format of Weerachai Siripunvaraporn
   subroutine write_iscalar(fid, E)
 
       integer,        intent(in)		:: fid
@@ -825,8 +842,8 @@ Contains
 
 	  allocate(temp(Nx,Ny),STAT=istat)
       k1 = 1
-      k2 = Nz
 	  do
+	  	k2 = Nz
 	    do k = k1,Nz-1
 	    	temp = abs(E%v(:,:,k+1) - E%v(:,:,k))
 	    	if (maxval(temp) > 0) then
@@ -850,8 +867,8 @@ Contains
    		else
    			fmt = '(i6)'
    		end if
-	    do j = 1,Ny
-	    	do i = 1,Nx
+	    do i = Nx,1,-1
+	    	do j = 1,Ny
 	    		write(fid,fmt,iostat=istat,advance='no') E%v(i,j,k1)
 	    	end do
 	    	write(fid,*)

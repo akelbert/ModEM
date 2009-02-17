@@ -47,6 +47,7 @@ module dataFunc
      !     observations anywhere within the solution domain.
      !  Additonal data types, to be used as elements of additional
      !    dictionaries can be added to accomodate additional data types
+  	 ! x(1) points North, x(2) points East, x(3) points down
      real(kind=selectedPrec)                    ::  x(3)
      ! optional site ID; needed for input and output only
      character(80)                              ::  id=''
