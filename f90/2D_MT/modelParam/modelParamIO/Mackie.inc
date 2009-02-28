@@ -129,7 +129,7 @@
 
       ! set the air layers to something quasi-reasonable: in the future,
       ! will include them in the input ascii file
-      grid%Dz(Nza) = max(grid%Dz(Nza+1),10.)
+      grid%Dz(Nza) = max(grid%Dz(Nza+1),10.0d0)
       do j = 1,Nza-1
       	grid%Dz(Nza-j) = 3. * grid%Dz(Nza-j+1)
       end do

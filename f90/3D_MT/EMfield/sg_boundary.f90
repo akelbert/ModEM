@@ -182,7 +182,7 @@ Contains
     implicit none
     type(grid3d_t), target, intent(in)     :: igrid
     ! the grid for which boundary edge fields are being initialized
-    type (cboundary), intent(out)       :: E
+    type (cboundary), intent(inout)     :: E
     integer                             :: status,nx,ny,nz
 
     if(E%allocated) then

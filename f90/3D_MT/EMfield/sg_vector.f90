@@ -302,7 +302,7 @@ Contains
     implicit none
     type(grid3d_t), target, intent(in)    :: igrid
     ! the grid for which an edge/ face node field is being initialized
-    type (rvector), intent(out)        :: E
+    type (rvector), intent(inout)      :: E
 
     integer                            :: status,nx,ny,nz
 
@@ -367,7 +367,7 @@ Contains
     implicit none
     type(grid3d_t), target, intent(in)     :: igrid
     ! the grid for which an edge/ face node field is being initialized
-    type (cvector), intent(out)         :: E
+    type (cvector), intent(inout)       :: E
 
     integer                             :: status,nx,ny,nz
 

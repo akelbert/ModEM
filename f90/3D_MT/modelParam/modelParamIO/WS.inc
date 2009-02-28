@@ -16,7 +16,7 @@
       character(80)                        :: someChar=''
       integer                              :: Nx, Ny, NzEarth, NzAir, someIndex=0, i, j, k, istat
       real(8)                              :: alpha=3.
-
+      
 	  paramType = ''
 
       ! Open file and read grid
@@ -74,9 +74,7 @@
  	  ! Read the resistivity
  	  do k=1,nzEarth
  	  	do j=1,Ny
- 	  		do i=Nx,1,-1
- 	  			read(fid,*,iostat=istat) rho%v(i,j,k)
- 	  		end do
+			read(fid,*,iostat=istat) (rho%v(i,j,k), i=Nx,1,-1)
  	  	end do
  	  end do
 

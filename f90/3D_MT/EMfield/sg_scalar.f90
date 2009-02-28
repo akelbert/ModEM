@@ -322,7 +322,7 @@ Contains
     type(grid3d_t), target, intent(in)    :: igrid
     ! the grid for which an scalar (center or corner) node field is being
     ! initialized
-    type (rscalar), intent(out)        :: E
+    type (rscalar), intent(inout)      :: E
 
     integer                            :: status,nx,ny,nz,nzEarth
 
@@ -377,7 +377,7 @@ Contains
     type(grid3d_t), target, intent(in)     :: igrid
     ! the grid for which an scalar (center or corner) node field is being
     ! initialized
-    type (cscalar), intent(out)         :: E
+    type (cscalar), intent(inout)       :: E
 
     integer                             :: status,nx,ny,nz
 
@@ -429,7 +429,7 @@ Contains
 
     implicit none
     type (grid3d_t), target, intent(in)    :: igrid
-    type (iscalar),  intent(out)        :: E
+    type (iscalar),  intent(inout)         :: E
 
     integer                            :: status,nx,ny,nz,nzEarth
 
