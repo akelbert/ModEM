@@ -24,10 +24,10 @@
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-F90 = ifort
-FFLAGS = -O3
-LIBS = -lblas -llapack
-OBJDIR = ./objs/2D_MT/Release
+F90 = pgf95
+FFLAGS = -g -Mprof=lines -Mbounds
+LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines
+OBJDIR = ./objs/2D_MT/Debug
 
 # -------------------End-macro-Defs---------------------------
 OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/Grid2D.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/InterpEB.o $(OBJDIR)/DataFunc.o $(OBJDIR)/MeasComb.o $(OBJDIR)/SensPDEcoeff.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 

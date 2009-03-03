@@ -76,6 +76,9 @@ else {
   $linkopts=" ";
 }
 
+# By default, use the current directory for object files
+$linkdir=".";
+
 #------------------------------
 # Done with environment variables. Now we need to process commandline args
 # These supersede anything supplied via environment variables.
@@ -110,6 +113,10 @@ while (@ARGV){
     $optiond=1
     #print "# Using debug option (full output on) from cmd line\n";
   }
+  if ($arg =~ /^-o$/){
+  	$linkdir=shift;
+  	#print "# Using the default object file output directory\n";
+  }
 
 }
 
@@ -142,17 +149,24 @@ if($optiond){
 print "# -p $spath\n";
 print "# -f90 $f90 (compiler)\n";
 print "# -opt $optim (compiler optimisation)\n";
-print "# -l $linkopts (linking options)\n\n";
+print "# -l $linkopts (linking options)\n";
+print "# -o $linkdir (output directory for object files)\n\n";
 
-print "#  Uncomment these lines to make program with g95\n";
-print "# F90 = g95\n";
-print "# FFLAGS = -g -O2\n";
-print "# FFLAGS = -g -ftrace=frame -fbounds-check\n";
-print "# LIBS = -lblas -llapack\n";
-print "#  Uncomment these lines to make program for solaris\n";
+print "#  Uncomment these lines to make program for Solaris OS\n";
 print "# F90 = f90\n";
 print "# FFLAGS = -dalign -g -C -w  -L/usr/local/lib\n";
 print "# LIBS = -xlic_lib=sunperf\n";
+print "#  Uncomment these lines to make program with g95\n";
+print "# F90 = g95\n";
+print "# FFLAGS = -O2\n";
+print "# FFLAGS = -g -ftrace=frame -fbounds-check\n";
+print "# LIBS = -lblas -llapack\n";
+print "#  Uncomment these lines to make program with Intel compiler\n";
+print "# F90 = ifort\n";
+print "# FFLAGS = -O3\n";
+print "# FFLAGS = -g -debug all\n";
+print "# LIBS = -lblas -llapack\n";
+
 
 if($optiond){
   print "# Main program is $mainprogfile \n" ;
@@ -168,6 +182,7 @@ print "include Makefile.local\n";
 print "F90 = $f90 \n";
 print "FFLAGS = $optim\n";
 print "LIBS = $linkopts\n";
+print "OBJDIR = $linkdir\n";
 
 print "\n# -------------------End-macro-Defs---------------------------\n";
 
@@ -178,12 +193,16 @@ print "\nall: $execfile \n";
 # Generate makefile entry for the Link step
 print "\n# Here is the link step \n";
 
-print "$execfile: \$(OBJ) \n";
+print "$execfile: \$(OBJDIR) \$(OBJ) \n";
 print "\t \$(F90) -o \$(OUTDIR)/$execfile \$(OBJ) \$(LIBS) \n";
+print "\t mv *.mod \$(OBJDIR) \n";
 
-print "\n# Here are the compile steps\n ";
+print "\n# Here are the compile steps \n\n";
+
+print "\$(OBJDIR): \n";
+print "\tmkdir -p \$(OBJDIR)\n";
+
 print STDOUT @global_outlines;
-
 
 # Add an entry for make clean at the end of the make file.  this
 # removes most of the garbage left around by most of the Fortran 90
@@ -192,6 +211,7 @@ print STDOUT @global_outlines;
 print "\n# Type \" make clean \" to get rid of all object and module files \n";
 
 print "clean: \n";
+print "\tcd \$(OBJDIR); \\\n";
 print "\trm -f *~ *.o *.obj *.mod *.d *.s00 *.dbg *.stackdump \\\n";
 print "\t`find . -mindepth 1 -name \"*~\"` \n\n";
 print "cleanall: clean \n";
@@ -287,6 +307,8 @@ $objfile=$mainprogfile;
 $objfile=~s/\.${sftag}/\.o/;
 # strip path so object files go in current dir
 $objfile=~s|.*/||;
+# now add the user-defined path to the object files
+$objfile="\$(OBJDIR)/$objfile";
 @global_objlist=(@global_objlist,$objfile);
 # list of dependencies
 @objlist=();
@@ -296,10 +318,12 @@ foreach  $mf (@modfiles) {
   $obj=~s/\.${sftag}/\.o/;
   # strip path so object files go in current dir
   $obj=~s|.*/||;
+  # now add the user-defined path to the object file
+  $obj="\$(OBJDIR)/$obj";
   @objlist=(@objlist,$obj);
 }
 
 @global_outlines=(@global_outlines,"\n$objfile:$mainprogfile @objlist \n");
-@global_outlines=(@global_outlines,"\t \$(F90) -c \$(FFLAGS) $mainprogfile \n");
+@global_outlines=(@global_outlines,"\t \$(F90) -c \$(FFLAGS) $mainprogfile -o $objfile\n");
 
 }
