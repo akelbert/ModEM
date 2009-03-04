@@ -264,7 +264,7 @@ module ioAscii
 
 			! Calculating apparent resistivities and phases
       !temp=dcmplx(allData%d(iTx)%data(1,k),allData%d(iTx)%data(2,k))
-      !write(fid,*)tab, ((periods(iTx)*MU)/(2.0*PI))*abs(temp)**2, abs(atan(allData%d(iTx)%data(2,k)/allData%d(iTx)%data(1,k)))*(180/PI)
+      !write(fid,*)tab, ((periods(iTx)*MU_0)/(2.0*PI))*abs(temp)**2, abs(atan(allData%d(iTx)%data(2,k)/allData%d(iTx)%data(1,k)))*(180/PI)
 
       end subroutine write_Z
 

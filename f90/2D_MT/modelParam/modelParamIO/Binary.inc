@@ -11,10 +11,10 @@
       character*80, intent(in)	:: cfile
       type(modelParam_t), intent(in)		:: cond
       type(grid2d_t)              :: grid
-      real (kind=selectedPrec), allocatable :: v(:,:)
+      real (kind=prec), allocatable :: v(:,:)
       Integer                     ::k,j,Nz,Nza,NzEarth,Ny,stat
       character*80                :: paramType
-      real (kind=selectedPrec)    :: AirCond
+      real (kind=prec)    :: AirCond
 
       grid = cond%grid
       Ny = grid%Ny
@@ -54,12 +54,12 @@
       character(*), intent(in)	:: cfile
       type(modelParam_t), intent(inout)		:: cond
       type(grid2d_t), intent(inout), optional :: grid
-      real (kind=selectedPrec), allocatable :: v(:,:)
+      real (kind=prec), allocatable :: v(:,:)
 
       !  local variables
       integer 		:: Ny, Nz, Nza, NzEarth
       character*80	:: paramType
-      real (kind=selectedPrec) :: AirCond
+      real (kind=prec) :: AirCond
 
       open(unit=fid, file=cfile, form='unformatted',status='OLD')
       !  Read in grid geometry definitions, store in structure TEgrid

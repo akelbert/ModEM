@@ -13,7 +13,7 @@
       character(*), intent(in)  :: cfile
       type(modelParam_t), intent(in)		   :: cond
       type(grid2d_t)              :: grid
-      real (kind=selectedPrec), allocatable    :: value(:,:)
+      real (kind=prec), allocatable    :: value(:,:)
       Integer                     ::k,j,Nz,Nza,NzEarth,Ny
       logical                     :: newFile
       character(80)               :: paramType
@@ -87,10 +87,10 @@
       character(*), intent(in)  :: cfile
       type(modelParam_t), intent(out)		   :: cond
       type(grid2d_t), intent(inout), optional  :: grid
-      real (kind=selectedPrec), allocatable    :: value(:,:)
+      real (kind=prec), allocatable    :: value(:,:)
       Integer                     ::k,j,Nz,Nza,NzEarth,Ny
       logical                     :: newFile
-      real (kind=selectedPrec)    :: airCond
+      real (kind=prec)    :: airCond
       character(80)               :: line,paramType
 
       if (len_trim(cfile)>0) then

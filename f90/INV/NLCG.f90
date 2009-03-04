@@ -17,29 +17,29 @@ public  :: NLCGsolver
      ! maximum number of iterations in one call to iterative solver
      integer					:: maxIter
      ! convergence criteria: return from solver if rms < rmsTol
-     real (kind=selectedPrec)	:: rmsTol
+     real (kind=prec)	:: rmsTol
      ! the condition to identify when the inversion stalls
-     real (kind=selectedPrec)   :: fdiffTol
+     real (kind=prec)   :: fdiffTol
      ! exit if lambda < lambdaTol approx. 1e-4
-     real (kind=selectedPrec)   :: lambdaTol
+     real (kind=prec)   :: lambdaTol
      ! set lambda_i = k * lambda_{i-1} when the inversion stalls
-     real (kind=selectedPrec)   :: k
+     real (kind=prec)   :: k
      ! the factor that ensures sufficient decrease in the line search
-     real (kind=selectedPrec)   :: c
+     real (kind=prec)   :: c
      ! restart CG every nCGmax iterations to ensure conjugacy
      integer                    :: nCGmax
      ! restart CG if orthogonality is lost (not necessarily needed)
-     ! real (kind=selectedPrec)   :: delta ! 0.5
+     ! real (kind=prec)   :: delta ! 0.5
      ! the starting step for the line search
-     real (kind=selectedPrec)   :: alpha_1
+     real (kind=prec)   :: alpha_1
      ! if alpha_{i+1} < alpha_i * k_{alpha}, set alpha_{i+1} = alpha_i/2
-     ! real (kind=selectedPrec)   :: alpha_k ! 0.1
+     ! real (kind=prec)   :: alpha_k ! 0.1
      ! if alpha_{i+1} - alpha_i < tol_{alpha}, set alpha_{i+1} = alpha_i/2
-     ! real (kind=selectedPrec)   :: alpha_tol ! 1.0e-2
+     ! real (kind=prec)   :: alpha_tol ! 1.0e-2
      ! maximum initial delta mHat (overrides alpha_1)
-     real (kind=selectedPrec)   :: startdm
+     real (kind=prec)   :: startdm
      ! optional relaxation parameter (Renormalised Steepest Descent algorithm)
-     real (kind=selectedPrec)   :: gamma
+     real (kind=prec)   :: gamma
      ! model output file name
      character(80)              :: modelFile
      ! fid for output files (in the future will not need this)
@@ -94,7 +94,7 @@ Contains
    ! that can be used for evaluating the gradient
 
 	 character(*), intent(in)               :: comment
-   real(kind=selectedPrec), intent(in)  :: lambda, alpha, f, rms
+   real(kind=prec), intent(in)  :: lambda, alpha, f, rms
 
 		write(*,'(a10)',advance='no') trim(comment)//':'
 		write(*,'(a3,es12.6)',advance='no') ' f=',f
@@ -112,19 +112,19 @@ Contains
    ! Also output the predicted data and the EM solution
    ! that can be used for evaluating the gradient
 
-   real(kind=selectedPrec), intent(in)  :: lambda
+   real(kind=prec), intent(in)  :: lambda
    type(dvecMTX), intent(in)              :: d
    type(modelParam_t), intent(in)           :: m0
    type(modelParam_t), intent(in)           :: mHat
-   real(kind=selectedPrec), intent(out) :: F
+   real(kind=prec), intent(out) :: F
    type(dvecMTX), optional, intent(out)   :: dHat
    type(EMsolnMTX), optional, intent(out) :: eAll
-   real(kind=selectedPrec), optional, intent(out) :: RMS
+   real(kind=prec), optional, intent(out) :: RMS
 
    !  local variables
    type(dvecMTX)    :: res,Nres
    type(modelParam_t) :: m,JTd
-   real(kind=selectedPrec) :: SS,mNorm
+   real(kind=prec) :: SS,mNorm
    integer :: Ndata
 
    ! compute the smoothed model parameter vector
@@ -180,7 +180,7 @@ Contains
    !  call linComb_modelParam(ONE,m,ONE,m0,m)
    !  call fwdPred(m,dHat,eAll)
 
-   real(kind=selectedPrec), intent(in)  :: lambda
+   real(kind=prec), intent(in)  :: lambda
    type(dvecMTX), intent(in)              :: d
    type(modelParam_t), intent(in)           :: m0
    type(modelParam_t), intent(in)           :: mHat
@@ -220,12 +220,12 @@ Contains
 !**********************************************************************
    subroutine update_damping_parameter(lambda,mHat,F,grad)
 
-   real(kind=selectedPrec), intent(inout)  :: lambda
+   real(kind=prec), intent(inout)  :: lambda
    type(modelParam_t), intent(in)              :: mHat
-   real(kind=selectedPrec), intent(inout)  :: F
+   real(kind=prec), intent(inout)  :: F
    type(modelParam_t), intent(inout)             :: grad
 
-   real(kind=selectedPrec) :: SS, mNorm
+   real(kind=prec) :: SS, mNorm
 	 type(modelParam_t)          :: dSS
 
    ! compute the model norm
@@ -323,13 +323,13 @@ Contains
    !  that is not readable by Matlab. Have to figure out why!..
    type(dvecMTX), intent(in)		       :: d
    !  lambda is regularization parameter
-   real(kind=selectedPrec), intent(inout)  :: lambda
+   real(kind=prec), intent(inout)  :: lambda
    !  m0 is prior model parameter
    type(modelParam_t), intent(in)		       :: m0
    !  m is solution parameter ... on input m contains starting guess
    type(modelParam_t), intent(inout)	       :: m
    !  initial step size in the line search direction in model units
-   real(kind=selectedPrec), intent(inout), optional  :: startdm
+   real(kind=prec), intent(inout), optional  :: startdm
    !  flavor is a string that specifies the algorithm to use
    ! character(80), intent(in)               :: flavor
    character(80)                           :: flavor = 'Cubic'
@@ -338,8 +338,8 @@ Contains
    type(dvecMTX)			:: dHat, res
    type(modelParam_t)			:: mHat, m_minus_m0, grad, g, h, gPrev
    !type(NLCGiterControl_t)			:: iterControl
-   real(kind=selectedPrec)		:: value, valuePrev, rms, rmsPrev, alpha, beta, gnorm
-   real(kind=selectedPrec)      :: grad_dot_h, g_dot_g, g_dot_gPrev, gPrev_dot_gPrev, g_dot_h
+   real(kind=prec)		:: value, valuePrev, rms, rmsPrev, alpha, beta, gnorm
+   real(kind=prec)      :: grad_dot_h, g_dot_g, g_dot_gPrev, gPrev_dot_gPrev, g_dot_h
    integer				:: iter, nCG, nLS, nfunc
    character(3)         :: iterChar
    character(100)       :: modelFile, gradFile
@@ -537,26 +537,26 @@ Contains
    ! systems in optimisation research (Pronzato et al [2000, 2001]).
    ! To the best of my knowledge, it is not useful for NLCG.
 
-   real(kind=selectedPrec), intent(in)     :: lambda
+   real(kind=prec), intent(in)     :: lambda
    type(dvecMTX), intent(in)		       :: d
    type(modelParam_t), intent(in)		       :: m0
    type(modelParam_t), intent(in)            :: h  ! search direction
-   real(kind=selectedPrec), intent(inout)  :: alpha ! step size
+   real(kind=prec), intent(inout)  :: alpha ! step size
    type(modelParam_t), intent(inout)         :: mHat
-   real(kind=selectedPrec), intent(inout)  :: f
+   real(kind=prec), intent(inout)  :: f
    type(modelParam_t), intent(inout)         :: grad
-   real(kind=selectedPrec), intent(out)    :: rms
+   real(kind=prec), intent(out)    :: rms
    integer,intent(out)                     :: niter
 
    ! optionally add relaxation (e.g. for Renormalised Steepest Descent)
-   real(kind=selectedPrec), intent(in), optional :: gamma
+   real(kind=prec), intent(in), optional :: gamma
 
    ! local variables
-   real(kind=selectedPrec)                 :: alpha_1,alpha_i
+   real(kind=prec)                 :: alpha_1,alpha_i
    logical                                 :: starting_guess
    logical                                 :: relaxation
-   real(kind=selectedPrec)                 :: eps,k,c,a,b
-   real(kind=selectedPrec)                 :: g_0,f_0,f_1,f_i,rms_1
+   real(kind=prec)                 :: eps,k,c,a,b
+   real(kind=prec)                 :: g_0,f_0,f_1,f_i,rms_1
    type(modelParam_t)                        :: mHat_0,mHat_1
    type(dvecMTX)                           :: dHat,dHat_1
    type(EMsolnMTX)                         :: eAll,eAll_1
@@ -705,26 +705,26 @@ Contains
    ! systems in optimisation research (Pronzato et al [2000, 2001]).
    ! To the best of my knowledge, it is not useful for NLCG.
 
-   real(kind=selectedPrec), intent(in)     :: lambda
+   real(kind=prec), intent(in)     :: lambda
    type(dvecMTX), intent(in)		       :: d
    type(modelParam_t), intent(in)		       :: m0
    type(modelParam_t), intent(in)            :: h  ! search direction
-   real(kind=selectedPrec), intent(inout)  :: alpha ! step size
+   real(kind=prec), intent(inout)  :: alpha ! step size
    type(modelParam_t), intent(inout)         :: mHat
-   real(kind=selectedPrec), intent(inout)  :: f
+   real(kind=prec), intent(inout)  :: f
    type(modelParam_t), intent(inout)         :: grad
-   real(kind=selectedPrec), intent(out)    :: rms
+   real(kind=prec), intent(out)    :: rms
    integer, intent(out)                    :: niter
 
    ! optionally add relaxation (e.g. for Renormalised Steepest Descent)
-   real(kind=selectedPrec), intent(in), optional :: gamma
+   real(kind=prec), intent(in), optional :: gamma
 
     ! local variables
-   real(kind=selectedPrec)                 :: alpha_1,alpha_i,alpha_j
+   real(kind=prec)                 :: alpha_1,alpha_i,alpha_j
    logical                                 :: starting_guess
    logical                                 :: relaxation
-   real(kind=selectedPrec)                 :: eps,k,c,a,b,q1,q2,q3
-   real(kind=selectedPrec)                 :: g_0,f_0,f_1,f_i,f_j,rms_1
+   real(kind=prec)                 :: eps,k,c,a,b,q1,q2,q3
+   real(kind=prec)                 :: g_0,f_0,f_1,f_i,f_j,rms_1
    type(modelParam_t)                        :: mHat_0,mHat_1
    type(dvecMTX)                           :: dHat,dHat_1
    type(EMsolnMTX)                         :: eAll,eAll_1

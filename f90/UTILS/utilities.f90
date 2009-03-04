@@ -7,24 +7,120 @@ module utilities
 
 Contains
 
-!*****************************************************************************
+  !*****************************************************************************
+  subroutine errStop(msg)
 
-     subroutine errStop(msg)
+    character(*), intent(in)  :: msg
+    write(0,*) 'Error: ',msg
+    stop
 
-     character(*), intent(in)  :: msg
-     write(0,*) 'Error: ',msg
-     stop
+  end subroutine errStop
 
-     end subroutine errStop
+  !*****************************************************************************
+  subroutine warning(msg)
 
-!*****************************************************************************
+    character(*), intent(in)  :: msg
+    write(0,*) 'Warning: ',msg
 
-     subroutine warning(msg)
+  end subroutine warning
 
-     character(*), intent(in)  :: msg
-     write(0,*) 'Warning: ',msg
+  ! **************************************************************************
+  function clean(x)
+    ! This is a utility routine that provides an expression used to battle
+	! against machine error problems. It returns the same real or real(8)
+	! as the input, but without the extra digits at the end that are often
+	! a cause of wrong comparisons in the if statements. ALWAYS use clean(x)
+	! instead of x in an inequality!!!
+	! LARGE_REAL is defined in the module math_constants
+	! A.K.
+    implicit none
+    real (kind=prec), intent(in)                   :: x
+    real (kind=prec)						       :: clean
 
-     end subroutine warning
+	clean = dnint(x*LARGE_REAL)/LARGE_REAL
+
+  end function clean
+
+  ! **************************************************************************
+  function nearest_meter(x) result(clean)
+    ! This is a utility routine that provides an expression used to battle
+	! against machine error problems. Both input and output are values in km.
+	! The function rounds the value to the nearest meter. This is useful to
+	! ensure that the grid read from a file does not depend on system precision.
+	! A.K.
+    implicit none
+    real (kind=prec), intent(in)                   :: x
+    real (kind=prec)						       :: clean
+
+	clean = dnint(x*KM2M)/KM2M
+
+  end function nearest_meter
+
+
+  ! **************************************************************************
+  function minNode(x, xNode) result(ix)
+    !  This is a utility routine, used by several data functional
+    !  set up routines, and for other interpolation functions
+    !  Returns index ix such that  xNode(ix) <= x < xNode(ix+1)
+    !  If x is out of range:
+    !  x < xNode(1) returns 0; if x> xNode(nx) returns nx
+    !  Assumes xNode is strictly increasing; does not check this
+    !  NOTE: as presently coded, when xNode is called with center
+    !  (face) node positions, this routine will return zero for
+    !  the coordinates in the outer half cell nearest the boundary
+    !  If evaluation over the complete model domain is to be allowed
+    !  a more general interpolation rule will be required.
+    !  A.K.: modified to allow input of any size, nx = size(xNode).
+
+    implicit none
+    real (kind=prec), intent(in)                   :: x
+    real (kind=prec), dimension(:), intent(in)     :: xNode
+
+    integer                                     :: ix
+    integer                                     :: i
+
+    ix = size(xNode)
+    do i = 1,size(xNode)
+       if(clean(xNode(i)) .gt. clean(x)) then
+          ix = i-1
+          exit
+       endif
+    enddo
+
+  end function minNode
+
+
+  ! **************************************************************************
+  function maxNode(x, xNode) result(ix)
+    !  This is a utility routine, used by several data functional
+    !  set up routines, and for other interpolation functions
+    !  Returns index ix such that  xNode(ix) <= x < xNode(ix+1)
+    !  If x is out of range:
+    !  x > xNode(1) returns 0; if x< xNode(nx) returns nx
+    !  Assumes xNode is strictly decreasing; does not check this
+    !  NOTE: as presently coded, when xNode is called with center
+    !  (face) node positions, this routine will return zero for
+    !  the coordinates in the outer half cell nearest the boundary
+    !  If evaluation over the complete model domain is to be allowed
+    !  a more general interpolation rule will be required.
+    !  A.K.: modified to allow input of any size, nx = size(xNode).
+
+    implicit none
+    real (kind=prec), intent(in)                   :: x
+    real (kind=prec), dimension(:), intent(in)     :: xNode
+
+    integer                                     :: ix
+    integer                                     :: i
+
+    ix = size(xNode)
+    do i = 1,size(xNode)
+       if(clean(xNode(i)) .lt. clean(x)) then
+          ix = i-1
+          exit
+       endif
+    enddo
+
+  end function maxNode
 
 ! *****************************************************************************
 
@@ -158,148 +254,12 @@ Contains
 
       END Subroutine lenb
 
-! *****************************************************************************
-!  function minNode(x, xNode, nx) result(ix)
-!    !  This is a utility routine, used by several data functional
-!    !  set up routines, and for other interpolation functions
-!    !  Returns index ix such that  xNode(ix) <= x < xNode(ix+1)
-!    !    If x is out of range:
-!    !       x < xNode(1) returns 0; if x> xNode(nx) returns nx
-!    !  Assumes xNode is strictly increasing; does not check this
-!    !  NOTE: as presently coded, when xNode is called with center
-!    !  (face) node positions, this routine will return zero for
-!    !  the coordinates in the outer half cell nearest the boundary
-!    !  If evaluation over the complete model domain is to be allowed
-!    !  a more general interpolation rule will be required.
-!
-!    implicit none
-!    real (kind=8), intent(in)                   :: x
-!    integer,intent(in)                          :: nx
-!    real (kind=8), dimension(nx), intent(in)    :: xNode(nx)
-!    integer                                     :: ix
-!    integer                                     :: i
-!
-!    ix = nx
-!    do i = 1,nx
-!       if(xNode(i) .gt. x ) then
-!          ix = i-1
-!          exit
-!       endif
-!    enddo
-!
-!  end function minNode
-
-    ! **************************************************************************
-  ! * BOP
-  function minNode(x, xNode) result(ix)
-    !  This is a utility routine, used by several data functional
-    !  set up routines, and for other interpolation functions
-    !  Returns index ix such that  xNode(ix) <= x < xNode(ix+1)
-    !  If x is out of range:
-    !  x < xNode(1) returns 0; if x> xNode(nx) returns nx
-    !  Assumes xNode is strictly increasing; does not check this
-    !  NOTE: as presently coded, when xNode is called with center
-    !  (face) node positions, this routine will return zero for
-    !  the coordinates in the outer half cell nearest the boundary
-    !  If evaluation over the complete model domain is to be allowed
-    !  a more general interpolation rule will be required.
-    !  A.K.: modified to allow input of any size, nx = size(xNode).
-
-    implicit none
-    real (kind=selectedPrec), intent(in)                   :: x
-    real (kind=selectedPrec), dimension(:), intent(in)     :: xNode
-    ! * EOP
-
-    integer                                     :: ix
-    integer                                     :: i
-
-    ix = size(xNode)
-    do i = 1,size(xNode)
-       if(clean(xNode(i)) .gt. clean(x)) then
-          ix = i-1
-          exit
-       endif
-    enddo
-
-  end function minNode
-
-
-  ! **************************************************************************
-  ! * BOP
-  function maxNode(x, xNode) result(ix)
-    !  This is a utility routine, used by several data functional
-    !  set up routines, and for other interpolation functions
-    !  Returns index ix such that  xNode(ix) <= x < xNode(ix+1)
-    !  If x is out of range:
-    !  x > xNode(1) returns 0; if x< xNode(nx) returns nx
-    !  Assumes xNode is strictly decreasing; does not check this
-    !  NOTE: as presently coded, when xNode is called with center
-    !  (face) node positions, this routine will return zero for
-    !  the coordinates in the outer half cell nearest the boundary
-    !  If evaluation over the complete model domain is to be allowed
-    !  a more general interpolation rule will be required.
-    !  A.K.: modified to allow input of any size, nx = size(xNode).
-
-    implicit none
-    real (kind=selectedPrec), intent(in)                   :: x
-    real (kind=selectedPrec), dimension(:), intent(in)     :: xNode
-    ! * EOP
-
-    integer                                     :: ix
-    integer                                     :: i
-
-    ix = size(xNode)
-    do i = 1,size(xNode)
-       if(clean(xNode(i)) .lt. clean(x)) then
-          ix = i-1
-          exit
-       endif
-    enddo
-
-  end function maxNode
-
-  ! **************************************************************************
-  ! * BOP
-  function clean(x)
-    ! This is a utility routine that provides an expression used to battle
-	! against machine error problems. It returns the same real or real(8)
-	! as the input, but without the extra digits at the end that are often
-	! a cause of wrong comparisons in the if statements. ALWAYS use clean(x)
-	! instead of x in an inequality!!!
-	! LARGE_REAL is defined in the module math_constants
-	! A.K.
-    implicit none
-    real (kind=selectedPrec), intent(in)                   :: x
-    real (kind=selectedPrec)						       :: clean
-    ! * EOP
-
-	clean = dnint(x*LARGE_REAL)/LARGE_REAL
-
-  end function clean
-
-  ! **************************************************************************
-  ! * BOP
-  function nearest_meter(x) result(clean)
-    ! This is a utility routine that provides an expression used to battle
-	! against machine error problems. Both input and output are values in km.
-	! The function rounds the value to the nearest meter. This is useful to
-	! ensure that the grid read from a file does not depend on system precision.
-	! A.K.
-    implicit none
-    real (kind=selectedPrec), intent(in)                   :: x
-    real (kind=selectedPrec)						       :: clean
-    ! * EOP
-
-	clean = dnint(x*KM2M)/KM2M
-
-  end function nearest_meter
-
   ! **************************************************************************
   ! Naser Meqbel included this function: apparently, it is not supported by
   ! all compilers as an intrinsic
   logical function isnan(a)
 
-        real (kind=selectedPrec), intent(in) ::a
+        real (kind=prec), intent(in) ::a
 
         if (a .ne. a) then
         	isnan = .true.

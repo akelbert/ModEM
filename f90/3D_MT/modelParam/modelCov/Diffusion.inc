@@ -110,12 +110,12 @@
      type (mCov_t), intent(out)              :: Cm
 
 
-     real (kind=selectedPrec), pointer, dimension(:,:)   ::  XDF
-     real (kind=selectedPrec), pointer, dimension(:,:)   ::  YDF
-     real (kind=selectedPrec), pointer, dimension(:,:)   ::  ZDF
+     real (kind=prec), pointer, dimension(:,:)   ::  XDF
+     real (kind=prec), pointer, dimension(:,:)   ::  YDF
+     real (kind=prec), pointer, dimension(:,:)   ::  ZDF
 
      integer                  :: jj, ix, iy, iz, Nx, Ny, NzEarth
-     real (kind=selectedPrec) :: xlen, ylen, zlen
+     real (kind=prec) :: xlen, ylen, zlen
 
 	  Nx      = gd%Nx
 	  Ny      = gd%Ny
@@ -178,24 +178,20 @@
   SUBROUTINE SetupXCM(Nx,xlen,XDF)
 
       integer Nx,info
-      real (kind=selectedPrec)  XDF(2,Nx),xlen
-      real (kind=selectedPrec)  cr,cl,difxc(Nx),difxr(Nx)
+      real (kind=prec)  XDF(2,Nx),xlen
+      real (kind=prec)  cr,cl,difxc(Nx),difxr(Nx)
 
       integer ix
-      real (kind=selectedPrec)  D0,D1
-
-      D0 = 0.
-      D1 = 1.
 
       DO ix = 1,Nx
         cr = xlen
         cl = xlen
 
-        difxc(ix) = D1 + cr + cl
+        difxc(ix) = ONE + cr + cl
         difxr(ix) = -cr
       ENDDO ! ix
 
-      CALL ConstantMatrixR8(XDF,2,Nx,2,Nx,D0)
+      CALL ConstantMatrixR8(XDF,2,Nx,2,Nx,R_ZERO)
 
       DO ix = 2,Nx
         XDF(1,ix) = difxr(ix-1)
@@ -226,24 +222,19 @@
   SUBROUTINE SetupYCM(Ny,ylen,YDF)
 
       integer Ny,info,ygd(*)
-      real (kind=selectedPrec)  YDF(2,Ny),ylen
-      real (kind=selectedPrec)  cr,cl,difyc(Ny),difyr(Ny)
+      real (kind=prec)  YDF(2,Ny),ylen
+      real (kind=prec)  cr,cl,difyc(Ny),difyr(Ny)
       integer iy
-      real (kind=selectedPrec)  D0,D1
-
-      D0 = 0.
-      D1 = 1.
-
 
       DO iy = 1,Ny
         cr = ylen
         cl = ylen
 
-        difyc(iy) = D1 + cr + cl
+        difyc(iy) = ONE + cr + cl
         difyr(iy) = -cr
       ENDDO ! iy
 
-      CALL ConstantMatrixR8(YDF,2,Ny,2,Ny,D0)
+      CALL ConstantMatrixR8(YDF,2,Ny,2,Ny,R_ZERO)
 
       DO iy = 2,Ny
         YDF(1,iy) = difyr(iy-1)
@@ -275,23 +266,19 @@
   SUBROUTINE SetupZCM(Nz,zlen,ZDF)
 
       integer Nz,info,zgd(*)
-      real (kind=selectedPrec)  ZDF(2,Nz),zlen
-      real (kind=selectedPrec)  cr,cl,difzc(Nz),difzr(Nz)
+      real (kind=prec)  ZDF(2,Nz),zlen
+      real (kind=prec)  cr,cl,difzc(Nz),difzr(Nz)
       integer iz
-      real (kind=selectedPrec)  D0,D1
-
-      D0 = 0.
-      D1 = 1.
 
       DO iz = 1,Nz
         cr = zlen
         cl = zlen
 
-        difzc(iz) = D1 + cr + cl
+        difzc(iz) = ONE + cr + cl
         difzr(iz) = -cr
       ENDDO ! iz
 
-      CALL ConstantMatrixR8(ZDF,2,Nz,2,Nz,D0)
+      CALL ConstantMatrixR8(ZDF,2,Nz,2,Nz,R_ZERO)
 
       DO iz = 2,Nz
         ZDF(1,iz) = difzr(iz-1)
@@ -356,8 +343,8 @@
 	  type (rscalar), intent(inout)  :: u2
 
 
-	  real (kind=selectedPrec), allocatable, dimension(:,:)   ::  XDF
-	  real (kind=selectedPrec), allocatable, dimension(:)     ::  ux
+	  real (kind=prec), allocatable, dimension(:,:)   ::  XDF
+	  real (kind=prec), allocatable, dimension(:)     ::  ux
 
 	  integer            :: Nx,Ny,NzEarth,ix,iy,iz,info
 
@@ -400,8 +387,8 @@
 	  type (mCov_t), intent(in)      :: Cm
 	  type (rscalar), intent(inout)  :: u2
 
-	  real (kind=selectedPrec), allocatable, dimension(:,:)   ::  YDF
-	  real (kind=selectedPrec), allocatable, dimension(:)     ::  uy
+	  real (kind=prec), allocatable, dimension(:,:)   ::  YDF
+	  real (kind=prec), allocatable, dimension(:)     ::  uy
 
 	  integer            :: Nx,Ny,NzEarth,ix,iy,iz,info
 
@@ -444,8 +431,8 @@
 	  type (mCov_t), intent(in)      :: Cm
 	  type (rscalar), intent(inout)  :: u2
 
-	  real (kind=selectedPrec), allocatable, dimension(:,:)   ::  ZDF
-	  real (kind=selectedPrec), allocatable, dimension(:)     ::  uz
+	  real (kind=prec), allocatable, dimension(:,:)   ::  ZDF
+	  real (kind=prec), allocatable, dimension(:)     ::  uz
 
 	  integer            :: Nx,Ny,NzEarth,ix,iy,iz,info
 

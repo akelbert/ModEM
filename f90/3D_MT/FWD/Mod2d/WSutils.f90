@@ -9,7 +9,7 @@ module WSutils
   ! *****************************************************************************
       SUBROUTINE CopyVectorR8(x_1,x_2,vx,y_1,y_2,vy)
       INTEGER x_1,x_2,y_1,y_2
-      REAL(kind=selectedPrec)  vx(*),vy(*)
+      REAL(kind=prec)  vx(*),vy(*)
 
       INTEGER ix,iy
  
@@ -31,7 +31,7 @@ module WSutils
 ! *****************************************************************************
       SUBROUTINE CopyVectorC16(x_1,x_2,vx,y_1,y_2,vy)
       INTEGER x_1,x_2,y_1,y_2
-      COMPLEX(kind=selectedPrec)  vx(*),vy(*)
+      COMPLEX(kind=prec)  vx(*),vy(*)
 
       INTEGER ix,iy
  
@@ -54,7 +54,7 @@ module WSutils
       SUBROUTINE CopyMatrixR8(x00,x01,x10,x11,nx1,nx2,mx,  &
                              y00,y01,y10,y11,ny1,ny2,my)
       INTEGER x00,x01,x10,x11,y00,y01,y10,y11,nx1,nx2,ny1,ny2
-      real(kind=selectedPrec)  mx(nx1,nx2),my(ny1,ny2)
+      real(kind=prec)  mx(nx1,nx2),my(ny1,ny2)
 
       INTEGER ix1,ix2,iy1,iy2
 
@@ -80,7 +80,7 @@ module WSutils
 ! *****************************************************************************
       SUBROUTINE TransMatrixToVectorR8(mx,np1,np2,s1,s2,e1,e2,vx,sa,ea)
       INTEGER np1,np2,s1,s2,e1,e2,sa,ea
-      real(kind=selectedPrec)  mx(np1,np2),vx(*)
+      real(kind=prec)  mx(np1,np2),vx(*)
 
       INTEGER i_1,i_2,ia
 
@@ -103,7 +103,7 @@ module WSutils
 ! *****************************************************************************    
       SUBROUTINE ConstantMatrixR8(mx,np1,np2,n1,n2,const_val)
       INTEGER np1,np2,n1,n2
-      real(kind=selectedPrec)  mx(np1,np2),const_val
+      real(kind=prec)  mx(np1,np2),const_val
 
       INTEGER i_1,i_2
       
@@ -118,8 +118,8 @@ module WSutils
    
       SUBROUTINE ConstantMatrixC16(mx,np1,np2,n1,n2,const_val)
       INTEGER np1,np2,n1,n2
-      real(kind=selectedPrec)  const_val
-      complex(kind=selectedPrec) mx(np1,np2)
+      real(kind=prec)  const_val
+      complex(kind=prec) mx(np1,np2)
 
       INTEGER i_1,i_2
       
@@ -136,7 +136,7 @@ module WSutils
 ! *****************************************************************************
       SUBROUTINE ConstantVectorR8(vx,n,const_val)
       INTEGER n
-      real(kind=selectedPrec)  vx(*),const_val
+      real(kind=prec)  vx(*),const_val
 
       INTEGER i
       
@@ -151,8 +151,8 @@ module WSutils
 ! *****************************************************************************
       SUBROUTINE ConstantVectorC16(vx,n,const_val)
       INTEGER n
-      real(kind=selectedPrec)  const_val
-      complex(kind=selectedPrec)  vx(*)
+      real(kind=prec)  const_val
+      complex(kind=prec)  vx(*)
 
       INTEGER i
       
@@ -166,7 +166,7 @@ module WSutils
 
 ! ***************************************************************************** 
       SUBROUTINE CumulativeDistance(nx,dx,xdis)
-      real(kind=selectedPrec)  dx(*),xdis(*)
+      real(kind=prec)  dx(*),xdis(*)
       INTEGER nx,ix
       
       xdis(1) = R_ZERO
@@ -180,7 +180,7 @@ module WSutils
 
 ! *****************************************************************************
       SUBROUTINE DistanceBetweenBlocks(nx,dx,cx)
-      real(kind=selectedPrec)  dx(*),cx(*)
+      real(kind=prec)  dx(*),cx(*)
       INTEGER nx,ix
       
       DO  ix = 2,nx

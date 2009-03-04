@@ -6,7 +6,7 @@
 !       "natural" representations of conductivity: defined on nodes
 !        for TE, and on faces for TM; for TM data functionals conductvity
 !        defined on cells is also required.  Mappings from the potentially
-!        more flexible earth conductivity parameter to these fixed, 
+!        more flexible earth conductivity parameter to these fixed,
 !        grid-specific representations is implemented in module CondMap,
 !	 which this module uses.  This module should have no (or at least
 !        minimal) dependence on the specific instance of the
@@ -37,7 +37,7 @@ module senspdecoeff
 
    !   local variables
    integer			:: iy, iz, Ny, Nzb,Nza
-   real (kind=selectedPrec)	:: dz,dy
+   real (kind=prec)	:: dz,dy
 
    if(Jy%gridType .ne. EDGE_EARTH .or.  &
 		Jz%gridType .ne. EDGE_EARTH) then
@@ -73,10 +73,10 @@ module senspdecoeff
 
    type(cvector), intent(in)		:: Ey,Ez
    type(cvector), intent(inout)		:: b
- 
+
    !  local variables
    integer 			:: iy, iz, Ny, Nzb, Nza
-   real (kind=selectedPrec)	:: dz1,dz2,dzz, dy1, dy2, dyy
+   real (kind=prec)	:: dz1,dz2,dzz, dy1, dy2, dyy
 
    if(Ey%gridType .ne. EDGE_EARTH .or.  &
 		Ez%gridType .ne. EDGE_EARTH) then
@@ -112,7 +112,7 @@ module senspdecoeff
 
    ! local variables
    integer 			:: iy, iz, Ny, Nzb, Nza
-   real(kind=selectedPrec)	:: dz1,dz2,dzz, dy1, dy2, dyy
+   real(kind=prec)	:: dz1,dz2,dzz, dy1, dy2, dyy
 
    if(Ey%gridType .ne. EDGE_EARTH .or.  &
 		Ez%gridType .ne. EDGE_EARTH) then
@@ -157,30 +157,30 @@ module senspdecoeff
    type(modelParam_t), intent(in)		:: dsigma
    type(EMrhs), intent(inout)          	:: e
    !  local variables
-   complex(kind=selectedPrec)		    :: i_omega_mu
+   complex(kind=prec)		    :: i_omega_mu
    character*80                 	    :: gridType
    type(cvector)                 	    :: Jy,Jz,CJy,CJz
 
    if(e0%mode.eq.'TE') then
-   
-	   i_omega_mu = cmplx(0.,isign*mu*e0%omega,kind=selectedPrec)
+
+	   i_omega_mu = cmplx(0.,ISIGN*MU_0*e0%omega,kind=prec)
 	   e%source%v = C_ZERO
 	   call CellToNode(dsigma,e%source,sigma0)
-	
+
 	   !  multiply by i * omega * mu
 	   e%source%v = e%source%v*e0%vec%v*i_omega_mu
 
    else
- 
+
 	   !  allocate temporary data structures
 	   gridType = EDGE_EARTH
 	   call create_cvector(e0%grid,gridType,Jy)
 	   call create_cvector(e0%grid,gridType,Jz)
 	   call create_cvector(e0%grid,gridType,CJy)
 	   call create_cvector(e0%grid,gridType,CJz)
-	
+
 	   call CellToEdge(dsigma,sigma0, CJy,CJz)
-	
+
 	   call curlB(e0%vec,Jy,Jz)
 	   CJy%v = CJy%v*Jy%v
 	   CJz%v = CJz%v*Jz%v
@@ -192,14 +192,14 @@ module senspdecoeff
 	   !    operator is actually -S (this is the usual way that the
 	   !       TM operator is written for 2D MT).  Hence the sign of e%v
 	   !    should NOT be reversed here
-	
+
 	   call deall_cvector(Jy)
 	   call deall_cvector(Jz)
 	   call deall_cvector(CJy)
 	   call deall_cvector(CJz)
-   
+
    endif
-   
+
    end subroutine Pmult
 
 !**********************************************************************
@@ -219,28 +219,28 @@ module senspdecoeff
    type(modelParam_t), intent(inout)               :: dsigmaReal
    type(modelParam_t), intent(inout),optional      :: dsigmaImag
    !  local variables
-   complex(kind=selectedPrec)			:: i_omega_mu
+   complex(kind=prec)			:: i_omega_mu
    character*80					        :: gridType
    type(cvector)					    :: Jy,Jz,CJy,CJz
    type(cvector)					    :: temp
 
    if(e0%mode.eq.'TE') then
-   
-	   i_omega_mu = cmplx(0.,isign*mu*e0%omega,kind=selectedPrec)
-	
+
+	   i_omega_mu = cmplx(0.,ISIGN*MU_0*e0%omega,kind=prec)
+
 	   call create_cvector(e0%vec%grid,e0%vec%gridType,temp)
 	   ! multiply backward solution by i_omega_mu * e0
 	   ! map real/imag parts onto parameter space
 	   temp%v = real(e%vec%v*e0%vec%v*i_omega_mu)
-	
+
 	   call NodeToCell(temp,dsigmaReal,sigma0)
-	
+
 	   if(present(dsigmaImag)) then
 	      ! also compute imaginary part
 	      temp%v = imag(e%vec%v*e0%vec%v*i_omega_mu)
 	      call NodeToCell(temp,dsigmaImag,sigma0)
 	   endif
-	   
+
 	   call deall_cvector(temp)
 
    else
@@ -251,24 +251,24 @@ module senspdecoeff
 	   call create_cvector(e0%grid,gridType,Jz)
 	   call create_cvector(e0%grid,gridType,CJy)
 	   call create_cvector(e0%grid,gridType,CJz)
-	
+
 	   !  compute curls
 	   call curlE_T(e%vec,CJy,CJz)
 	   call curlB(e0%vec,Jy,Jz)
 	   CJy%v = CJy%v*Jy%v
 	   CJz%v = CJz%v*Jz%v
-	
+
 	   ! map from edge back to model parameter space
 	   Jy%v = real(CJy%v)
 	   Jz%v = real(CJz%v)
 	   call EdgeToCell(Jy,Jz,sigma0,dsigmaReal)
-	
+
 	   if(present(dsigmaImag)) then
 	      Jy%v = imag(CJy%v)
 	      Jz%v = imag(CJz%v)
 	      call EdgeToCell(Jy,Jz,sigma0,dsigmaImag)
 	   endif
-	
+
 	   call deall_cvector(Jy)
 	   call deall_cvector(Jz)
 	   call deall_cvector(CJy)

@@ -15,11 +15,11 @@
 	integer                                           :: N
 
 	! general rules for smoothing in the X and Y-directions, dimension(NzEarth)
-	real (kind=selectedPrec), pointer, dimension(:)   :: Sx
-	real (kind=selectedPrec), pointer, dimension(:)   :: Sy
+	real (kind=prec), pointer, dimension(:)   :: Sx
+	real (kind=prec), pointer, dimension(:)   :: Sy
 
 	! general rule for vertical smoothing
-	real (kind=selectedPrec)                          :: Sz
+	real (kind=prec)                          :: Sz
 
 	! special rules for smoothing across a surface stored as a sparse array
     type (sparsevecc)                                 :: S

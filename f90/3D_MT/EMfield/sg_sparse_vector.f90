@@ -74,7 +74,7 @@ module sg_sparse_vector
      ! i,j,k are arrays of indices that defines grid location
      integer , pointer, dimension(:) 		:: i,j,k,xyz
      ! c is complex array of coefficients
-     complex (kind=selectedPrec), pointer, dimension(:) 	:: c
+     complex (kind=prec), pointer, dimension(:) 	:: c
      ! has sparse vector been allocated?
      logical					:: allocated = .false.
      ! pointer to the parent grid
@@ -375,7 +375,7 @@ Contains
   !  allocates for output if necessary
 
     implicit none
-    complex(kind=selectedPrec), intent(in)	:: cs
+    complex(kind=prec), intent(in)	:: cs
     type (sparsevecc), intent(in)		:: Lin
     type (sparsevecc), intent(inout)            :: Lout
 
@@ -412,7 +412,7 @@ Contains
     implicit none
     type (sparsevecc), intent(in)		:: SV
     type (cvector), intent(in)			:: V
-    complex(kind=selectedPrec)				:: c
+    complex(kind=prec)				:: c
     integer					:: i
     integer					:: xi, yi, zi
 
@@ -476,7 +476,7 @@ Contains
     implicit none
     type (sparsevecc), intent(in)		:: SV
     type (cvector), intent(in)			:: V
-    complex(kind=selectedPrec)				:: c
+    complex(kind=prec)				:: c
     integer					:: i
     integer					:: xi, yi, zi
 
@@ -541,7 +541,7 @@ Contains
     implicit none
     type (sparsevecc), intent(in)		:: SV
     type (cvector), intent(in)			:: V
-    complex(kind=selectedPrec)				:: c
+    complex(kind=prec)				:: c
     integer					:: i
     integer					:: xi, yi, zi
 
@@ -607,7 +607,7 @@ Contains
     implicit none
     type (sparsevecc), intent(in)		:: SV
     type (cvector), intent(in)			:: V
-    complex(kind=selectedPrec)				:: c
+    complex(kind=prec)				:: c
     integer					:: i
     integer					:: xi, yi, zi
 
@@ -675,7 +675,7 @@ Contains
     implicit none
     type (sparsevecc), intent(in)	:: SV
     type (cvector), intent(inout)	:: V
-    complex(kind=selectedPrec), intent(in)		:: cs
+    complex(kind=prec), intent(in)		:: cs
     integer				:: i
     integer				:: xi, yi, zi
 

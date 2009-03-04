@@ -8,15 +8,15 @@ program FWDtest
 	use fwdtemod
 	implicit none
 	
-	real (kind=selectedPrec), allocatable, dimension(:,:) :: Cond2D
+	real (kind=prec), allocatable, dimension(:,:) :: Cond2D
 	integer (kind=4) :: Nzb, IER, nPer, i, nHXB
-	real (kind=selectedPrec), allocatable, dimension(:) :: periods
+	real (kind=prec), allocatable, dimension(:) :: periods
         !  Solution, boundary conditions for TM test
-	complex (kind=selectedPrec), allocatable, dimension(:,:) :: Hsol
-	complex (kind=selectedPrec), allocatable, dimension(:)	:: HXB
+	complex (kind=prec), allocatable, dimension(:,:) :: Hsol
+	complex (kind=prec), allocatable, dimension(:)	:: HXB
         !  Solution, boundary conditions for TE test
-	complex (kind=selectedPrec), allocatable, dimension(:,:) :: Esol
-	complex (kind=selectedPrec), allocatable, dimension(:)	:: EXB
+	complex (kind=prec), allocatable, dimension(:,:) :: Esol
+	complex (kind=prec), allocatable, dimension(:)	:: EXB
 
         type(grid2d_t) 	:: TMgrid
 

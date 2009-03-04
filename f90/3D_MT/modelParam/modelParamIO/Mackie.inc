@@ -79,11 +79,11 @@
     type (rscalar), intent(inout), optional     :: Cond
     character (len=80), intent(out), optional   :: paramType
 
-    real(kind=selectedPrec)                     :: origin(3)
-    real(kind=selectedPrec),pointer,dimension(:)    :: res
+    real(kind=prec)                     :: origin(3)
+    real(kind=prec),pointer,dimension(:)    :: res
     integer                                     :: whichLayer
     integer                                     :: ix,iy,iz,ip,i,j
-    real(kind=selectedPrec)                     :: alpha = 3.
+    real(kind=prec)                     :: alpha = 3.
     integer                                     :: jj,Nx,Ny,Nz,NzEarth,NzAir
     integer                                     :: status, ioerr
 
@@ -221,7 +221,7 @@
     type (grid3d_t), intent(inout)             :: grid
     type (rscalar), intent(inout)     			:: Cond
     character(*), intent(in)         			:: paramType
-    real(kind=selectedPrec), allocatable       :: value(:,:,:)
+    real(kind=prec), allocatable       :: value(:,:,:)
     integer                                    :: i,j,k,ioerr
     integer                                    :: Nx,Ny,NzEarth,Nza,Nz
     logical                                    :: newFile

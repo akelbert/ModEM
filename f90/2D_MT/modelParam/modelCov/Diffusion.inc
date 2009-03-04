@@ -65,11 +65,11 @@
   type (grid2d_t),   intent(in)    :: gd
   type (modelCov_t), intent(out)   :: Cm
 
-  real (kind=selectedPrec), pointer, dimension(:,:)   ::  YDF
-  real (kind=selectedPrec), pointer, dimension(:,:)   ::  ZDF
+  real (kind=prec), pointer, dimension(:,:)   ::  YDF
+  real (kind=prec), pointer, dimension(:,:)   ::  ZDF
 
   integer  :: iy, iz, NzEarth ,Ny, istat
-  real (kind=selectedPrec) :: ylen, zlen
+  real (kind=prec) :: ylen, zlen
 
   Ny      = gd%Ny
   NzEarth = gd%Nz - gd%Nza
@@ -108,13 +108,13 @@
   subroutine setupYCM(Ny,ylen,YDF)
 
   !use wsLAPACK
-  real (kind=selectedPrec), pointer, dimension(:,:)   ::  YDF
+  real (kind=prec), pointer, dimension(:,:)   ::  YDF
   integer  :: Ny
-  real (kind=selectedPrec) :: ylen
+  real (kind=prec) :: ylen
 
   integer  :: iy,info,istat
-  real (kind=selectedPrec) :: cr, cl
-  real (kind=selectedPrec), allocatable, dimension(:)   ::  dfyc, dfyr
+  real (kind=prec) :: cr, cl
+  real (kind=prec), allocatable, dimension(:)   ::  dfyc, dfyr
 
 
   allocate(YDF(2,Ny),STAT=istat)
@@ -159,13 +159,13 @@
   subroutine setupZCM(Nzb,zlen,ZDF)
 
   !use wsLAPACK
-  real (kind=selectedPrec), pointer,  dimension(:,:)   ::  ZDF
+  real (kind=prec), pointer,  dimension(:,:)   ::  ZDF
   integer  :: Nzb
-  real (kind=selectedPrec) :: zlen
+  real (kind=prec) :: zlen
 
   integer  :: iz,info,istat
-  real (kind=selectedPrec) :: cr, cl
-  real (kind=selectedPrec), allocatable, dimension(:)   ::  dfzc, dfzr
+  real (kind=prec) :: cr, cl
+  real (kind=prec), allocatable, dimension(:)   ::  dfzc, dfzr
 
 
   allocate(ZDF(2,Nzb),STAT=istat)
@@ -250,8 +250,8 @@
   type (modelCov_t),   intent(in)    :: Cm
   type (modelParam_t), intent(inout) :: CmJ
 
-  real (kind=selectedPrec), allocatable, dimension(:,:)   ::  YDF
-  real (kind=selectedPrec), allocatable, dimension(:)     ::  uy
+  real (kind=prec), allocatable, dimension(:,:)   ::  YDF
+  real (kind=prec), allocatable, dimension(:)     ::  uy
 
   integer            :: Ny,Nz,iy,iz,info,istat
 
@@ -289,8 +289,8 @@
   type (modelCov_t),   intent(in)    :: Cm
   type (modelParam_t), intent(inout) :: CmJ
 
-  real (kind=selectedPrec), allocatable, dimension(:,:)   ::  ZDF
-  real (kind=selectedPrec), allocatable, dimension(:)     ::  uz
+  real (kind=prec), allocatable, dimension(:,:)   ::  ZDF
+  real (kind=prec), allocatable, dimension(:)     ::  uz
 
 
   integer            :: Ny,Nz,iy,iz,info,istat

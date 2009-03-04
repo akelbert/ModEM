@@ -148,7 +148,7 @@ module sg_scalar
      character (len=80)	                               :: gridType
 
      ! Note that the arrays are defined through dynamic memory allocation
-     complex(kind=selectedPrec), pointer, dimension(:,:,:)    :: v
+     complex(kind=prec), pointer, dimension(:,:,:)    :: v
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction
@@ -178,7 +178,7 @@ module sg_scalar
      ! staggered grid
      ! v: dimension Nx, Ny, Nz
      ! Note that the arrays are defined through dynamic memory allocation
-     real(kind=selectedPrec), pointer, dimension(:,:,:)        :: v
+     real(kind=prec), pointer, dimension(:,:,:)        :: v
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction
@@ -208,7 +208,7 @@ module sg_scalar
      ! staggered grid
      ! v: dimension Nx, Ny, Nz
      ! Note that the arrays are defined through dynamic memory allocation
-     integer(kind=selectedPrec), pointer, dimension(:,:,:)        :: v
+     integer(kind=prec), pointer, dimension(:,:,:)        :: v
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction
@@ -1022,7 +1022,7 @@ Contains
   subroutine scMult_cscalar(c, E1, E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                      :: c
+    complex(kind=prec), intent(in)                      :: c
     ! a complex scalar to be multiplied with
     type (cscalar), intent(in)                       :: E1
     type (cscalar), intent(inout)                    :: E2
@@ -1064,7 +1064,7 @@ Contains
   function scMult_cscalar_f(c, E1) result(E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                      :: c
+    complex(kind=prec), intent(in)                      :: c
     ! a complex scalar to be multiplied with
     type (cscalar), intent(in)                       :: E1
     type (cscalar)                                   :: E2
@@ -1110,7 +1110,7 @@ Contains
   subroutine scMult_rscalar(c, E1, E2)
 
     implicit none
-    real (kind=selectedPrec), intent(in)                         :: c
+    real (kind=prec), intent(in)                         :: c
     ! a real scalar to be multiplied with
     type (rscalar), intent(in)                       :: E1
     type (rscalar), intent(inout)                    :: E2
@@ -1153,7 +1153,7 @@ Contains
   function scMult_rscalar_f(c, E1) result(E2)
 
     implicit none
-    real (kind=selectedPrec), intent(in)                         :: c
+    real (kind=prec), intent(in)                         :: c
     ! a complex scalar to be multiplied with
     type (rscalar), intent(in)                       :: E1
     type (rscalar)                                   :: E2
@@ -1899,7 +1899,7 @@ Contains
 
     implicit none
     type (rscalar), intent(in)   :: E1, E2
-    real (kind=selectedPrec)		     :: r
+    real (kind=prec)		     :: r
 
     r = 0.0
 
@@ -1935,7 +1935,7 @@ Contains
 
     implicit none
     type (cscalar), intent(in)       :: E1, E2
-    complex(kind=selectedPrec)		     :: c
+    complex(kind=prec)		     :: c
 
     c = C_ZERO
 
@@ -2016,7 +2016,7 @@ Contains
   subroutine scMultAdd_cscalar(c, E1, E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                      :: c
+    complex(kind=prec), intent(in)                      :: c
     ! a complex scalar to be multiplied with
     type (cscalar), intent(in)                       :: E1
     type (cscalar), intent(inout)                    :: E2

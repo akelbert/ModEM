@@ -28,7 +28,7 @@ implicit none
     ! actual size of array
     integer   :: N1=0
     integer   :: N2=0
-    complex(kind=selectedPrec), pointer, dimension(:,:)      :: v
+    complex(kind=prec), pointer, dimension(:,:)      :: v
     type(grid2d_t), pointer		:: grid
     !   corners, cells, sides ... full ...interior, whatever
     !   supported types at present:
@@ -44,7 +44,7 @@ implicit none
      integer				:: nCoeff  = 0
      ! j,k are arrays of indices that defines grid location
      integer , pointer, dimension(:)	:: j,k
-     complex (kind=selectedPrec), pointer, dimension(:)      :: c
+     complex (kind=prec), pointer, dimension(:)      :: c
      ! has sparse vector been allocated?
      logical				:: allocated = .false.
      ! pointer to the parent grid
@@ -141,7 +141,7 @@ contains
    !    objects; implementation for 
      type(cvector), intent(in)		:: e1,e2
      logical, intent(in)		:: conj_case
-     complex(kind=selectedPrec)	:: c
+     complex(kind=prec)	:: c
 
      ! local variables
      integer				:: j,k
@@ -260,7 +260,7 @@ contains
     implicit none
     type (sparsevecc), target, intent(in)     :: Lic1,Lic2
     type (sparsevecc), intent(inout)          :: Loc3
-    complex (kind=selectedPrec), intent(in)	:: c1,c2
+    complex (kind=prec), intent(in)	:: c1,c2
 
     integer                                     :: n,m,nm
     integer                                     :: nCoeffSum
@@ -316,7 +316,7 @@ contains
   subroutine scMult_sparsevecc(cs,Lic,Loc)
 
     implicit none
-    complex (kind=selectedPrec), intent(in)	    :: cs
+    complex (kind=prec), intent(in)	    :: cs
     type (sparsevecc), target, intent(in)     :: Lic
     type (sparsevecc), intent(inout)          :: Loc
 
@@ -369,7 +369,7 @@ contains
     type (cvector), intent(in)			:: FV  ! full vector
     logical, intent(in)				:: conj_Case ! = .true.
 				! for standard Hermitian inner product
-    complex(kind=selectedPrec)			:: c
+    complex(kind=prec)			:: c
     integer					:: i
     integer					:: yi, zi
     
@@ -406,7 +406,7 @@ contains
   subroutine add_scvector(cs,SV,FV)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)	:: cs
+    complex(kind=prec), intent(in)	:: cs
     type (sparsevecc), intent(in)		:: SV  ! sparse vector
     type (cvector), intent(inout)		:: FV  ! full vector
     integer					:: i

@@ -140,7 +140,7 @@ Contains
     integer, intent(out)			:: nSites
     integer, intent(out)			:: ios
     logical, intent(out)			:: ifBzTF
-    real(kind=selectedPrec), pointer, dimension(:,:) :: sites
+    real(kind=prec), pointer, dimension(:,:) :: sites
 
     integer		:: k
 
@@ -203,7 +203,7 @@ Contains
     ! header contents
     integer, intent(in)				:: nPer,nSites
     logical, intent(in)				:: ifBzTF
-    real(kind=selectedPrec), intent(inout)	:: sites(3,nSites)
+    real(kind=prec), intent(inout)	:: sites(3,nSites)
 
     !  iostatus
     integer, intent(out)			:: ios
@@ -232,7 +232,7 @@ Contains
     implicit none
     integer, intent(in)				:: ioNum,ifreq,imode
 
-    real (kind=selectedPrec), intent(out)			:: fileOmega
+    real (kind=prec), intent(out)			:: fileOmega
     type (cboundary), intent(inout)		:: inBC
 
     !  local variables
@@ -281,7 +281,7 @@ Contains
   subroutine BCfileWrite(ioNum, Omega, iFreq, iMode, ModeName, outBC)
 
     implicit none
-    real (kind=selectedPrec), intent(in)	:: Omega
+    real (kind=prec), intent(in)	:: Omega
     integer, intent(in)				:: ioNum
     integer, intent(in)				:: ifreq,imode
     character (len=20), intent(in)		:: ModeName
@@ -313,7 +313,7 @@ Contains
     implicit none
     integer, intent(in)				:: ioNum,ifreq,imode
     type (cvector), intent(inout)		:: inE
-    real (kind=selectedPrec), intent(out)	:: fileOmega
+    real (kind=prec), intent(out)	:: fileOmega
 
     !  local variables
     integer					:: nRecSkip, iskip
@@ -351,7 +351,7 @@ Contains
   subroutine EfileWrite(ioNum,Omega, iFreq, iMode, ModeName, outE)
 
     implicit none
-    real (kind=selectedPrec), intent(in)	:: Omega
+    real (kind=prec), intent(in)	:: Omega
     integer, intent(in)				:: ioNum,iFreq,iMode
     character (len=20), intent(in)		:: ModeName
     type (cvector), intent(in)			:: outE
@@ -374,8 +374,8 @@ Contains
     integer, intent(in)				:: ioNum,iFreq
     logical, intent(in)				:: ifBzTF
     integer, intent(in)				:: nSites
-    complex (kind=selectedPrec), intent(out)	:: Z(3,2,nSites)
-    real (kind=selectedPrec), intent(out)	:: fileOmega
+    complex (kind=prec), intent(out)	:: Z(3,2,nSites)
+    real (kind=prec), intent(out)	:: fileOmega
 
     integer					:: nRecSkip,fileIfreq
     integer					:: iskip,i,j,k
@@ -410,10 +410,10 @@ Contains
 
     implicit none
     integer, intent(in)				:: ioNum
-    real (kind=selectedPrec), intent(in)	:: Omega
+    real (kind=prec), intent(in)	:: Omega
     integer, intent(in)				:: ifreq
     integer, intent(in)				:: nSites
-    real (kind=selectedPrec), intent(in)	:: Z(2,6,nSites)
+    real (kind=prec), intent(in)	:: Z(2,6,nSites)
     logical, intent(in)				:: ifBzTF
     integer					:: i,j,k,nComp
 
@@ -436,7 +436,7 @@ Contains
   subroutine DfileWrite(ioNum,Omega, iFreq, iMode, ModeName,solverDiag)
 
     implicit none
-    real (kind=selectedPrec), intent(in)		:: Omega
+    real (kind=prec), intent(in)		:: Omega
     integer, intent(in)				:: ifreq,imode
     character (len=20), intent(in)		:: ModeName
     integer, intent(in)				:: ioNum
@@ -485,10 +485,10 @@ Contains
       integer, intent(in)			:: fid
       character(*), intent(in)			:: cfile
       integer, intent(in)			:: nTx,nSites
-      real(kind=selectedPrec),intent(in)	:: periods(nTx)
-      real(kind=selectedPrec),intent(in)	:: sites(3,nSites)
+      real(kind=prec),intent(in)	:: periods(nTx)
+      real(kind=prec),intent(in)	:: sites(3,nSites)
       type(dvecMTX),intent(in)			:: allData
-      real(kind=selectedPrec), dimension(:,:), pointer :: siteTemp
+      real(kind=prec), dimension(:,:), pointer :: siteTemp
 
      ! local variables
       integer   :: ns,iTx,k,j,nComp
@@ -523,13 +523,13 @@ Contains
       integer, intent(in)       			:: fid
       character(*), intent(in)  			:: cfile
       integer, intent(out)      			:: nTx,nSites
-      real(kind=selectedPrec),dimension(:), pointer     :: periods
-      real(kind=selectedPrec),dimension(:,:), pointer   :: sites
+      real(kind=prec),dimension(:), pointer     :: periods
+      real(kind=prec),dimension(:,:), pointer   :: sites
       type(dvecMTX), intent(inout)   			:: allData
 
      ! local variables
       integer   	:: nComp,ns,iTx,k,l,j,Ndata
-      real(kind=selectedPrec), pointer, dimension(:,:) :: siteTemp,siteTempAll
+      real(kind=prec), pointer, dimension(:,:) :: siteTemp,siteTempAll
       logical		:: newSite
 
       open(unit=fid,file=cfile,form='unformatted',status='old')

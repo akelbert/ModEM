@@ -24,8 +24,8 @@ implicit none
      !    if needed.  Other sorts of EM data may have more
      !    complex tx descriptions
      ! angular frequency (radians/sec), and for convenience period (s)
-     real(kind=selectedPrec)            :: omega = R_ZERO
-     real(kind=selectedPrec)            :: period = R_ZERO
+     real(kind=prec)            :: omega = R_ZERO
+     real(kind=prec)            :: period = R_ZERO
      ! index number to frequency/ period in solution file
      integer                    :: iPer
   end type MTtx
@@ -257,14 +257,14 @@ Contains
    type(EMsoln), intent(inout)	:: e0
 
    ! local variables
-   real(kind=selectedPrec)	:: period, omega
+   real(kind=prec)	:: period, omega
    integer			:: IER,iMode
-   complex(kind=selectedPrec)	:: i_omega_mu
+   complex(kind=prec)	:: i_omega_mu
 
    omega = txDict(iTx)%omega
    period = txDict(iTx)%period
    !  set period, complete setup of 3D EM equation system
-   i_omega_mu = cmplx(0.,isign*mu*omega,kind=selectedPrec)
+   i_omega_mu = cmplx(0.,ISIGN*MU_0*omega,kind=prec)
 
    !  complete operator intialization, for this frequency
    !  call UpdateFreq(txDict(iTx)%omega)
@@ -301,7 +301,7 @@ Contains
 
    ! local variables
    integer      			:: IER,iMode
-   real(kind=selectedPrec) 		:: omega, period
+   real(kind=prec) 		:: omega, period
 
    omega = txDict(iTx)%omega
    period = txDict(iTx)%period

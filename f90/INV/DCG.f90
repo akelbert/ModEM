@@ -12,18 +12,18 @@ use sensmatrix
      ! maximum number of iterations in one call to iterative solver
      integer					:: maxIt
      ! convergence criteria: return from solver if relative error < tol
-     real (kind=selectedPrec)			:: tol
+     real (kind=prec)			:: tol
      ! actual number of iterations before return
      integer					:: niter
      ! relative error for each iteration
-     real (kind=selectedPrec), pointer, dimension(:)	:: rerr
+     real (kind=prec), pointer, dimension(:)	:: rerr
      ! logical variable indicating if algorithm "failed"
      logical					:: failed = .false.
   end type iterControl_t
 
  save
    type(EMsolnMTX), private		:: eAll
-   real(kind=selectedPrec), private	:: lambda
+   real(kind=prec), private	:: lambda
    type(modelParam_t), private		:: sigma, JTd
 
 Contains
@@ -99,7 +99,7 @@ Contains
    !  d is data
    type(dvecMTX), intent(in)		:: d
    !  lambda is regularization parameter
-   real(kind=selectedPrec)		:: lambda
+   real(kind=prec)		:: lambda
    !   m0 is prior model parameter
    type(modelParam_t), intent(in)		:: m0
    !   m is solution parameter ... on input m contains starting guess
@@ -109,7 +109,7 @@ Contains
    type(dvecMTX)			:: dHat, b, res
    type(modelParam_t)			:: m_minus_m0
    type(iterControl_t)			:: PCGiter
-   real(kind=selectedPrec)		:: rms
+   real(kind=prec)		:: rms
    integer				:: iter
 
    ! these copies are just used to create data vectors with the
@@ -209,8 +209,8 @@ subroutine PCG_dvecMTC(b,x, PCGiter)
   !  also need to change types on these for complex case
   !   We assume here that data objects are real, so result of
   !     dot product is also real
-  real (kind=selectedPrec)      	:: beta,alpha,rho,rhoOld
-  real (kind=selectedPrec)      	:: bnorm, rnorm
+  real (kind=prec)      	:: beta,alpha,rho,rhoOld
+  real (kind=prec)      	:: bnorm, rnorm
   integer               		:: i
 
   ! Allocation of r, z, p, q using =

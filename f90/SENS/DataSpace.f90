@@ -35,7 +35,7 @@ module dataspace
 
       ! data will contain actual data; 
       ! dimensions will be data(nComp,nSite)
-      real (kind=selectedPrec), pointer, dimension(:,:) 	:: data,err
+      real (kind=prec), pointer, dimension(:,:) 	:: data,err
 
       ! rx will contain indices of corresponding entries in
       ! receiver definition dictionary (dimension: rx(nSite))
@@ -249,7 +249,7 @@ Contains
     subroutine linComb_Dvec(a,d1,b,d2,dOut)
 
     type (dvec), intent(in)			:: d1, d2
-    real (kind=selectedPrec), intent(in)	:: a, b
+    real (kind=prec), intent(in)	:: a, b
     type (dvec), intent(inout)			:: dOut
 
     ! local variables
@@ -308,7 +308,7 @@ Contains
     subroutine linComb_DvecMTX(a,D1,b,D2,Dout)
 
     type (dvecMTX), intent(in)			:: D1, D2
-    real (kind=selectedPrec), intent(in)			:: a, b
+    real (kind=prec), intent(in)			:: a, b
     type (dvecMTX), intent(inout)		:: Dout
 
     !  local variables
@@ -355,7 +355,7 @@ Contains
   !   overwriting d2; ignores error field
 
     type (dvec), intent(in)			:: d1
-    real (kind=selectedPrec), intent(in)	:: a
+    real (kind=prec), intent(in)	:: a
     type (dvec), intent(inout)			:: d2
 
     ! local variables
@@ -382,7 +382,7 @@ Contains
   !   overwriting D2; ignores error field
 
     type (dvecMTX), intent(in)		:: D1
-    real (kind=selectedPrec), intent(in)		:: a
+    real (kind=prec), intent(in)		:: a
     type (dvecMTX), intent(inout)	:: D2
 
     !  local variables
@@ -411,7 +411,7 @@ Contains
   !  computes dOut = a * dIn for DvecMTX objects dIn and dOut 
   !  and real scalar a; ignores error field
 
-    real (kind=selectedPrec), intent(in)		:: a
+    real (kind=prec), intent(in)		:: a
     type (dvecMTX), intent(in)	                :: dIn
     type (dvecMTX)                              :: dOut
 
@@ -430,7 +430,7 @@ Contains
     function dotProd_Dvec(d1,d2) result(r)
 
     type (dvec), intent(in)		:: d1, d2
-    real (kind=selectedPrec)		:: r
+    real (kind=prec)		:: r
 
     ! local variables
     integer				:: j, k
@@ -460,7 +460,7 @@ Contains
     function dotProd_DvecMTX(D1,D2) result(r)
 
     type (dvecMTX), intent(in)		:: D1, D2
-    real (kind=selectedPrec)		:: r
+    real (kind=prec)		:: r
 
     ! local variables
     integer				:: j
@@ -576,7 +576,7 @@ Contains
 	 !  fractional error in the output; any errors stored in d
 	 !  are overwritten
 
-	 real (kind=selectedPrec), intent(in) :: err
+	 real (kind=prec), intent(in) :: err
    type(dvec),intent(inout)             :: d
 
    !  local variables
@@ -609,7 +609,7 @@ Contains
 	 !  fractional error in the output; any errors stored in d
 	 !  are overwritten
 
-	 real (kind=selectedPrec), intent(in) :: err
+	 real (kind=prec), intent(in) :: err
    type(dvecMTX),intent(inout)          :: d
 
    !  local variables
@@ -650,11 +650,11 @@ Contains
 
   type (dvecMTX),intent(in)      :: allData
   type (dvecMTX),intent(in)      :: allCalc
-  real (kind=selectedPrec), intent(inout)      :: misfit
+  real (kind=prec), intent(inout)      :: misfit
 
   ! local variables
   integer ip
-  real (kind=selectedPrec)    ::  mf2
+  real (kind=prec)    ::  mf2
 
   do ip = 1,allData%nTx
     mf2 = SUM(((allData%d(ip)%data - allCalc%d(ip)%data)/allData%d(ip)%err)**2.)

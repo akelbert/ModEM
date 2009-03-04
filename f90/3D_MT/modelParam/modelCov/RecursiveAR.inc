@@ -125,7 +125,7 @@
 
     ! Exception rules
     integer, pointer, dimension(:)                   :: mask1, mask2, ii, jj, kk, xyz
-    real (kind=selectedPrec), pointer, dimension(:)  :: smoothing, S
+    real (kind=prec), pointer, dimension(:)  :: smoothing, S
 
     integer       			 :: Nx, Ny, NzEarth, nrules, nS, i, j, k, n, istat
     integer                  :: fid = 30
@@ -230,8 +230,8 @@
    ! In our case, the assumed-shape array would be e.g. conductivity
    ! in each cell of the Nx x Ny x NzEarth grid.
 
-    real (kind=selectedPrec), intent(in)     :: w(:,:,:)
-    real (kind=selectedPrec), intent(out)    :: v(:,:,:)
+    real (kind=prec), intent(in)     :: w(:,:,:)
+    real (kind=prec), intent(out)    :: v(:,:,:)
     integer, intent(in)                      :: n
     integer                                  :: Nx, Ny, NzEarth, i, j, k, iSmooth
 
@@ -325,7 +325,7 @@
 
     implicit none
     integer, intent(in)                      :: i,j,k
-    real (kind=selectedPrec)                 :: alpha
+    real (kind=prec)                 :: alpha
 
     ! local variables
     integer                                  :: n
@@ -365,7 +365,7 @@
 
     implicit none
     integer, intent(in)                      :: i,j,k
-    real (kind=selectedPrec)                 :: beta
+    real (kind=prec)                 :: beta
 
     ! local variables
     integer                                  :: n
@@ -405,7 +405,7 @@
 
     implicit none
     integer, intent(in)                      :: i,j,k
-    real (kind=selectedPrec)                 :: gamma
+    real (kind=prec)                 :: gamma
 
     ! local variables
     integer                                  :: n
@@ -441,7 +441,7 @@
 
     implicit none
     integer, intent(in)                      :: i,j,k
-    real (kind=selectedPrec)                 :: c
+    real (kind=prec)                 :: c
 
     if ((i < 1) .or. (i > CmSqrt%Nx)) then
     	call errStop('index i out of bounds in Scaling(i,j,k)')

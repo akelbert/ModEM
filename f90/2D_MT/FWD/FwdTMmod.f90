@@ -36,12 +36,12 @@ module fwdtmmod
    !  integers describing grid size (for internal use)
    integer, private	:: Nzb,Nz,Ny
    !  real arrays describing grid spacing (for internal use)
-   real (kind=selectedPrec), allocatable, dimension(:),private	:: Dzb, Dy, Czb, Cy
+   real (kind=prec), allocatable, dimension(:),private	:: Dzb, Dy, Czb, Cy
    !  real and complex arrays used for solving the equations (internal use)
-   real (kind=selectedPrec), allocatable, dimension(:,:),private	:: ATM,CRho
-   real (kind=selectedPrec), allocatable, dimension(:),private	:: BTM
-   complex (kind=selectedPrec), allocatable, dimension(:,:),private :: AII
-   complex (kind=selectedPrec), allocatable, dimension(:),private	:: HXI
+   real (kind=prec), allocatable, dimension(:,:),private	:: ATM,CRho
+   real (kind=prec), allocatable, dimension(:),private	:: BTM
+   complex (kind=prec), allocatable, dimension(:,:),private :: AII
+   complex (kind=prec), allocatable, dimension(:),private	:: HXI
    integer, allocatable, dimension(:),private	:: ipiv
    logical		:: Initialized  = .false.
 
@@ -123,7 +123,7 @@ module fwdtmmod
       !  The solution is returned in array Hsol ...
       !  could make a derived data type to carry soln and info
       !   about grid size
-      complex(kind=selectedPrec), intent(out)	:: Hsol(Ny+1,Nzb+1)
+      complex(kind=prec), intent(out)	:: Hsol(Ny+1,Nzb+1)
       integer, intent(out)	::IER
       character*1    :: NTC
  
@@ -224,7 +224,7 @@ module fwdtmmod
       !  local variables
       integer				:: iy, iz
 
-      real (kind=selectedPrec)  :: Cond2D(Ny,Nz)
+      real (kind=prec)  :: Cond2D(Ny,Nz)
 
          call CondParamToArray(Sigma,Ny,Nz,Cond2D)
          ! Copy inputs into local grid variables
@@ -247,7 +247,7 @@ module fwdtmmod
 !**********************************************************************
       Subroutine UpdateFreqTM(per)
 !      updates frequency (period) dependence, modifying AII
-      real(kind=selectedPrec), intent(in)	:: per 
+      real(kind=prec), intent(in)	:: per 
 
       Call FormAII(per,Nzb,Ny,ATM,AII,ipiv)
 
@@ -257,8 +257,8 @@ module fwdtmmod
 !**********************************************************************
       Subroutine SetBoundTM(per,HXB)
 !     wrapper for WSfwdMod routine SetBound2D_TM 
-      real(kind=selectedPrec),intent(in)		:: per
-      complex(kind=selectedPrec), intent(inout)	:: HXB(MMBMX)
+      real(kind=prec),intent(in)		:: per
+      complex(kind=prec), intent(inout)	:: HXB(MMBMX)
 
       Call SetBound2D_TM(per,Nzb,Ny,Dzb,Dy,CRho,HXI,HXB)
 
@@ -289,8 +289,8 @@ module fwdtmmod
       subroutine HarrayToIntVec(H,V)
         !  copies complex 2D array E (interior nodes only)
         !  into forcing or solution vector
-        complex(kind=selectedPrec), intent(in)       :: H(Ny+1,Nzb+1)
-        complex(kind=selectedPrec), intent(out)      :: V(:)
+        complex(kind=prec), intent(in)       :: H(Ny+1,Nzb+1)
+        complex(kind=prec), intent(out)      :: V(:)
         integer :: iy,iz,is
 
         is = 1
@@ -308,8 +308,8 @@ module fwdtmmod
       subroutine IntVecToHarray(V,H)
         !  copy complex 2D array H (interior nodes only)
         !  into forcing or solution vector
-        complex(kind=selectedPrec), intent(out)       :: H(Ny+1,Nzb+1)
-        complex(kind=selectedPrec), intent(in)      :: V(:)
+        complex(kind=prec), intent(out)       :: H(Ny+1,Nzb+1)
+        complex(kind=prec), intent(in)      :: V(:)
         integer :: iy,iz,is
 
         is = 1
@@ -327,8 +327,8 @@ module fwdtmmod
       subroutine addHarrayToIntVec(H,V)
          !  adds complex 2D array E (interior nodes only)
          !  into forcing or solution vector
-         complex(kind=selectedPrec), intent(in)       :: H(Ny+1,Nzb+1)
-         complex(kind=selectedPrec), intent(inout)    :: V(:)
+         complex(kind=prec), intent(in)       :: H(Ny+1,Nzb+1)
+         complex(kind=prec), intent(inout)    :: V(:)
          integer :: iy,iz,is
 
          is = 1
@@ -347,8 +347,8 @@ module fwdtmmod
      !  by area weights Cy*Cz
      !  Input may overwrite output
 
-     complex(kind=selectedPrec), intent(in)       :: Hin(Ny+1,Nz+1)
-     complex(kind=selectedPrec), intent(inout)    :: Hout(Ny+1,Nz+1)
+     complex(kind=prec), intent(in)       :: Hin(Ny+1,Nz+1)
+     complex(kind=prec), intent(inout)    :: Hout(Ny+1,Nz+1)
      integer :: iy,iz
 
      do iy = 2,Ny

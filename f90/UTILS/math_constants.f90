@@ -4,49 +4,65 @@
 module math_constants
   implicit none
 
-  !  use this to select singal or double precision
-  integer, parameter                    :: SP = selected_real_kind(6,37)
-  integer, parameter                    :: DP = selected_real_kind(15,307)
-  integer, parameter			:: selectedPrec = DP
+  ! Use this to select single or double precision
+  integer, parameter             :: SP = selected_real_kind(6,37)
+  integer, parameter             :: DP = selected_real_kind(15,307)
+  integer, parameter			 :: prec = DP
 
-  real (kind=selectedPrec), parameter	:: PI = 3.14159265_selectedPrec
-  real (kind=selectedPrec), parameter	:: MU = PI*.0000004_selectedPrec
+  real (kind=prec), parameter	 :: PI = 3.14159265357898_prec
+  real (kind=prec), parameter	 :: MU_0 = PI*.0000004_prec
+
+  ! Important: sign convention used throughout the program
+  integer, parameter             :: ISIGN = -1
 
   ! Conductivity of the air for computational purposes
-  real (kind=selectedPrec), parameter	:: SIGMA_AIR = 1.0e-10
+  real (kind=prec), parameter	 :: SIGMA_AIR = 1.0e-10
+
+  ! Variable used to decide if a cell is air or ground in the presence of topography:
+  ! starting from the top of the air layers, program looks for the first cell in each
+  ! column with conductivity exceeding SIGMA_MIN ... top of this cell is taken to be
+  ! Earth's surface for this column)
+  real (kind=prec), parameter    :: SIGMA_MIN = 1.0e-6
+
+  ! Useful geophysical constants
+  real (kind=prec), parameter	 :: EARTH_R = 6371.0_prec !6378.164
+  real (kind=prec), parameter	 :: CRUST_R = 6358.35_prec
 
   ! Useful conversion constants
-  real (kind=selectedPrec), parameter	:: D2R = PI/180._selectedPrec 
-  real (kind=selectedPrec), parameter	:: R2D = 180._selectedPrec/PI 
-  real (kind=selectedPrec), parameter	:: KM2M = 1000.0_selectedPrec
-  real (kind=selectedPrec), parameter	:: M2KM = 0.001_selectedPrec
-  
-  ! Sign convention
-  integer, parameter                    :: isign = -1
+  real (kind=prec), parameter	 :: D2R = PI/180._prec
+  real (kind=prec), parameter	 :: R2D = 180._prec/PI
+  real (kind=prec), parameter	 :: KM2M = 1000.0_prec
+  real (kind=prec), parameter	 :: M2KM = 0.001_prec
 
-  real(kind=selectedPrec),parameter	:: TWO = 2.0_selectedPrec
-  real(kind=selectedPrec),parameter	:: ONE = 1.0_selectedPrec
-  real(kind=selectedPrec),parameter	:: THREE = 3.0_selectedPrec
-  real(kind=selectedPrec),parameter	:: EIGHT = 8.0_selectedPrec
-  real(kind=selectedPrec),parameter	:: R_ZERO = 0.0_selectedPrec
-  real(kind=selectedPrec),parameter	:: MinusONE = -1.0_selectedPrec
-  real(kind=selectedPrec),parameter	:: MinusTWO = -2.0_selectedPrec
-  
-  ! Real precision constants / tolerance
-  real(kind=selectedPrec),parameter	:: LARGE_REAL = 1.0e20
-  real(kind=selectedPrec),parameter :: TOL4= 0.0001_dp
-  real(kind=selectedPrec),parameter :: TOL6= 0.000001_dp
-  real(kind=selectedPrec),parameter :: TOL8= 0.00000001_dp
 
-  complex(kind=selectedPrec), parameter	:: C_ONE = (1.0_selectedPrec,0.0_selectedPrec)
-  complex(kind=selectedPrec), parameter :: C_ZERO = (0.0_selectedPrec, 0.0_selectedPrec)
-  complex(kind=selectedPrec), parameter	:: C_MinusOne = (-1.0_selectedPrec, 0.0_selectedPrec)
+  ! Smallest possible distance in radians or meters, that is used to prevent
+  ! problems with machine errors in if statements
+  real (kind=prec), parameter    :: EPS_GRID = 1.0e-4
 
-  character(len=2), parameter		:: TE = 'TE'
-  character(len=2), parameter		:: TM = 'TM'
+  ! Real and complex precision constants / tolerance
+  real (kind=prec), parameter	 :: LARGE_REAL = 1.0e13
+  real (kind=prec), parameter    :: TOL4= 0.0001_dp
+  real (kind=prec), parameter    :: TOL6= 0.000001_dp
+  real (kind=prec), parameter    :: TOL8= 0.00000001_dp
 
-  character(len=3), parameter		:: FWD = 'FWD'
-  character(len=3), parameter		:: TRN = 'TRN'
-  character(len=3), parameter		:: ADJ = 'ADJ'
+  real (kind=prec), parameter	 :: EIGHT = 8.0_prec
+  real (kind=prec), parameter	 :: THREE = 3.0_prec
+  real (kind=prec), parameter	 :: TWO = 2.0_prec
+  real (kind=prec), parameter	 :: ONE = 1.0_prec
+  real (kind=prec), parameter	 :: R_ZERO = 0.0_prec
+  real (kind=prec), parameter	 :: MinusONE = -1.0_prec
+  real (kind=prec), parameter	 :: MinusTWO = -2.0_prec
+
+  complex (kind=prec), parameter :: C_ONE = (1.0_prec,0.0_prec)
+  complex (kind=prec), parameter :: C_ZERO = (0.0_prec, 0.0_prec)
+  complex (kind=prec), parameter :: C_MinusOne = (-1.0_prec, 0.0_prec)
+
+  ! Useful character constants
+  character (len=2), parameter	 :: TE = 'TE'
+  character (len=2), parameter	 :: TM = 'TM'
+
+  character (len=3), parameter	 :: FWD = 'FWD'
+  character (len=3), parameter	 :: TRN = 'TRN'
+  character (len=3), parameter	 :: ADJ = 'ADJ'
 
 end module math_constants !math_constants

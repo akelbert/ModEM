@@ -29,8 +29,8 @@ module Main
 
   integer, save                                             :: output_level
 
-  real (kind=selectedPrec), pointer, dimension(:), save	:: periods
-  real (kind=selectedPrec), pointer, dimension(:,:), save	:: sites
+  real (kind=prec), pointer, dimension(:), save	:: periods
+  real (kind=prec), pointer, dimension(:,:), save	:: sites
   character(80), pointer, dimension(:,:), save        :: siteids
   character(2), pointer, dimension(:), save    		:: modes
   character(200), save                              :: data_comments

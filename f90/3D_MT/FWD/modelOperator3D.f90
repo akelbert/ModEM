@@ -33,7 +33,7 @@ module modelOperator3D
   type(grid3d_t), private, target 	::	mGrid   ! THE model grid
   type(rvector), public			::	volE    ! THE volume elements
   type(rvector), private		::	condE   ! THE edge conductivities
-  real(kind=selectedPrec),private	::      omega   ! THE (active) frequency
+  real(kind=prec),private	::      omega   ! THE (active) frequency
 
   ! NOTE: THIS VARIABLE IS TEMPORARILY REQUIRED TO SET THE BOUNDARY CONDITIONS
   type(rscalar), private        :: Cond3D
@@ -50,20 +50,20 @@ module modelOperator3D
   ! directions for adjacent faces for Ex term at ix, ij, ik point
   ! (collection of left/ right horizontal and top/ bottom vertical faces),
   !    etc.
-  real (kind=selectedPrec), pointer, dimension(:,:), private    :: xXY, xXZ
-  real (kind=selectedPrec), pointer, dimension(:,:), private    :: xY, xZ
-  real (kind=selectedPrec), pointer, dimension(:,:), private    :: xXO
-  real (kind=selectedPrec), pointer, dimension(:,:), private    :: yYX, yYZ
-  real (kind=selectedPrec), pointer, dimension(:,:), private    :: yX, yZ
-  real (kind=selectedPrec), pointer, dimension(:,:), private    :: yYO
-  real (kind=selectedPrec), pointer, dimension(:,:), private    :: zZX, zZY
-  real (kind=selectedPrec), pointer, dimension(:,:), private    :: zX, zY
-  real (kind=selectedPrec), pointer, dimension(:,:), private    :: zZO
+  real (kind=prec), pointer, dimension(:,:), private    :: xXY, xXZ
+  real (kind=prec), pointer, dimension(:,:), private    :: xY, xZ
+  real (kind=prec), pointer, dimension(:,:), private    :: xXO
+  real (kind=prec), pointer, dimension(:,:), private    :: yYX, yYZ
+  real (kind=prec), pointer, dimension(:,:), private    :: yX, yZ
+  real (kind=prec), pointer, dimension(:,:), private    :: yYO
+  real (kind=prec), pointer, dimension(:,:), private    :: zZX, zZY
+  real (kind=prec), pointer, dimension(:,:), private    :: zX, zY
+  real (kind=prec), pointer, dimension(:,:), private    :: zZO
 
   ! coefficients of diagonal of (unweighted) A operator
   type (cvector), private                                :: Adiag
   ! information about the heritage ... probably this is not needed!
-  real (kind=selectedPrec), private			:: whichOmega, whichCondE
+  real (kind=prec), private			:: whichOmega, whichCondE
 
   !!!!!!>>>>>>>>> FROM preconditioner
   ! coefficients of diagonal of preconditoner for A operator
@@ -169,7 +169,7 @@ Contains
   subroutine UpdateFreq(inOmega)
 
     implicit none
-    real (kind=selectedPrec), intent (in)             :: inOmega
+    real (kind=prec), intent (in)             :: inOmega
 
     omega = inOmega
     Call AdiagSetUp()
@@ -208,7 +208,7 @@ Contains
   subroutine UpdateFreqCond(inOmega, CondParam)
 
     implicit none
-    real(kind=selectedPrec)                 :: inOmega
+    real(kind=prec)                 :: inOmega
     type(modelParam_t), intent(in)            :: CondParam      ! input conductivity
     ! structure on the center of the grid
 
@@ -238,7 +238,7 @@ Contains
 
     !  Input mode, period
     integer, intent(in)		:: imode
-    real(kind=selectedPrec)	:: period
+    real(kind=prec)	:: period
 
     ! Output electric field first guess (for iterative solver)
     type(cvector), intent(inout)	:: E0
@@ -567,15 +567,15 @@ Contains
     end if
 
     do ix = 1, mGrid%nx
-       Adiag%x(ix,:,:) = CMPLX(0.0, 1.0, 8)*omega*MU*condE%x(ix,:,:)
+       Adiag%x(ix,:,:) = CMPLX(0.0, 1.0, 8)*omega*MU_0*condE%x(ix,:,:)
     enddo
 
     do iy = 1, mGrid%ny
-       Adiag%y(:,iy,:) = CMPLX(0.0, 1.0, 8)*omega*MU*condE%y(:,iy,:)
+       Adiag%y(:,iy,:) = CMPLX(0.0, 1.0, 8)*omega*MU_0*condE%y(:,iy,:)
     enddo
 
     do iz = 1, mGrid%nz
-       Adiag%z(:,:,iz) = CMPLX(0.0, 1.0, 8)*omega*MU*condE%z(:,:,iz)
+       Adiag%z(:,:,iz) = CMPLX(0.0, 1.0, 8)*omega*MU_0*condE%z(:,:,iz)
     enddo
 
 
@@ -629,9 +629,9 @@ Contains
        if ((inE%gridType == outE%gridType)) then
 
           if (adjt) then
-             diag_sign = -1*isign
+             diag_sign = -1*ISIGN
           else
-             diag_sign = isign
+             diag_sign = ISIGN
           end if
 
           ! Apply difference equation to compute Ex (only on interior nodes)
@@ -714,7 +714,7 @@ Contains
     type (cvector)                           :: workE
     ! workE is the complex vector that is used as a work space
     integer                                  :: diag_sign
-    complex(kind=selectedPrec)               :: c2
+    complex(kind=prec)               :: c2
     ! a complex multiplier
 
     if (.not.inE%allocated) then
@@ -744,14 +744,14 @@ Contains
           ! done with preparing del X del X E
 
           if (adjt) then
-             diag_sign = -1*isign
+             diag_sign = -1*ISIGN
           else
-             diag_sign = isign
+             diag_sign = ISIGN
           end if
 
           ! now preparing +/-i*omega*mu*conductivity*E
           Call diagMult_crvector(inE, condE, outE)
-          c2 = diag_sign*C_ONE*omega*MU
+          c2 = diag_sign*C_ONE*omega*MU_0
           Call linComb_cvector(C_ONE, workE, c2, outE, outE)
 
           ! diagonally multiply the final results with weights (edge volume)
@@ -1018,7 +1018,7 @@ Contains
           do iz = 2, mGrid%nz
 
              Dilu%x(ix, iy, iz) = xXO(iy,iz) - &
-                  CMPLX(0.0, 1.0, 8)*omega*MU*condE%x(ix, iy, iz)  &
+                  CMPLX(0.0, 1.0, 8)*omega*MU_0*condE%x(ix, iy, iz)  &
                   - xXY(iy, 1)*xXY(iy-1, 2)*Dilu%x(ix,iy-1,iz) &
                   - xXZ(iz, 1)*xXZ(iz-1, 2)*Dilu%x(ix,iy,iz-1)
              Dilu%x(ix, iy, iz) = 1.0/ Dilu%x(ix, iy, iz)
@@ -1034,7 +1034,7 @@ Contains
           do ix = 2, mGrid%nx
 
              Dilu%y(ix, iy, iz) = yYO(ix,iz) - &
-                  CMPLX(0.0, 1.0, 8)*omega*MU*condE%y(ix, iy, iz) &
+                  CMPLX(0.0, 1.0, 8)*omega*MU_0*condE%y(ix, iy, iz) &
                   - yYZ(iz, 1)*yYZ(iz-1, 2)*Dilu%y(ix, iy, iz-1) &
                   - yYX(ix, 1)*yYX(ix-1, 2)*Dilu%y(ix-1, iy, iz)
              Dilu%y(ix, iy, iz) = 1.0/ Dilu%y(ix, iy, iz)
@@ -1050,7 +1050,7 @@ Contains
           do iy = 2, mGrid%ny
 
              Dilu%z(ix, iy, iz) = zZO(ix,iy) - &
-                  CMPLX(0.0, 1.0, 8)*omega*MU*condE%z(ix, iy, iz) &
+                  CMPLX(0.0, 1.0, 8)*omega*MU_0*condE%z(ix, iy, iz) &
                   - zZX(ix, 1)*zZX(ix-1, 2)*Dilu%z(ix-1, iy, iz) &
                   - zZY(iy, 1)*zZY(iy-1, 2)*Dilu%z(ix, iy-1, iz)
              Dilu%z(ix, iy, iz) = 1.0/ Dilu%z(ix, iy, iz)
@@ -1378,7 +1378,6 @@ Contains
 
     implicit none
     integer                               :: ix, iy, iz
-    real(kind=selectedPrec)	:: D0 = 0.0
 
     IF(.not.condE%allocated) THEN
  	WRITE(0,*) 'condE not allocated yet: DivCorrSetUp'
@@ -1452,9 +1451,9 @@ Contains
     do ix = 1, mGrid%nx
        do iy = 1, mGrid%ny
           do iz = 1, mGrid%nzAir
-             condE%x(ix, iy, iz) = D0
-             condE%y(ix, iy, iz) = D0
-             condE%z(ix, iy, iz) = D0
+             condE%x(ix, iy, iz) = R_ZERO
+             condE%y(ix, iy, iz) = R_ZERO
+             condE%z(ix, iy, iz) = R_ZERO
           enddo
        enddo
     enddo
@@ -1479,12 +1478,12 @@ Contains
     !  To be explicit about forcing coefficients that multiply boundary
     !    nodes to be zero (this gaurantees that the BC on the potential
     !    is phi = 0):
-    db1%x(2,:,:) = D0
-    db1%y(:,2,:) = D0
-    db1%z(:,:,2) = D0
-    db2%x(mGrid%nx,:,:) = D0
-    db2%y(:,mGrid%ny,:) = D0
-    db2%z(:,:,mGrid%nz) = D0
+    db1%x(2,:,:) = R_ZERO
+    db1%y(:,2,:) = R_ZERO
+    db1%z(:,:,2) = R_ZERO
+    db2%x(mGrid%nx,:,:) = R_ZERO
+    db2%y(:,mGrid%ny,:) = R_ZERO
+    db2%z(:,:,mGrid%nz) = R_ZERO
 
     ! Compute inverse diagonal elements for D-ILU (interior nodes only)
     ! set top nodes to 1.0

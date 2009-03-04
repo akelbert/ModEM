@@ -19,10 +19,10 @@ module grid2d
       integer   :: Nz = 0
       integer   :: Ny = 0
       integer   :: Nza = 0
-      real (kind=selectedPrec), pointer, dimension(:) :: Dy,Dz
-      real (kind=selectedPrec), pointer, dimension(:) :: Dely,Delz
-      real (kind=selectedPrec), pointer, dimension(:) :: yNode,zNode
-      real (kind=selectedPrec), pointer, dimension(:) :: yCenter,zCenter
+      real (kind=prec), pointer, dimension(:) :: Dy,Dz
+      real (kind=prec), pointer, dimension(:) :: Dely,Delz
+      real (kind=prec), pointer, dimension(:) :: yNode,zNode
+      real (kind=prec), pointer, dimension(:) :: yCenter,zCenter
    end type grid2d_t
 
    Contains

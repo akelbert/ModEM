@@ -48,7 +48,7 @@ module dataFunc
      !  Additonal data types, to be used as elements of additional
      !    dictionaries can be added to accomodate additional data types
   	 ! x(1) points North, x(2) points East, x(3) points down
-     real(kind=selectedPrec)                    ::  x(3)
+     real(kind=prec)                    ::  x(3)
      ! optional site ID; needed for input and output only
      character(80)                              ::  id=''
   end type MTrx
@@ -127,7 +127,7 @@ Contains
   subroutine RXdictSetUp(nSites,siteLocations,siteIDs)
 
     integer, intent(in)	 		:: nSites
-    real(kind=selectedPrec), intent(in)	:: siteLocations(3,nSites)
+    real(kind=prec), intent(in)	:: siteLocations(3,nSites)
     character(*), intent(in), optional  :: siteIDs(nSites)
 	character(3) :: id
 
@@ -223,7 +223,7 @@ Contains
   type (modelParam_t), intent(in) :: Sigma ! used to compute ef
   integer, intent(in)			:: iDT
   integer, intent(in) 			:: iRX
-  complex(kind=selectedPrec), intent(inout)	:: Z(*)
+  complex(kind=prec), intent(inout)	:: Z(*)
 
   ! Definition of the impedance elements:
   !   iDT=Full_Impedance
@@ -234,13 +234,13 @@ Contains
   !  Z(1) = Zxy, Z(2) = Zyx
 
   !  optional argument, useful for linearized impedance
-  complex(kind=selectedPrec), intent(out), optional	:: Binv(2,2)
+  complex(kind=prec), intent(out), optional	:: Binv(2,2)
 
   !  local variables
   integer			:: iMode, i,j,xyz,ij
-  real(kind=selectedPrec)	:: omega,x(3)
-  complex(kind=selectedPrec)	:: BB(3,2),EE(2,2)
-  complex(kind=selectedPrec)	:: det,i_omega,ctemp
+  real(kind=prec)	:: omega,x(3)
+  complex(kind=prec)	:: BB(3,2),EE(2,2)
+  complex(kind=prec)	:: det,i_omega,ctemp
   type(sparsevecC)		:: Lex,Ley,Lbx,Lby,Lbz
   logical			:: ComputeHz
 
@@ -345,9 +345,9 @@ Contains
   type(EMsparse), intent(inout)		:: L(*),Q(*)
 
   !  local variables
-  complex(kind=selectedPrec)	:: Binv(2,2)
-  complex (kind=selectedPrec)	:: Z(6), i_omega,c1,c2
-  real(kind=selectedPrec)	:: x(3),omega
+  complex(kind=prec)	:: Binv(2,2)
+  complex (kind=prec)	:: Z(6), i_omega,c1,c2
+  real(kind=prec)	:: x(3),omega
   type(sparsevecc)		:: L1
   integer			:: i,j,k,nComp,IJ(2,6),xyz,n
   type(sparsevecC)		:: Lex,Ley,Lbx,Lby,Lbz
@@ -458,7 +458,7 @@ Contains
    !
    !  Now, this also is used to multiply Q by cs before adding.
 
-   complex(kind=selectedPrec),intent(in)	:: cs
+   complex(kind=prec),intent(in)	:: cs
    type (EMsparse), intent(in)                  :: Q
    type (modelParam_t), intent(in)                :: sigma0
    type (modelParam_t), intent(inout)             :: dsigmaReal

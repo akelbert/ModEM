@@ -49,7 +49,7 @@ module ModelParameter
      integer			:: Nx,Ny,NzEarth
      type(rscalar)		:: cellCond
      type(grid3d_t),pointer    :: grid
-     real (kind=selectedPrec)   :: AirCond
+     real (kind=prec)   :: AirCond
      logical			:: allocated = .false.
      character (len=80)		:: paramType = ''
      !  supported paramType at present: LINEAR and LOGE
@@ -120,7 +120,7 @@ Contains
      character(80), intent(in)			    :: paramtype
      type (modelParam_t), intent(inout)		:: m
      type (rscalar), intent(in), optional   :: v
-     real (kind=selectedPrec), intent(in), optional :: vAir
+     real (kind=prec), intent(in), optional :: vAir
 
      if(m%allocated) then
         call deall_modelParam(m)
@@ -201,7 +201,7 @@ Contains
 
    !   dot product of two model space parameter objects
    !    here implemented for 3D numerical grid
-     real(kind=selectedPrec)          :: r
+     real(kind=prec)          :: r
      type(modelParam_t), intent(in)       :: m1,m2
 
      ! local variables
@@ -240,7 +240,7 @@ Contains
      !   are model parameters
      !   output m may overwrite m1 or m2
 
-     real(kind=selectedPrec),intent(in)       :: a1,a2
+     real(kind=prec),intent(in)       :: a1,a2
      type(modelParam_t), intent(in)		:: m1,m2
      type(modelParam_t), intent(inout)		:: m
 
@@ -275,7 +275,7 @@ Contains
     function scMult_modelParam(a,mIn) result (mOut)
   !  computes mOut = a * mIn for modelParam object m and real scalar a
 
-    real (kind=selectedPrec), intent(in)		:: a
+    real (kind=prec), intent(in)		:: a
     type(modelParam_t), intent(in)	            :: mIn
     type(modelParam_t)                          :: mOut
 
@@ -300,7 +300,7 @@ Contains
      type(modelParam_t), intent(inout)    :: m
      character(80), intent(in)		      :: paramType
      type(rscalar), intent(in)		      :: v
-     real(kind=selectedPrec), intent(in), optional :: vAir
+     real(kind=prec), intent(in), optional :: vAir
 
      if(.not.(m%allocated)) then
         call errstop('output modelParam must be allocated before calling setValue_modelParam')
@@ -334,7 +334,7 @@ Contains
      type(modelParam_t), intent(in)       :: m
      character(80), intent(inout)		  :: paramType
      type(rscalar), intent(out)		      :: v
-     real(kind=selectedPrec), intent(out), optional :: vAir
+     real(kind=prec), intent(out), optional :: vAir
      ! local variable
      type(modelParam_t)                   :: mTemp
 

@@ -29,7 +29,7 @@
      type(rscalar), intent(inout)	       :: cCond
      character(80), intent(out), optional  :: paramType
      type(grid3d_t), intent(out), optional :: grid
-     real(kind=selectedPrec), intent(out), optional :: AirCond
+     real(kind=prec), intent(out), optional :: AirCond
 
      if(cCond%allocated) then
         if((cCond%Ny .ne. m%Ny).or. (cCond%Nx .ne. m%Nx) .or. &
@@ -102,10 +102,10 @@
     logical		:: linearizedMapping
     ! the prefix V are the volumes S is total over surrounding cells
     !   common sides are ommited from volume calculation
-    real(kind=selectedPrec)            :: Vdr,Vdl,Vur,Vul,S
-    real(kind=selectedPrec)            :: Vdn,Vds,Vun,Vus
-    real(kind=selectedPrec)            :: Vnr,Vnl,Vsr,Vsl,airCond
-    real(kind=selectedPrec),pointer,dimension(:,:,:)	:: temp
+    real(kind=prec)            :: Vdr,Vdl,Vur,Vul,S
+    real(kind=prec)            :: Vdn,Vds,Vun,Vus
+    real(kind=prec)            :: Vnr,Vnl,Vsr,Vsl,airCond
+    real(kind=prec),pointer,dimension(:,:,:)	:: temp
 
     linearizedMapping = present(m0)
 
@@ -236,10 +236,10 @@
     integer		:: ix,iy,iz,ize,nx,ny,nz,nzE,nZa
     ! the prefix V are the volumes S is total over surrounding cells
     !   common sides are ommited from volume calculation
-    real(kind=selectedPrec)            :: Vdr,Vdl,Vur,Vul,S
-    real(kind=selectedPrec)            :: Vdn,Vds,Vun,Vus
-    real(kind=selectedPrec)            :: Vnr,Vnl,Vsr,Vsl
-    real(kind=selectedPrec),pointer,dimension(:,:,:)	:: temp
+    real(kind=prec)            :: Vdr,Vdl,Vur,Vul,S
+    real(kind=prec)            :: Vdn,Vds,Vun,Vus
+    real(kind=prec)            :: Vnr,Vnl,Vsr,Vsl
+    real(kind=prec),pointer,dimension(:,:,:)	:: temp
 
 
     if ((.not.m%allocated).or.(.not.Econd%allocated)) then
@@ -385,11 +385,11 @@
 
     type (modelParam_t), intent(in)     :: m
     integer, intent(in)               :: xyz,ix,iy,iz
-    real(kind=selectedPrec)           :: r
+    real(kind=prec)           :: r
 
     ! local variables
     integer		:: izE,nx,ny,nz,nZE,nZa
-    real(kind=selectedPrec)           :: w11,w21,w12,w22,S,temp(2,2)
+    real(kind=prec)           :: w11,w21,w12,w22,S,temp(2,2)
 
     nx = m%Nx
     ny = m%Ny

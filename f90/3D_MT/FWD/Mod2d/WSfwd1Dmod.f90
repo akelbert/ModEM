@@ -15,14 +15,14 @@ use wsutils
       SUBROUTINE Fwd1D_TM(per,Nzb,Dzb,r1d,X1D)
 
       INTEGER Nzb
-      REAL(kind=selectedPrec)  per,Dzb(*),r1d(*)
-      COMPLEX(kind=selectedPrec) X1D(*)
+      REAL(kind=prec)  per,Dzb(*),r1d(*)
+      COMPLEX(kind=prec) X1D(*)
       
       INTEGER iz,jj,nzb1,nzb2
-      REAL(kind=selectedPrec)  Omega,Omue,skd
-      REAL(kind=selectedPrec)  dz1(NZ1MX),cz1(NZ2MX)
-      REAL(kind=selectedPrec)  au1d(NZ0MX),ad1d(NZ0MX)
-      COMPLEX(kind=selectedPrec) ac1d(NZ0MX),xb1d(2),xb(NZ0MX)
+      REAL(kind=prec)  Omega,Omue,skd
+      REAL(kind=prec)  dz1(NZ1MX),cz1(NZ2MX)
+      REAL(kind=prec)  au1d(NZ0MX),ad1d(NZ0MX)
+      COMPLEX(kind=prec) ac1d(NZ0MX),xb1d(2),xb(NZ0MX)
 
       nzb1 = Nzb + 1
       nzb2 = Nzb + 2
@@ -69,14 +69,14 @@ use wsutils
       SUBROUTINE Fwd1D_TE(per,Nza,Nz,Dz,s1,X1D)
 
       INTEGER Nza,Nz
-      REAL(kind=selectedPrec)  per,Dz(*),s1(*)
-      COMPLEX(kind=selectedPrec) X1D(*)
+      REAL(kind=prec)  per,Dz(*),s1(*)
+      COMPLEX(kind=prec) X1D(*)
       
       INTEGER iz,jj,nz1,nz2
-      REAL(kind=selectedPrec)  Omega,Omue,skd,s1d(NZ1MX)
-      REAL(kind=selectedPrec)  dz1(NZ1MX),cz1(NZ2MX)
-      REAL(kind=selectedPrec)  au1d(NZ0MX),ad1d(NZ0MX),ss
-      COMPLEX(kind=selectedPrec) ac1d(NZ0MX),xb1d(2),xb(NZ0MX)
+      REAL(kind=prec)  Omega,Omue,skd,s1d(NZ1MX)
+      REAL(kind=prec)  dz1(NZ1MX),cz1(NZ2MX)
+      REAL(kind=prec)  au1d(NZ0MX),ad1d(NZ0MX),ss
+      COMPLEX(kind=prec) ac1d(NZ0MX),xb1d(2),xb(NZ0MX)
 
       nz1 = Nz + 1
       nz2 = Nz + 2
@@ -136,11 +136,11 @@ use wsutils
       SUBROUTINE Solve1D(nz0,ad1d,ac1d,xb)
  
       INTEGER nz0
-      REAL(kind=selectedPrec)  ad1d(*)
-      COMPLEX(kind=selectedPrec) ac1d(*),xb(*)
+      REAL(kind=prec)  ad1d(*)
+      COMPLEX(kind=prec) ac1d(*),xb(*)
 
       INTEGER jj,iPiv(NZ0MX),info
-      COMPLEX(kind=selectedPrec) a1d(4,NZ0MX)
+      COMPLEX(kind=prec) a1d(4,NZ0MX)
       character*1 cN
      
       cN = 'N'

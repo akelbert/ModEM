@@ -155,7 +155,7 @@ module sg_vector
      ! y: edge nodes in y-direction: dimension Nx+1, Ny, Nz+1
      ! z: edge nodes in z-direction: dimension Nx+1, Ny+1, Nz
      ! Note that the arrays are defined through dynamic memory allocation  
-     complex(kind=selectedPrec), pointer, dimension(:,:,:)  :: x, y, z
+     complex(kind=prec), pointer, dimension(:,:,:)  :: x, y, z
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction
@@ -186,7 +186,7 @@ module sg_vector
      ! y: edge nodes in y-direction: dimension Nx+1, Ny, Nz+1
      ! z: edge nodes in z-direction: dimension Nx+1, Ny+1, Nz
      ! Note that the arrays are defined through dynamic memory allocation  
-     real(kind=selectedPrec), pointer, dimension(:,:,:) :: x,y,z
+     real(kind=prec), pointer, dimension(:,:,:) :: x,y,z
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction
@@ -624,7 +624,7 @@ Contains
   subroutine scMult_cvector(c, E1, E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                      :: c          
+    complex(kind=prec), intent(in)                      :: c          
     ! a complex scalar to be multiplied with
     type (cvector), intent(in)                       :: E1            
     type (cvector), intent(inout)                    :: E2 
@@ -668,7 +668,7 @@ Contains
   function scMult_cvector_f(c, E1) result(E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                      :: c          
+    complex(kind=prec), intent(in)                      :: c          
     ! a complex scalar to be multiplied with
     type (cvector), intent(in)                       :: E1            
     type (cvector)                                   :: E2             
@@ -716,7 +716,7 @@ Contains
   subroutine scMultReal_cvector(c, E1, E2)
 
     implicit none
-    real (kind=selectedPrec), intent(in)                         :: c          
+    real (kind=prec), intent(in)                         :: c          
     ! a real scalar to be multiplied with
     type (cvector), intent(in)                       :: E1            
     type (cvector), intent(inout)                    :: E2 
@@ -760,7 +760,7 @@ Contains
   function scMultReal_cvector_f(c, E1) result(E2)
 
     implicit none
-    real (kind=selectedPrec), intent(in)			     :: c          
+    real (kind=prec), intent(in)			     :: c          
     ! a real scalar to be multiplied with
     type (cvector), intent(in)                       :: E1            
     type (cvector)                                   :: E2             
@@ -808,7 +808,7 @@ Contains
   subroutine scMult_rvector(c, E1, E2)
 
     implicit none
-    real (kind=selectedPrec), intent(in)                         :: c          
+    real (kind=prec), intent(in)                         :: c          
     ! a real scalar to be multiplied with
     type (rvector), intent(in)                       :: E1            
     type (rvector), intent(inout)                    :: E2             
@@ -853,7 +853,7 @@ Contains
   function scMult_rvector_f(c, E1) result(E2)
 
     implicit none
-    real (kind=selectedPrec), intent(in)                         :: c          
+    real (kind=prec), intent(in)                         :: c          
     ! a complex scalar to be multiplied with
     type (rvector), intent(in)                       :: E1            
     type (rvector)                                   :: E2 
@@ -1820,7 +1820,7 @@ Contains
 
     implicit none
     type (rvector), intent(in)   :: E1, E2
-    real (kind=selectedPrec)		     :: r 
+    real (kind=prec)		     :: r 
 
     r = 0.0
     
@@ -1857,7 +1857,7 @@ Contains
 
     implicit none
     type (cvector), intent(in)       :: E1, E2
-    complex(kind=selectedPrec)		     :: c
+    complex(kind=prec)		     :: c
 
     c = C_ZERO
     
@@ -1896,7 +1896,7 @@ Contains
 
     implicit none
     type (cvector), intent(in)       :: E1, E2
-    complex(kind=selectedPrec)		     :: c
+    complex(kind=prec)		     :: c
 
     c = C_ZERO
     
@@ -1975,7 +1975,7 @@ Contains
   subroutine scMultAdd_cvector(c, E1, E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                      :: c          
+    complex(kind=prec), intent(in)                      :: c          
     ! a complex scalar to be multiplied with
     type (cvector), intent(in)                       :: E1            
     type (cvector), intent(inout)                    :: E2             

@@ -24,11 +24,11 @@ implicit none
    integer              :: NZ1MX, NZ2MX
    integer              :: NzSave, NzaSave, NySave
 
-   real(kind=selectedPrec),parameter       :: Mue =  MU
+   real(kind=prec),parameter       :: Mue =  MU_0
 
    !  air conductivity is fixed ... but this can be reset by any
    !  routine that uses this module.
-   real(kind=selectedPrec)                :: CondAir = SIGMA_AIR
+   real(kind=prec)                :: CondAir = SIGMA_AIR
 
    contains
 
@@ -41,7 +41,7 @@ implicit none
      NzSave = Nz
      NzaSave = Nza
      NySave = Ny
- 
+
      NZ0MX = Nz+1
      NY0MX = Ny+1
      MMIMX = (NY0MX-1)*(NZ0MX-1)
@@ -55,7 +55,7 @@ implicit none
 !**********************************************************************
       SUBROUTINE CopyVectorR8(x_1,x_2,vx,y_1,y_2,vy)
       INTEGER x_1,x_2,y_1,y_2
-      real(kind=selectedPrec)  vx(*),vy(*)
+      real(kind=prec)  vx(*),vy(*)
 
       INTEGER ix,iy
 
@@ -76,7 +76,7 @@ implicit none
 !**********************************************************************
       SUBROUTINE CopyVectorC16(x_1,x_2,vx,y_1,y_2,vy)
       INTEGER x_1,x_2,y_1,y_2
-      complex(kind=selectedPrec)  vx(*),vy(*)
+      complex(kind=prec)  vx(*),vy(*)
 
       INTEGER ix,iy
 
@@ -99,7 +99,7 @@ implicit none
       SUBROUTINE CopyMatrixR8(x00,x01,x10,x11,nx1,nx2,mx,  &
                              y00,y01,y10,y11,ny1,ny2,my)
       INTEGER x00,x01,x10,x11,y00,y01,y10,y11,nx1,nx2,ny1,ny2
-      real(kind=selectedPrec)  mx(nx1,nx2),my(ny1,ny2)
+      real(kind=prec)  mx(nx1,nx2),my(ny1,ny2)
 
       INTEGER ix1,ix2,iy1,iy2
 
@@ -124,7 +124,7 @@ implicit none
 !******************************************************************
       SUBROUTINE TransMatrixToVectorR8(mx,np1,np2,s1,s2,e1,e2,vx,sa,ea)
      INTEGER np1,np2,s1,s2,e1,e2,sa,ea
-      real(kind=selectedPrec)  mx(np1,np2),vx(*)
+      real(kind=prec)  mx(np1,np2),vx(*)
 
       INTEGER i_1,i_2,ia
 
@@ -146,7 +146,7 @@ implicit none
 !***************************************************************
       SUBROUTINE ConstantMatrixR8(mx,np1,np2,n1,n2,const_val)
       INTEGER np1,np2,n1,n2
-      real(kind=selectedPrec)  mx(np1,np2),const_val
+      real(kind=prec)  mx(np1,np2),const_val
 
       INTEGER i_1,i_2
 
@@ -158,11 +158,11 @@ implicit none
 
       RETURN
       END subroutine ! ConstantMatrixR8
-  
+
       SUBROUTINE ConstantMatrixC16(mx,np1,np2,n1,n2,const_val)
       INTEGER np1,np2,n1,n2
-      real(kind=selectedPrec)  const_val
-      complex(kind=selectedPrec) mx(np1,np2)
+      real(kind=prec)  const_val
+      complex(kind=prec) mx(np1,np2)
 
       INTEGER i_1,i_2
 
@@ -178,7 +178,7 @@ implicit none
 !*******************************************************************
       SUBROUTINE ConstantVectorR8(vx,n,const_val)
       INTEGER n
-      real(kind=selectedPrec)  vx(*),const_val
+      real(kind=prec)  vx(*),const_val
 
       INTEGER i
 
@@ -192,8 +192,8 @@ implicit none
 !******************************************************************
       SUBROUTINE ConstantVectorC16(vx,n,const_val)
       INTEGER n
-      real(kind=selectedPrec)  const_val
-      complex(kind=selectedPrec)  vx(*)
+      real(kind=prec)  const_val
+      complex(kind=prec)  vx(*)
 
       INTEGER i
 
@@ -208,7 +208,7 @@ implicit none
 
 !******************************************************************
       SUBROUTINE CumulativeDistance(nx,dx,xdis)
-      real(kind=selectedPrec)  dx(*),xdis(*)
+      real(kind=prec)  dx(*),xdis(*)
       INTEGER nx,ix
 
       xdis(1) = 0.0D+0
@@ -221,7 +221,7 @@ implicit none
 
 !*******************************************************************
       SUBROUTINE DistanceBetweenBlocks(nx,dx,cx)
-      real(kind=selectedPrec)  dx(*),cx(*),D2
+      real(kind=prec)  dx(*),cx(*),D2
       INTEGER nx,ix
 
       !!!!!  IS THIS A BUG ?????  !!!!!!
@@ -243,14 +243,14 @@ implicit none
       SUBROUTINE Fwd1D_TM(per,Nzb,Dzb,r1d,X1D)
 
       INTEGER Nzb
-      real(kind=selectedPrec)  per,Dzb(*),r1d(*)
-      complex(kind=selectedPrec) X1D(*)
+      real(kind=prec)  per,Dzb(*),r1d(*)
+      complex(kind=prec) X1D(*)
 
       INTEGER iz,jj,nzb1,nzb2
-      real(kind=selectedPrec)  Omega,Omue,skd
-      real(kind=selectedPrec)  dz1(NZ1MX),cz1(NZ2MX)
-      real(kind=selectedPrec)  au1d(NZ0MX),ad1d(NZ0MX)
-      complex(kind=selectedPrec) ac1d(NZ0MX),xb1d(2),xb(NZ0MX)
+      real(kind=prec)  Omega,Omue,skd
+      real(kind=prec)  dz1(NZ1MX),cz1(NZ2MX)
+      real(kind=prec)  au1d(NZ0MX),ad1d(NZ0MX)
+      complex(kind=prec) ac1d(NZ0MX),xb1d(2),xb(NZ0MX)
 
       nzb1 = Nzb + 1
       nzb2 = Nzb + 2
@@ -271,7 +271,7 @@ implicit none
       DO iz = 2,nzb1
         au1d(jj) = TWO*r1d(iz-1)/dz1(iz-1)
         ad1d(jj) = TWO*r1d(iz)/dz1(iz)
-        ac1d(jj) = CMPLX(R_ZERO,Omue,kind=selectedPrec)*cz1(iz) &
+        ac1d(jj) = CMPLX(R_ZERO,Omue,kind=prec)*cz1(iz) &
 			 - au1d(jj) - ad1d(jj)
         jj = jj + 1
       ENDDO
@@ -298,14 +298,14 @@ implicit none
       SUBROUTINE Fwd1D_TE(per,Nza,Nz,Dz,s1,X1D)
 
       INTEGER Nza,Nz
-      real(kind=selectedPrec)  per,Dz(*),s1(*)
-      complex(kind=selectedPrec) X1D(*)
+      real(kind=prec)  per,Dz(*),s1(*)
+      complex(kind=prec) X1D(*)
 
       INTEGER iz,jj,nz1,nz2
-      real(kind=selectedPrec)  Omega,Omue,skd,s1d(NZ1MX)
-      real(kind=selectedPrec)  dz1(NZ1MX),cz1(NZ2MX)
-      real(kind=selectedPrec)  au1d(NZ0MX),ad1d(NZ0MX),ss
-      complex(kind=selectedPrec) ac1d(NZ0MX),xb1d(2),xb(NZ0MX)
+      real(kind=prec)  Omega,Omue,skd,s1d(NZ1MX)
+      real(kind=prec)  dz1(NZ1MX),cz1(NZ2MX)
+      real(kind=prec)  au1d(NZ0MX),ad1d(NZ0MX),ss
+      complex(kind=prec) ac1d(NZ0MX),xb1d(2),xb(NZ0MX)
 
       nz1 = Nz + 1
       nz2 = Nz + 2
@@ -338,7 +338,7 @@ implicit none
         au1d(jj) = TWO/dz1(iz-1)
         ad1d(jj) = TWO/dz1(iz)
         ss       = (s1d(iz)*dz1(iz)+s1d(iz-1)*dz1(iz-1))
-        ac1d(jj) = CMPLX(R_ZERO,Omue*ss,kind=selectedPrec) &
+        ac1d(jj) = CMPLX(R_ZERO,Omue*ss,kind=prec) &
 			 - au1d(jj) - ad1d(jj)
         jj = jj + 1
       ENDDO
@@ -366,11 +366,11 @@ implicit none
       SUBROUTINE Solve1D(nz0,ad1d,ac1d,xb)
 
       INTEGER nz0
-      real(kind=selectedPrec)  ad1d(*)
-      complex(kind=selectedPrec) ac1d(*),xb(*)
+      real(kind=prec)  ad1d(*)
+      complex(kind=prec) ac1d(*),xb(*)
 
       INTEGER jj,iPiv(NZ0MX),info, k
-      complex(kind=selectedPrec) a1d(4,NZ0MX)
+      complex(kind=prec) a1d(4,NZ0MX)
       character*1 cN
 
       cN = 'N'
@@ -400,11 +400,11 @@ implicit none
       SUBROUTINE FormAII(per,Nz0,Ny,AA,AII,iPiv)
 
       INTEGER Nz0,Ny,iPiv(*)
-      real(kind=selectedPrec)  per,AA(MMIMX,4)
-      complex(kind=selectedPrec) AII(NZ3MX,MMIMX)
+      real(kind=prec)  per,AA(MMIMX,4)
+      complex(kind=prec) AII(NZ3MX,MMIMX)
 
       INTEGER mmi,jj,nz3,kl,ku,kc,info
-      real(kind=selectedPrec)  Omega,Omue
+      real(kind=prec)  Omega,Omue
 
       Omega = (TWO*PI)/per
       Omue  = Omega*Mue
@@ -420,7 +420,7 @@ implicit none
 
 !     diagonal term
       DO jj = 1,mmi
-        AII(kc,jj) = CMPLX(AA(jj,1),Omue*AA(jj,4),kind=selectedPrec)
+        AII(kc,jj) = CMPLX(AA(jj,1),Omue*AA(jj,4),kind=prec)
       ENDDO
 
 !     first lower and upper diagonal terms
@@ -456,8 +456,8 @@ implicit none
       SUBROUTINE MulAibWithXb(Nz0,Ny,Aib,Xb,AXb)
 
       INTEGER Nz0,Ny
-      real(kind=selectedPrec)  Aib(*)
-      complex(kind=selectedPrec) Xb(*),AXb(*)
+      real(kind=prec)  Aib(*)
+      complex(kind=prec) Xb(*),AXb(*)
       INTEGER mmi,mmb,iy,iz,jj,izz
 
       mmi = (Ny-1)*(Nz0-1)
@@ -504,12 +504,12 @@ implicit none
       SUBROUTINE SetBound2D_TM(per,Nzb,Ny,Dzb,Dy,CRho,HXI0,HXB)
 
       INTEGER Nzb,Ny
-      real(kind=selectedPrec)  per,Dzb(*),Dy(*),CRho(NZ0MX,NY0MX)
-      complex(kind=selectedPrec) HXI0(*),HXB(*)
+      real(kind=prec)  per,Dzb(*),Dy(*),CRho(NZ0MX,NY0MX)
+      complex(kind=prec) HXI0(*),HXB(*)
 
       INTEGER nzb1,ny1,mmi,mmb,np1,np2,iz,iy,ii,jj
-      real(kind=selectedPrec)  r1d(NZ1MX)
-      complex(kind=selectedPrec) X1D(NZ2MX)
+      real(kind=prec)  r1d(NZ1MX)
+      complex(kind=prec) X1D(NZ2MX)
 !     is this extra complication needed?
 !      real (kind=8), allocatable, dimension(:) ::  r1d
 !      complex (kind=8), allocatable, dimension(:)      ::  x1d
@@ -571,12 +571,12 @@ implicit none
 !        to minimize changes to WS code, just copy (part of) Cond2d into CCon
 
       INTEGER Nza,Nz,Ny
-      real(kind=selectedPrec)  per,Dz(*),Dy(*)
-      complex(kind=selectedPrec) EXI0(*),EXB(*)
+      real(kind=prec)  per,Dz(*),Dy(*)
+      complex(kind=prec) EXI0(*),EXB(*)
 
       INTEGER nz1,ny1,mmi,mmb,np1,np2,iz,iy,ii,jj
-      real(kind=selectedPrec)  s1d(NZ1MX),CCon(NZ0MX,NY0MX),Cond2D(NZ0MX,NY0MX)
-      complex(kind=selectedPrec) X1D(NZ2MX)
+      real(kind=prec)  s1d(NZ1MX),CCon(NZ0MX,NY0MX),Cond2D(NZ0MX,NY0MX)
+      complex(kind=prec) X1D(NZ2MX)
       nz1 = Nz + 1
       ny1 = Ny + 1
 
@@ -638,8 +638,8 @@ implicit none
       SUBROUTINE SetupA_TM(Nzb,Ny,Dzb,Dy,Czb,Cy,CRho,ATM,BTM)
 
       INTEGER Nzb,Ny
-      real(kind=selectedPrec)  Dzb(*),Dy(*),Czb(*),Cy(*),CRho(NZ0MX,NY0MX)
-      real(kind=selectedPrec)  ATM(MMIMX,4),BTM(MMBMX)
+      real(kind=prec)  Dzb(*),Dy(*),Czb(*),Cy(*),CRho(NZ0MX,NY0MX)
+      real(kind=prec)  ATM(MMIMX,4),BTM(MMBMX)
 
 !    ATM(:,1) : Real diagonal term
 !    ATM(:,2) : Real first upper strip
@@ -648,8 +648,8 @@ implicit none
 !     BTM      : Boundary
 
       INTEGER jj,iz,iy,nblx,iblx
-      real(kind=selectedPrec)  r00,r10,r01,r11
-      real(kind=selectedPrec)  ar,al,ad,au
+      real(kind=prec)  r00,r10,r01,r11
+      real(kind=prec)  ar,al,ad,au
 
       nblx = Ny*Nzb
       iblx = 2*Ny + 2*Nzb
@@ -727,8 +727,8 @@ implicit none
 !        to minimize changes to WS code, just copy (part of) Cond2d into CCon
 
       INTEGER Nza,Nz,Ny
-      real(kind=selectedPrec)  Dz(*),Dy(*),Cz(*),Cy(*)
-      real(kind=selectedPrec)  ATE(MMIMX,4),BTE(MMBMX)
+      real(kind=prec)  Dz(*),Dy(*),Cz(*),Cy(*)
+      real(kind=prec)  ATE(MMIMX,4),BTE(MMBMX)
 
 !     ATE(:,1) : Real diagonal term
 !     ATE(:,2) : Real second strip
@@ -737,8 +737,8 @@ implicit none
 !     BTE      : Boundary
 
       INTEGER jj,iz,iy,nblx,iblx
-      real(kind=selectedPrec)  s00,s10,s01,s11,s2d
-      real(kind=selectedPrec)  ar,al,ad,au,CCon(NZ0MX,NY0MX),COnd2D(NZ0MX,NY0MX)
+      real(kind=prec)  s00,s10,s01,s11,s2d
+      real(kind=prec)  ar,al,ad,au,CCon(NZ0MX,NY0MX),COnd2D(NZ0MX,NY0MX)
 
       nblx = Ny*Nz
       iblx = 2*Ny + 2*Nz

@@ -51,7 +51,7 @@ module datafunc
      !   different dictionaries can be used for different data types
      !  Additonal elements of MTrx data type can be added to 
      !   accomodate additional data types
-     real(kind=selectedPrec)			::  x(2)
+     real(kind=prec)			::  x(2)
   end type MTrx
 
   ! receiver dictionary for 2D MT data will be an array of
@@ -98,7 +98,7 @@ Contains
     !   corresponding to grid  (normally z = 0 for flat Earth surface)
 
     integer, intent(in)	 		:: nSites
-    real(kind=selectedPrec), intent(in)	:: siteLocations(2,nSites)
+    real(kind=prec), intent(in)	:: siteLocations(2,nSites)
 
     !  local variables
     integer                             :: i
@@ -170,12 +170,12 @@ Contains
   !    be treated as an array here, even if there is only one element.
   !   As an example: to add tippers to TE mode, dimension on Z 
   !     will have to be changed to 2!
-  complex(kind=selectedPrec), intent(inout)	:: Z(1)
+  complex(kind=prec), intent(inout)	:: Z(1)
 
   !  local variables
   type(sparsevecc)		:: Lb,Le
-  complex(kind=selectedPrec)	:: B,E
-  real(kind=selectedPrec)	:: omega, x(2)
+  complex(kind=prec)	:: B,E
+  real(kind=prec)	:: omega, x(2)
   logical			:: Conj_Case = .false.
   character*2			:: mode
   character*80			:: msg
@@ -245,9 +245,9 @@ Contains
   type(EMsparse), intent(inout)		:: Lz(1), Qz(1)
 
   !  local variables
-  complex (kind=selectedPrec)		:: B,E,c_E,c_B
+  complex (kind=prec)		:: B,E,c_E,c_B
   type(sparsevecc)			:: Le,Lb
-  real (kind=selectedPrec)		:: x(2), omega
+  real (kind=prec)		:: x(2), omega
   character*2				:: mode
   logical				:: Conj_case = .false.
 
@@ -316,7 +316,7 @@ Contains
    !
    !  Now, this also is used to multiply Q by cs before adding.
 
-   complex(kind=selectedPrec),intent(in)	:: cs
+   complex(kind=prec),intent(in)	:: cs
    type (EMsparse), intent(in)                  :: Q
    type (modelParam_t), intent(in)                :: sigma0
    type (modelParam_t), intent(inout)             :: dsigmaReal

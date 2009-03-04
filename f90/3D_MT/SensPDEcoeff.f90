@@ -1,12 +1,12 @@
 ! *****************************************************************************
 !  Module that computes "forcings" for sensitivity calculation
 !       (and adjoints).  This module is specific to the numerical
-!       implementation of the solver, in this case for 3D 
+!       implementation of the solver, in this case for 3D
 !       MT finite difference modeling.   This module works with the
 !       "natural" representations of conductivity: defined on edges
 !        of the staggered grid.  Mappings from the potentially
-!        more flexible earth conductivity parameter to these fixed, 
-!        grid-specific representations are to be implemented in module 
+!        more flexible earth conductivity parameter to these fixed,
+!        grid-specific representations are to be implemented in module
 !	 ModelParam.  This module has no dependence on the specific
 !        conductivity parameterization
 !
@@ -29,7 +29,7 @@ module senspdecoeff
    !   mapping from modelParam dsigma to source for forward problem
    !    (needed to calculate J*dsigma, where J is sensitivity)
    !   e0 is input background field solution;
-   !    e is output ... used for forcing, created before calling 
+   !    e is output ... used for forcing, created before calling
    !    this routine
 
    type(EMsoln), intent(in)		    :: e0
@@ -38,11 +38,11 @@ module senspdecoeff
    type(EMrhs), intent(inout)		:: e
 
    !  local variables
-   complex(kind=selectedPrec)		:: minus_i_omega_mu
+   complex(kind=prec)		:: minus_i_omega_mu
    type(rvector)			        :: temp
    integer				            :: k
-   
-   minus_i_omega_mu = cmplx(0.,-isign*mu*e0%omega,kind=selectedPrec)
+
+   minus_i_omega_mu = cmplx(0.,-ISIGN*MU_0*e0%omega,kind=prec)
    call create_rvector(e0%grid,temp,EDGE)
 
    ! map dsigma to edges, storing in array temp
@@ -74,18 +74,18 @@ module senspdecoeff
    type(modelParam_t), intent(inout),optional	:: dsigmaImag
 
    !  local variables
-   complex(kind=selectedPrec)			:: minus_i_omega_mu
+   complex(kind=prec)			:: minus_i_omega_mu
    type(cvector)				:: Ctemp(2)
    type(rvector)				:: temp
    integer					:: k
-   
-   minus_i_omega_mu = cmplx(0.,-isign*mu*e0%omega,kind=selectedPrec)
+
+   minus_i_omega_mu = cmplx(0.,-ISIGN*MU_0*e0%omega,kind=prec)
    call create_rvector(e0%grid,temp,EDGE)
    call create_cvector(e0%grid,Ctemp(1),EDGE)
    call create_cvector(e0%grid,Ctemp(2),EDGE)
 
    ! multiply backward solutions (e) by minus_i_omega_mu * e0
-   !   and sum over modes ... 
+   !   and sum over modes ...
    do k = 1,2
       call diagMult_cvector(e0%pol(k),e%pol(k),Ctemp(k))
    enddo
@@ -101,7 +101,7 @@ module senspdecoeff
       call getImag_cvector(Ctemp(1),temp)
       call EdgeToModelParam(temp,dsigmaImag,sigma0)
    endif
-   
+
    call deall_rvector(temp)
    call deall_cvector(Ctemp(1))
    call deall_cvector(Ctemp(2))

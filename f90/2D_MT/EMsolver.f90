@@ -18,7 +18,7 @@ use fwdtmmod
 use solnrhs
 
 implicit none
-  
+
  type :: MTtx
      !  An MT source is defined by frequency and boundary conditions
      !   at present there does not seem to be much need for BC info ... add
@@ -26,8 +26,8 @@ implicit none
      !    complex tx descriptions
      character(2)                :: mode = ''! = 'TE' or 'TM'
      ! angular frequency (radians/sec), and for convenience period (s)
-     real(kind=selectedPrec)            :: omega = R_ZERO
-     real(kind=selectedPrec)            :: period = R_ZERO
+     real(kind=prec)            :: omega = R_ZERO
+     real(kind=prec)            :: period = R_ZERO
      ! index number to frequency/ period in solution file
      integer                    :: iPer
   end type MTtx
@@ -67,7 +67,7 @@ end type EMsolnMTX
 !    changes from the previous solver call, appropriate solver
 !    coefficients are updated, matrices factored, etc.).  This
 !    functionality needs to be maintained in implementations for new
-!    problems! 
+!    problems!
 public initSolver
 
 !  cleanup/deallocation routines
@@ -85,7 +85,7 @@ public create_EMsolnMTX, deall_EMsolnMTX
   !   the inversion.
 
 type(grid2d_t), target, save, private     :: SolnRHS_grid
-  
+
 Contains
 
 !**********************************************************************
@@ -102,7 +102,7 @@ Contains
      integer, intent(in)         :: nTx
      real*8, intent(in)          :: periods(nTx)
      character*2, intent(in)     :: modes(nTx)
- 
+
      ! local variables
      integer                     :: iTx
 
@@ -114,7 +114,7 @@ Contains
      enddo
 
   end subroutine TXdictSetUp
-  
+
 ! **************************************************************************
 ! Cleans up and deletes transmitter dictionary at end of program execution
   subroutine deall_txDict()
@@ -125,12 +125,12 @@ Contains
        deallocate(txDict,STAT=istat)
     end if
 
-  end subroutine deall_txDict   
-  
+  end subroutine deall_txDict
+
    !**********************************************************************
    subroutine initSolver(iTx,sigma,e0,e,comb)
    !   Initializes forward solver for
-   !    transmitter iTx: in this instance TE or TM mode solvers 
+   !    transmitter iTx: in this instance TE or TM mode solvers
    !    for the appropriate frequency depending on mode
    !   Idea is to call this before calling fwdSolve or sensSolve,
    !     in particular before the first solution for each transmitter
@@ -139,10 +139,10 @@ Contains
    !     this routine initialized for a different data type (TE vs. TM
    !     mode) full initialization (after deallocation/cleanup if required)
    !     is performed.
-   !     
-   !   iTx defines transmitter: for 2D MT, this provides info about 
+   !
+   !   iTx defines transmitter: for 2D MT, this provides info about
    !       frequency and TE/TM mode; for 3D MT just frequency
-   !   
+   !
    !   This now does all setup (including matrix factorization) for
    !     the appropriate mode/frequency
    !   NOTE: e and comb are optional calling arguments;
@@ -160,7 +160,7 @@ Contains
 
    !  local variables
    integer					:: IER
-   real(kind=selectedPrec)			:: period
+   real(kind=prec)			:: period
    character*2          			:: mode
    logical					:: initForSens
 
@@ -172,9 +172,9 @@ Contains
    if(currentMode .ne. mode) then
       if(currentMode .ne. '  ') then
          !  not inital solution, but mode has changed from last
-         !  sensitivity calculated: will need to reinitialize 
+         !  sensitivity calculated: will need to reinitialize
          !  solver + rhs/soln arrays ... first deallocate from
-         !  previous mode 
+         !  previous mode
          call deall_EMrhs(b0)
          call deall_EMsoln(e0)
          if(initForSens) then
@@ -206,7 +206,7 @@ Contains
          case default
             call errStop('mode must be TE or TM in initSolver')
       end select
-   
+
       !  allocate for rhs for background, scratch sensitivity solutions
       b0%nonzero_source = .false.
       b0%nonzero_bc = .true.
@@ -284,16 +284,16 @@ Contains
    type(EMsoln), intent(inout)	:: e0
 
    ! local variables
-   real(kind=selectedPrec)	:: period,omega
+   real(kind=prec)	:: period,omega
    integer			:: IER
-   complex(kind=selectedPrec)	:: i_omega_mu
+   complex(kind=prec)	:: i_omega_mu
    character*2          	:: mode
 
    mode = txDict(iTx)%mode
    period = txDict(iTx)%period
    omega = txDict(iTx)%omega
    !  set period, complete setup of TE mode equation system
-   i_omega_mu = cmplx(0.,isign*mu*omega,kind=selectedPrec)
+   i_omega_mu = cmplx(0.,ISIGN*MU_0*omega,kind=prec)
 
    ! solve forward problem
    select case (mode)
@@ -315,7 +315,7 @@ Contains
          endif
       case default
    end select
-   !  set transmitter index for this solution 
+   !  set transmitter index for this solution
    !          (sigma is set at initialization)
    e0%tx = iTx
    e0%mode = mode
@@ -354,7 +354,7 @@ Contains
        endif
    endif
    e%tx = iTx
-   end subroutine sensSolve   
+   end subroutine sensSolve
 
 !**********************************************************************
    subroutine create_EMsolnMTX(d,eAll)
@@ -377,7 +377,7 @@ Contains
       enddo
 
    end subroutine create_EMsolnMTX
-   
+
    !**********************************************************************
    subroutine deall_EMsolnMTX(eAll)
 
@@ -406,7 +406,7 @@ Contains
        SolnRHS_grid = grid
 
     end subroutine set_SolnRHS_grid
-    
+
 !**********************************************************************
     subroutine delete_SolnRHS_grid
 !    Call this routine when SolnRHS_grid is no longer needed
@@ -414,5 +414,5 @@ Contains
        call deall_grid2d(SolnRHS_grid)
 
     end subroutine delete_SolnRHS_grid
-    
+
 end module emsolver

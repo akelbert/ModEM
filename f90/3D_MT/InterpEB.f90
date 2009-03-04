@@ -31,7 +31,7 @@ Contains
 
     implicit none
     type(grid3d_t), target, intent(in)              :: inGrid
-    real(kind=selectedPrec), dimension(3), intent(in)     :: x
+    real(kind=prec), dimension(3), intent(in)     :: x
     integer, intent(in)                         :: xyz
     type(sparsevecc), intent(inout)             :: LC
     type(modelParam_t), intent(in), optional  :: CondE
@@ -41,9 +41,9 @@ Contains
     integer, dimension(8)                       :: I,J,K
     integer                                     :: nxMax, nyMax, nzMax
     integer                                     :: status
-    complex(kind=selectedPrec), dimension(8)    :: C
-    real(kind=selectedPrec), dimension(3,2)     :: w
-    real(kind=selectedPrec)                     :: wadd
+    complex(kind=prec), dimension(8)    :: C
+    real(kind=prec), dimension(3,2)     :: w
+    real(kind=prec)                     :: wadd
     character (len = 80)                        :: gridType = ''
     logical                     		:: UseCond
 
@@ -215,7 +215,7 @@ Contains
 
     implicit none
     type (grid3d_t), target, intent(in)    		:: inGrid
-    real (kind=selectedPrec), dimension(3), intent(in) 	:: x
+    real (kind=prec), dimension(3), intent(in) 	:: x
     integer, intent(in)        			:: xyz
     type (sparsevecc), intent(inout) 		:: LC
 
@@ -223,9 +223,9 @@ Contains
     integer                                     :: nxMax, nyMax, nzMax
     integer, dimension(8)			:: I,J,K
     integer					:: status
-    real (kind=selectedPrec), dimension(3,2)	:: w
-    real (kind=selectedPrec)			:: wadd
-    complex (kind=selectedPrec), dimension(8)  	:: C
+    real (kind=prec), dimension(3,2)	:: w
+    real (kind=prec)			:: wadd
+    complex (kind=prec), dimension(8)  	:: C
     character (len=80)				:: gridType = ''
 
     if(LC%allocated) then
@@ -348,8 +348,8 @@ Contains
 
     implicit none
     type (grid3d_t), target, intent(in) 		:: inGrid
-    real(kind=selectedPrec), 	intent(in)	:: omega
-    real(kind=selectedPrec), dimension(3), intent(in)	:: x
+    real(kind=prec), 	intent(in)	:: omega
+    real(kind=prec), dimension(3), intent(in)	:: x
     integer, intent(in)              		:: xyz
     type (sparsevecc), intent(inout) 		:: LC
 
@@ -357,15 +357,15 @@ Contains
     integer 					:: ii,n,m,p
     integer					:: num = 4
     integer, dimension(4)			:: I,J,K,AXES
-    real (kind=selectedPrec), dimension(3,2)   	:: w
-    complex (kind=selectedPrec), dimension(4)  	:: C
-    complex (kind=selectedPrec)   	       	:: c1,c2,i_omega_inv
+    real (kind=prec), dimension(3,2)   	:: w
+    complex (kind=prec), dimension(4)  	:: C
+    complex (kind=prec)   	       	:: c1,c2,i_omega_inv
     type (sparsevecc)				:: LConeH, LCH, LCtemp
     character (len=80)				:: gridType = ''
     integer					:: status
 
     !   NOTE: Careful about minus sign here ... 
-    i_omega_inv = isign*cmplx(0.0 ,1./omega,kind=selectedPrec)
+    i_omega_inv = ISIGN*cmplx(0.0 ,1./omega,kind=prec)
 
     if(LC%allocated) then
        deallocate(LC%i, STAT=status)

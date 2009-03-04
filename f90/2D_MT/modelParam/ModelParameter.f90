@@ -38,8 +38,8 @@ type ::  modelParam_t
    integer   				:: Ny = 0
    integer   				:: NzEarth = 0
    type(grid2d_t), pointer  		:: grid
-   real (kind=selectedPrec), pointer, dimension(:,:) :: v
-   real (kind=selectedPrec)		:: AirCond = SIGMA_AIR
+   real (kind=prec), pointer, dimension(:,:) :: v
+   real (kind=prec)		:: AirCond = SIGMA_AIR
    logical           			:: allocated = .false.
    !   parameter types supported:
    !   LINEAR = linear conductivity of each grid Earth cell is specified
@@ -105,8 +105,8 @@ Contains
      type (grid2d_t), intent(in), target   	:: grid
      character(*), intent(in)   		    :: paramtype
      type (modelParam_t), intent(inout)   	:: cond
-     real (kind=selectedPrec), intent(in), optional :: value(:,:)
-     real (kind=selectedPrec), intent(in), optional :: airCond
+     real (kind=prec), intent(in), optional :: value(:,:)
+     real (kind=prec), intent(in), optional :: airCond
      !  local variables
      integer ::       Nz,Ny,Nza,NzEarth
 
@@ -162,7 +162,7 @@ Contains
 
    !   dot product of two model space parameter objects
    !    here implemented for 2D blocks
-     real(kind=selectedPrec)		:: r
+     real(kind=prec)		:: r
      type(modelParam_t), intent(in)	:: m1,m2
 
      ! local variables
@@ -187,7 +187,7 @@ Contains
 
    !   Max norm = max(|m_ij|)
    !    here implemented for 2D blocks
-     real(kind=selectedPrec)		:: r
+     real(kind=prec)		:: r
      type(modelParam_t), intent(in)	:: m
 
      ! local variables
@@ -221,7 +221,7 @@ Contains
      !   are model parameters
      !   output m may overwrite m1 or m2
 
-     real(kind=selectedPrec),intent(in)		:: a1,a2
+     real(kind=prec),intent(in)		:: a1,a2
      type(modelParam_t), intent(in)	:: m1,m2
      type(modelParam_t), intent(inout)	:: m
 
@@ -254,7 +254,7 @@ Contains
     function scMult_modelParam(a,mIn) result (mOut)
   !  computes mOut = a * mIn for modelParam object m and real scalar a
 
-    real (kind=selectedPrec), intent(in)		:: a
+    real (kind=prec), intent(in)		:: a
     type(modelParam_t), intent(in)	            :: mIn
     type(modelParam_t)                            :: mOut
 
@@ -315,9 +315,9 @@ Contains
 
      implicit none
      type (modelParam_t), intent(in)   	        :: cond
-     real (kind=selectedPrec), intent(inout)    :: value(:,:)
+     real (kind=prec), intent(inout)    :: value(:,:)
      character*80, intent(out), optional   		:: paramtype
-     real (kind=selectedPrec), intent(out), optional :: airCond
+     real (kind=prec), intent(out), optional :: airCond
      !  local variables
      integer ::       Nz,Ny,Nza,NzEarth
 

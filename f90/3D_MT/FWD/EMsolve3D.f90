@@ -5,7 +5,7 @@
 module EMsolve3D
 
   use sg_boundary			! work between different data types
-  					! (between boundary conditions and 
+  					! (between boundary conditions and
 					! complex vectors)
   use sg_diff_oper			 ! generic differential operators
   use sg_sparse_vector, only: add_scvector
@@ -56,9 +56,9 @@ module EMsolve3D
   ! maximum number of PCG iterations for divergence correction
   integer, parameter    ::              MaxIterDivCorDef = 30
   ! misfit tolerance for convergence of EMsolve algorithm
-  real(kind=selectedPrec), parameter       ::      tolEMDef = 1E-7
+  real(kind=prec), parameter       ::      tolEMDef = 1E-7
   ! misfit tolerance for convergence of divergence correction solver
-  real(kind=selectedPrec), parameter       ::      tolDivCorDef = 1E-7
+  real(kind=prec), parameter       ::      tolDivCorDef = 1E-7
 
   save
   ! Actual values of control parameters must be set before first use,
@@ -66,7 +66,7 @@ module EMsolve3D
   !  of em_solve; are saved between calls, private to this module
   integer,  private        ::      IterPerDivCor, MaxDivCor, MaxIterDivCor
   integer,  private        ::      MaxIterTotal ! = MaxDivCor*IterPerDivCor
-  real(kind=selectedPrec), private   ::      tolEM, tolDivCor
+  real(kind=prec), private   ::      tolEM, tolDivCor
 
   ! EMsolve diagnostics: these are computed during execution of em_solve
   !   can be retrieved by call to getEmsolveDiag
@@ -74,20 +74,20 @@ module EMsolve3D
   logical, private 		::	failed
   ! nIterTotal keeps tally on number of iterations so far
   ! nDivCor keeps tally on number of divergence correction so far
-  real(kind=selectedPrec), pointer, dimension(:), private	::	EMrelErr
-  real(kind=selectedPrec), pointer, dimension(:,:), private	::	divJ
-  real(kind=selectedPrec), pointer, dimension(:,:), private	::	DivCorRelErr
+  real(kind=prec), pointer, dimension(:), private	::	EMrelErr
+  real(kind=prec), pointer, dimension(:,:), private	::	divJ
+  real(kind=prec), pointer, dimension(:,:), private	::	DivCorRelErr
 
 Contains
 
 !**********************************************************************
-! Solves the forward EM problem;  
+! Solves the forward EM problem;
 !
-! If bRHS%adj = 'TRN' solves transposed problem  A^T x = b 
+! If bRHS%adj = 'TRN' solves transposed problem  A^T x = b
 
   subroutine FWDsolve3D(bRHS,omega,eSol)
 
-    ! redefine some of the interfaces (locally) for our convenience    
+    ! redefine some of the interfaces (locally) for our convenience
     use sg_vector !, only: copy => copy_cvector, &
          !scMult => scMultReal_cvector
     ! generic routines for vector operations on the edge/face nodes
@@ -97,7 +97,7 @@ Contains
     implicit none
     !  INPUTS:
     type (RHS), intent(in)		:: bRHS
-    real(kind=selectedPrec), intent(in)	:: omega
+    real(kind=prec), intent(in)	:: omega
     !  OUTPUTS:
     !     eSol must be allocated before calling this routine
     type (cvector), intent(inout)	:: eSol
@@ -105,12 +105,12 @@ Contains
     ! LOCAL VARIABLES
     logical				:: converged,trans,ltemp
     integer				:: status, iter
-    complex(kind=selectedPrec)         	:: iOmegaMuInv
+    complex(kind=prec)         	:: iOmegaMuInv
     type (cvector)			:: b,temp
     type (cscalar)			:: phi0
     type (cboundary)             	:: tempBC
     type (solverControl_t)			:: QMRiter
-    
+
     !  Zero solver diagnostic variables
     nIterTotal = 0
     nDivCor = 0
@@ -118,7 +118,7 @@ Contains
     divJ = R_ZERO
     DivCorRelErr = R_ZERO
     failed = .false.
-    
+
     trans = (bRHS%adj .eq. TRN)
 
     if (.not.eSol%allocated) then
@@ -127,7 +127,7 @@ Contains
     endif
 
     ! allocate/initialize local data structures
-    Call create_cvector(bRHS%grid, b, eSol%gridType) 
+    Call create_cvector(bRHS%grid, b, eSol%gridType)
     Call create_cvector(bRHS%grid, temp, eSol%gridType)
     ! this is just a work array, at a given instance only single frequency and
     ! mode is being used
@@ -169,7 +169,7 @@ Contains
        call diagDiv(b,VolE,temp)
        call Div(temp,phi0)
     else
-       ! In the usual forward model case BC do enter into forcing 
+       ! In the usual forward model case BC do enter into forcing
        !   First compute contribution of BC term to RHS of reduced interior
        !    node system of equations : - A_IB*b
        if (bRHS%nonzero_BC) then
@@ -184,7 +184,7 @@ Contains
           Call scMult(MinusOne,b,b)
        endif
        ! Add internal sources if appropriate: Note that these must be multiplied
-       !  explictly by volume weights  
+       !  explictly by volume weights
        if (bRHS%nonzero_Source) then
           if (bRHS%sparse_Source) then
              ! temp  = bRHS%sSparse
@@ -209,7 +209,7 @@ Contains
     endif
 
     if(bRHS%nonzero_Source) then
-       iOmegaMuInv = isign/cmplx(0.0,omega*mu,selectedPrec)
+       iOmegaMuInv = ISIGN/cmplx(0.0,omega*MU_0,prec)
        call scMult(iOmegaMuInv,phi0,phi0)
     endif
 
@@ -248,14 +248,14 @@ Contains
        Call SdivCorr(temp,eSol,phi0)
     endif
     loop: do while ((.not.converged).and.(.not.failed))
-    
+
        Call QMR(b, eSol,QMRiter)
 
        ! algorithm is converged when the relative error is less than tolerance
        ! (in which case QMRiter%niter will be less than QMRiter%maxIt)
        converged = QMRiter%niter .lt. QMRiter%maxIt
 
-       ! there are two ways of failing: 1) QMR did not work or 
+       ! there are two ways of failing: 1) QMR did not work or
        !        2) total number of divergence corrections exceeded
        failed = failed .or. QMRiter%failed
 
@@ -315,14 +315,14 @@ Contains
     Call deall(phi0)
     Call deall(b)
     Call deall(temp)
-    Call deall(tempBC)  
+    Call deall(tempBC)
     deallocate(QMRiter%rerr, STAT=status)
 
   end subroutine FWDsolve3D
 
 !**********************************************************************
 ! solver_divcorrr contains the subroutine that would solve the divergence
-! correction. Solves the divergene correction using pre-conditioned 
+! correction. Solves the divergene correction using pre-conditioned
 ! conjuagte gradient
 subroutine SdivCorr(inE,outE,phi0)
   ! Purpose: driver routine to compute divergence correction for input electric
@@ -342,11 +342,11 @@ subroutine SdivCorr(inE,outE,phi0)
   !  local variables
   type (solverControl_t)			:: PCGiter
   type (cscalar)		        :: phiSol, phiRHS
-  complex (kind=selectedPrec)        	:: c2
+  complex (kind=prec)        	:: c2
   integer				:: status
   character (len=80)              	:: Desc = ''
   logical				:: SourceTerm
-  
+
   SourceTerm = present(phi0)
 
   ! initialize PCGiter (maximum iterations allowed per set of diveregence
@@ -359,14 +359,14 @@ subroutine SdivCorr(inE,outE,phi0)
   Desc = CORNER
   ! alocating phiSol, phiRHS
   Call create_cscalar(inE%grid, phiSol, Desc)
-  Call create_cscalar(inE%grid, phiRHS, Desc)  
+  Call create_cscalar(inE%grid, phiRHS, Desc)
 
   ! compute divergence of currents for input electric field
   Call DivC(inE, phiRHS)
 
   !  If source term is present, subtract from divergence of currents
   if(SourceTerm) then
-     call subtract(phiRHS,phi0,phiRHS) 
+     call subtract(phiRHS,phi0,phiRHS)
   endif
 
   ! compute the size of current Divergence before (using dot product)
@@ -390,7 +390,7 @@ subroutine SdivCorr(inE,outE,phi0)
 
   !  If source term is present, subtract from divergence of currents
   if(SourceTerm) then
-     call subtract(phiRHS,phi0,phiRHS) 
+     call subtract(phiRHS,phi0,phiRHS)
   endif
 
   ! as in WS code, compute the size of current Divergence after
@@ -416,14 +416,14 @@ end subroutine SdivCorr ! SdivCorr
     Call AdiagInit()
     Call DiluInit()
     Call DivCorrInit()
-    
+
     ! Set up model operators
     ! Set up operator arrays that only need grid geometry information
     ! discretization of del X del X E
     Call CurlcurleSetUp()
-    
+
   end subroutine ModelOperatorSetUp
-  
+
   !**********************************************************************
   ! Deallocate the model operators after an EM problem is finished
   subroutine ModelOperatorCleanUp()
@@ -432,10 +432,10 @@ end subroutine SdivCorr ! SdivCorr
     call deall_Adiag()
 	call DeallocateDilu()
 	call Deallocate_DivCorr()
-    
+
     ! Deallocate model operators arrays
  	call CurlcurleCleanUp()
-    
+
   end subroutine ModelOperatorCleanUp
 
   !**********************************************************************
@@ -446,7 +446,7 @@ end subroutine SdivCorr ! SdivCorr
      type (emsolve_control), intent(in)	::	solverControl
 
      if(solverControl%UseDefaults) then
-        IterPerDivCor = IterPerDivCorDef 
+        IterPerDivCor = IterPerDivCorDef
         MaxDivCor = MaxDivCorDef
         MaxIterTotal = MaxDivCor*IterPerDivCor
 	MaxIterDivCor = MaxIterDivCorDef
@@ -482,7 +482,7 @@ end subroutine SdivCorr ! SdivCorr
   !**********************************************************************
   !   deallEMsolveControl deallocate
   subroutine  deallEMsolveControl()
-    
+
      integer istat
 
      deallocate(EMrelErr, STAT=istat)
@@ -502,7 +502,7 @@ end subroutine SdivCorr ! SdivCorr
      solverDiagnostics%EMrelErr = EMrelErr
      solverDiagnostics%divJ = divJ
      solverDiagnostics%DivCorRelErr = DivCorRelErr
-     
+
   end subroutine getEMsolveDiag
 
   !***************************************************************************

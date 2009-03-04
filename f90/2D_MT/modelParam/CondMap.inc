@@ -24,8 +24,8 @@
       
       ! local variables
       integer iy,iz,Ny,Nz,Nza,izc, NzE
-      real(kind=selectedPrec) w00,w01,w10,w11,wsum
-      real(kind=selectedPrec), allocatable, dimension(:,:)	:: temp
+      real(kind=prec) w00,w01,w10,w11,wsum
+      real(kind=prec), allocatable, dimension(:,:)	:: temp
 
       Ny = cellCond%grid%Ny
       Nz = cellCond%grid%Nz
@@ -96,7 +96,7 @@
 
       ! local variables
       integer iy,iz,izc,Ny,Nz,Nza
-      real(kind=selectedPrec) w00,w01,w10,w11,wsum
+      real(kind=prec) w00,w01,w10,w11,wsum
 
       if(NodeCond%gridType .NE. NODE) then 
          call errStop('NodeCond must be of gridType NODE in NodeToCell')
@@ -155,7 +155,7 @@
       type (modelParam_t), intent(in)   :: CellCond
       integer, intent(in)	:: Ny,Nz
   
-      real(kind=selectedPrec), intent(inout)   :: Cond(Ny,Nz)
+      real(kind=prec), intent(inout)   :: Cond(Ny,Nz)
       
       ! local variables
       integer iy,iz,izc,NyC,NzC,Nza
@@ -193,7 +193,7 @@
       function rhoC(sigma,j,k) result(r)
       type (modelParam_t), intent(in)	:: sigma
       integer, intent(in)		:: j,k
-      real(kind=selectedPrec)	                :: r
+      real(kind=prec)	                :: r
 
       ! local variables
       if(sigma%paramType .eq. LOGE) then
@@ -212,11 +212,11 @@
    type (modelParam_t), intent(in)    :: sigma0
    type (cvector), intent(inout)   :: EdgeCond_y, EdgeCond_z
 
-   real (kind=selectedPrec), allocatable, dimension(:,:) :: temp
+   real (kind=prec), allocatable, dimension(:,:) :: temp
 
 
    integer :: iz, iy, Nz, Nza, Ny, Nzb
-   real (kind=selectedPrec)    ::  wll, wrr, wdd, wuu, wsum
+   real (kind=prec)    ::  wll, wrr, wdd, wuu, wsum
 
    Ny  = CellCond%grid%Ny
    Nz  = CellCond%grid%Nz
@@ -268,7 +268,7 @@
 
 
    integer :: iz, iy, Nz, Nza, Ny, Nzb
-   real (kind=selectedPrec)    ::  wll, wrr, wdd, wuu, wsum
+   real (kind=prec)    ::  wll, wrr, wdd, wuu, wsum
 
    Ny  = CellCond%grid%Ny
    Nz  = CellCond%grid%Nz

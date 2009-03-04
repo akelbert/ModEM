@@ -15,7 +15,7 @@
 
       type(rscalar)           :: ccond
       type(grid3d_t)          :: grid
-      real(kind=selectedPrec) :: AirCond
+      real(kind=prec) :: AirCond
       character(80)           :: paramType
 
       paramType = LOGE
@@ -53,7 +53,7 @@
       type(grid3d_t), intent(inout), optional :: grid
 
       integer		:: NzAir,Nz,Nx,Ny,NzEarth
-      real(kind=selectedPrec) 	:: AirCond
+      real(kind=prec) 	:: AirCond
       type(rscalar)             :: ccond
       character(80)             :: gridType,rParamType
 

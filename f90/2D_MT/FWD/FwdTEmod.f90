@@ -36,12 +36,12 @@ module fwdtemod
    !  integers describing grid size (for internal use)
    integer, private	:: Nza,Nz,Ny
    !  real arrays describing grid spacing (for internal use)
-   real (kind=selectedPrec), allocatable, dimension(:),private	:: Dz, Dy, Cz, Cy
+   real (kind=prec), allocatable, dimension(:),private	:: Dz, Dy, Cz, Cy
    !  real and complex arrays used for solving the equations (internal use)
-   real (kind=selectedPrec), allocatable, dimension(:,:),private:: ATE,CCon
-   real (kind=selectedPrec), allocatable, dimension(:),private	:: BTE
-   complex (kind=selectedPrec), allocatable, dimension(:,:),private :: AII
-   complex (kind=selectedPrec), allocatable, dimension(:),private:: EXI
+   real (kind=prec), allocatable, dimension(:,:),private:: ATE,CCon
+   real (kind=prec), allocatable, dimension(:),private	:: BTE
+   complex (kind=prec), allocatable, dimension(:,:),private :: AII
+   complex (kind=prec), allocatable, dimension(:),private:: EXI
    integer, allocatable, dimension(:),private	:: ipiv
    logical		:: Initialized  = .false.
 
@@ -128,7 +128,7 @@ module fwdtemod
       !  The solution is returned in array Esol ...
       !  could make a derived data type to carry soln and info
       !   about grid size
-      complex(kind=selectedPrec), intent(out)	:: Esol(Ny+1,Nz+1)
+      complex(kind=prec), intent(out)	:: Esol(Ny+1,Nz+1)
       integer, intent(out)	::IER
       character*1		:: NTC
  
@@ -228,7 +228,7 @@ module fwdtemod
       type (modelParam_t), intent(in)	:: Sigma
 
       !  local variables
-      real(kind=selectedPrec)	::	Cond2D(Ny,Nz)
+      real(kind=prec)	::	Cond2D(Ny,Nz)
       integer	:: iy, iz
 
          call CondParamToArray(Sigma,Ny,Nz,Cond2D)
@@ -252,7 +252,7 @@ module fwdtemod
       Subroutine UpdateFreqTE(per)
 
 !      updates frequency (period) dependence, modifying AII
-      real(kind=selectedPrec), intent(in)	:: per 
+      real(kind=prec), intent(in)	:: per 
 
       call FormAII(per,Nz,Ny,ATE,AII,ipiv)
 
@@ -263,8 +263,8 @@ module fwdtemod
       Subroutine SetBoundTE(per,EXB)
 
 !     wrapper for WSfwdMod routine SetBound2D_TE 
-      real(kind=selectedPrec),intent(in)		:: per
-      complex(kind=selectedPrec), intent(inout)	:: EXB(MMBMX)
+      real(kind=prec),intent(in)		:: per
+      complex(kind=prec), intent(inout)	:: EXB(MMBMX)
 
       call SetBound2D_TE(per,Nza,Nz,Ny,Dz,Dy,CCon,EXI,EXB)
 
@@ -296,8 +296,8 @@ module fwdtemod
      subroutine EarrayToIntVec(E,V)
         !  copies complex 2D array E (interior nodes only)
         !  into forcing or solution vector
-        complex(kind=selectedPrec), intent(in)       :: E(Ny+1,Nz+1)
-        complex(kind=selectedPrec), intent(out)       :: V(:)
+        complex(kind=prec), intent(in)       :: E(Ny+1,Nz+1)
+        complex(kind=prec), intent(out)       :: V(:)
         integer :: iy,iz,is
 
         is = 1
@@ -314,8 +314,8 @@ module fwdtemod
      subroutine IntVecToEarray(V,E)
         !  copy complex 2D array E (interior nodes only)
         !  into forcing or solution vector
-        complex(kind=selectedPrec), intent(in)       :: V(:)
-        complex(kind=selectedPrec), intent(out)       :: E(Ny+1,Nz+1)
+        complex(kind=prec), intent(in)       :: V(:)
+        complex(kind=prec), intent(out)       :: E(Ny+1,Nz+1)
         integer :: iy,iz,is
 
         is = 1
@@ -332,8 +332,8 @@ module fwdtemod
      subroutine addEarrayToIntVec(E,V)
         !  adds complex 2D array E (interior nodes only)
         !  into forcing or solution vector
-        complex(kind=selectedPrec), intent(in)       :: E(Ny+1,Nz+1)
-        complex(kind=selectedPrec), intent(inout)       :: V(:)
+        complex(kind=prec), intent(in)       :: E(Ny+1,Nz+1)
+        complex(kind=prec), intent(inout)       :: V(:)
         integer :: iy,iz,is
 
         is = 1
@@ -352,8 +352,8 @@ module fwdtemod
         !  by area weights Cy*Cz
         !  Input may overwrite output
 
-        complex(kind=selectedPrec), intent(in)       :: Ein(Ny+1,Nz+1)
-        complex(kind=selectedPrec), intent(inout)       :: Eout(Ny+1,Nz+1)
+        complex(kind=prec), intent(in)       :: Ein(Ny+1,Nz+1)
+        complex(kind=prec), intent(inout)       :: Eout(Ny+1,Nz+1)
         integer :: iy,iz
 
         do iy = 2,Ny

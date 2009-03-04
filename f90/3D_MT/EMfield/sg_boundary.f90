@@ -106,12 +106,12 @@ module sg_boundary
      ! the dimensions for the ZMax and ZMin face is nx, ny+1 for x component for
      !  and nx+1, ny for z component 
 
-     complex (kind=selectedPrec), pointer, dimension(:,:)    :: xYMax, zYMax
-     complex (kind=selectedPrec), pointer, dimension(:,:)    :: xYMin, zYMin
-     complex (kind=selectedPrec), pointer, dimension(:,:)    :: yXMax, zXMax 
-     complex (kind=selectedPrec), pointer, dimension(:,:)    :: yXMin, zXMin
-     complex (kind=selectedPrec), pointer, dimension(:,:)    :: xZMin, yZMin 
-     complex (kind=selectedPrec), pointer, dimension(:,:)    :: xZMax, yZMax
+     complex (kind=prec), pointer, dimension(:,:)    :: xYMax, zYMax
+     complex (kind=prec), pointer, dimension(:,:)    :: xYMin, zYMin
+     complex (kind=prec), pointer, dimension(:,:)    :: yXMax, zXMax 
+     complex (kind=prec), pointer, dimension(:,:)    :: yXMin, zXMin
+     complex (kind=prec), pointer, dimension(:,:)    :: xZMin, yZMin 
+     complex (kind=prec), pointer, dimension(:,:)    :: xZMax, yZMax
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction
@@ -372,7 +372,7 @@ Contains
   subroutine scMult_cboundary(c, E1, E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                      :: c          
+    complex(kind=prec), intent(in)                      :: c          
     ! a complex scalar to be multiplied with
     type (cboundary), intent(in)                       :: E1            
     type (cboundary), intent(inout)                    :: E2 
@@ -417,7 +417,7 @@ Contains
   function scMult_cboundary_f(c, E1) result(E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                      :: c          
+    complex(kind=prec), intent(in)                      :: c          
     ! a complex scalar to be multiplied with
     type (cboundary), intent(in)                       :: E1            
     type (cboundary)                                   :: E2 
@@ -638,7 +638,7 @@ Contains
 
     implicit none
     type (cboundary), intent(in)       :: E1, E2
-    complex(kind=selectedPrec)		       :: c
+    complex(kind=prec)		       :: c
 
     c = C_ZERO
     
@@ -718,7 +718,7 @@ Contains
   subroutine scMultAdd_cboundary(c, E1, E2)
 
     implicit none
-    complex(kind=selectedPrec), intent(in)                        :: c          
+    complex(kind=prec), intent(in)                        :: c          
     ! a complex scalar to be multiplied with
     type (cboundary), intent(in)                       :: E1            
     type (cboundary), intent(inout)                    :: E2             

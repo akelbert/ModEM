@@ -17,7 +17,7 @@ module interpEB
   public				:: NodeInterpSetup2D
   public				:: BinterpSetUp_TE, BfromESetUp_TE
   public				:: EinterpSetUp_TM, EfromBSetUp_TM
- 
+
 Contains
 
   ! **************************************************************************
@@ -36,7 +36,7 @@ Contains
     !  on at least some compilers need to use intent(inout) for pointer
     !    targets????
     type (grid2d_t), target, intent(in)	:: inGrid
-    real (kind=selectedPrec), dimension(2), intent(in)     :: x
+    real (kind=prec), dimension(2), intent(in)     :: x
     character (len=2), intent(in)     		:: mode  ! = 'TE' or 'TM'
     type (sparsevecc), intent(inout)          :: LC
 
@@ -44,9 +44,9 @@ Contains
     integer                                     :: j0,k0,ii,n,m
     integer, dimension(4)                       :: J,K
     integer                                     :: nyMax, nzMax
-    complex(kind=selectedPrec), dimension(4)	:: C
-    real(kind=selectedPrec), dimension(2,2)	:: w
-    real(kind=selectedPrec)			:: wadd
+    complex(kind=prec), dimension(4)	:: C
+    real(kind=prec), dimension(2,2)	:: w
+    real(kind=prec)			:: wadd
 
      if(LC%allocated) then
         call deall_sparsevecc(LC)
@@ -117,16 +117,16 @@ Contains
     !   NEED TO MODIFY TO ALLOW INTERPOLATION OF VERTICAL
 
     type (grid2d_t), target, intent(in)	:: inGrid
-    real (kind=selectedPrec), dimension(2), intent(in) 	:: x
+    real (kind=prec), dimension(2), intent(in) 	:: x
     type (sparsevecc), intent(inout) 		:: LC
 
     !   local variables
     integer 					:: j0,k0,ii,n,m
     integer                                     :: nyMax, nzMax
     integer, dimension(4)			:: J,K
-    real (kind=selectedPrec), dimension(2,2)	:: w
-    real (kind=selectedPrec)			:: wadd
-    complex (kind=selectedPrec), dimension(4)	:: C
+    real (kind=prec), dimension(2,2)	:: w
+    real (kind=prec)			:: wadd
+    complex (kind=prec), dimension(4)	:: C
 
     if(LC%allocated) then
        call deall_sparsevecc(LC)
@@ -138,7 +138,7 @@ Contains
 
     j0 = minNode(x(1),inGrid%yNode)
     if((j0.gt.0).and.(j0.lt.nyMax)) then
-       w(1,2) = (x(1) - inGrid%yNode(j0))/(inGrid%dy(j0)) 
+       w(1,2) = (x(1) - inGrid%yNode(j0))/(inGrid%dy(j0))
     elseif(j0.le.0) then
        w(1,2) = ONE
     else
@@ -147,15 +147,15 @@ Contains
 
     k0 = minNode(x(2),inGrid%zCenter)
     if((k0.gt.0).and.(k0.lt.nzMax)) then
-       w(2,2) = (x(2) - inGrid%zCenter(k0))/(inGrid%Delz(k0+1))          
+       w(2,2) = (x(2) - inGrid%zCenter(k0))/(inGrid%Delz(k0+1))
     elseif(k0.le.0) then
        w(2,2) = ONE
     else
        w(2,2) = R_ZERO
     endif
 
-    w(1,1) = ONE-w(1,2) 
-    w(2,1) = ONE-w(2,2) 
+    w(1,1) = ONE-w(1,2)
+    w(2,1) = ONE-w(2,2)
 
     ii = 0
     do n = 1,2
@@ -186,18 +186,18 @@ Contains
     !   NEED TO MODIFY TO ALLOW INTERPOLATION OF VERTICAL
 
     type (grid2d_t), target, intent(in)	:: inGrid
-    real (kind=selectedPrec), dimension(2), intent(in)	:: x
-    real (kind=selectedPrec), intent(in)	:: omega
+    real (kind=prec), dimension(2), intent(in)	:: x
+    real (kind=prec), intent(in)	:: omega
     type (sparsevecc), intent(inout) 		:: LC
 
     integer 					:: ii
     integer					:: num = 2
     integer, dimension(2)			:: J,K
-    complex (kind=selectedPrec), dimension(2)	:: C
-    complex (kind=selectedPrec)			:: i_omega
+    complex (kind=prec), dimension(2)	:: C
+    complex (kind=prec)			:: i_omega
     type (sparsevecc)				:: LConeH, LCH, LCtemp
 
-    i_omega = MinusONE*isign*cmplx(0.0 ,omega,kind=selectedPrec)
+    i_omega = MinusONE*ISIGN*cmplx(0.0 ,omega,kind=prec)
 
     if(LC%allocated) then
        call deall_sparsevecc(LC)
@@ -210,17 +210,17 @@ Contains
 
     !   loop over coefficients for mag field interpolation
     do ii = 1,LCH%nCoeff
-       J(1) = LCH%j(ii) 
-       J(2) = LCH%j(ii) 
-       K(1) = LCH%k(ii) 
+       J(1) = LCH%j(ii)
+       J(2) = LCH%j(ii)
+       K(1) = LCH%k(ii)
        K(2) = LCH%k(ii)+1
        C(1) = MinusONE/(inGrid%dz(K(1))*i_omega)
        C(2) = ONE/(inGrid%dz(K(1))*i_omega)
 
        if(ii.eq.1) then
           ! initialize LC (coefficients for H measurement functional:
-          ! coefficients for first face   
-          call create_sparsevecc(inGrid,NODE,num,LConeH)  
+          ! coefficients for first face
+          call create_sparsevecc(inGrid,NODE,num,LConeH)
           LC%j = J
           LC%k = K
           LC%c= C*LCH%c(1)
@@ -236,10 +236,10 @@ Contains
 
     enddo
 
-    ! clean-up 
-    call deall_sparsevecc(LConeH) 
-    call deall_sparsevecc(LCH) 
-    call deall_sparsevecc(LCtemp) 
+    ! clean-up
+    call deall_sparsevecc(LConeH)
+    call deall_sparsevecc(LCH)
+    call deall_sparsevecc(LCtemp)
 
   end subroutine BfromESetUp_TE
   ! **************************************************************************
@@ -252,15 +252,15 @@ Contains
     ! would be required; can be used to construct an interpolator to compute
     ! E at arbitrary points directly from magnetic fields defined on
     ! staggered grid edges; see EfromBsetup_TM)
-    ! ALSO, optionally returns array of sparse vectors Q defined on cells for 
-    !   construction of derivatives of data functional derivaties with 
+    ! ALSO, optionally returns array of sparse vectors Q defined on cells for
+    !   construction of derivatives of data functional derivaties with
     !   respect to resistivity parameters; one sparse vector is returned
     !    for each interpolation coefficient in LC
     !
     ! INTERPOLATION METHOD:  bilinear spline
 
     type (grid2d_t), target, intent(in)        :: inGrid
-    real (kind=selectedPrec), dimension(2), intent(in)    :: x
+    real (kind=prec), dimension(2), intent(in)    :: x
     type (modelParam_t), intent(in)		:: sigma
     type (sparsevecc), intent(inout)		:: LC
     type (sparsevecc), intent(inout),optional	:: Q(4)
@@ -269,15 +269,15 @@ Contains
     integer                                     :: j0,k0,ii,n,m,j0m1,j0p1
     integer                                     :: nyMax, nzMax
     integer, dimension(4)                       :: J,K
-    complex (kind=selectedPrec), dimension(4)	:: C
+    complex (kind=prec), dimension(4)	:: C
     integer, dimension(2)                       :: JQ,KQ
-    complex (kind=selectedPrec), dimension(2)	:: CQ
-    real (kind=selectedPrec), dimension(2,2)	:: w
-    real (kind=selectedPrec), dimension(2)	:: r
-    real (kind=selectedPrec)			:: wadd
-    real (kind=selectedPrec), dimension(:), allocatable	:: eNode,DelZ
+    complex (kind=prec), dimension(2)	:: CQ
+    real (kind=prec), dimension(2,2)	:: w
+    real (kind=prec), dimension(2)	:: r
+    real (kind=prec)			:: wadd
+    real (kind=prec), dimension(:), allocatable	:: eNode,DelZ
     logical 					:: returnQ
-    
+
 
     returnQ = present(Q)
     if(LC%allocated) then
@@ -293,8 +293,8 @@ Contains
 
     nyMax = inGrid%ny+1
     nzMax = inGrid%nz - inGrid%Nza+1
- 
-    !   construct a new "eNode" list:  first vertical node is at surface, 
+
+    !   construct a new "eNode" list:  first vertical node is at surface,
     !    subsequent vertical nodes are at face centers
     allocate(eNode(nzMax))
     allocate(DelZ(nzMax-1))
@@ -323,7 +323,7 @@ Contains
        w(1,2) = R_ZERO
     endif
     w(1,1) = ONE-w(1,2)
-    
+
     !  vertical cell index for interpolated point
     k0 = minNode(x(2),inGrid%zNode) - inGrid%Nza
     j0m1 = max(1,j0-1)
@@ -389,13 +389,13 @@ Contains
     !  of HORIZONTAL TM electric field at
     !  location given by x, using TM Magetic field defined on grid nodes
     !  Calls EinterpSetUp_TM, and various sparse_vector routines
-    
+
     !  Input: model grid data structure
     type (grid2d_t), target, intent(in)	:: inGrid
     !  Input: location of point observation of electric field
-    real (kind=selectedPrec), dimension(2), intent(in)	:: x
+    real (kind=prec), dimension(2), intent(in)	:: x
     !  Input: frequency
-    real (kind=selectedPrec), intent(in)	:: omega
+    real (kind=prec), intent(in)	:: omega
     type (modelParam_t), intent(in)		:: sigma
     ! Output: sparse vector defined on magnetic field solution space
     type (sparsevecc), intent(inout) 		:: LC
@@ -404,23 +404,23 @@ Contains
     !     parameters.  BOTH ARE REQUIRED IF ONE IS PROVIDED
     !  Optional input: background magnetic field
     type (cvector), intent(in),optional 		:: b0
-    !  Optional output: sparse vector 
+    !  Optional output: sparse vector
     !      defined on conductivity parameter space
     type (sparsevecc), intent(inout),optional :: Q
-   
-    ! local variables 
+
+    ! local variables
     integer 					:: ii,Nza,nCoeff
     integer					:: num = 6
     integer, dimension(4)			:: J,K
-    complex (kind=selectedPrec), dimension(4)	:: C
-    complex (kind=selectedPrec)			:: e_ii,i_omega
+    complex (kind=prec), dimension(4)	:: C
+    complex (kind=prec)			:: e_ii,i_omega
     type (sparsevecc)				:: LCE, LC_ii, LCtemp, Qj
     type (sparsevecc)				:: QE(4),Qtemp
     logical 					:: returnQ = .false.
     logical,parameter          			:: Conj_Case = .false.
-    real (kind=selectedPrec)			:: dz1,dy1,dy2
+    real (kind=prec)			:: dz1,dy1,dy2
 
-    i_omega = MinusONE*isign*cmplx(0.,omega,kind=selectedPrec)
+    i_omega = MinusONE*ISIGN*cmplx(0.,omega,kind=prec)
 
     if(LC%allocated) then
        call deall_sparsevecc(LC)
@@ -439,20 +439,20 @@ Contains
     Nza = inGrid%Nza
     do ii = 1,LCE%nCoeff
        if(LCE%K(ii).eq.0) then
-          !  surface E node 
+          !  surface E node
           !   (only this case occurs for standard TM mode)
           dz1 = inGrid%dz(Nza+1)
 	  nCoeff = 4
           J(1:2) = LCE%J(ii)
-          J(3) = LCE%J(ii)-1 
-          J(4) = LCE%J(ii)+1 
+          J(3) = LCE%J(ii)-1
+          J(4) = LCE%J(ii)+1
           K(1) = 1
           K(2:4) = 2
-          C(1) = -(rhoC(sigma,J(1)-1,1)+rhoC(sigma,J(1),1))/(TWO*dz1*mu) + &
+          C(1) = -(rhoC(sigma,J(1)-1,1)+rhoC(sigma,J(1),1))/(TWO*dz1*MU_0) + &
 			i_omega*THREE*dz1/EIGHT
-          dy1 = inGrid%dy(J(1)-1)*(inGrid%dy(J(1)-1)+inGrid%dy(J(1)))*mu
-          dy2 = inGrid%dy(J(1))*(inGrid%dy(J(1)-1)+inGrid%dy(J(1)))*mu
-          C(2) = (rhoC(sigma,J(1)-1,1)+rhoC(sigma,J(1),1))/(TWO*dz1*mu) &
+          dy1 = inGrid%dy(J(1)-1)*(inGrid%dy(J(1)-1)+inGrid%dy(J(1)))*MU_0
+          dy2 = inGrid%dy(J(1))*(inGrid%dy(J(1)-1)+inGrid%dy(J(1)))*MU_0
+          C(2) = (rhoC(sigma,J(1)-1,1)+rhoC(sigma,J(1),1))/(TWO*dz1*MU_0) &
 			+ i_omega*dz1/EIGHT  &
           		- dz1*(rhoC(sigma,J(1)-1,1)&
 			+rhoC(sigma,J(1)-1,2))/(EIGHT*dy1) &
@@ -463,7 +463,7 @@ Contains
           C(4) = (rhoC(sigma,J(1),1)+ &
 		rhoC(sigma,J(1),2))*dz1/(EIGHT*dy2)
 
-          if(returnQ) then 
+          if(returnQ) then
              ! make sparse vector Qj defined on cells
              call create_sparsevecc(inGrid,CELL,4,Qj)
 
@@ -473,8 +473,8 @@ Contains
              call create_sparsevecc(inGrid,NODE_EARTH,3,LCtemp)
              LCtemp%J = J(1:3)
              LCtemp%K = K(1:3)
-             LCtemp%C(1) = MinusONE/(TWO*dz1*mu)
-             LCtemp%C(2) = ONE/(TWO*dz1*mu) - dz1/(EIGHT*dy1)
+             LCtemp%C(1) = MinusONE/(TWO*dz1*MU_0)
+             LCtemp%C(2) = ONE/(TWO*dz1*MU_0) - dz1/(EIGHT*dy1)
              LCtemp%C(3) = dz1/(EIGHT*dy1)
              Qj%C(1) = dotProd_scvector(LCtemp,b0,Conj_Case)
 
@@ -485,11 +485,11 @@ Contains
              LCtemp%J(3) = J(4)
              LCtemp%K(1:2) = K(1:2)
              LCtemp%K(3) = K(4)
-             LCtemp%C(1) = MinusONE/(TWO*dz1*mu)
-             LCtemp%C(2) = ONE/(TWO*dz1*mu) - dz1/(EIGHT*dy2)
+             LCtemp%C(1) = MinusONE/(TWO*dz1*MU_0)
+             LCtemp%C(2) = ONE/(TWO*dz1*MU_0) - dz1/(EIGHT*dy2)
              LCtemp%C(3) = dz1/(EIGHT*dy2)
              Qj%C(2) = dotProd_scvector(LCtemp,b0,Conj_Case)
-             
+
              ! Third cell
              Qj%J(3) = J(1)-1
              Qj%K(3) =  2
@@ -499,7 +499,7 @@ Contains
              LCtemp%C(1) = - dz1/(EIGHT*dy1)
              LCtemp%C(2) =  dz1/(EIGHT*dy1)
              Qj%C(3) = dotProd_scvector(LCtemp,b0,Conj_Case)
-          
+
              ! Fourth cell
              Qj%J(4) = J(1)
              Qj%K(4) =  2
@@ -511,7 +511,7 @@ Contains
              LCtemp%C(2) =  dz1/(EIGHT*dy2)
              Qj%C(4) = dotProd_scvector(LCtemp,b0,Conj_Case)
           endif
-          
+
        else
           !  not a surface E node
           dz1 = inGrid%dz(K(1)+ingrid%Nza)
@@ -520,10 +520,10 @@ Contains
           K(1) = LCE%K(ii)
           K(2) = LCE%K(ii) + 1
           C(2) = (rhoC(sigma,J(1)-1,K(1))+rhoC(sigma,J(1),K(1)))&
-				/(TWO*dz1*mu)
+				/(TWO*dz1*MU_0)
           C(1) = -C(2)
 
-          if(returnQ) then 
+          if(returnQ) then
              ! make sparse vector Qj defined on cells
              call create_sparsevecc(inGrid,CELL,2,Qj)
 
@@ -533,8 +533,8 @@ Contains
              call create_sparsevecc(inGrid,NODE_EARTH,2,LCtemp)
              LCtemp%J = J
              LCtemp%K = K
-             LCtemp%C(1) = MinusONE/(TWO*dz1*mu)
-             LCtemp%C(2) = ONE/(TWO*dz1*mu)
+             LCtemp%C(1) = MinusONE/(TWO*dz1*MU_0)
+             LCtemp%C(2) = ONE/(TWO*dz1*MU_0)
              Qj%C(1) = dotProd_scvector(LCtemp,b0,Conj_Case)
 
              ! Second cell

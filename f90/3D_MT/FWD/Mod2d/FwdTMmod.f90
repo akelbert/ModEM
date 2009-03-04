@@ -32,12 +32,12 @@ module fwdtmmod
    !  integers describing grid size (for internal use)
    integer, private	:: Nzb,Nz,Ny
    !  real arrays describing grid spacing (for internal use)
-   real (kind=selectedPrec), allocatable, dimension(:),private	:: Dzb, Dy, Czb, Cy
+   real (kind=prec), allocatable, dimension(:),private	:: Dzb, Dy, Czb, Cy
    !  real and complex arrays used for solving the equations (internal use)
-   real (kind=selectedPrec), allocatable, dimension(:,:),private	:: ATM,CRho
-   real (kind=selectedPrec), allocatable, dimension(:),private	:: BTM
-   complex (kind=selectedPrec), allocatable, dimension(:,:),private :: AII
-   complex (kind=selectedPrec), allocatable, dimension(:),private	:: HXI
+   real (kind=prec), allocatable, dimension(:,:),private	:: ATM,CRho
+   real (kind=prec), allocatable, dimension(:),private	:: BTM
+   complex (kind=prec), allocatable, dimension(:,:),private :: AII
+   complex (kind=prec), allocatable, dimension(:),private	:: HXI
    integer, allocatable, dimension(:),private	:: ipiv
    logical		:: Initialized  = .false.
 
@@ -49,7 +49,7 @@ module fwdtmmod
       !  routine allocates and initializes everything
       !  Inputs
       type (grid2d_t), intent(in)   :: TMgrid
-      real (kind=selectedPrec), intent(in) :: Cond2D(Ny,Nz)
+      real (kind=prec), intent(in) :: Cond2D(Ny,Nz)
       !  outputs ... just allocates saved module arrays 
       !         IER = 0 if everyting works, -1 otherwise
       !         could add different error codes for different
@@ -113,12 +113,12 @@ module fwdtmmod
       !   for boundary conditions specified in HXB, and does not allow for
       !   forcing.  Need to modify to allow specification of source terms.
       !   HXB can be generated in the proper format by a call to setBound2D_TM
-      complex(kind=selectedPrec), intent(in)	:: HXB(MMBMX)
+      complex(kind=prec), intent(in)	:: HXB(MMBMX)
 
       !  The solution is returned in array Hsol ...
       !  could make a derived data type to carry soln and info
       !   about grid size
-      complex(kind=selectedPrec), intent(out)	:: Hsol(Ny+1,Nzb+1)
+      complex(kind=prec), intent(out)	:: Hsol(Ny+1,Nzb+1)
       integer, intent(out)	::IER
  
       ! local variables
@@ -171,7 +171,7 @@ module fwdtmmod
 !      updates resisistivity (internal solver representation)
 !        and then computes ATM, BTM (which depend on resistivity)
 
-      real (kind=selectedPrec), intent(in) :: Cond2D(Ny,Nz)
+      real (kind=prec), intent(in) :: Cond2D(Ny,Nz)
       integer	:: iy, iz
 
          ! Copy inputs into local grid variables
@@ -194,7 +194,7 @@ module fwdtmmod
 !**********************************************************************
       Subroutine UpdateFreqTM(per)
 !      updates frequency (period) dependence, modifying AII
-      real(kind=selectedPrec), intent(in)	:: per 
+      real(kind=prec), intent(in)	:: per 
 
       Call FormAII(per,Nzb,Ny,ATM,AII,ipiv)
 
@@ -204,8 +204,8 @@ module fwdtmmod
 !**********************************************************************
       Subroutine SetBoundTM(per,HXB)
 !     wrapper for WSfwdMod routine SetBound2D_TM 
-      real(kind=selectedPrec),intent(in)		:: per
-      complex(kind=selectedPrec), intent(inout)	:: HXB(MMBMX)
+      real(kind=prec),intent(in)		:: per
+      complex(kind=prec), intent(inout)	:: HXB(MMBMX)
 
       Call SetBound2D_TM(per,Nzb,Ny,Dzb,Dy,CRho,HXI,HXB)
 

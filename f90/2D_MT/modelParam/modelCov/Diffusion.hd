@@ -8,10 +8,10 @@
 
     private
 
-    real (kind=selectedPrec) :: ylen = R_ZERO
-    real (kind=selectedPrec) :: zlen = R_ZERO
-    real (kind=selectedPrec), pointer, dimension(:,:,:)   ::  YDIF
-    real (kind=selectedPrec), pointer, dimension(:,:,:)   ::  ZDIF
+    real (kind=prec) :: ylen = R_ZERO
+    real (kind=prec) :: zlen = R_ZERO
+    real (kind=prec), pointer, dimension(:,:,:)   ::  YDIF
+    real (kind=prec), pointer, dimension(:,:,:)   ::  ZDIF
     logical                  :: allocated
 
   end type

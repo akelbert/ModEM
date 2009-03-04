@@ -48,9 +48,9 @@ module grid3d
      integer               :: nx, ny, nz, nzEarth, nzAir
 
      ! the origin of the model, by default set to zero
-     real (kind=selectedPrec)			:: ox = 0.0, oy = 0.0, oz = 0.0
+     real (kind=prec)			:: ox = 0.0, oy = 0.0, oz = 0.0
      !  the rotation angle in degrees, by defualt set to zero
-     real (kind=selectedPrec)			:: rotdeg = 0.0
+     real (kind=prec)			:: rotdeg = 0.0
 
      ! Grid geometry:
      ! dx,delX are arrays of grid spacings in x-direction
@@ -63,10 +63,10 @@ module grid3d
      ! dy,delY, dz, delZ are analagous arrays for other directions
      ! similarly, are dyinv and delYinv
      ! Note that the arrays are allocated dynamically
-     real (kind=selectedPrec), pointer, dimension(:)        :: dx, dy, dz
-     real (kind=selectedPrec), pointer, dimension(:)        :: dxinv, dyinv, dzinv
-     real (kind=selectedPrec), pointer, dimension(:)        :: delX, delY, delZ
-     real (kind=selectedPrec), pointer, dimension(:)        :: delXinv, delYinv, &
+     real (kind=prec), pointer, dimension(:)        :: dx, dy, dz
+     real (kind=prec), pointer, dimension(:)        :: dxinv, dyinv, dzinv
+     real (kind=prec), pointer, dimension(:)        :: delX, delY, delZ
+     real (kind=prec), pointer, dimension(:)        :: delXinv, delYinv, &
      delZinv
 
      ! Book-keeping on cumulative distances
@@ -76,12 +76,12 @@ module grid3d
      ! the coordinate axis with dimensions nx
      ! yEdge, yCenter, zEdge, zCenter are analagous arrays for other directions
      ! Note that the arrays are allocated dynamically
-     real (kind=selectedPrec), pointer, dimension(:)        :: xEdge, yEdge, zEdge
-     real (kind=selectedPrec), pointer, dimension(:)        :: xCenter, yCenter, &
+     real (kind=prec), pointer, dimension(:)        :: xEdge, yEdge, zEdge
+     real (kind=prec), pointer, dimension(:)        :: xCenter, yCenter, &
      zCenter
 
      ! total thickness of the air above
-     real (kind=selectedPrec)				     :: zAirThick
+     real (kind=prec)				     :: zAirThick
 
      ! allocated:  .true.  all the arrays have been allocated
      logical		                             :: allocated = .false.
@@ -225,12 +225,12 @@ Contains
 
     implicit none
     type(grid3d_t), target, intent(inout)    :: grid
-    real(kind=selectedPrec), intent(in), optional	  :: origin(3)
+    real(kind=prec), intent(in), optional	  :: origin(3)
 
     integer                               :: ix,iy,iz,i,j
     integer                               :: status
-    real (kind=selectedPrec)                         :: xCum, yCum, zCum
-    real(kind=selectedPrec)                     :: alpha = 3.
+    real (kind=prec)                         :: xCum, yCum, zCum
+    real(kind=prec)                     :: alpha = 3.
 
     !   Following is Kush's approach to setting air layers:
     ! mirror imaging the dz values in the air layer with respect to

@@ -32,8 +32,8 @@ implicit none
 
     !! omega, period, tx are information about the source used to compute
     !!   the solution
-    real(kind=selectedPrec)	:: omega = R_ZERO
-    real(kind=selectedPrec)	:: period = R_ZERO
+    real(kind=prec)	:: omega = R_ZERO
+    real(kind=prec)	:: period = R_ZERO
     integer 			:: tx = 0
 
     !! sigma, grid are pointers to the model parameter and grid used 
@@ -198,7 +198,7 @@ contains
        type (EMsparse), intent(in)             :: SV  ! sparse vector
        type (EMsoln), intent(in)               :: FV  ! full vector
        logical, intent(in)                     :: conj_Case ! = .true.
-       complex(kind=selectedPrec)		:: c
+       complex(kind=prec)		:: c
        integer					:: k
      
        c = C_ZERO
@@ -369,7 +369,7 @@ contains
      !
      !   In this implementation, an EMrhs object
 
-       complex(kind=selectedPrec), intent(in)  :: cs
+       complex(kind=prec), intent(in)  :: cs
        type (EMsparse), intent(in)             :: SV  ! sparse vector
        type (EMrhs), intent(inout)             :: comb  ! full vector
 

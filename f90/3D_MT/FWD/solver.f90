@@ -18,11 +18,11 @@ module solver
      ! maximum number of iterations in one call to iterative solver
      integer                                               :: maxIt
      ! convergence criteria: return from solver if relative error < tol
-     real (kind=selectedPrec)                              :: tol
+     real (kind=prec)                              :: tol
      ! actual number of iterations before return
      integer                                               :: niter
      ! relative error for each iteration
-     real (kind=selectedPrec), pointer, dimension(:)   :: rerr
+     real (kind=prec), pointer, dimension(:)   :: rerr
      ! logical variable indicating if algorithm "failed"
      logical                                               :: failed = .false.
   end type solverControl_t
@@ -58,8 +58,8 @@ subroutine PCG(b,x, PCGiter)
 
   ! local variables
   type (cscalar)	:: r,s,p,q
-  complex(kind=selectedPrec)	:: beta,alpha,delta,deltaOld
-  complex(kind=selectedPrec)	:: bnorm, rnorm
+  complex(kind=prec)	:: beta,alpha,delta,deltaOld
+  complex(kind=prec)	:: bnorm, rnorm
   integer		:: i
 
   if (.not.b%allocated) then
@@ -144,10 +144,10 @@ subroutine QMR(b,x, QMRiter)
   type (cvector)      	    :: AX,R,VT,WORK
   type (cvector)	    :: Y,Z,WT,V,W,YT,ZT,P,Q,PT,D,S
   logical                   :: adjoint, ilu_adjt
-  complex (kind=selectedPrec)          :: ETA,PDE,EPSIL,RDE,BETA,DELTA,RHO
-  complex (kind=selectedPrec)          :: PSI,RHO1,GAMM,GAMM1,THET,THET1,TM2
-  complex (kind=selectedPrec)          :: bnorm,rnorm
-  complex (kind=selectedPrec)          :: rhoInv,psiInv
+  complex (kind=prec)          :: ETA,PDE,EPSIL,RDE,BETA,DELTA,RHO
+  complex (kind=prec)          :: PSI,RHO1,GAMM,GAMM1,THET,THET1,TM2
+  complex (kind=prec)          :: bnorm,rnorm
+  complex (kind=prec)          :: rhoInv,psiInv
   integer                   :: iter
 
   if (.not.b%allocated) then

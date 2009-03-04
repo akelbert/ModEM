@@ -26,7 +26,7 @@ Contains
 
     !  Input mode, period 
     integer, intent(in)		:: imode
-    real(kind=selectedPrec)	:: period
+    real(kind=prec)	:: period
     !  Input 3D grid
     type(grid3d_t), intent(in)	:: grid3D
     !  Input 3D conductivity in cells
@@ -46,11 +46,11 @@ Contains
     
     ! These are temporary work arrays
     ! Array for 2D solutions
-    complex (kind=selectedPrec),allocatable, dimension(:,:)	:: Esol
+    complex (kind=prec),allocatable, dimension(:,:)	:: Esol
     ! Array for 2D BC
-    complex (kind=selectedPrec), allocatable, dimension(:)      :: EXB
+    complex (kind=prec), allocatable, dimension(:)      :: EXB
     ! Array for 2D Conductivity
-    real (kind=selectedPrec), allocatable, dimension(:,:)	:: Cond2D
+    real (kind=prec), allocatable, dimension(:,:)	:: Cond2D
 
     !  nv is number of vertical levels in 2D
     nv = grid3D%nz

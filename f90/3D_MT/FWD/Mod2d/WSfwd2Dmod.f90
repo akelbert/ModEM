@@ -23,7 +23,7 @@ module WSfwd2Dmod
    !  grid2d_t is derived data type used to store basic grid geometry info
    type ::  grid2d_t
       integer	:: Nz,Ny,Nza
-      real(kind=selectedPrec), pointer, dimension(:) :: Dy,Dz
+      real(kind=prec), pointer, dimension(:) :: Dy,Dz
    end type
 
    contains
@@ -33,11 +33,11 @@ module WSfwd2Dmod
       SUBROUTINE FormAII(per,Nz0,Ny,AA,AII,iPiv)
  
       INTEGER Nz0,Ny,iPiv(*)
-      REAL(kind=selectedPrec)  per,AA(MMIMX,4)
-      COMPLEX(kind=selectedPrec) AII(NZ3MX,MMIMX)
+      REAL(kind=prec)  per,AA(MMIMX,4)
+      COMPLEX(kind=prec) AII(NZ3MX,MMIMX)
 
       INTEGER mmi,jj,nz3,kl,ku,kc,info
-      REAL(kind=selectedPrec)  Omega,Omue
+      REAL(kind=prec)  Omega,Omue
 
       Omega = (TWO*PI)/per
       Omue  = Omega*Mue
@@ -89,8 +89,8 @@ module WSfwd2Dmod
       SUBROUTINE MulAibWithXb(Nz0,Ny,Aib,Xb,AXb)
 
       INTEGER Nz0,Ny
-      REAL(kind=selectedPrec)  Aib(*)
-      COMPLEX(kind=selectedPrec) Xb(*),AXb(*)
+      REAL(kind=prec)  Aib(*)
+      COMPLEX(kind=prec) Xb(*),AXb(*)
 
       INTEGER mmi,mmb,iy,iz,jj,izz
 
@@ -138,12 +138,12 @@ module WSfwd2Dmod
       SUBROUTINE SetBound2D_TM(per,Nzb,Ny,Dzb,Dy,CRho,HXI0,HXB)
 
       INTEGER Nzb,Ny
-      REAL(kind=selectedPrec)  per,Dzb(*),Dy(*),CRho(NZ0MX,NY0MX)
-      COMPLEX(kind=selectedPrec) HXI0(*),HXB(*)
+      REAL(kind=prec)  per,Dzb(*),Dy(*),CRho(NZ0MX,NY0MX)
+      COMPLEX(kind=prec) HXI0(*),HXB(*)
 
       INTEGER nzb1,ny1,mmi,mmb,np1,np2,iz,iy,ii,jj
-      REAL(kind=selectedPrec)  r1d(NZ1MX)
-      COMPLEX(kind=selectedPrec) X1D(NZ2MX)
+      REAL(kind=prec)  r1d(NZ1MX)
+      COMPLEX(kind=prec) X1D(NZ2MX)
 !     is this extra complication needed?
 !      real (kind=8), pointer, dimension(:)	::  r1d
 !      complex (kind=8), pointer, dimension(:)	::  x1d
@@ -205,12 +205,12 @@ module WSfwd2Dmod
 !        to minimize changes to WS code, just copy (part of) Cond2d into CCon 
 
       INTEGER Nza,Nz,Ny
-      REAL(kind=selectedPrec)  per,Dz(*),Dy(*)
-      COMPLEX(kind=selectedPrec) EXI0(*),EXB(*)
+      REAL(kind=prec)  per,Dz(*),Dy(*)
+      COMPLEX(kind=prec) EXI0(*),EXB(*)
 
       INTEGER nz1,ny1,mmi,mmb,np1,np2,iz,iy,ii,jj
-      REAL(kind=selectedPrec)  s1d(NZ1MX),CCon(NZ0MX,NY0MX),Cond2D(NZ0MX,NY0MX)
-      COMPLEX(kind=selectedPrec) X1D(NZ2MX)
+      REAL(kind=prec)  s1d(NZ1MX),CCon(NZ0MX,NY0MX),Cond2D(NZ0MX,NY0MX)
+      COMPLEX(kind=prec) X1D(NZ2MX)
 
 
       nz1 = Nz + 1
@@ -274,8 +274,8 @@ module WSfwd2Dmod
       SUBROUTINE SetupA_TM(Nzb,Ny,Dzb,Dy,Czb,Cy,CRho,ATM,BTM)
 
       INTEGER Nzb,Ny
-      real(kind=selectedPrec)  Dzb(*),Dy(*),Czb(*),Cy(*),CRho(NZ0MX,NY0MX)
-      real(kind=selectedPrec)  ATM(MMIMX,4),BTM(MMBMX)
+      real(kind=prec)  Dzb(*),Dy(*),Czb(*),Cy(*),CRho(NZ0MX,NY0MX)
+      real(kind=prec)  ATM(MMIMX,4),BTM(MMBMX)
       
 !    ATM(:,1) : Real diagonal term
 !    ATM(:,2) : Real first upper strip
@@ -284,8 +284,8 @@ module WSfwd2Dmod
 !     BTM      : Boundary
 
       INTEGER jj,iz,iy,nblx,iblx
-      real(kind=selectedPrec)  r00,r10,r01,r11
-      real(kind=selectedPrec)  ar,al,ad,au
+      real(kind=prec)  r00,r10,r01,r11
+      real(kind=prec)  ar,al,ad,au
 
       nblx = Ny*Nzb
       iblx = 2*Ny + 2*Nzb
@@ -363,8 +363,8 @@ module WSfwd2Dmod
 !        to minimize changes to WS code, just copy (part of) Cond2d into CCon
 
       INTEGER Nza,Nz,Ny
-      REAL(kind=selectedPrec)  Dz(*),Dy(*),Cz(*),Cy(*)
-      REAL(kind=selectedPrec)  ATE(MMIMX,4),BTE(MMBMX)
+      REAL(kind=prec)  Dz(*),Dy(*),Cz(*),Cy(*)
+      REAL(kind=prec)  ATE(MMIMX,4),BTE(MMBMX)
       
 !     ATE(:,1) : Real diagonal term
 !     ATE(:,2) : Real second strip
@@ -373,8 +373,8 @@ module WSfwd2Dmod
 !     BTE      : Boundary
 
       INTEGER jj,iz,iy,nblx,iblx
-      REAL(kind=selectedPrec)  s00,s10,s01,s11,s2d
-      REAL(kind=selectedPrec)  ar,al,ad,au,CCon(NZ0MX,NY0MX),COnd2D(NZ0MX,NY0MX)
+      REAL(kind=prec)  s00,s10,s01,s11,s2d
+      REAL(kind=prec)  ar,al,ad,au,CCon(NZ0MX,NY0MX),COnd2D(NZ0MX,NY0MX)
 
       nblx = Ny*Nz
       iblx = 2*Ny + 2*Nz

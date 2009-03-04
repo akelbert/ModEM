@@ -51,7 +51,7 @@ Contains
   type (modelParam_t), intent(in), optional	:: dSigma	
 
   !  local variables
-  complex(kind=selectedPrec)	:: Z
+  complex(kind=prec)	:: Z
   type(EMsparse), pointer	:: Lz(:), Qz(:)
   logical               	:: Conj_Case = .false.
   logical               	:: calcQ
@@ -190,7 +190,7 @@ Contains
   !  local variables
   integer               		:: iSite, iTx, iDT, nComp, &
 					 nFunc, iComp, iFunc
-  complex(kind=selectedPrec)		:: Z
+  complex(kind=prec)		:: Z
   logical               		:: calcQ
   type(EMSparse),pointer    	:: Lz(:),Qz(:)
 
@@ -271,7 +271,7 @@ Contains
 
   !  local variables
   integer               ::  iSite, ncomp,nFunc,iDT,iComp, iFunc
-  complex (kind=selectedPrec), pointer, dimension(:)      ::  Z
+  complex (kind=prec), pointer, dimension(:)      ::  Z
   
   iDT = d%dataType
   ncomp = d%ncomp

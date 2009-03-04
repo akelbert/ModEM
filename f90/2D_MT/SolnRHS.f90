@@ -21,8 +21,8 @@ implicit none
 
     !!  Mode (TE or TM) 
     character*2				:: mode = ''
-    real(kind=selectedPrec)		:: omega = R_ZERO
-    real(kind=selectedPrec)		:: period = R_ZERO
+    real(kind=prec)		:: omega = R_ZERO
+    real(kind=prec)		:: period = R_ZERO
     type(modelParam_t), pointer		:: sigma
     integer 				:: tx = 0
     type(grid2d_t), pointer		:: grid
@@ -44,7 +44,7 @@ implicit none
      logical				:: nonzero_bc = .false.
      logical				:: allocated = .false.
      type(cvector)			:: source
-     complex(kind=selectedPrec), pointer, dimension(:)	:: bc
+     complex(kind=prec), pointer, dimension(:)	:: bc
      type(grid2d_t), pointer		:: grid
   end type EMrhs
 
@@ -114,7 +114,7 @@ contains
      !   dot product of two solution space objects
        type(EMsoln), intent(in)		:: e1,e2
        logical, intent(in)		:: conj_case
-       complex(kind=selectedPrec)	:: c
+       complex(kind=prec)	:: c
   
        c = dotProd_cvector(e1%vec,e2%vec,conj_case)
 
@@ -159,7 +159,7 @@ contains
        ! linear combination of two EMsparse objects
 
        type (EMsparse), intent(in)		:: Lin1,Lin2
-       complex (kind=selectedPrec), intent(in)	:: c1,c2
+       complex (kind=prec), intent(in)	:: c1,c2
        type (EMsparse), intent(inout)		:: Lout
        
        call linComb_sparsevecc(Lin1%L,c1,Lin2%L,c2,Lout%L) 
@@ -174,7 +174,7 @@ contains
        type (EMsparse), intent(in)             :: SV  ! sparse vector
        type (EMsoln), intent(in)               :: FV  ! full vector
        logical, intent(in)                     :: conj_Case ! = .true.
-       complex(kind=selectedPrec)		:: c
+       complex(kind=prec)		:: c
      
        c = dotProd_scvector(SV%L,FV%vec,Conj_Case)
 
@@ -183,7 +183,7 @@ contains
      !**********************************************************************
      subroutine add_EMsparseEMsoln(cs,SV,FV)
 
-        complex(kind=selectedPrec), intent(in)	:: cs
+        complex(kind=prec), intent(in)	:: cs
         type (EMsparse), intent(in)	:: SV  ! sparse vector
         type (EMsoln), intent(inout)	:: FV  ! full vector
  
@@ -262,7 +262,7 @@ contains
      !**********************************************************************
      subroutine add_EMsparseEMrhs(cs,SV,FV)
 
-        complex(kind=selectedPrec), intent(in)	:: cs
+        complex(kind=prec), intent(in)	:: cs
         type (EMsparse), intent(in)		:: SV  ! sparse vector
         type (EMrhs), intent(inout)		:: FV  ! full vector
  
