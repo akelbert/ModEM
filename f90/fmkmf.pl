@@ -5,8 +5,8 @@
 # in perl for greater speed and (hopefully) portability.
 # Initial tests suggest speed is 10x better than the sh version.
 #
-# Output modified by A.Kelbert; Dec 4, 2005; then Jan 7, 2008.
-
+# Format modified by Anna Kelbert, 2005-2009.
+#
 # A basic makefile entry for bork.f90 would be
 # bork.o:bork.f90
 # <-tab->$(F90) -c bork.f90
@@ -26,6 +26,8 @@
 # <-tab->$(F90) -o baz baz.o bork.o .....
 # The list of object files to be linked should have foo.o in it once 
 # and only once for each foo.f90 that was compiled 
+
+use File::Basename;
 
 #-------------------------------------------------
 # First check if the luser has any relevent environment vars set
@@ -64,7 +66,7 @@ if ( $ENV{FMKMF_OPTIM} ) {
 } 
 else {
   #print "\# FMKMF_OPTIM not set: using default optimization \n";
-  $optim="-g -O2";
+  $optim="-O2";
 }
 
 if ( $ENV{FMKMF_LINKOPTS} ) {
@@ -160,13 +162,20 @@ print "#  Uncomment these lines to make program with g95\n";
 print "# F90 = g95\n";
 print "# FFLAGS = -O2\n";
 print "# FFLAGS = -g -ftrace=frame -fbounds-check\n";
+print "# MODULE = -fmod=\$(OBJDIR)\n";
 print "# LIBS = -lblas -llapack\n";
 print "#  Uncomment these lines to make program with Intel compiler\n";
 print "# F90 = ifort\n";
 print "# FFLAGS = -O3\n";
 print "# FFLAGS = -g -debug all\n";
+print "# MODULE = -module \$(OBJDIR)\n";
 print "# LIBS = -lblas -llapack\n";
-
+print "#  Uncomment these lines to make program with PGI compiler\n";
+print "# F90 = pgf95\n";
+print "# FFLAGS = -O3\n";
+print "# FFLAGS = -g -Mprof=lines -Mbounds\n";
+print "# MODULE = -module \$(OBJDIR)\n";
+print "# LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines\n";
 
 if($optiond){
   print "# Main program is $mainprogfile \n" ;
@@ -179,14 +188,17 @@ process_fsource($mainprogfile);
 print "\n# ------------------Macro-Defs---------------------\n";
 
 print "include Makefile.local\n";
+print "OBJDIR = $linkdir\n";
 print "F90 = $f90 \n";
 print "FFLAGS = $optim\n";
+print "MODULE = -module \$(OBJDIR)\n";
 print "LIBS = $linkopts\n";
-print "OBJDIR = $linkdir\n";
+
 
 print "\n# -------------------End-macro-Defs---------------------------\n";
 
 print "OBJ = @global_objlist \n\n";
+
 
 print "\nall: $execfile \n";
 
@@ -195,7 +207,7 @@ print "\n# Here is the link step \n";
 
 print "$execfile: \$(OBJDIR) \$(OBJ) \n";
 print "\t \$(F90) -o \$(OUTDIR)/$execfile \$(OBJ) \$(LIBS) \n";
-print "\t mv *.mod \$(OBJDIR) \n";
+# print "\trm -f *.mod \n";
 
 print "\n# Here are the compile steps \n\n";
 
@@ -240,12 +252,20 @@ sub process_fsource {
   # There should be nothing but whitespace before the USE. Sloppily, 
   # we allow tabs, although the standard (IIRC) does not
   my @modulelist=();
+  my @includelist=();
   while ($line=<MAINPROG>) { 
     if ($line =~ /^[ \t]*use (\w+)/i ) { # line matches regexp between / /
       if($optiond){
-	print "# $mainprogfile Uses Module $1\n";
+		print "# $mainprogfile Uses Module $1\n";
       }
       @modulelist=(@modulelist,$1);
+    } elsif  ($line =~ /^[ \t]*include "(\S+)"/i ){
+      if($optiond){
+		print "# $mainprogfile Includes $1\n";
+      }
+      my $includefile = $1;
+      my $mainprogpath = dirname($mainprogfile); 
+      @includelist=(@includelist,"$mainprogpath/$includefile");    	
     }
   }
   
@@ -253,6 +273,9 @@ sub process_fsource {
 
   if($optiond){
     print "# Full list of modules in $mainprogfile: @modulelist \n";
+    if (@includelist > 0) {
+    	print "# Full list of includes in $mainprogfile: @includelist \n";
+    }
   }
   # Find which file each module is in.
   
@@ -323,7 +346,11 @@ foreach  $mf (@modfiles) {
   @objlist=(@objlist,$obj);
 }
 
-@global_outlines=(@global_outlines,"\n$objfile:$mainprogfile @objlist \n");
-@global_outlines=(@global_outlines,"\t \$(F90) -c \$(FFLAGS) $mainprogfile -o $objfile\n");
+@global_outlines=(@global_outlines,"\n$objfile:$mainprogfile @objlist @includelist\n");
+@global_outlines=(@global_outlines,"\t \$(F90) -c \$(MODULE) \$(FFLAGS) $mainprogfile -o $objfile\n");
+
+#if (@includelist > 0) {
+#	@global_outlines=(@global_outlines,"\n$mainprogfile: @includelist \n");
+#}
 
 }

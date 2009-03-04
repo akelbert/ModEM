@@ -2,8 +2,8 @@
 # Generated using: ./fmkmf.pl [OPTIONS] Mod2DMT.f90 > Makefile
 # with command line options
 # -p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod
-# -f90 g95 (compiler)
-# -opt -g -C (compiler optimisation)
+# -f90 ifort (compiler)
+# -opt -O2 (compiler optimisation)
 # -l -lblas -llapack (linking options)
 # -o . (output directory for object files)
 
@@ -15,19 +15,28 @@
 # F90 = g95
 # FFLAGS = -O2
 # FFLAGS = -g -ftrace=frame -fbounds-check
+# MODULE = -fmod=$(OBJDIR)
 # LIBS = -lblas -llapack
 #  Uncomment these lines to make program with Intel compiler
 # F90 = ifort
 # FFLAGS = -O3
 # FFLAGS = -g -debug all
+# MODULE = -module $(OBJDIR)
 # LIBS = -lblas -llapack
+#  Uncomment these lines to make program with PGI compiler
+# F90 = pgf95
+# FFLAGS = -O3
+# FFLAGS = -g -Mprof=lines -Mbounds
+# MODULE = -module $(OBJDIR)
+# LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-F90 = pgf95
-FFLAGS = -g -Mprof=lines -Mbounds
-LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines
 OBJDIR = ./objs/2D_MT/Debug
+F90 = pgf95 
+FFLAGS = -g -Mprof=lines -Mbounds
+MODULE = -module $(OBJDIR)
+LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines
 
 # -------------------End-macro-Defs---------------------------
 OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/Grid2D.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/InterpEB.o $(OBJDIR)/DataFunc.o $(OBJDIR)/MeasComb.o $(OBJDIR)/SensPDEcoeff.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 
@@ -38,7 +47,6 @@ all: Mod2DMT
 # Here is the link step 
 Mod2DMT: $(OBJDIR) $(OBJ) 
 	 $(F90) -o $(OUTDIR)/Mod2DMT $(OBJ) $(LIBS) 
-	 mv *.mod $(OBJDIR) 
 
 # Here are the compile steps 
 
@@ -46,67 +54,67 @@ $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
 $(OBJDIR)/math_constants.o:UTILS/math_constants.f90  
-	 $(F90) -c $(FFLAGS) UTILS/math_constants.f90 -o $(OBJDIR)/math_constants.o
+	 $(F90) -c $(MODULE) $(FFLAGS) UTILS/math_constants.f90 -o $(OBJDIR)/math_constants.o
 
 $(OBJDIR)/utilities.o:UTILS/utilities.f90 $(OBJDIR)/math_constants.o 
-	 $(F90) -c $(FFLAGS) UTILS/utilities.f90 -o $(OBJDIR)/utilities.o
+	 $(F90) -c $(MODULE) $(FFLAGS) UTILS/utilities.f90 -o $(OBJDIR)/utilities.o
 
 $(OBJDIR)/DataSpace.o:SENS/DataSpace.f90 $(OBJDIR)/utilities.o $(OBJDIR)/math_constants.o 
-	 $(F90) -c $(FFLAGS) SENS/DataSpace.f90 -o $(OBJDIR)/DataSpace.o
+	 $(F90) -c $(MODULE) $(FFLAGS) SENS/DataSpace.f90 -o $(OBJDIR)/DataSpace.o
 
 $(OBJDIR)/Grid2D.o:2D_MT/Grid2D.f90 $(OBJDIR)/math_constants.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/Grid2D.f90 -o $(OBJDIR)/Grid2D.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/Grid2D.f90 -o $(OBJDIR)/Grid2D.o
 
 $(OBJDIR)/EMfield.o:2D_MT/EMfield.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/Grid2D.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/EMfield.f90 -o $(OBJDIR)/EMfield.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/EMfield.f90 -o $(OBJDIR)/EMfield.o
 
-$(OBJDIR)/ModelParameter.o:2D_MT/modelParam/ModelParameter.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/EMfield.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/modelParam/ModelParameter.f90 -o $(OBJDIR)/ModelParameter.o
+$(OBJDIR)/ModelParameter.o:2D_MT/modelParam/ModelParameter.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/EMfield.o 2D_MT/modelParam/modelCov/Diffusion.hd 2D_MT/modelParam/CondMap.inc 2D_MT/modelParam/modelCov/Diffusion.inc 2D_MT/modelParam/modelParamIO/Binary.inc 2D_MT/modelParam/modelParamIO/Mackie.inc
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/modelParam/ModelParameter.f90 -o $(OBJDIR)/ModelParameter.o
 
 $(OBJDIR)/SolnRHS.o:2D_MT/SolnRHS.f90 $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/SolnRHS.f90 -o $(OBJDIR)/SolnRHS.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/SolnRHS.f90 -o $(OBJDIR)/SolnRHS.o
 
 $(OBJDIR)/InterpEB.o:2D_MT/InterpEB.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/ModelParameter.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/InterpEB.f90 -o $(OBJDIR)/InterpEB.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/InterpEB.f90 -o $(OBJDIR)/InterpEB.o
 
 $(OBJDIR)/DataFunc.o:2D_MT/DataFunc.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/InterpEB.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/DataFunc.f90 -o $(OBJDIR)/DataFunc.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/DataFunc.f90 -o $(OBJDIR)/DataFunc.o
 
 $(OBJDIR)/MeasComb.o:SENS/MeasComb.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/DataFunc.o 
-	 $(F90) -c $(FFLAGS) SENS/MeasComb.f90 -o $(OBJDIR)/MeasComb.o
+	 $(F90) -c $(MODULE) $(FFLAGS) SENS/MeasComb.f90 -o $(OBJDIR)/MeasComb.o
 
 $(OBJDIR)/SensPDEcoeff.o:2D_MT/SensPDEcoeff.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataFunc.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/SensPDEcoeff.f90 -o $(OBJDIR)/SensPDEcoeff.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/SensPDEcoeff.f90 -o $(OBJDIR)/SensPDEcoeff.o
 
 $(OBJDIR)/WSfwd2D.o:2D_MT/FWD/WSfwd2D.f90 $(OBJDIR)/math_constants.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/FWD/WSfwd2D.f90 -o $(OBJDIR)/WSfwd2D.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/FWD/WSfwd2D.f90 -o $(OBJDIR)/WSfwd2D.o
 
 $(OBJDIR)/FwdTEmod.o:2D_MT/FWD/FwdTEmod.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/SolnRHS.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/FWD/FwdTEmod.f90 -o $(OBJDIR)/FwdTEmod.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/FWD/FwdTEmod.f90 -o $(OBJDIR)/FwdTEmod.o
 
 $(OBJDIR)/FwdTMmod.o:2D_MT/FWD/FwdTMmod.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/SolnRHS.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/FWD/FwdTMmod.f90 -o $(OBJDIR)/FwdTMmod.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/FWD/FwdTMmod.f90 -o $(OBJDIR)/FwdTMmod.o
 
 $(OBJDIR)/EMsolver.o:2D_MT/EMsolver.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataFunc.o $(OBJDIR)/DataSpace.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/SolnRHS.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/EMsolver.f90 -o $(OBJDIR)/EMsolver.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/EMsolver.f90 -o $(OBJDIR)/EMsolver.o
 
 $(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/MeasComb.o $(OBJDIR)/SensPDEcoeff.o $(OBJDIR)/EMsolver.o 
-	 $(F90) -c $(FFLAGS) SENS/SensMatrix.f90 -o $(OBJDIR)/SensMatrix.o
+	 $(F90) -c $(MODULE) $(FFLAGS) SENS/SensMatrix.f90 -o $(OBJDIR)/SensMatrix.o
 
 $(OBJDIR)/UserCtrl.o:./UserCtrl.f90  
-	 $(F90) -c $(FFLAGS) ./UserCtrl.f90 -o $(OBJDIR)/UserCtrl.o
+	 $(F90) -c $(MODULE) $(FFLAGS) ./UserCtrl.f90 -o $(OBJDIR)/UserCtrl.o
 
 $(OBJDIR)/ioAscii.o:2D_MT/ioMod/ioAscii.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/EMfield.o $(OBJDIR)/DataSpace.o $(OBJDIR)/EMsolver.o $(OBJDIR)/utilities.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/ioMod/ioAscii.f90 -o $(OBJDIR)/ioAscii.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/ioMod/ioAscii.f90 -o $(OBJDIR)/ioAscii.o
 
 $(OBJDIR)/Main.o:2D_MT/Main.f90 $(OBJDIR)/ModelParameter.o $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o $(OBJDIR)/EMsolver.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o 
-	 $(F90) -c $(FFLAGS) 2D_MT/Main.f90 -o $(OBJDIR)/Main.o
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/Main.f90 -o $(OBJDIR)/Main.o
 
 $(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensMatrix.o 
-	 $(F90) -c $(FFLAGS) INV/NLCG.f90 -o $(OBJDIR)/NLCG.o
+	 $(F90) -c $(MODULE) $(FFLAGS) INV/NLCG.f90 -o $(OBJDIR)/NLCG.o
 
 $(OBJDIR)/Mod2DMT.o:Mod2DMT.f90 $(OBJDIR)/SensMatrix.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o 
-	 $(F90) -c $(FFLAGS) Mod2DMT.f90 -o $(OBJDIR)/Mod2DMT.o
+	 $(F90) -c $(MODULE) $(FFLAGS) Mod2DMT.f90 -o $(OBJDIR)/Mod2DMT.o
 
 # Type " make clean " to get rid of all object and module files 
 clean: 
