@@ -67,14 +67,14 @@
       read(fid) Ny,Nz,Nza
 
       ! then allocate for grid
-      call create_Grid2D(Ny,Nz,Nza,grid)
+      call create_grid2d(Ny,Nz,Nza,grid)
 
       !    read in grid spacings
       read(fid) grid%Dy
       read(fid) grid%Dz
 
       ! complete grid definition
-      call gridCalcs(grid)
+      call setup_grid2d(grid)
 
       read(fid) paramType
       read(fid) Ny,NzEarth

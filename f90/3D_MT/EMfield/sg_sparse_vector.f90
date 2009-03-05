@@ -31,7 +31,7 @@ module sg_sparse_vector
   END INTERFACE
 
   INTERFACE linComb
-     MODULE PROCEDURE linComb_sparsevecc
+     module procedure linComb_sparsevecc
   END INTERFACE
 
   INTERFACE add
@@ -39,27 +39,39 @@ module sg_sparse_vector
   END INTERFACE
 
   INTERFACE dotProd
-     MODULE PROCEDURE dotProd_scvector_f
-     !MODULE PROCEDURE dotProd_csvector_f
+     module procedure dotProd_scvector_f
+     !module procedure dotProd_csvector_f
   END INTERFACE
 
   INTERFACE dotProd_noConj
-     MODULE PROCEDURE dotProd_noConj_scvector_f
-     !MODULE PROCEDURE dotProd_noConj_csvector_f
+     module procedure dotProd_noConj_scvector_f
+     !module procedure dotProd_noConj_csvector_f
   END INTERFACE
 
+  INTERFACE conjg
+     module procedure conjg_sparsevecc_f
+  END INTERFACE
+
+  INTERFACE newValue
+     module procedure newValueC_sparsevecc
+     module procedure newValueR_sparsevecc
+     module procedure copyValue_csvector
+  END INTERFACE
+
+
   interface assignment (=)
-     MODULE PROCEDURE copy_sparsevecc
-     MODULE PROCEDURE copy_csvector
+     module PROCEDURE copy_sparsevecc
+     module PROCEDURE copy_csvector
   end interface
 
-  public	:: sparsevecc
-  public	:: create_sparsevecc, deall_sparsevecc, reall_sparsevecc
-  public  :: copy_csvector
-  public	:: copy_sparsevecc, linComb_sparsevecc, scMult_sparsevecc
-  public	:: dotProd_scvector_f, dotProd_csvector_f
-  public	:: add_scvector
-
+  public			:: sparsevecc
+  public			:: create_sparsevecc, deall_sparsevecc
+  public            :: scMult_sparsevecc
+  public			:: newValueC_sparsevecc, newValueR_sparsevecc
+  public			:: copyValue_csvector, conjg_sparsevecc_f
+  public			:: copy_sparsevecc, linComb_sparsevecc
+  public			:: dotProd_scvector_f, dotProd_csvector_f
+  public			:: add_scvector
 
 !**************************************************************************
   type :: sparsevecc
@@ -106,6 +118,7 @@ Contains
 
   ! **********************************************************************
   ! create an object of type sparsevecc of length nCoeff
+  ! NB: no pointer to the grid at creation? - A.K.
   subroutine create_sparsevecc(nCoeff,newLC, gridType)
 
     implicit none
@@ -289,7 +302,6 @@ Contains
 
   end subroutine copy_sparsevecc
 
-
   ! **********************************************************************
   ! linear combination of two sparse vectors, output as a sparse vector
   ! allocates (or reallocates) output sparse vector Loc3
@@ -298,11 +310,11 @@ Contains
     implicit none
     type (sparsevecc), target, intent(in)	:: Lic1,Lic2
     type (sparsevecc), intent(inout)		:: Loc3
-    complex (kind=8), intent(in)		:: ic1,ic2
+    complex (kind=prec), intent(in)		:: ic1,ic2
 
     integer					:: n,m,nm
     integer					:: nCoeffSum
-    integer, pointer, dimension(:)  	:: Lic1oldIndex
+    integer, allocatable, dimension(:)  	:: Lic1oldIndex
     integer	                     		:: status
 
     allocate(Lic1oldIndex(Lic2%nCoeff), STAT = status)
@@ -368,41 +380,39 @@ Contains
   end subroutine linComb_sparsevecc
 
   ! **********************************************************************
-
-  subroutine scMult_sparsevecc(cs,Lin,Lout)
-  ! multiply comples sparse vector by a complex scalar cs
-  !  output (Lout) can overwrite input (Lin)
-  !  allocates for output if necessary
+  ! multiply a sparse complex vector SV1 by a complex value to get SV2.
+  ! Sometimes computing a full linear combination by linComb_sparsevecc
+  ! is too much work for this simple need... SV2 = ic * SV1
+  ! output SV2 can overwrite input SV1
+  ! allocates for output if necessary
+  subroutine scMult_sparsevecc(cs,SV1,SV2)
 
     implicit none
-    complex(kind=prec), intent(in)	:: cs
-    type (sparsevecc), intent(in)		:: Lin
-    type (sparsevecc), intent(inout)            :: Lout
+    complex(kind=prec), intent(in)	    :: cs
+    type (sparsevecc), intent(in)		:: SV1
+    type (sparsevecc), intent(inout)    :: SV2
 
-    ! local variables
-    integer                                     :: n,m,nm
-    integer                                     :: nCoeffSum
-    integer, pointer, dimension(:)          :: Lic1oldIndex
-    integer                                     :: status
-
-    !  make sure Lout is allocated and of the correct size
-    if(Lout%allocated) then
-       if(Lout%nCoeff .ne. Lin%nCoeff) then
-          call deall_sparsevecc(Lout)
-          call create_sparsevecc(Lin%nCoeff,Lout,Lin%gridType)
+    !  make sure SV2 is allocated and of the correct size
+    if(SV2%allocated) then
+       if(SV2%gridType .ne. SV1%gridType) then
+          write(0,*) 'not compatible usage for scMult_sparsevecc'
+          stop
+       elseif(SV2%nCoeff .ne. SV1%nCoeff) then
+          call deall_sparsevecc(SV2)
+          call create_sparsevecc(SV1%nCoeff,SV2,SV1%gridType)
        endif
     else
-       call create_sparsevecc(Lin%nCoeff,Lout,Lin%gridType)
+       call create_sparsevecc(SV1%nCoeff,SV2,SV1%gridType)
     endif
 
-    Lout%i = Lin%i
-    Lout%j = Lin%j
-    Lout%k = Lin%k
-    Lout%xyz = Lin%xyz
-    Lout%c = cs*Lin%c
-    Lout%grid => Lin%grid
+    SV2%i = SV1%i
+    SV2%j = SV1%j
+    SV2%k = SV1%k
+    SV2%xyz = SV1%xyz
+    SV2%c = cs * SV1%c
+    SV2%grid => SV1%grid
 
-    end subroutine scMult_sparsevecc
+  end subroutine scMult_sparsevecc
 
   ! **********************************************************************
   ! compute complex dot product between a sparse vector SV and a vector of
@@ -419,12 +429,12 @@ Contains
     c = C_ZERO
 
     if((.not.SV%allocated).or.(.not.V%allocated)) then
-       write(0,*) 'RHS not allocated yet for dotProd_scvector'
+       write(0,*) 'RHS not allocated yet for dotProd_scvector_f'
        stop
     endif
 
     if (SV%gridType /= V%gridType) then
-       write(0,*) 'not compatible usage for dotProd_scvector'
+       write(0,*) 'not compatible usage for dotProd_scvector_f'
        stop
     endif
 
@@ -460,7 +470,7 @@ Contains
           end if
 
        else
-          write(0,*) 'IJK out of bounds for dotProd_scvector'
+          write(0,*) 'IJK out of bounds for dotProd_scvector_f'
           stop
        endif
 
@@ -483,12 +493,12 @@ Contains
     c = C_ZERO
 
     if((.not.SV%allocated).or.(.not.V%allocated)) then
-       write(0,*) 'RHS not allocated yet for dotProd_csvector'
+       write(0,*) 'RHS not allocated yet for dotProd_csvector_f'
        stop
     endif
 
     if (SV%gridType /= V%gridType) then
-       write(0,*) 'not compatible usage for dotProd_csvector'
+       write(0,*) 'not compatible usage for dotProd_csvector_f'
        stop
     endif
 
@@ -524,7 +534,7 @@ Contains
           end if
 
        else
-          write(0,*) 'IJK out of bounds for dotProd_csvector'
+          write(0,*) 'IJK out of bounds for dotProd_csvector_f'
           stop
        endif
 
@@ -548,12 +558,12 @@ Contains
     c = C_ZERO
 
     if((.not.SV%allocated).or.(.not.V%allocated)) then
-       write(0,*) 'RHS not allocated yet for SparseFullDotProdC'
+       write(0,*) 'RHS not allocated yet for dotProd_scvector_f'
        stop
     endif
 
     if (SV%gridType /= V%gridType) then
-       write(0,*) 'not compatible usage for SparseFullDotProdC'
+       write(0,*) 'not compatible usage for dotProd_scvector_f'
        stop
     endif
 
@@ -589,7 +599,7 @@ Contains
           end if
 
        else
-          write(0,*) 'IJK out of bounds for SparseFullDotProdC'
+          write(0,*) 'IJK out of bounds for dotProd_scvector_f'
           stop
        endif
 
@@ -614,12 +624,12 @@ Contains
     c = C_ZERO
 
     if((.not.SV%allocated).or.(.not.V%allocated)) then
-       write(0,*) 'RHS not allocated yet for dotProd_csvector'
+       write(0,*) 'RHS not allocated yet for dotProd_csvector_f'
        stop
     endif
 
     if (SV%gridType /= V%gridType) then
-       write(0,*) 'not compatible usage for dotProd_csvector'
+       write(0,*) 'not compatible usage for dotProd_csvector_f'
        stop
     endif
 
@@ -655,7 +665,7 @@ Contains
           end if
 
        else
-          write(0,*) 'IJK out of bounds for dotProd_csvector'
+          write(0,*) 'IJK out of bounds for dotProd_csvector_f'
           stop
        endif
 
@@ -729,6 +739,132 @@ Contains
 
   end subroutine add_scvector
 
+  ! **********************************************************************
+  ! this will conjugate a sparse complex vector SV1 (result SV2)
+  ! A.K.
+  function conjg_sparsevecc_f(SV1) result (SV2)
+
+    type (sparsevecc), intent(in)		:: SV1
+    type (sparsevecc)           		:: SV2
+
+    ! check to see if SV1 is active (allocated)
+    if(.not.SV1%allocated) then
+       write(0,*) 'Input sparse vector not allocated yet for conjg_sparsevecc_f'
+       stop
+    endif
+
+    !  make sure SV2 is allocated and of the correct size
+    if(SV2%allocated) then
+       if ((SV2%gridType .ne. SV1%gridType) .or. (SV2%nCoeff .ne. SV1%nCoeff)) then
+          call deall_sparsevecc(SV2)
+          call create_sparsevecc(SV1%nCoeff,SV2,SV1%gridType)
+       endif
+    else
+       call create_sparsevecc(SV1%nCoeff,SV2,SV1%gridType)
+    endif
+
+    SV2%i = SV1%i
+    SV2%j = SV1%j
+    SV2%k = SV1%k
+    SV2%xyz = SV1%xyz
+    SV2%c = conjg(SV1%c)
+    SV2%grid => SV1%grid
+
+  end function conjg_sparsevecc_f
+
+  ! **************************************************************************
+  ! subroutine to fill a single entry in the sparse vector with a value
+  ! from full vector; sparsevecc has to be pre-allocated
+  ! A.K.
+  subroutine newValueC_sparsevecc(SV,index,c,i,j,k,xyz)
+
+	type (sparsevecc), intent(inout)                :: SV
+	complex(kind=prec), intent(in)                  :: c
+	integer, intent(in)								:: i,j,k,xyz,index
+	integer											:: istat
+
+	if (.not.SV%allocated) then
+	  write (0, *) 'Sparse vector in newValueC_sparsevecc is not allocated yet'
+	  stop
+	end if
+
+	if (index.gt.SV%nCoeff) then !ubound(SV%c)
+	  write (0, *) 'The chosen index in newValueC_sparsevecc is not allocated yet'
+	  stop
+	end if
+
+	SV%i(index) = i
+	SV%j(index) = j
+	SV%k(index) = k
+	SV%xyz(index) = xyz
+	SV%c(index) = c
+
+  end subroutine newValueC_sparsevecc
+
+
+  ! **************************************************************************
+  ! A subroutine to fill a single entry in the sparse vector with a value
+  ! from full vector; sparsevecc has to be pre-allocated
+  ! A.K.
+  subroutine newValueR_sparsevecc(SV,index,r,i,j,k,xyz)
+
+	type (sparsevecc), intent(inout)                :: SV
+	real(kind=prec), intent(in)		                :: r
+	integer, intent(in)								:: i,j,k,xyz,index
+	integer											:: istat
+
+	if (.not.SV%allocated) then
+	  write (0, *) 'Sparse vector in newValueR_sparsevecc is not allocated yet'
+	  stop
+	end if
+
+	if (index.gt.SV%nCoeff) then
+	  write (0, *) 'The chosen index in newValueR_sparsevecc is not allocated yet'
+	  stop
+	end if
+
+	SV%i(index) = i
+	SV%j(index) = j
+	SV%k(index) = k
+	SV%xyz(index) = xyz
+	SV%c(index) = dcmplx(r,0.0d0)
+
+  end subroutine newValueR_sparsevecc
+
+  ! **************************************************************************
+  ! A subroutine to fill a single entry in the sparse vector with a value
+  ! from full vector; sparsevecc has to be pre-allocated
+  ! A.K.
+  subroutine copyValue_csvector(SV,index,V,i,j,k,xyz)
+
+	type (sparsevecc), intent(inout)                :: SV
+	type (cvector), intent(in)                      :: V
+	integer, intent(in)				:: i,j,k,xyz,index
+	integer						:: istat
+
+	if (.not.SV%allocated) then
+	  write (0, *) 'Sparse vector in copyValue_csvector is not allocated yet'
+	  stop
+	end if
+
+	if (index.gt.SV%nCoeff) then
+	  write (0, *) 'The chosen index in copyValue_csvector is not allocated yet'
+	  stop
+	end if
+
+	SV%i(index) = i
+	SV%j(index) = j
+	SV%k(index) = k
+	SV%xyz(index) = xyz
+	 if (xyz == 1) then
+		SV%c(index) = V%x(i,j,k)
+	 else if (xyz == 2) then
+		SV%c(index) = V%y(i,j,k)
+	 else if (xyz == 3) then
+		SV%c(index) = V%z(i,j,k)
+	 end if
+
+  end subroutine copyValue_csvector
 
   ! **********************************************************************
   ! copy from a full vector to a sparse vector, this routine has quite a

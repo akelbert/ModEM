@@ -1,13 +1,13 @@
-module grid2d
+module Grid2D
    !  Defines grid data structure, basic grid methods
-   
+
    use math_constants
 
    ! Possible grid types, on which cvector is defined. Viewing the grid
    ! as 2D, NODES and EDGES correspond to the corners and the edges of
    ! all square grid elements, and CELLS corresponds to the centers of
    ! these squares. EARTH means the air is excluded from the grid.
-   character(len=80), parameter		:: CELL = 'CELL' 
+   character(len=80), parameter		:: CELL = 'CELL'
    character(len=80), parameter		:: NODE = 'NODE'
    character(len=80), parameter		:: EDGE = 'EDGE'
    character(len=80), parameter		:: NODE_EARTH = 'NODE EARTH'
@@ -25,11 +25,13 @@ module grid2d
       real (kind=prec), pointer, dimension(:) :: yCenter,zCenter
    end type grid2d_t
 
+   public         :: create_grid2d, deall_grid2d, setup_grid2d
+
    Contains
 
      !************************************************************************
-     subroutine create_Grid2D(Ny,Nz,Nza,grid)
-       !  creates finite differences grid2d_t structure of 
+     subroutine create_grid2d(Ny,Nz,Nza,grid)
+       !  creates finite differences grid2d_t structure of
        !  size Nz x Ny, allocates arrays
        !
        implicit none
@@ -48,10 +50,10 @@ module grid2d
        allocate(grid%zCenter(Nz))
        allocate(grid%yCenter(Ny))
 
-     end subroutine create_Grid2D 
-     
+     end subroutine create_grid2d
+
      !************************************************************************
-     subroutine deall_Grid2D(grid)
+     subroutine deall_grid2d(grid)
        !  deallocates finite differences grid2d_t structure
        !
        implicit none
@@ -66,11 +68,11 @@ module grid2d
        if (associated(grid%zCenter)) deallocate(grid%zCenter)
        if (associated(grid%yCenter)) deallocate(grid%yCenter)
 
-     end subroutine deall_Grid2D 
-     
+     end subroutine deall_grid2d
+
      !***********************************************************************
-     ! gridCalcs grid: after allocation, read in Dy, Dz, then call:
-     subroutine gridCalcs(grid)
+     ! setup_grid2d: after allocation, read in Dy, Dz, then call:
+     subroutine setup_grid2d(grid)
        implicit none
        type (grid2d_t) , intent(inout)	:: grid
        !  local variables
@@ -107,5 +109,6 @@ module grid2d
         do iz = 1,grid%Nz
            grid%zCenter(iz) = (grid%zNode(iz)+grid%zNode(iz+1))/2.;
         enddo
-     end subroutine gridCalcs
-end module grid2D
+     end subroutine setup_grid2d
+
+end module Grid2D

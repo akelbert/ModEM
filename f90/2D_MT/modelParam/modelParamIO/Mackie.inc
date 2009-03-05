@@ -136,7 +136,7 @@
 
       !call read_grid2d(fid,'',grid)
             ! complete grid definition
-      call gridCalcs(grid)
+      call setup_grid2d(grid)
 
       !Ny = grid%Ny
       !NzEarth = grid%Nz-grid%Nza

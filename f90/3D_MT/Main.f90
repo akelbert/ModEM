@@ -89,7 +89,7 @@ Contains
        call read_modelParam(fidRead,cUserDef%rFile_Model,sigma0,paramType,grid)
 
        ! Finish setting up the grid (if that is not done in the read subroutine)
-       call gridCalcs(grid)
+       call setup_grid3d(grid)
 
        !  set grid for higher level solver routines
        call set_SolnRHS_grid(grid)

@@ -65,7 +65,7 @@
       read(fid)  grid%dx
       read(fid)  grid%dy
       read(fid)  grid%dz(NzAir+1:NzAir+NzEarth)
-      call gridCalcs(grid)
+      call setup_grid3d(grid)
 
       read(fid) rParamType
 

@@ -65,4 +65,7 @@ module math_constants
   character (len=3), parameter	 :: TRN = 'TRN'
   character (len=3), parameter	 :: ADJ = 'ADJ'
 
+  character (len=80), parameter  :: Cartesian = 'Cartesian'
+  character (len=80), parameter  :: Spherical = 'Spherical'
+
 end module math_constants !math_constants

@@ -135,8 +135,7 @@ module sg_scalar
        diagMult_rcscalar, diagMult_crscalar, &
        diagMult_rcscalar_f, diagMult_crscalar_f, &
        dotProd_rscalar_f, dotProd_cscalar_f, &
-       ! the two routines below are not part of any interface
-  linComb_cscalar, scMultAdd_cscalar, CornerVolume
+       linComb_cscalar, scMultAdd_cscalar
 
   ! ***************************************************************************
   ! type cscalar defines scalar for either edge or face in a staggered grid as
@@ -2051,48 +2050,5 @@ Contains
     end if
 
   end subroutine scMultAdd_cscalar ! scMultAdd_cscalar
-
-  ! *************************************************************************
-  ! * CornerVolume creates volume elements centered around the corners of
-  ! * the grid, and stores them as real scalars with gridType=CORNER.
-
-  subroutine CornerVolume(inGr, cV)
-
-    implicit none
-    type (grid3d_t), intent(in)          :: inGr  ! input grid
-    type (rscalar), intent(inout)      :: cV    ! center volume as output
-    integer                            :: ix, iy, iz
-    ! dummy variables
-
-    ! Checks whether the size is the same
-    if ((inGr%nx == cV%nx).and.&
-         (inGr%ny == cV%ny).and.&
-         (inGr%nz == cV%nz)) then
-
-       if (cV%gridType == CORNER) then
-
-          ! center volume is only using the internal corner nodes
-          do ix = 2, inGr%nx
-             do iy = 2, inGr%ny
-                do iz = 2, inGr%nz
-
-                   ! note that we are multiplying
-                   ! using the distances with corner of a cell as a center
-                   cV%v(ix, iy, iz) = inGr%delX(ix)*inGr%delY(iy)*&
-                        inGr%delZ(iz)
-
-                enddo
-             enddo
-          enddo
-
-       else
-          write (0, *) 'CornerVolume: not compatible usage for existing data types'
-       end if
-
-    else
-       write(0, *) 'Error-grid size and center volume are not the same size'
-    endif
-
-  end subroutine CornerVolume
 
 end module sg_scalar ! sg_scalar

@@ -440,7 +440,7 @@ module ioAscii
       read(fid,*) Ny,NzEarth
       Nz = NzEarth + Nza
       ! then allocate for grid
-      call create_Grid2D(Ny,Nz,Nza,grid)
+      call create_grid2d(Ny,Nz,Nza,grid)
 
       !    read in grid spacings
 
@@ -463,7 +463,7 @@ module ioAscii
       end if
 
       ! complete grid definition
-      call gridCalcs(grid)
+      call setup_grid2d(grid)
 
       end subroutine read_grid2d
 
