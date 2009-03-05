@@ -25,7 +25,7 @@ module sg_vector
      module procedure deall_rvector
      module procedure deall_cvector
   END INTERFACE
-  
+
   ! scalar value multiplies the edge/ face nodes
   INTERFACE scMult
      module procedure scMult_rvector
@@ -53,7 +53,7 @@ module sg_vector
      module procedure subtract_cvector
   END INTERFACE
 
-  ! pointwise vector (two vector data types) multiplication of edge/ face 
+  ! pointwise vector (two vector data types) multiplication of edge/ face
   ! nodes
   ! and pointwise real-complex (mixed) multiplication of edge/ face nodes
   ! Both are vector data types
@@ -86,6 +86,24 @@ module sg_vector
      MODULE PROCEDURE dotProd_noConj_cvector_f
   END INTERFACE
 
+  ! overload some intrinsic functions for complex numbers
+  INTERFACE conjg
+     MODULE PROCEDURE conjg_cvector_f
+  END INTERFACE
+
+  INTERFACE cmplx
+     MODULE PROCEDURE cmplx_rvector_f
+  END INTERFACE
+
+  INTERFACE real
+     MODULE PROCEDURE real_cvector_f
+  END INTERFACE
+
+  INTERFACE imag
+     MODULE PROCEDURE imag_cvector_f
+  END INTERFACE
+
+  ! Important - overloading the '=' assignment
   INTERFACE ASSIGNMENT (=)
      MODULE PROCEDURE copy_cvector
      MODULE PROCEDURE copy_rvector
@@ -109,12 +127,12 @@ module sg_vector
      MODULE PROCEDURE diagMult_rvector_f
      MODULE PROCEDURE diagMult_cvector_f
      MODULE PROCEDURE diagMult_rcvector_f
-     MODULE PROCEDURE diagMult_crvector_f 
+     MODULE PROCEDURE diagMult_crvector_f
   END INTERFACE
 
   INTERFACE OPERATOR (/)
      MODULE PROCEDURE diagDiv_rcvector_f
-     MODULE PROCEDURE diagDiv_crvector_f 
+     MODULE PROCEDURE diagDiv_crvector_f
   END INTERFACE
 
   public		::   create_rvector,  create_cvector, &
@@ -134,9 +152,8 @@ module sg_vector
        diagDiv_rcvector, diagDiv_crvector, &
        diagDiv_rcvector_f, diagDiv_crvector_f, &
        dotProd_rvector_f, dotProd_cvector_f, &
-       getReal_cvector, getImag_cvector, &
-       ! the two routines below are not part of any interface
-  	linComb_cvector, scMultAdd_cvector
+       linComb_cvector, scMultAdd_cvector, conjg_cvector_f, &
+       cmplx_rvector_f, real_cvector_f, imag_cvector_f
 
 
   ! ***************************************************************************
@@ -154,23 +171,23 @@ module sg_vector
      ! x: edge nodes in x-direction: dimension Nx, Ny+1, Nz+1
      ! y: edge nodes in y-direction: dimension Nx+1, Ny, Nz+1
      ! z: edge nodes in z-direction: dimension Nx+1, Ny+1, Nz
-     ! Note that the arrays are defined through dynamic memory allocation  
+     ! Note that the arrays are defined through dynamic memory allocation
      complex(kind=prec), pointer, dimension(:,:,:)  :: x, y, z
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction
      ! ny is grid dimension (number of cells) in the y-direction
-     ! nz is grid dimension (number of cells) in the z-direction: 
+     ! nz is grid dimension (number of cells) in the z-direction:
      integer                                          :: nx = 0, ny = 0, nz = 0
 
      ! allocated:  .true.  x, y, z arrays have been allocated
      logical		                              :: allocated = .false.
 
      ! pointer to parent grid
-     type (grid3d_t), pointer                             :: grid		
+     type (grid3d_t), pointer                             :: grid
 
   end type cvector
-  
+
   ! ***************************************************************************
   ! type vector defines vector for either edge or face in a staggered grid as
   ! a real field
@@ -185,13 +202,13 @@ module sg_vector
      ! x: edge nodes in x-direction: dimension Nx, Ny+1, Nz+1
      ! y: edge nodes in y-direction: dimension Nx+1, Ny, Nz+1
      ! z: edge nodes in z-direction: dimension Nx+1, Ny+1, Nz
-     ! Note that the arrays are defined through dynamic memory allocation  
-     real(kind=prec), pointer, dimension(:,:,:) :: x,y,z
+     ! Note that the arrays are defined through dynamic memory allocation
+     real(kind=prec), pointer, dimension(:,:,:)      :: x, y, z
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction
      ! ny is grid dimension (number of cells) in the y-direction
-     ! nz is grid dimension (number of cells) in the z-direction: 
+     ! nz is grid dimension (number of cells) in the z-direction:
      integer                                          :: nx = 0, ny = 0, nz = 0
 
 
@@ -202,7 +219,7 @@ module sg_vector
      type (grid3d_t), pointer                             :: grid
 
   end type rvector
-  
+
 Contains
   ! CREATE GRID_edge/ face VECTORS
   ! * subroutine create_rvector(igrid, E, gridType)
@@ -216,7 +233,7 @@ Contains
   ! * subroutine copy_rvector(E2,E1)
   ! * subroutine copy_cvector(E2,E1)
 
-  ! ZERO GRID_edge/ face VECTORS 
+  ! ZERO GRID_edge/ face VECTORS
   ! * subroutine zero_rvector(E)
   ! * subroutine zero_cvector(E)
 
@@ -246,7 +263,7 @@ Contains
   ! * function subtract_rvector_f(E1, E2) result(E3)
   ! * function subtract_cvector_f(E1, E2) result(E3)
 
-  ! POINTWISE MULTIPLICATION OF VECTORS: 
+  ! POINTWISE MULTIPLICATION OF VECTORS:
   ! * subroutine diagMult_rvector(E1, E2, E3)
   ! * subroutine diagMult_cvector(E1, E2, E3)
 
@@ -287,9 +304,15 @@ Contains
   ! * subroutine linCom_cvector(inc1, E1, inc2, E2, E3)
   ! * subroutine scMultAdd_V_node(c, E1, E2)  (E2 = E2+c*E1)
 
+  ! COMBINE REAL VECTORS TO PRODUCE A COMPLEX VECTOR, AND THE CONVERSE
+  ! * function conjg_cvector(E1) result (E2)
+  ! * function cmplx_rvector(E1, E2) result (E3)
+  ! * function real_cvector(E1) result (E2)
+  ! * function imag_cvector(E1) result (E2)
+
   ! The algebraic routines expect all input and output
   ! variables to be of the correct type, already allocated,
-  ! and of the correct size.  
+  ! and of the correct size.
 
 
   !****************************************************************************
@@ -309,7 +332,7 @@ Contains
     character (len=80), intent(in)     :: gridType
 
     if(E%allocated) then
-       ! first deallocate memory for x,y,z 
+       ! first deallocate memory for x,y,z
        deallocate(E%x, E%y, E%z, STAT=status)
     end if
 
@@ -327,10 +350,14 @@ Contains
     ! gridType
     E%gridType = gridType
 
-    ! allocate memory for x,y,z 
+    ! allocate memory for x,y,z
     ! E%allocated will be true if all allocations succeed
     E%allocated = .true.
     if (E%gridType == EDGE) then
+	   ! For spherical problem:
+	   ! 1) E%x(:,1,:) and E%x(:,ny+1,:) are undefined,
+	   ! 2) E%y(nx+1,:,:) and E%z(nx+1,:,:) are repetitios,
+	   ! 3) E%x(-1,0,ny+1,ny+2,:,:) will be needed for interpolation.
        allocate(E%x(nx,ny+1,nz+1), STAT=status)
        E%allocated = E%allocated .and. (status .EQ. 0)
        allocate(E%y(nx+1,ny,nz+1), STAT=status)
@@ -338,20 +365,23 @@ Contains
        allocate(E%z(nx+1,ny+1,nz), STAT=status)
        E%allocated = E%allocated .and. (status .EQ. 0)
     else if (E%gridType == FACE) then
+	   ! For spherical problem:
+	   ! 1) E%y(:,1,:) and E%y(:,ny+1,:) are undefined,
+	   ! 2) E%x(nx+1,:,:) is repetitios and equals E%x(1,:,:).
        allocate(E%x(nx+1,ny,nz), STAT=status)
        E%allocated = E%allocated .and. (status .EQ. 0)
        allocate(E%y(nx,ny+1,nz), STAT=status)
        E%allocated = E%allocated .and. (status .EQ. 0)
        allocate(E%z(nx,ny,nz+1), STAT=status)
        E%allocated = E%allocated .and. (status .EQ. 0)
-    else 
+    else
        write (0, *) 'not a known tag'
     end if
 
     if (E%allocated) then
-       E%x = 0.0
-       E%y = 0.0
-       E%z = 0.0
+       E%x = R_ZERO
+       E%y = R_ZERO
+       E%z = R_ZERO
     end if
 
   end subroutine create_rvector  ! create_rvector
@@ -374,7 +404,7 @@ Contains
     character (len=80), intent(in)      :: gridType
 
     if(E%allocated) then
-       ! first deallocate memory for x,y,z 
+       ! first deallocate memory for x,y,z
        deallocate(E%x, E%y, E%z,STAT=status)
     end if
 
@@ -393,10 +423,15 @@ Contains
     ! gridType
     E%gridType = gridType
 
-    ! allocate memory for x,y,z ; 
+    ! allocate memory for x,y,z ;
     ! E%allocated will be true if all allocations succeed
     E%allocated = .true.
     if (E%gridType == EDGE) then
+	   ! For spherical problem:
+	   ! 1) E%x(:,1,:) and E%x(:,ny+1,:) are undefined,
+	   ! 2) E%y(nx+1,:,:) and E%z(nx+1,:,:) are repetitious,
+	   ! 3) E%z(:,1,k) and E%z(:,ny+1,k) indep. of i for a fixed k,
+	   ! 4) E%x(-1,0,ny+1,ny+2,:,:) will be needed for interpolation.
        allocate(E%x(nx,ny+1,nz+1), STAT=status)
        E%allocated = E%allocated .and. (status .EQ. 0)
        allocate(E%y(nx+1,ny,nz+1), STAT=status)
@@ -404,13 +439,16 @@ Contains
        allocate(E%z(nx+1,ny+1,nz), STAT=status)
        E%allocated = E%allocated .and. (status .EQ. 0)
     else if (E%gridType == FACE) then
+	   ! For spherical problem:
+	   ! 1) E%y(:,1,:) and E%y(:,ny+1,:) are undefined,
+	   ! 2) E%x(nx+1,:,:) is repetitious and equals E%x(1,:,:).
        allocate(E%x(nx+1,ny,nz), STAT=status)
        E%allocated = E%allocated .and. (status .EQ. 0)
        allocate(E%y(nx,ny+1,nz), STAT=status)
        E%allocated = E%allocated .and. (status .EQ. 0)
        allocate(E%z(nx,ny,nz+1), STAT=status)
        E%allocated = E%allocated .and. (status .EQ. 0)
-    else 
+    else
        write (0, *) 'not a known tag'
     end if
 
@@ -434,7 +472,7 @@ Contains
     integer	    :: status
 
     if(E%allocated) then
-       ! deallocate memory for x,y,z 
+       ! deallocate memory for x,y,z
        deallocate(E%x, E%y, E%z,STAT=status)
     end if
 
@@ -456,9 +494,9 @@ Contains
     type (cvector)  :: E
     integer	    :: status
 
-    ! deallocate memory for x,y,z 
+    ! deallocate memory for x,y,z
     if(E%allocated) then
-       ! deallocate memory for x,y,z 
+       ! deallocate memory for x,y,z
        deallocate(E%x, E%y, E%z,STAT=status)
     end if
 
@@ -472,7 +510,7 @@ Contains
 
 
   !****************************************************************************
-  ! copy_rvector makes an exact copy of derived data type 
+  ! copy_rvector makes an exact copy of derived data type
   ! rvector;   NOTE: first argument is output
   subroutine copy_rvector(E2, E1)
 
@@ -480,7 +518,7 @@ Contains
     type (rvector), intent(in)       :: E1
     type (rvector), intent(inout)    :: E2
     integer	                     :: status
- 
+
     ! check to see if RHS (E1) is active (allocated)
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for copy_rvector'
@@ -503,7 +541,7 @@ Contains
        else
 
           if(E2%allocated) then
-             ! first deallocate memory for x,y,z 
+             ! first deallocate memory for x,y,z
              deallocate(E2%x, E2%y, E2%z,STAT=status)
           end if
 
@@ -523,9 +561,9 @@ Contains
 
 
   !****************************************************************************
-  ! copy_cvector makes an exact copy of derived data type 
-  ! cvector; 
-  subroutine copy_cvector(E2, E1) 
+  ! copy_cvector makes an exact copy of derived data type
+  ! cvector;
+  subroutine copy_cvector(E2, E1)
 
     implicit none
     type (cvector), intent(in)            :: E1
@@ -554,7 +592,7 @@ Contains
        else
 
           if(E2%allocated) then
-             ! first deallocate memory for x,y,z 
+             ! first deallocate memory for x,y,z
              deallocate(E2%x, E2%y, E2%z,STAT=status)
           end if
 
@@ -573,8 +611,8 @@ Contains
   end subroutine copy_cvector  ! copy_cvector
 
 
-  !****************************************************************************
-  ! zero_rvector zeros variable of derived data type 
+  ! ***************************************************************************
+  ! zero_rvector zeros variable of derived data type
   ! rvector;
   subroutine zero_rvector(E)
 
@@ -595,8 +633,8 @@ Contains
   end subroutine zero_rvector
 
 
-  !****************************************************************************
-  ! zero_cvector zeros variable of derived data type 
+  ! ***************************************************************************
+  ! zero_cvector zeros variable of derived data type
   ! cvector;
   subroutine zero_cvector(E)
 
@@ -617,17 +655,17 @@ Contains
   end subroutine zero_cvector ! zero_cvector
 
 
-  !****************************************************************************
+  ! ***************************************************************************
   ! scMult_cvector multiplies vector stored as derived data type
   ! cvector with a complex scalar; subroutine version
   ! E2 can overwrite E1
   subroutine scMult_cvector(c, E1, E2)
 
     implicit none
-    complex(kind=prec), intent(in)                      :: c          
+    complex(kind=prec), intent(in)                      :: c
     ! a complex scalar to be multiplied with
-    type (cvector), intent(in)                       :: E1            
-    type (cvector), intent(inout)                    :: E2 
+    type (cvector), intent(in)                       :: E1
+    type (cvector), intent(inout)                    :: E2
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_cvector'
@@ -662,16 +700,16 @@ Contains
   end subroutine scMult_cvector ! scMult_cvector
 
 
-  !****************************************************************************
+  ! ***************************************************************************
   ! scMult_cvector_f multiplies vector stored as derived data type
   ! cvector with a complex scalar; function version
   function scMult_cvector_f(c, E1) result(E2)
 
     implicit none
-    complex(kind=prec), intent(in)                      :: c          
+    complex(kind=prec), intent(in)                      :: c
     ! a complex scalar to be multiplied with
-    type (cvector), intent(in)                       :: E1            
-    type (cvector)                                   :: E2             
+    type (cvector), intent(in)                       :: E1
+    type (cvector)                                   :: E2
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_cvector_f'
@@ -709,17 +747,17 @@ Contains
   end function scMult_cvector_f ! scMult_cvector_f
 
 
-  !****************************************************************************
+  ! ***************************************************************************
   ! scMultReal_cvector multiplies vector stored as derived data type
   ! cvector with a real scalar; subroutine version
   ! E2 can overwrite E1
   subroutine scMultReal_cvector(c, E1, E2)
 
     implicit none
-    real (kind=prec), intent(in)                         :: c          
+    real (kind=prec), intent(in)                         :: c
     ! a real scalar to be multiplied with
-    type (cvector), intent(in)                       :: E1            
-    type (cvector), intent(inout)                    :: E2 
+    type (cvector), intent(in)                       :: E1
+    type (cvector), intent(inout)                    :: E2
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMultReal_cvector'
@@ -760,10 +798,10 @@ Contains
   function scMultReal_cvector_f(c, E1) result(E2)
 
     implicit none
-    real (kind=prec), intent(in)			     :: c          
+    real (kind=prec), intent(in)			     :: c
     ! a real scalar to be multiplied with
-    type (cvector), intent(in)                       :: E1            
-    type (cvector)                                   :: E2             
+    type (cvector), intent(in)                       :: E1
+    type (cvector)                                   :: E2
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMultReal_cvector_f'
@@ -808,16 +846,16 @@ Contains
   subroutine scMult_rvector(c, E1, E2)
 
     implicit none
-    real (kind=prec), intent(in)                         :: c          
+    real (kind=prec), intent(in)                         :: c
     ! a real scalar to be multiplied with
-    type (rvector), intent(in)                       :: E1            
-    type (rvector), intent(inout)                    :: E2             
+    type (rvector), intent(in)                       :: E1
+    type (rvector), intent(inout)                    :: E2
 
    if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_rvector'
        stop
     endif
-    
+
     ! check to see if LHS (E2) is active (allocated)
     if(.not.E2%allocated) then
        write(0,*) 'LHS was not allocated for scMult_rvector'
@@ -853,15 +891,15 @@ Contains
   function scMult_rvector_f(c, E1) result(E2)
 
     implicit none
-    real (kind=prec), intent(in)                         :: c          
+    real (kind=prec), intent(in)                         :: c
     ! a complex scalar to be multiplied with
-    type (rvector), intent(in)                       :: E1            
-    type (rvector)                                   :: E2 
-    
+    type (rvector), intent(in)                       :: E1
+    type (rvector)                                   :: E2
+
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_rvector_f'
        stop
-    endif            
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_rvector(E1%grid, E2, E1%gridType)
@@ -902,12 +940,12 @@ Contains
 
     implicit none
     type (rvector), intent(in)               :: E1, E2
-    type (rvector), intent(inout)            :: E3             
+    type (rvector), intent(inout)            :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_rvector'
        stop
-    endif        
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -946,12 +984,12 @@ Contains
 
     implicit none
     type (rvector), intent(in)               :: E1, E2
-    type (rvector)                           :: E3             
+    type (rvector)                           :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_rvector_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_rvector(E1%grid, E3, E1%gridType)
@@ -993,12 +1031,12 @@ Contains
 
     implicit none
     type (cvector), intent(in)               :: E1, E2
-    type (cvector), intent(inout)            :: E3             
+    type (cvector), intent(inout)            :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_cvector'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1037,12 +1075,12 @@ Contains
 
     implicit none
     type (cvector), intent(in)               :: E1, E2
-    type (cvector)                           :: E3             
+    type (cvector)                           :: E3
 
      if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_cvector_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cvector(E1%grid, E3, E1%gridType)
@@ -1084,12 +1122,12 @@ Contains
 
     implicit none
     type (rvector), intent(in)               :: E1, E2
-    type (rvector), intent(inout)            :: E3             
+    type (rvector), intent(inout)            :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for subtract_rvector'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1128,12 +1166,12 @@ Contains
 
     implicit none
     type (rvector), intent(in)               :: E1, E2
-    type (rvector)                           :: E3             
+    type (rvector)                           :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_rvector_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_rvector(E1%grid, E3, E1%gridType)
@@ -1175,18 +1213,18 @@ Contains
 
     implicit none
     type (cvector), intent(in)               :: E1, E2
-    type (cvector), intent(inout)            :: E3             
+    type (cvector), intent(inout)            :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for subtract_cvector'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E2) is active (allocated)
     if(.not.E3%allocated) then
        write(0,*) 'LHS not allocated for subtract_cvector'
     else
-    
+
        ! Check whether all the vector nodes are of the same size
        if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz).and.&
             (E1%nx == E3%nx).and.(E1%ny == E3%ny).and.(E1%nz == E3%nz)) then
@@ -1219,12 +1257,12 @@ Contains
 
     implicit none
     type (cvector), intent(in)               :: E1, E2
-    type (cvector)                           :: E3             
+    type (cvector)                           :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for subtract_cvector_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cvector(E1%grid, E3, E1%gridType)
@@ -1259,7 +1297,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_rvector multiplies two vectors E1, E2 stored as derived data 
+  ! diagMult_rvector multiplies two vectors E1, E2 stored as derived data
   ! type rvector pointwise; subroutine version
   ! E3 can overwrite E1 or E2
   subroutine diagMult_rvector(E1, E2, E3)
@@ -1267,12 +1305,11 @@ Contains
     implicit none
     type (rvector), intent(in)               :: E1, E2
     type (rvector), intent(inout)            :: E3
-    
-    
+
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rvector'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1305,7 +1342,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_rvector_f multiplies two vectors E1, E2 stored as derived 
+  ! diagMult_rvector_f multiplies two vectors E1, E2 stored as derived
   ! data type rvector pointwise; function version
   function diagMult_rvector_f(E1, E2) result(E3)
 
@@ -1316,7 +1353,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rvector_f'
        stop
-    endif 
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_rvector(E1%grid, E3, E1%gridType)
@@ -1351,7 +1388,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_cvector multiplies two vectors E1, E2 stored as derived data 
+  ! diagMult_cvector multiplies two vectors E1, E2 stored as derived data
   ! type cvector pointwise; subroutine version
   ! E3 can overwrite E1 or E2
   subroutine diagMult_cvector(E1, E2, E3)
@@ -1363,7 +1400,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_cvector'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1396,7 +1433,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_cvector_f multiplies two vectors E1, E2 stored as derived 
+  ! diagMult_cvector_f multiplies two vectors E1, E2 stored as derived
   ! data  type cvector pointwise; function version
   function diagMult_cvector_f(E1, E2) result(E3)
 
@@ -1407,7 +1444,7 @@ Contains
    if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_cvector_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cvector(E1%grid, E3, E1%gridType)
@@ -1442,26 +1479,26 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_crvector multiplies complex vector E1 with scalar vector E2 
+  ! diagMult_crvector multiplies complex vector E1 with scalar vector E2
   ! stored as derived type cvector pointwise; subroutine version
   ! E3 can overwrite E1 or E2
   subroutine diagMult_crvector(E1, E2, E3)
 
     implicit none
     type (cvector), intent(in)               :: E1
-    type (rvector), intent(in)               :: E2    
+    type (rvector), intent(in)               :: E2
     type (cvector), intent(inout)            :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_crvector'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
        write(0,*) 'LHS was not allocated for diagMult_crvector'
     else
-    
+
        ! Check whether all the vector nodes are of the same size
        if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz).and. &
             (E1%nx == E3%nx).and.(E1%ny == E3%ny).and.(E1%nz == E3%nz)) then
@@ -1488,7 +1525,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_crvector_f multiplies complex vector E1 with real vector 
+  ! diagMult_crvector_f multiplies complex vector E1 with real vector
   ! E2 stored as derived data type cvector pointwise; function version
   function diagMult_crvector_f(E1, E2) result(E3)
 
@@ -1500,7 +1537,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_crvector_f'
        stop
-    endif  
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cvector(E1%grid, E3, E1%gridType)
@@ -1535,20 +1572,20 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_rcvector multiplies real vector E1 with complex vector E2 
+  ! diagMult_rcvector multiplies real vector E1 with complex vector E2
   ! stored as derived type cvector pointwise; subroutine version
   ! E3 can overwrite E1 or E2
   subroutine diagMult_rcvector(E1, E2, E3)
 
     implicit none
     type (rvector), intent(in)               :: E1
-    type (cvector), intent(in)               :: E2    
+    type (cvector), intent(in)               :: E2
     type (cvector), intent(inout)            :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rcvector'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1581,7 +1618,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_rcvector_f multiplies real vector E1 with complex vector E2 
+  ! diagMult_rcvector_f multiplies real vector E1 with complex vector E2
   ! stored as derived data type cvector pointwise; function version
   function diagMult_rcvector_f(E1, E2) result(E3)
 
@@ -1593,7 +1630,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rcvector_f'
        stop
-    endif 
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cvector(E1%grid, E3, E1%gridType)
@@ -1619,7 +1656,7 @@ Contains
 
        else
 
-          write(0, *) 'Error:diagMult_Node_MixedRC_f: vectors not same size'
+          write(0, *) 'Error:diagMult_rcvector_f: vectors not same size'
 
        end if
     end if
@@ -1628,21 +1665,21 @@ Contains
 
 
   !****************************************************************************
-  ! diagDiv_crvector divides complex vector E1 with scalar vector E2 
+  ! diagDiv_crvector divides complex vector E1 with scalar vector E2
   ! stored as derived type cvector pointwise; subroutine version
   ! E3 can overwrite E1 or E2
   subroutine diagDiv_crvector(E1, E2, E3)
 
     implicit none
     type (cvector), intent(in)               :: E1
-    type (rvector), intent(in)               :: E2    
+    type (rvector), intent(in)               :: E2
     type (cvector), intent(inout)            :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagDiv_crvector'
        stop
-    endif 
-    
+    endif
+
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
        write(0,*) 'LHS was not allocated for diagDiv_crvector'
@@ -1674,7 +1711,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagDiv_crvector_f divides complex vector E1 with real vector 
+  ! diagDiv_crvector_f divides complex vector E1 with real vector
   ! E2 stored as derived data type cvector pointwise; function version
   function diagDiv_crvector_f(E1, E2) result(E3)
 
@@ -1686,7 +1723,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagDiv_crvector_f'
        stop
-    endif 
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cvector(E1%grid, E3, E1%gridType)
@@ -1721,20 +1758,20 @@ Contains
 
 
   !****************************************************************************
-  ! diagDiv_rcvector divides real vector E1 with complex vector E2 
+  ! diagDiv_rcvector divides real vector E1 with complex vector E2
   ! stored as derived type cvector pointwise; subroutine version
   ! E3 can overwrite E1 or E2
   subroutine diagDiv_rcvector(E1, E2, E3)
 
     implicit none
     type (rvector), intent(in)               :: E1
-    type (cvector), intent(in)               :: E2    
+    type (cvector), intent(in)               :: E2
     type (cvector), intent(inout)            :: E3
 
        if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagDiv_rcvector'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1767,7 +1804,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagDiv_rcvector_f divides real vector E1 with complex vector E2 
+  ! diagDiv_rcvector_f divides real vector E1 with complex vector E2
   ! stored as derived data type cvector pointwise; function version
   function diagDiv_rcvector_f(E1, E2) result(E3)
 
@@ -1779,7 +1816,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagDiv_rcvector_f'
        stop
-    endif 
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cvector(E1%grid, E3, E1%gridType)
@@ -1787,7 +1824,7 @@ Contains
     if(.not.E3%allocated) then
        write(0,*) 'LHS was not allocated for diagDiv_rcvector_f'
     else
-    
+
        ! Check whether both vectors are of the same size
        if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz).and. &
             (E1%nx == E3%nx).and.(E1%ny == E3%ny).and.(E1%nz == E3%nz)) then
@@ -1820,14 +1857,14 @@ Contains
 
     implicit none
     type (rvector), intent(in)   :: E1, E2
-    real (kind=prec)		     :: r 
+    real (kind=prec)		     :: r
 
-    r = 0.0
-    
+    r = R_ZERO
+
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProd_rvector'
        stop
-    endif  
+    endif
 
     ! Check whether both input vectors are of the same size
     if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
@@ -1860,11 +1897,11 @@ Contains
     complex(kind=prec)		     :: c
 
     c = C_ZERO
-    
+
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProd_cvector'
        stop
-    endif  
+    endif
 
     ! Check whether both input vectors are of the same size
     if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
@@ -1899,11 +1936,11 @@ Contains
     complex(kind=prec)		     :: c
 
     c = C_ZERO
-    
+
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProd_noConj_cvector'
        stop
-    endif  
+    endif
 
     ! Check whether both input vectors are of the same size
     if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
@@ -1929,15 +1966,15 @@ Contains
 
     implicit none
     !   input vectors
-    type (cvector), intent(in)             :: E1, E2     
+    type (cvector), intent(in)             :: E1, E2
     !  input complex scalars
-    complex (kind=8), intent(in)           :: inc1, inc2
-    type (cvector), intent(inout)          :: E3              
+    complex (kind=prec), intent(in)           :: inc1, inc2
+    type (cvector), intent(inout)          :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for linComb_cvector'
        stop
-    endif                
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -1951,7 +1988,7 @@ Contains
           if ((E1%gridType == E2%gridType).and.(E1%gridType == E3%gridType)) then
 
              ! form linear combinatoin
-             E3%x = inc1*E1%x + inc2*E2%x  
+             E3%x = inc1*E1%x + inc2*E2%x
              E3%y = inc1*E1%y + inc2*E2%y
              E3%z = inc1*E1%z + inc2*E2%z
 
@@ -1975,15 +2012,15 @@ Contains
   subroutine scMultAdd_cvector(c, E1, E2)
 
     implicit none
-    complex(kind=prec), intent(in)                      :: c          
+    complex(kind=prec), intent(in)                   :: c
     ! a complex scalar to be multiplied with
-    type (cvector), intent(in)                       :: E1            
-    type (cvector), intent(inout)                    :: E2             
+    type (cvector), intent(in)                       :: E1
+    type (cvector)                                   :: E2
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMultAdd_cvector'
        stop
-    endif  
+    endif
 
     ! check to see if LHS (E2) is active (allocated)
     if(.not.E2%allocated) then
@@ -2013,43 +2050,213 @@ Contains
 
   end subroutine scMultAdd_cvector ! scMultAdd_cvector
 
-!***************************************************************
 
-  subroutine getReal_cvector(eC,eR)
+  ! ***************************************************************************
+  function conjg_cvector_f(E1) result (E2)
+	! conjg_cvector_f computes a conjugate of a derived data type cvector
+	! A.K.
+    implicit none
+    type (cvector), intent(in)            :: E1
+    type (cvector)                        :: E2
 
-  !   takes real part of cvector object eC
-  !   for now: let's assume that eR and eC are consistent,
-  !   and that eR has been allocated ... clean up the present
-  !   garbage implmentation of error checking later!
+    integer                               :: status
 
-  type(cvector), intent(in)		:: eC
-  type(rvector), intent(inout)		:: eR
+    ! check to see if RHS (E1) is active (allocated)
+    if(.not.E1%allocated) then
+       write(0,*) 'input not allocated yet for conjg_cvector_f'
+    else
 
-  eR%x = real(eC%x)
-  eR%y = real(eC%y)
-  eR%z = real(eC%z)
+       if((E2%nx == E1%nx).and.(E2%ny == E1%ny).and.(E2%nz == E1%nz)) then
 
-  end subroutine getReal_cvector
+          if  (E1%gridType == E2%gridType) then
 
-!***************************************************************
+             ! just conjugate components
+             E2%x = conjg(E1%x)
+             E2%y = conjg(E1%y)
+             E2%z = conjg(E1%z)
+             E2%gridType = E1%gridType
 
-  subroutine getImag_cvector(eC,eR)
+          else
+             write (0, *) 'not compatible usage for conjg_cvector_f'
+          end if
 
-  !   takes real part of cvector object eC
-  !   for now: let's assume that eR and eC are consistent,
-  !   and that eR has been allocated ... clean up the present
-  !   garbage implmentation of error checking later!
+       else
 
-  type(cvector), intent(in)		:: eC
-  type(rvector), intent(inout)		:: eR
+          if(E2%allocated) then
+             ! first deallocate memory for x,y,z
+             deallocate(E2%x, E2%y, E2%z,STAT=status)
+          end if
 
-  eR%x = imag(eC%x)
-  eR%y = imag(eC%y)
-  eR%z = imag(eC%z)
+          !  then allocate E2 as correct size ...
+          Call create_cvector(E1%grid, E2, E1%gridType)
+          !   .... and conjugate E1
+          E2%x = conjg(E1%x)
+          E2%y = conjg(E1%y)
+          E2%z = conjg(E1%z)
+          E2%gridType = E1%gridType
 
-  end subroutine getImag_cvector
-  
-!***************************************************************
+       end if
+
+    end if
+
+  end function conjg_cvector_f  ! conjg_cvector_f
+
+
+  ! ***************************************************************************
+  function cmplx_rvector_f(E1, E2) result (E3)
+  ! inputs two real vectors, merges them as real1 + imag(real2), a complex
+  ! vector
+    implicit none
+    type (rvector), intent(in)            :: E1
+    type (rvector), intent(in)            :: E2
+    type (cvector)                        :: E3
+
+    integer                               :: status
+
+    ! check to see if RHS (E1 and E2) are active (allocated)
+    if((.not.E1%allocated).or.(.not.E2%allocated)) then
+       write(0,*) 'RHS not allocated yet for cmplx_rvector_f'
+    else
+
+       if((E3%nx == E1%nx).and.(E3%ny == E1%ny).and.(E3%nz == E1% nz).and.&
+        (E3%nx == E2%nx).and.(E3%ny == E2%ny).and.(E3%nz == E2%nz))  then
+
+          if  ((E1%gridType == E2%gridType).and.(E1%gridType == E3% gridType)) then
+
+             ! create a complex pair
+             E3%x = cmplx(E1%x, E2%x, prec)
+             E3%y = cmplx(E1%y, E2%y, prec)
+             E3%z = cmplx(E1%z, E2%z, prec)
+             E3%gridType = E1%gridType
+
+          else
+             write (0, *) 'not compatible usage for cmplx_rvector_f'
+          end if
+
+       else
+
+          if(E3%allocated) then
+             ! first deallocate memory for x,y,z
+             deallocate(E3%x, E3%y, E3%z,STAT=status)
+          end if
+
+          !  then allocate E3 as correct size ...
+          Call create_cvector(E1%grid, E3, E1%gridType)
+          !   .... and create a complex pair
+          E3%x = cmplx(E1%x, E2%x, prec)
+          E3%y = cmplx(E1%y, E2%y, prec)
+          E3%z = cmplx(E1%z, E2%z, prec)
+          E3%gridType = E1%gridType
+
+       end if
+
+    end if
+
+  end function cmplx_rvector_f  ! cmplx_rvector_f
+
+
+  ! ***************************************************************************
+  ! real_cvector_f copies the real part of the derived data type cvector variable;
+  ! to produce a derived data type rvector
+  function real_cvector_f(E1) result (E2)
+
+    implicit none
+    type (cvector), intent(in)            :: E1
+    type (rvector)                        :: E2
+
+    integer                               :: status
+
+    ! check to see if RHS (E1) is active (allocated)
+    if(.not.E1%allocated) then
+       write(0,*) 'input not allocated yet for real_cvector_f'
+    else
+
+       if((E2%nx == E1%nx).and.(E2%ny == E1%ny).and.(E2%nz == E1%nz)) then
+
+          if  (E1%gridType == E2%gridType) then
+
+             ! just copy components
+             E2%x = real(E1%x, prec)
+             E2%y = real(E1%y, prec)
+             E2%z = real(E1%z, prec)
+             E2%gridType = E1%gridType
+
+          else
+             write (0, *) 'not compatible usage for real_cvector_f'
+          end if
+
+       else
+
+          if(E2%allocated) then
+             ! first deallocate memory for x,y,z
+             deallocate(E2%x, E2%y, E2%z,STAT=status)
+          end if
+
+          !  then allocate E2 as correct size ...
+          Call create_rvector(E1%grid, E2, E1%gridType)
+          !   .... and copy E1
+          E2%x = real(E1%x, prec)
+          E2%y = real(E1%y, prec)
+          E2%z = real(E1%z, prec)
+          E2%gridType = E1%gridType
+
+       end if
+
+    end if
+
+  end function real_cvector_f  ! real_cvector_f
+
+
+  ! ***************************************************************************
+  ! imag_cvector_f copies the imag part of the derived data type cvector variable;
+  ! to produce a derived data type rvector
+  function imag_cvector_f(E1) result (E2)
+
+    implicit none
+    type (cvector), intent(in)            :: E1
+    type (rvector)                        :: E2
+
+    integer                               :: status
+
+    ! check to see if RHS (E1) is active (allocated)
+    if(.not.E1%allocated) then
+       write(0,*) 'input not allocated yet for imag_cvector_f'
+    else
+
+       if((E2%nx == E1%nx).and.(E2%ny == E1%ny).and.(E2%nz == E1%nz)) then
+
+          if  (E1%gridType == E2%gridType) then
+
+             ! just copy components
+             E2%x = aimag(E1%x)
+             E2%y = aimag(E1%y)
+             E2%z = aimag(E1%z)
+             E2%gridType = E1%gridType
+
+          else
+             write (0, *) 'not compatible usage for imag_cvector_f'
+          end if
+
+       else
+
+          if(E2%allocated) then
+             ! first deallocate memory for x,y,z
+             deallocate(E2%x, E2%y, E2%z,STAT=status)
+          end if
+
+          !  then allocate E2 as correct size ...
+          Call create_rvector(E1%grid, E2, E1%gridType)
+          !   .... and copy E1
+          E2%x = aimag(E1%x)
+          E2%y = aimag(E1%y)
+          E2%z = aimag(E1%z)
+          E2%gridType = E1%gridType
+
+       end if
+
+    end if
+
+  end function imag_cvector_f  ! imag_cvector_f
 
   ! *************************************************************************
   ! * EdgeVolume creates volume elements centered around the edges of
@@ -2065,7 +2272,7 @@ Contains
     implicit none
     type (grid3d_t), intent(in)             :: inGr     ! input model
     type (rvector), intent(inout)         :: eV       ! edge volume
-    integer                               :: ix, iy, iz        
+    integer                               :: ix, iy, iz
     ! dummy variables
 
     ! Checks whether the size is the same
@@ -2109,7 +2316,7 @@ Contains
              do iy = 1,inGr%ny+1
                 do iz = 1,inGr%nz
 
-                   ! eV%z values are centered within dz. 
+                   ! eV%z values are centered within dz.
                    eV%z(ix, iy, iz) = inGr%delX(ix)*inGr%delY(iy)*&
                         inGr%dz(iz)
 

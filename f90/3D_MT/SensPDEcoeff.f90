@@ -93,12 +93,12 @@ module senspdecoeff
    call scMult_cvector(minus_i_omega_mu,Ctemp(1),Ctemp(1))
 
    ! map real/imag parts onto parameter space
-   call getReal_cvector(Ctemp(1),temp)
+   temp = real(Ctemp(1))
    call EdgeToModelParam(temp,dsigmaReal,sigma0)
 
    if(present(dsigmaImag)) then
       ! also compute imaginary part
-      call getImag_cvector(Ctemp(1),temp)
+      temp = imag(Ctemp(1))
       call EdgeToModelParam(temp,dsigmaImag,sigma0)
    endif
 

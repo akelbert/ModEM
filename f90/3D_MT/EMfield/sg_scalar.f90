@@ -1879,12 +1879,12 @@ Contains
              E3%v = E1%v * E2%v
 
           else
-             write (0, *) 'not compatible usage for diagMult_Node_MixedRC_f'
+             write (0, *) 'not compatible usage for diagMult_rcscalar_f'
           end if
 
        else
 
-          write(0, *) 'Error:diagMult_Node_MixedRC_f: scalars not same size'
+          write(0, *) 'Error:diagMult_rcscalar_f: scalars not same size'
 
        end if
     end if

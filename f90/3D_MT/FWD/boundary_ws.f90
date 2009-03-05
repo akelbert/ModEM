@@ -1,5 +1,5 @@
 ! *****************************************************************************
-! This module implements boundary conditions and first guess as in WS3D 
+! This module implements boundary conditions and first guess as in WS3D
 ! subroutine bound3d (in boundary.f)
 module boundary_ws
 
@@ -7,11 +7,11 @@ module boundary_ws
   use sg_scalar
   use sg_boundary
   use fwdtemod
-  
+
   implicit none
 
   ! Workhorse
-  public		:: BC_x0_WS	
+  public		:: BC_x0_WS
 
 Contains
 
@@ -19,12 +19,12 @@ Contains
   !****************************************************************************
   ! Generates boundary conditions and initial guess for the iterative solution.
   subroutine BC_x0_WS(imode,period,grid3D,Cond3D,E0,BC)
-    !  sets up boundary condtions in BC and initial electric 
-    !  field solution vector in E0 
-    !  E0 should be complex vector, allocated, usedfor = EDGE
+    !  sets up boundary condtions in BC and initial electric
+    !  field solution vector in E0
+    !  E0 should be complex vector, allocated, gridType = EDGE
     !  BC should be complex BC, allocated
 
-    !  Input mode, period 
+    !  Input mode, period
     integer, intent(in)		:: imode
     real(kind=prec)	:: period
     !  Input 3D grid
@@ -34,7 +34,7 @@ Contains
 
     ! Output electric field first guess (for iterative solver)
     type(cvector), intent(inout)	:: E0
-    ! Output boundary conditions 
+    ! Output boundary conditions
     type(cboundary), intent(inout)	:: BC
 
 
@@ -43,7 +43,7 @@ Contains
     type(grid2d_t)		        :: grid2D
     integer				:: iSlice,ih,iz,nEXB,nv,nh,nSlice
     integer				:: IER,istat
-    
+
     ! These are temporary work arrays
     ! Array for 2D solutions
     complex (kind=prec),allocatable, dimension(:,:)	:: Esol
@@ -121,7 +121,7 @@ Contains
        endif
        ! using conductivity for this slice set coefficients
        Call UpdateCondTE(Cond2D)
-       ! finish setting up operator and factor matrix 
+       ! finish setting up operator and factor matrix
        Call UpdateFreqTE(period)
        ! set BC for 2D problem
        Call SetBoundTE(period,EXB)
