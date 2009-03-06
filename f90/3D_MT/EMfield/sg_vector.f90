@@ -533,6 +533,7 @@ Contains
              E2%y = E1%y
              E2%z = E1%z
              E2%gridType = E1%gridType
+             E2%grid => E1%grid
 
           else
              write (0, *) 'not compatible usage for copy_rvector'
@@ -552,6 +553,7 @@ Contains
           E2%y = E1%y
           E2%z = E1%z
           E2%gridType = E1%gridType
+          E2%grid => E1%grid
 
        end if
 
@@ -584,6 +586,7 @@ Contains
              E2%y = E1%y
              E2%z = E1%z
              E2%gridType = E1%gridType
+             E2%grid => E1%grid
 
           else
              write (0, *) 'not compatible usage for copy_cvector'
@@ -603,6 +606,7 @@ Contains
           E2%y = E1%y
           E2%z = E1%z
           E2%gridType = E1%gridType
+          E2%grid => E1%grid
 
        end if
 
@@ -1842,7 +1846,7 @@ Contains
 
        else
 
-          write(0, *) 'Error:diagDircvector_f: vectors not same size'
+          write(0, *) 'Error:diagDiv_rcvector_f: vectors not same size'
 
        end if
     end if
@@ -1850,112 +1854,202 @@ Contains
   end function diagDiv_rcvector_f ! diagDiv_rcvector_f
 
 
-  !****************************************************************************
-  ! dotProd_rvector computes dot product of two vecors stored
+  ! ***************************************************************************
+  ! dotProd_rvector computes dot product of two vectors stored
   ! as derived data type rvector, returning a real number
   function dotProd_rvector_f(E1, E2) result(r)
 
     implicit none
     type (rvector), intent(in)   :: E1, E2
-    real (kind=prec)		     :: r
+	type (rvector)				 :: E3
+    real(kind=prec)		         :: r
+	integer						 :: nx,ny,nz
 
     r = R_ZERO
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
-       write(0,*) 'RHS not allocated yet for dotProd_rvector'
+       write(0,*) 'input vectors not allocated yet for dotProd_rvector_f'
        stop
     endif
+
+	E3 = E1
+	nx = E3%nx
+	ny = E3%ny
+	nz = E3%nz
+
+	if (E3%grid%coords == Spherical) then
+	  ! needs special treatment
+	  if (E3%gridType == EDGE) then
+		! delete duplicate edges
+		E3%y(nx+1,:,:) = R_ZERO
+		E3%z(nx+1,:,:) = R_ZERO
+		E3%z(2:nx,1,:) = R_ZERO
+		E3%z(2:nx,ny+1,:) = R_ZERO
+	  else if (E3%gridType == FACE) then
+		! delete duplicate faces
+		E3%x(nx+1,:,:) = R_ZERO
+	  else
+		write(0,*) 'unknown gridType ',trim(E3%gridType),' in dotProd_rvector_f'
+	  end if
+	else if (E3%grid%coords == Cartesian) then
+	  ! do nothing
+	else
+	  write(0,*) 'unknown coordinate system ',trim(E3%grid%coords),' in dotProd_rvector_f'
+	  stop
+	end if
 
     ! Check whether both input vectors are of the same size
     if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
 
        if ((E1%gridType == E2%gridType)) then
 
-          r = r + sum(E1%x * E2%x)
-          r = r + sum(E1%y * E2%y)
-          r = r + sum(E1%z * E2%z)
+          r = r + sum(E3%x * E2%x)
+          r = r + sum(E3%y * E2%y)
+          r = r + sum(E3%z * E2%z)
 
        else
-          write (0, *) 'dotProd_rvector: not compatible usage'
+          write (0,*) 'not compatible input vectors in dotProd_rvector_f'
        end if
 
     else
 
-       write(0, *) 'Error:dotProd_rvector: vectors not same size'
+       write(0,*) 'vectors not the same size in dotProd_rvector_f'
 
     end if
 
-  end function dotProd_rvector_f  ! dotProd_rvector
+  end function dotProd_rvector_f  ! dotProd_rvector_f
 
-  !****************************************************************************
-  ! dotProd_cvector computes dot product of two vecors stored
+
+  ! ***************************************************************************
+  ! dotProd_cvector computes dot product of two vectors stored
   ! as derived data type cvector, returning a complex number
   function dotProd_cvector_f(E1, E2) result(c)
 
     implicit none
     type (cvector), intent(in)       :: E1, E2
-    complex(kind=prec)		     :: c
+	type (cvector)					 :: E3
+    complex(kind=prec)		         :: c
+	integer						     :: nx,ny,nz
 
-    c = C_ZERO
+    c = R_ZERO
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
-       write(0,*) 'RHS not allocated yet for dotProd_cvector'
+       write(0,*) 'RHS not allocated yet for dotProdCC'
        stop
     endif
 
-    ! Check whether both input vectors are of the same size
+ 	E3 = E1
+	nx = E3%nx
+	ny = E3%ny
+	nz = E3%nz
+
+	if (E3%grid%coords == Spherical) then
+	  ! needs special treatment
+	  if (E3%gridType == EDGE) then
+		! delete duplicate edges
+		E3%y(nx+1,:,:) = C_ZERO
+		E3%z(nx+1,:,:) = C_ZERO
+		E3%z(2:nx,1,:) = C_ZERO
+		E3%z(2:nx,ny+1,:) = C_ZERO
+	  else if (E3%gridType == FACE) then
+		! delete duplicate faces
+		E3%x(nx+1,:,:) = C_ZERO
+	  else
+		write(0,*) 'unknown gridType ',trim(E3%gridType),' in dotProd_cvector_f'
+	  end if
+	else if (E3%grid%coords == Cartesian) then
+	  ! do nothing
+	else
+	  write(0,*) 'unknown coordinate system ',trim(E3%grid%coords),' in dotProd_cvector_f'
+	  stop
+	end if
+
+   ! Check whether both input vectors are of the same size
     if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
 
        if ((E1%gridType == E2%gridType)) then
 
-          c = c + sum(conjg(E1%x) * E2%x)
-          c = c + sum(conjg(E1%y) * E2%y)
-          c = c + sum(conjg(E1%z) * E2%z)
+          c = c + sum(conjg(E3%x) * E2%x)
+          c = c + sum(conjg(E3%y) * E2%y)
+          c = c + sum(conjg(E3%z) * E2%z)
 
        else
-          write (0, *) 'dotProd_cvector: not compatible usage'
+          write (0, *) 'not compatible input vectors in dotProd_cvector_f'
        end if
 
     else
 
-       write(0, *) 'Error:dotProd_cvector: vectors not same size'
+       write(0, *) 'vectors not the same size in dotProd_cvector_f'
 
     end if
 
   end function dotProd_cvector_f ! dotProd_cvector
 
-  !****************************************************************************
-  ! dotProd_noConj_cvector computes dot product of two vecors stored
-  ! as derived data type cvector, returning a complex number
-  !  IN THIS VERSION CONJUGATES ARE NOT USED
 
+  ! ***************************************************************************
+  ! dotProd_noConj_cvector computes dot product of two vectors stored
+  ! as derived data type cvector, returning a complex number
   function dotProd_noConj_cvector_f(E1, E2) result(c)
 
     implicit none
     type (cvector), intent(in)       :: E1, E2
-    complex(kind=prec)		     :: c
+	type (cvector)					 :: E3
+    complex(kind=prec)		         :: c
+	integer						     :: nx,ny,nz
 
-    c = C_ZERO
+    c = R_ZERO
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
-       write(0,*) 'RHS not allocated yet for dotProd_noConj_cvector'
+       write(0,*) 'RHS not allocated yet for dotProdCC'
        stop
     endif
 
-    ! Check whether both input vectors are of the same size
+ 	E3 = E1
+	nx = E3%nx
+	ny = E3%ny
+	nz = E3%nz
+
+	if (E3%grid%coords == Spherical) then
+	  ! needs special treatment
+	  if (E3%gridType == EDGE) then
+		! delete duplicate edges
+		E3%y(nx+1,:,:) = C_ZERO
+		E3%z(nx+1,:,:) = C_ZERO
+		E3%z(2:nx,1,:) = C_ZERO
+		E3%z(2:nx,ny+1,:) = C_ZERO
+	  else if (E3%gridType == FACE) then
+		! delete duplicate faces
+		E3%x(nx+1,:,:) = C_ZERO
+	  else
+		write(0,*) 'unknown gridType ',trim(E3%gridType),' in dotProd_noConj_cvector_f'
+	  end if
+	else if (E3%grid%coords == Cartesian) then
+	  ! do nothing
+	else
+	  write(0,*) 'unknown coordinate system ',trim(E3%grid%coords),' in dotProd_noConj_cvector_f'
+	  stop
+	end if
+
+   ! Check whether both input vectors are of the same size
     if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
+
        if ((E1%gridType == E2%gridType)) then
-          c = c + sum(E1%x * E2%x)
-          c = c + sum(E1%y * E2%y)
-          c = c + sum(E1%z * E2%z)
+
+          c = c + sum(E3%x * E2%x)
+          c = c + sum(E3%y * E2%y)
+          c = c + sum(E3%z * E2%z)
+
        else
-          write (0, *) 'dotProd_noConj_cvector: not compatible usage'
+          write (0, *) 'not compatible input vectors in dotProd_noConj_cvector_f'
        end if
+
     else
-       write(0, *) 'Error:dotProd_noConj_cvector: vectors not same size'
+
+       write(0, *) 'vectors not the same size in dotProd_noConj_cvector_f'
+
     end if
 
-  end function dotProd_noConj_cvector_f ! dotProd_cvector
+  end function dotProd_noConj_cvector_f ! dotProd__noConj_cvector_f
 
 
   !****************************************************************************
