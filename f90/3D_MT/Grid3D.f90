@@ -34,7 +34,7 @@ module grid3d
   type :: grid3d_t
 
      ! Grid coordinate system; important - used in EMfield
-     character (len=80)			:: coords
+     character (len=80)			:: coords = Cartesian
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction

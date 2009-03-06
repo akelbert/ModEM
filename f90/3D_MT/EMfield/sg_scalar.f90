@@ -360,12 +360,12 @@ Contains
     E%allocated = status .EQ. 0
 
     if (E%allocated) then
-       E%v = 0.0
+       E%v = R_ZERO
     end if
 
   end subroutine create_rscalar  ! create_rscalar
 
-  !****************************************************************************
+  ! ***************************************************************************
   ! create_cscalar creates variable of derived type cscalar,
   ! using grid definition in structure "grid" ;
   ! allocates memory in v component array
@@ -373,7 +373,7 @@ Contains
   subroutine create_cscalar(igrid, E, gridType)
 
     implicit none
-    type(grid3d_t), target, intent(in)     :: igrid
+    type (grid3d_t), target, intent(in)     :: igrid
     ! the grid for which an scalar (center or corner) node field is being
     ! initialized
     type (cscalar), intent(inout)       :: E
@@ -928,7 +928,7 @@ Contains
 
   !****************************************************************************
   ! copy_cscalar makes an exact copy of derived data type
-  ! cscalar;
+  ! cscalar; and NOTE: E2 is the output
   subroutine copy_cscalar(E2, E1)
 
     implicit none
@@ -995,8 +995,7 @@ Contains
 
   !****************************************************************************
   ! zero_cscalar zeros variable of derived data type
-  ! cscalar;
-
+  ! cscalar
   subroutine zero_cscalar(E)
 
     implicit none
@@ -1794,7 +1793,7 @@ Contains
 
        else
 
-          write(0, *) 'Error:diagMult_Node_MixedCR_f: scalars not same size'
+          write(0, *) 'Error:diagMult_crscalar_f: scalars not same size'
 
        end if
     end if
@@ -1900,7 +1899,7 @@ Contains
     type (rscalar), intent(in)   :: E1, E2
     real (kind=prec)		     :: r
 
-    r = 0.0
+    r = R_ZERO
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProd_rscalar'
@@ -1973,7 +1972,7 @@ Contains
     !   input scalars
     type (cscalar), intent(in)             :: E1, E2
     !  input complex scalars
-    complex (kind=8), intent(in)           :: inc1, inc2
+    complex (kind=prec), intent(in)           :: inc1, inc2
     type (cscalar), intent(inout)          :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
@@ -2050,5 +2049,6 @@ Contains
     end if
 
   end subroutine scMultAdd_cscalar ! scMultAdd_cscalar
+
 
 end module sg_scalar ! sg_scalar
