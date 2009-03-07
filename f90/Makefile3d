@@ -1,7 +1,7 @@
 # Makefile suited for building the Mod3DMT program
 # Generated using: ./fmkmf.pl [OPTIONS] Mod3DMT.f90 > Makefile
 # with command line options
-# -p .:INV:LAPACK:SENS:UTILS:3D_MT:3D_MT/modelParam:3D_MT/FWD:3D_MT/FWD/Mod2d:3D_MT/EMfield:3D_MT/ioMod
+# -p .:INV:LAPACK:SENS:UTILS:FIELDS/FiniteDiff3D:3D_MT:3D_MT/modelParam:3D_MT/FWD:3D_MT/FWD/Mod2d:3D_MT/ioMod
 # -f90 ifort (compiler)
 # -opt -O3 (compiler optimisation)
 # -l -lblas -llapack (linking options)
@@ -65,20 +65,20 @@ $(OBJDIR)/DataSpace.o:SENS/DataSpace.f90 $(OBJDIR)/utilities.o $(OBJDIR)/math_co
 $(OBJDIR)/Grid3D.o:3D_MT/Grid3D.f90 $(OBJDIR)/math_constants.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/Grid3D.f90 -o $(OBJDIR)/Grid3D.o
 
-$(OBJDIR)/sg_scalar.o:3D_MT/EMfield/sg_scalar.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o 
-	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/EMfield/sg_scalar.f90 -o $(OBJDIR)/sg_scalar.o
+$(OBJDIR)/sg_scalar.o:FIELDS/FiniteDiff3D/sg_scalar.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_scalar.f90 -o $(OBJDIR)/sg_scalar.o
 
-$(OBJDIR)/sg_vector.o:3D_MT/EMfield/sg_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o 
-	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/EMfield/sg_vector.f90 -o $(OBJDIR)/sg_vector.o
+$(OBJDIR)/sg_vector.o:FIELDS/FiniteDiff3D/sg_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_vector.f90 -o $(OBJDIR)/sg_vector.o
 
-$(OBJDIR)/sg_sparse_vector.o:3D_MT/EMfield/sg_sparse_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o $(OBJDIR)/sg_vector.o 
-	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/EMfield/sg_sparse_vector.f90 -o $(OBJDIR)/sg_sparse_vector.o
+$(OBJDIR)/sg_sparse_vector.o:FIELDS/FiniteDiff3D/sg_sparse_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o $(OBJDIR)/sg_vector.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_sparse_vector.f90 -o $(OBJDIR)/sg_sparse_vector.o
 
 $(OBJDIR)/ModelParameter.o:3D_MT/modelParam/ModelParameter.f90 $(OBJDIR)/Grid3D.o $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o 3D_MT/modelParam/modelCov/RecursiveAR.hd 3D_MT/modelParam/CondMap.inc 3D_MT/modelParam/modelCov/RecursiveAR.inc 3D_MT/modelParam/modelParamIO/Binary.inc 3D_MT/modelParam/modelParamIO/Mackie.inc 3D_MT/modelParam/modelParamIO/WS.inc
 	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/modelParam/ModelParameter.f90 -o $(OBJDIR)/ModelParameter.o
 
-$(OBJDIR)/sg_boundary.o:3D_MT/EMfield/sg_boundary.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o $(OBJDIR)/sg_vector.o 
-	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/EMfield/sg_boundary.f90 -o $(OBJDIR)/sg_boundary.o
+$(OBJDIR)/sg_boundary.o:FIELDS/FiniteDiff3D/sg_boundary.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o $(OBJDIR)/sg_vector.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_boundary.f90 -o $(OBJDIR)/sg_boundary.o
 
 $(OBJDIR)/SolnRHS.o:3D_MT/SolnRHS.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/sg_sparse_vector.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/SolnRHS.f90 -o $(OBJDIR)/SolnRHS.o
@@ -95,8 +95,8 @@ $(OBJDIR)/MeasComb.o:SENS/MeasComb.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/util
 $(OBJDIR)/SensPDEcoeff.o:3D_MT/SensPDEcoeff.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/DataFunc.o $(OBJDIR)/sg_vector.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/SensPDEcoeff.f90 -o $(OBJDIR)/SensPDEcoeff.o
 
-$(OBJDIR)/sg_diff_oper.o:3D_MT/EMfield/sg_diff_oper.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_scalar.o 
-	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/EMfield/sg_diff_oper.f90 -o $(OBJDIR)/sg_diff_oper.o
+$(OBJDIR)/sg_diff_oper.o:FIELDS/FiniteDiff3D/sg_diff_oper.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_scalar.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_diff_oper.f90 -o $(OBJDIR)/sg_diff_oper.o
 
 $(OBJDIR)/GridCalc.o:3D_MT/GridCalc.f90 $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_scalar.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/GridCalc.f90 -o $(OBJDIR)/GridCalc.o

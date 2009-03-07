@@ -1,0 +1,83 @@
+! *****************************************************************************
+module global
+	! Module global is used by all other modules, except for the input module,
+	! which initializes the variables. There, to make the code clear, we pass
+	! them as arguments. Otherwise, these variables are assumed known.
+	! This is crucial, since some of the data contains pointers to values
+	! stored here. These global variables are initialized in the module main.
+
+  use grid3d
+  use modeldef
+  use datadef
+  use iotypes
+  implicit none
+
+  !save
+
+  ! ***************************************************************************
+  ! * dictionaries of receivers, transmitters and transfer functions
+  type (Obs_List), save								:: obsList
+  type (Freq_List), save								:: freqList
+  type (TF_List), save								:: TFList
+
+  ! ***************************************************************************
+  ! * user-defined list of radii in meters at which we output the solution 
+  type (Rad_List), save								:: slices
+
+  ! ***************************************************************************
+  ! * rho: storing the model on the grid - resistivity defined in cell centres
+  real(8), allocatable, dimension(:,:,:), save		:: rho	!(nx,ny,nz)
+
+  ! ***************************************************************************
+  ! * grid: Contains the information about the user-specified grid
+  type (grid3d_t), save								:: grid
+
+  ! ***************************************************************************
+  ! * shell: Contains the information about thin-shell conductance
+  type (shell_info), save								:: crust
+
+  ! ***************************************************************************
+  ! * param: Contains the information about the user-specified parametrization
+  type (param_info), save								:: p_input
+  type (param_info), save								:: p0_input
+  type (param_info), save								:: p_smooth
+  type (param_info), save								:: p_diff
+  type (param_info), save								:: param
+  type (param_info), save								:: param0
+
+  ! ***************************************************************************
+  ! * cUserDef: Vital character-based information specified by the user
+  ! * outFiles: Information about output file names; extensions are hard-coded
+  ! * fwdCtrls: User-specified information about the forward solver relaxations
+  type (input_info), save								:: cUserDef
+  type (output_info),save							:: outFiles
+  type (relaxation),save								:: fwdCtrls
+
+
+  ! ***************************************************************************
+  ! * misfitType: preconditioning and regularisation parameters
+  type (misfit_def)								:: misfitType
+
+  ! ***************************************************************************
+  ! * some common integers are stored here to simplify the code 
+  !integer										:: nfreq,ifreq
+  !integer               						:: nobs, iobs
+  !integer										:: nfunc, ifunc
+  !integer										:: nvar, ivar, ilayer
+  !integer										:: ncoeff, icoeff
+  integer										:: nfreq
+  integer               						:: nobs
+  integer										:: nfunc
+  integer										:: nvar
+  integer										:: ncoeff
+
+
+  ! Dimensions:
+  ! nvar = total number of variable parameters (n)
+  ! nobs = total number of observatories in the analysis
+  !		  (compare to $m_\omega$ = total number of observations for freq. omega)
+  ! 3*np1 = number of vector components on cell edges (|E|)
+  ! nx*ny*nz = number of scalar values at cell centers (|G|) 
+  ! nfreq = number of frequency loops
+
+end module global

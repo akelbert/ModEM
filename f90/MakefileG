@@ -1,0 +1,185 @@
+# Makefile suited for building the Global3D program
+# Generated using: ./fmkmf.pl [OPTIONS] Global3D.f90 > Makefile
+# with command line options
+# -p .:INV:LAPACK:SENS:UTILS:FIELDS/FiniteDiff3D:EARTH:EARTH/modelParam:EARTH/FWD:EARTH/EMfield:EARTH/ioMod:EARTH/Basics:EARTH/Jacobian
+# -f90 pgf95 (compiler)
+# -opt -g -Mprof=lines -Mbounds (compiler optimisation)
+# -l -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines (linking options)
+# -o ./objs/EARTH/Debug (output directory for object files)
+
+#  Uncomment these lines to make program for Solaris OS
+# F90 = f90
+# FFLAGS = -dalign -g -C -w  -L/usr/local/lib
+# LIBS = -xlic_lib=sunperf
+#  Uncomment these lines to make program with g95
+# F90 = g95
+# FFLAGS = -O2
+# FFLAGS = -g -ftrace=frame -fbounds-check
+# MODULE = -fmod=$(OBJDIR)
+# LIBS = -lblas -llapack
+#  Uncomment these lines to make program with Intel compiler
+# F90 = ifort
+# FFLAGS = -O3
+# FFLAGS = -g -debug all
+# MODULE = -module $(OBJDIR)
+# LIBS = -lblas -llapack
+#  Uncomment these lines to make program with PGI compiler
+# F90 = pgf95
+# FFLAGS = -O3
+# FFLAGS = -g -Mprof=lines -Mbounds
+# MODULE = -module $(OBJDIR)
+# LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines
+
+# ------------------Macro-Defs---------------------
+include Makefile.local
+OBJDIR = ./objs/EARTH/Release
+F90 = ifort 
+FFLAGS = -O3
+MODULE = -module $(OBJDIR)
+LIBS = -lblas -llapack
+
+# -------------------End-macro-Defs---------------------------
+OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o $(OBJDIR)/utilities.o $(OBJDIR)/polpak.o $(OBJDIR)/paramfunc.o $(OBJDIR)/modeldef.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/datadef.o $(OBJDIR)/iotypes.o $(OBJDIR)/model_operators.o $(OBJDIR)/input.o $(OBJDIR)/iospec.o $(OBJDIR)/interp.o $(OBJDIR)/modelmap.o $(OBJDIR)/global.o $(OBJDIR)/grid_orig.o $(OBJDIR)/field_vectors.o $(OBJDIR)/data_vectors.o $(OBJDIR)/dimensions.o $(OBJDIR)/boundaries.o $(OBJDIR)/elements.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/Main.o $(OBJDIR)/responses.o $(OBJDIR)/functionals.o $(OBJDIR)/output.o $(OBJDIR)/coreFwd.o $(OBJDIR)/wrapper.o $(OBJDIR)/maxwells.o $(OBJDIR)/interp_orig.o $(OBJDIR)/output_orig.o $(OBJDIR)/dataFunc.o $(OBJDIR)/sg_spherical.o $(OBJDIR)/jacobian.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/Global3D.o 
+
+
+all: Global3D 
+
+# Here is the link step 
+Global3D: $(OBJDIR) $(OBJ) 
+	 $(F90) -o $(OUTDIR)/Global3D $(OBJ) $(LIBS) 
+
+# Here are the compile steps 
+
+$(OBJDIR): 
+	mkdir -p $(OBJDIR)
+
+$(OBJDIR)/math_constants.o:UTILS/math_constants.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) UTILS/math_constants.f90 -o $(OBJDIR)/math_constants.o
+
+$(OBJDIR)/Grid3D.o:EARTH/Grid3D.f90 $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Grid3D.f90 -o $(OBJDIR)/Grid3D.o
+
+$(OBJDIR)/utilities.o:UTILS/utilities.f90 $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) UTILS/utilities.f90 -o $(OBJDIR)/utilities.o
+
+$(OBJDIR)/polpak.o:UTILS/polpak.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) UTILS/polpak.f90 -o $(OBJDIR)/polpak.o
+
+$(OBJDIR)/paramfunc.o:EARTH/modelParam/paramfunc.f90 $(OBJDIR)/polpak.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/modelParam/paramfunc.f90 -o $(OBJDIR)/paramfunc.o
+
+$(OBJDIR)/modeldef.o:EARTH/modelParam/modeldef.f90 $(OBJDIR)/paramfunc.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/modelParam/modeldef.f90 -o $(OBJDIR)/modeldef.o
+
+$(OBJDIR)/sg_scalar.o:FIELDS/FiniteDiff3D/sg_scalar.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_scalar.f90 -o $(OBJDIR)/sg_scalar.o
+
+$(OBJDIR)/sg_vector.o:FIELDS/FiniteDiff3D/sg_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_vector.f90 -o $(OBJDIR)/sg_vector.o
+
+$(OBJDIR)/sg_sparse_vector.o:FIELDS/FiniteDiff3D/sg_sparse_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o $(OBJDIR)/sg_vector.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_sparse_vector.f90 -o $(OBJDIR)/sg_sparse_vector.o
+
+$(OBJDIR)/datadef.o:EARTH/Basics/datadef.f90 $(OBJDIR)/Grid3D.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_sparse_vector.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Basics/datadef.f90 -o $(OBJDIR)/datadef.o
+
+$(OBJDIR)/iotypes.o:EARTH/ioMod/iotypes.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/ioMod/iotypes.f90 -o $(OBJDIR)/iotypes.o
+
+$(OBJDIR)/model_operators.o:EARTH/modelParam/model_operators.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/modeldef.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/modelParam/model_operators.f90 -o $(OBJDIR)/model_operators.o
+
+$(OBJDIR)/input.o:EARTH/ioMod/input.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/Grid3D.o $(OBJDIR)/utilities.o $(OBJDIR)/modeldef.o $(OBJDIR)/datadef.o $(OBJDIR)/iotypes.o $(OBJDIR)/model_operators.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/ioMod/input.f90 -o $(OBJDIR)/input.o
+
+$(OBJDIR)/iospec.o:EARTH/ioMod/iospec.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/ioMod/iospec.f90 -o $(OBJDIR)/iospec.o
+
+$(OBJDIR)/interp.o:EARTH/Jacobian/interp.f90 $(OBJDIR)/modeldef.o $(OBJDIR)/datadef.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/utilities.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Jacobian/interp.f90 -o $(OBJDIR)/interp.o
+
+$(OBJDIR)/modelmap.o:EARTH/modelParam/modelmap.f90 $(OBJDIR)/Grid3D.o $(OBJDIR)/modeldef.o $(OBJDIR)/paramfunc.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/modelParam/modelmap.f90 -o $(OBJDIR)/modelmap.o
+
+$(OBJDIR)/global.o:EARTH/Basics/global.f90 $(OBJDIR)/Grid3D.o $(OBJDIR)/modeldef.o $(OBJDIR)/datadef.o $(OBJDIR)/iotypes.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Basics/global.f90 -o $(OBJDIR)/global.o
+
+$(OBJDIR)/grid_orig.o:EARTH/Basics/grid_orig.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Basics/grid_orig.f90 -o $(OBJDIR)/grid_orig.o
+
+$(OBJDIR)/field_vectors.o:EARTH/Basics/field_vectors.f90 $(OBJDIR)/Grid3D.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Basics/field_vectors.f90 -o $(OBJDIR)/field_vectors.o
+
+$(OBJDIR)/data_vectors.o:EARTH/Basics/data_vectors.f90 $(OBJDIR)/datadef.o $(OBJDIR)/modeldef.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Basics/data_vectors.f90 -o $(OBJDIR)/data_vectors.o
+
+$(OBJDIR)/dimensions.o:EARTH/Basics/dimensions.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Basics/dimensions.f90 -o $(OBJDIR)/dimensions.o
+
+$(OBJDIR)/boundaries.o:EARTH/Basics/boundaries.f90 $(OBJDIR)/sg_sparse_vector.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Basics/boundaries.f90 -o $(OBJDIR)/boundaries.o
+
+$(OBJDIR)/elements.o:EARTH/Basics/elements.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Basics/elements.f90 -o $(OBJDIR)/elements.o
+
+$(OBJDIR)/ringcurrent.o:EARTH/FWD/ringcurrent.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/elements.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/FWD/ringcurrent.f90 -o $(OBJDIR)/ringcurrent.o
+
+$(OBJDIR)/Main.o:EARTH/Main.f90 $(OBJDIR)/input.o $(OBJDIR)/iospec.o $(OBJDIR)/iotypes.o $(OBJDIR)/interp.o $(OBJDIR)/math_constants.o $(OBJDIR)/model_operators.o $(OBJDIR)/modeldef.o $(OBJDIR)/modelmap.o $(OBJDIR)/global.o $(OBJDIR)/grid_orig.o $(OBJDIR)/field_vectors.o $(OBJDIR)/data_vectors.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/dimensions.o $(OBJDIR)/dimensions.o $(OBJDIR)/boundaries.o $(OBJDIR)/ringcurrent.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Main.f90 -o $(OBJDIR)/Main.o
+
+$(OBJDIR)/responses.o:EARTH/Jacobian/responses.f90 $(OBJDIR)/datadef.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/interp.o $(OBJDIR)/global.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Jacobian/responses.f90 -o $(OBJDIR)/responses.o
+
+$(OBJDIR)/functionals.o:EARTH/Jacobian/functionals.f90 $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Jacobian/functionals.f90 -o $(OBJDIR)/functionals.o
+
+$(OBJDIR)/output.o:EARTH/ioMod/output.f90 $(OBJDIR)/iotypes.o $(OBJDIR)/iospec.o $(OBJDIR)/Grid3D.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/modeldef.o $(OBJDIR)/responses.o $(OBJDIR)/functionals.o $(OBJDIR)/model_operators.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/ioMod/output.f90 -o $(OBJDIR)/output.o
+
+$(OBJDIR)/coreFwd.o:EARTH/FWD/coreFwd.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/elements.o $(OBJDIR)/dimensions.o $(OBJDIR)/iospec.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/FWD/coreFwd.f90 -o $(OBJDIR)/coreFwd.o
+
+$(OBJDIR)/wrapper.o:EARTH/FWD/wrapper.f90 $(OBJDIR)/dimensions.o $(OBJDIR)/elements.o $(OBJDIR)/Grid3D.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/elements.o $(OBJDIR)/global.o $(OBJDIR)/elements.o $(OBJDIR)/global.o $(OBJDIR)/elements.o $(OBJDIR)/global.o $(OBJDIR)/Grid3D.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/FWD/wrapper.f90 -o $(OBJDIR)/wrapper.o
+
+$(OBJDIR)/maxwells.o:EARTH/FWD/maxwells.f90 $(OBJDIR)/modeldef.o $(OBJDIR)/grid_orig.o $(OBJDIR)/field_vectors.o $(OBJDIR)/math_constants.o $(OBJDIR)/coreFwd.o $(OBJDIR)/wrapper.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/FWD/maxwells.f90 -o $(OBJDIR)/maxwells.o
+
+$(OBJDIR)/interp_orig.o:EARTH/Jacobian/interp_orig.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Jacobian/interp_orig.f90 -o $(OBJDIR)/interp_orig.o
+
+$(OBJDIR)/output_orig.o:EARTH/ioMod/output_orig.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/elements.o $(OBJDIR)/interp_orig.o $(OBJDIR)/iospec.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/ioMod/output_orig.f90 -o $(OBJDIR)/output_orig.o
+
+$(OBJDIR)/dataFunc.o:EARTH/Jacobian/dataFunc.f90 $(OBJDIR)/global.o $(OBJDIR)/modeldef.o $(OBJDIR)/datadef.o $(OBJDIR)/Grid3D.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/interp.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Jacobian/dataFunc.f90 -o $(OBJDIR)/dataFunc.o
+
+$(OBJDIR)/sg_spherical.o:FIELDS/FiniteDiff3D/sg_spherical.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/sg_vector.o $(OBJDIR)/utilities.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_spherical.f90 -o $(OBJDIR)/sg_spherical.o
+
+$(OBJDIR)/jacobian.o:EARTH/Jacobian/jacobian.f90 $(OBJDIR)/modeldef.o $(OBJDIR)/model_operators.o $(OBJDIR)/elements.o $(OBJDIR)/dimensions.o $(OBJDIR)/Grid3D.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_spherical.o $(OBJDIR)/wrapper.o $(OBJDIR)/maxwells.o $(OBJDIR)/field_vectors.o $(OBJDIR)/boundaries.o $(OBJDIR)/boundaries.o $(OBJDIR)/boundaries.o $(OBJDIR)/global.o $(OBJDIR)/global.o $(OBJDIR)/global.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Jacobian/jacobian.f90 -o $(OBJDIR)/jacobian.o
+
+$(OBJDIR)/initFields.o:EARTH/FWD/initFields.f90 $(OBJDIR)/grid_orig.o $(OBJDIR)/field_vectors.o $(OBJDIR)/dimensions.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/coreFwd.o $(OBJDIR)/global.o $(OBJDIR)/wrapper.o $(OBJDIR)/sg_sparse_vector.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/FWD/initFields.f90 -o $(OBJDIR)/initFields.o
+
+$(OBJDIR)/dataMisfit.o:EARTH/Jacobian/dataMisfit.f90 $(OBJDIR)/global.o $(OBJDIR)/responses.o $(OBJDIR)/functionals.o $(OBJDIR)/model_operators.o $(OBJDIR)/iotypes.o $(OBJDIR)/iospec.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/Jacobian/dataMisfit.f90 -o $(OBJDIR)/dataMisfit.o
+
+$(OBJDIR)/Global3D.o:Global3D.f90 $(OBJDIR)/Main.o $(OBJDIR)/output.o $(OBJDIR)/global.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/dimensions.o $(OBJDIR)/field_vectors.o $(OBJDIR)/data_vectors.o $(OBJDIR)/global.o $(OBJDIR)/field_vectors.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/maxwells.o $(OBJDIR)/output_orig.o $(OBJDIR)/Grid3D.o $(OBJDIR)/data_vectors.o $(OBJDIR)/global.o $(OBJDIR)/dataFunc.o $(OBJDIR)/jacobian.o $(OBJDIR)/output.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/boundaries.o $(OBJDIR)/data_vectors.o $(OBJDIR)/global.o $(OBJDIR)/jacobian.o $(OBJDIR)/boundaries.o $(OBJDIR)/output.o $(OBJDIR)/initFields.o $(OBJDIR)/dataFunc.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/data_vectors.o $(OBJDIR)/global.o $(OBJDIR)/jacobian.o $(OBJDIR)/boundaries.o $(OBJDIR)/output.o $(OBJDIR)/initFields.o $(OBJDIR)/dataFunc.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/data_vectors.o $(OBJDIR)/global.o $(OBJDIR)/jacobian.o $(OBJDIR)/boundaries.o $(OBJDIR)/output.o $(OBJDIR)/initFields.o $(OBJDIR)/dataFunc.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/data_vectors.o $(OBJDIR)/global.o $(OBJDIR)/jacobian.o $(OBJDIR)/output.o $(OBJDIR)/modelmap.o $(OBJDIR)/initFields.o $(OBJDIR)/dataFunc.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/sg_spherical.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) Global3D.f90 -o $(OBJDIR)/Global3D.o
+
+# Type " make clean " to get rid of all object and module files 
+clean: 
+	cd $(OBJDIR); \
+	rm -f *~ *.o *.obj *.mod *.d *.s00 *.dbg *.stackdump \
+	`find . -mindepth 1 -name "*~"` 
+
+cleanall: clean 
+	rm -f $(OUTDIR)/Global3D 
+
+src: clean 
+	tar cvfz $(ARCHIVE).tgz * 
+
+  
