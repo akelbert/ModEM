@@ -98,9 +98,9 @@ Contains
 
 		write(*,'(a10)',advance='no') trim(comment)//':'
 		write(*,'(a3,es12.6)',advance='no') ' f=',f
-		write(*,'(a5,f10.6)',advance='no') ' rms=',rms
+		write(*,'(a5,f11.6)',advance='no') ' rms=',rms
 		write(*,'(a8,f9.6)',advance='no') ' lambda=',lambda
-		write(*,'(a7,f9.6)') ' alpha=',alpha
+		write(*,'(a7,es12.6)') ' alpha=',alpha
 
    end subroutine printf
 

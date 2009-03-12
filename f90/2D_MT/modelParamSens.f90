@@ -13,7 +13,7 @@
 !        conductivity parameterization
 
 !
-module senspdecoeff
+module modelParamSens
    use math_constants
    use utilities
    use datafunc 	!!!! inherit: soln2d modelparameter
@@ -279,4 +279,4 @@ module senspdecoeff
    end subroutine PmultT
 
    !**********************************************************************
-end module senspdecoeff
+end module modelParamSens

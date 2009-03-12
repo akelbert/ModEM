@@ -3,7 +3,7 @@ module sensMatrix
 use math_constants
 use utilities
 use meascomb	 !!!!  inherits : dataspace, dataFunc, solnrhs
-use senspdecoeff  !!!  inherits : modelspace, soln2d
+use modelparamsens  !!!  inherits : modelspace, soln2d
 use emsolver
 
 implicit none
@@ -25,7 +25,7 @@ Contains
    !   2)  call setWSparams to set grid dimensions inside
    !         WS forward modeling module
    !   3)  set up transmitter and receiver dictionaries;
-   !       "pointers" to entries in these dictionaries are 
+   !       "pointers" to entries in these dictionaries are
    !        attached to multi-transmitter data vector d .
    !        Note that the actual frequencies used for the
    !        solver are extracted from the transmitter dictionary
@@ -37,22 +37,22 @@ Contains
    type(dvecMTX), intent(inout)	:: d
    !   sigma0 is background conductivity parameter
    type(modelParam_t), intent(in)	:: sigma0
-   !   dsigma is the output array of data sensitivities, 
+   !   dsigma is the output array of data sensitivities,
    !   one for each element in the data array.  Each sensitivity
-   !    is an element of type modelParam, an abstract 
+   !    is an element of type modelParam, an abstract
    !    data type that defines the unknow conductivity
    type(modelParam_t), pointer   :: dsigma(:)
 
    !  local variables
    type(EMsoln)		:: e,e0
    type(EMrhs)		:: comb
-   integer 		:: j,nTx,k,nSite,nTot,ii,iTx, & 
+   integer 		:: j,nTx,k,nSite,nTot,ii,iTx, &
 				iDT,nfunc,ncomp,iRx,iFunc
    type(EMsparse), pointer	:: L(:),Q(:)
    logical 		:: calcQ
-   
+
    ! nTX is number of transmitters; nTot is number of real data
-   nTx = d%nTx 
+   nTx = d%nTx
    nTot = d%Ndata
 
    if(.not.associated(dsigma)) then
@@ -84,7 +84,7 @@ Contains
       ! get data type info for this dvec: here we allow for either
       !  real or complex data, though we always store as real
       !  Complex data come in pairs, stored as two succesive
-      !  "components" in the dvec structure.  
+      !  "components" in the dvec structure.
       !  "isComplex" is an attribute of a dvec structure; can
       !  be different for different dvecs within the overall data
       !  vector
@@ -104,7 +104,7 @@ Contains
       endif
       allocate(L(nFunc))
       allocate(Q(nFunc))
- 
+
       ! loop over sites, computing sensitivity for all components
       !   for each site
       do k = 1,nSite
@@ -183,7 +183,7 @@ Contains
       endif
    endif
 
-   ! loop over frequencies : solve forward system twice, 
+   ! loop over frequencies : solve forward system twice,
    !    to compute background, perturbation solutions
    !    apply data functionals (linearized about background soln)
    !    to perturbation solution
@@ -192,7 +192,7 @@ Contains
       !   get indices into dictionaries for this dvec
       iTx = d%d(j)%tx
       iDT = d%d(j)%dataType
-   
+
       !  manage any necessary initilization for this transmitter
       call initSolver(iTx,sigma0,e0,e,comb)
 
@@ -203,9 +203,9 @@ Contains
          !  solve forward problem; result is stored in e0
          call fwdSolve(iTx,e0)
       endif
-      
-      !  compute rhs (stored in comb) for forward sensitivity 
-      !  calculation, using conductivity perturbations and 
+
+      !  compute rhs (stored in comb) for forward sensitivity
+      !  calculation, using conductivity perturbations and
       !  background soln:
       call Pmult(e0,sigma0,delSig,comb)
 
@@ -214,14 +214,14 @@ Contains
 
       ! finally apply linearized data functionals
       if(TypeDict(iDT)%calcQ) then
-         call linDataMeas(e0,sigma0,e,d%d(j),delSig) 
-      else 
+         call linDataMeas(e0,sigma0,e,d%d(j),delSig)
+      else
 	 call linDataMeas(e0,sigma0,e,d%d(j))
-      endif 
+      endif
 
    enddo
 
-   !  clean up 
+   !  clean up
    call exitSolver(e0,e,comb)
 
    end subroutine Jmult
@@ -248,7 +248,7 @@ Contains
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
    type(dvecMTX), intent(in)		:: d
-   !   delSig is the output conductivity parameter 
+   !   delSig is the output conductivity parameter
    type(modelParam_t), intent(Out)  	:: dsigma
    type(EMsolnMTX), intent(in), optional	:: eAll
 
@@ -259,7 +259,7 @@ Contains
    integer 		:: j,iTx,iDT
    logical		:: calcSomeQ, firstQ
    logical		:: savedSolns
-   
+
    calcSomeQ = .false.
    firstQ = .true.
    savedSolns = present(eAll)
@@ -293,7 +293,7 @@ Contains
          !  solve forward problem; result is stored in e0
          call fwdSolve(iTx,e0)
       endif
-      
+
       ! set up comb using linearized data functionals
       !  ... for dvecs with data functionals depending on conductivity
       !   parameter also compute analagous comb in parameter space
@@ -303,7 +303,7 @@ Contains
             !   ==> allocate and zero Qcomb (use copy so that paramtype
             !         is set correctly)
             call copy_ModelParam(Qcomb,sigmaTemp)
-            !  NOTE: linDataComb ADDS to Qcomb, not overwrites 
+            !  NOTE: linDataComb ADDS to Qcomb, not overwrites
             !   ==> only zero Qcomb for first transmitter requiring Q
             call zero_ModelParam(Qcomb)
             !  set flags indicating that Q is now non-zero
@@ -313,7 +313,7 @@ Contains
             !  BUT: linDataComb overwrites comb ... so zero this
             !       for every transmitter
           call zero_EMrhs(comb)
-          call linDataComb(e0,sigma0,d%d(j),comb,Qcomb) 
+          call linDataComb(e0,sigma0,d%d(j),comb,Qcomb)
       else
           call zero_EMrhs(comb)
           call linDataComb(e0,sigma0,d%d(j),comb)
@@ -328,24 +328,24 @@ Contains
       call PmultT(e0,sigma0,e,sigmaTemp)
       call linComb_modelParam(ONE,dsigma,ONE,sigmaTemp,dsigma)
    enddo
- 
+
    if(calcSomeQ) then
       !  add Qcomb
       call linComb_ModelParam(ONE,dsigma,ONE,Qcomb,dsigma)
       call deall_modelParam(Qcomb)
    endif
 
-   !  clean up 
+   !  clean up
    call exitSolver(e0,e,comb)
    call deall_modelParam(sigmaTemp)
-   
+
    end subroutine JmultT
 
    !**********************************************************************
    subroutine Jmult_MTX(delSig,sigma0,d,eAll)
 
    !  Calculate product of sensitivity matrix and a separate
-   !    model parameter for each transmitter in a datavector 
+   !    model parameter for each transmitter in a datavector
    !    (i.e., multiple dvec objects)
    !
    !  First need to set up transmitter and receiver dictionaries;
@@ -389,7 +389,7 @@ Contains
       enddo
    endif
 
-   ! loop over frequencies : solve forward system twice, 
+   ! loop over frequencies : solve forward system twice,
    !    to compute background, perturbation solutions
    !    apply data functionals (linearized about background soln)
    !    to perturbation solution
@@ -398,7 +398,7 @@ Contains
       !   get indices into dictionaries for this dvec
       iTx = d%d(j)%tx
       iDT = d%d(j)%dataType
-   
+
       !  manage any necessary initilization for this transmitter
       call initSolver(iTx,sigma0,e0,e,comb)
 
@@ -409,9 +409,9 @@ Contains
          !  solve forward problem; result is stored in e0
          call fwdSolve(iTx,e0)
       endif
-      
-      !  compute rhs (stored in comb) for forward sensitivity 
-      !  calculation, using conductivity perturbations and 
+
+      !  compute rhs (stored in comb) for forward sensitivity
+      !  calculation, using conductivity perturbations and
       !  background soln:
       call Pmult(e0,sigma0,delSig(j),comb)
 
@@ -420,14 +420,14 @@ Contains
 
       ! finally apply linearized data functionals
       if(TypeDict(iDT)%calcQ) then
-         call linDataMeas(e0,sigma0,e,d%d(j),delSig(j)) 
-      else 
+         call linDataMeas(e0,sigma0,e,d%d(j),delSig(j))
+      else
 	 call linDataMeas(e0,sigma0,e,d%d(j))
-      endif 
+      endif
 
    enddo
 
-   !  clean up 
+   !  clean up
    call exitSolver(e0,e,comb)
 
    end subroutine Jmult_MTX
@@ -456,7 +456,7 @@ Contains
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
    type(dvecMTX), intent(in)		:: d
-   !   delSig is the output conductivity parameter 
+   !   delSig is the output conductivity parameter
    type(modelParam_t), dimension(:), pointer  	:: dsigma
    type(EMsolnMTX), intent(in), optional	:: eAll
 
@@ -482,7 +482,7 @@ Contains
          iDT = d%d(j)%dataType
          if(typeDict(iDT)%calcQ) then
             calcSomeQ = .true.
-         endif 
+         endif
       enddo
    endif
 
@@ -515,15 +515,15 @@ Contains
          !  solve forward problem; result is stored in e0
          call fwdSolve(iTx,e0)
       endif
-      
+
       ! set up comb using linearized data functionals
       !  ... for dvecs with data functionals depending on conductivity
       !   parameter also compute analagous comb in parameter space
       call zero_EMrhs(comb)
       if(typeDict(iDT)%calcQ) then
-         call linDataComb(e0,sigma0,d%d(j),comb,Qcomb) 
+         call linDataComb(e0,sigma0,d%d(j),comb,Qcomb)
       else
-         call linDataComb(e0,sigma0,d%d(j),comb) 
+         call linDataComb(e0,sigma0,d%d(j),comb)
       endif
 
       ! solve forward problem with source in comb
@@ -539,13 +539,13 @@ Contains
          call linComb_ModelParam(ONE,dsigma(j),ONE,Qcomb,dsigma(j))
       endif
    enddo
- 
-   !  clean up 
+
+   !  clean up
    call exitSolver(e0,e,comb)
    if(calcSomeQ) then
       call deall_modelParam(Qcomb)
    endif
-   
+
    end subroutine JmultT_MTX
 
    !**********************************************************************
@@ -586,10 +586,10 @@ Contains
       endif
    endif
 
-   ! loop over transmitters: solve forward system for each, 
-   !    apply (non-linear) data functionals 
+   ! loop over transmitters: solve forward system for each,
+   !    apply (non-linear) data functionals
    ! write(6,*) 'd%nTx = ',d%nTx
-   
+
    ! set errorBar=.false. since predicted data do not have
    !    well-defined error bars
    d%errorBar = .false.
@@ -597,22 +597,22 @@ Contains
    do j = 1,d%nTx
       !   get indices into dictionaries for this dvec
       iTx = d%d(j)%tx
-      
+
       !  do any necessary initialization for transmitter iTx
       call initSolver(iTx,sigma,e0)
 
       ! compute forward solution
       call fwdSolve(iTx,e0)
-             
+
       ! apply data functionals
-      call dataMeas(e0,sigma,d%d(j)) 
+      call dataMeas(e0,sigma,d%d(j))
 
       if(present(eAll)) then
          call copy_EMsoln(eAll%solns(j),e0)
-      endif 
-      
+      endif
+
    enddo
-   
+
    ! deallocate and clean up
    call exitSolver(e0)
 
