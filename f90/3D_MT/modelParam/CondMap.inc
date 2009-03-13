@@ -109,9 +109,13 @@
 
     linearizedMapping = present(m0)
 
-    if ((.not.m%allocated).or.(.not.Econd%allocated)) then
-      write(0,*) 'Ccond or Econd in EdgeCond not allocated yet'
+    if (.not. m%allocated) then
+      write(0,*) 'input model parameter in ModelParamToEdge not allocated yet'
       stop
+    end if
+
+    if (.not. Econd%allocated) then
+      call create_rvector(m%grid,Econd,EDGE)
     end if
 
     ! Could add code to check whether the bounds are the same ...
