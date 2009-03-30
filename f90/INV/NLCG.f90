@@ -113,16 +113,16 @@ Contains
    ! that can be used for evaluating the gradient
 
    real(kind=prec), intent(in)  :: lambda
-   type(dvecMTX), intent(in)              :: d
+   type(dataVecMTX_t), intent(in)              :: d
    type(modelParam_t), intent(in)           :: m0
    type(modelParam_t), intent(in)           :: mHat
    real(kind=prec), intent(out) :: F
-   type(dvecMTX), optional, intent(out)   :: dHat
+   type(dataVecMTX_t), optional, intent(out)   :: dHat
    type(EMsolnMTX), optional, intent(out) :: eAll
    real(kind=prec), optional, intent(out) :: RMS
 
    !  local variables
-   type(dvecMTX)    :: res,Nres
+   type(dataVecMTX_t)    :: res,Nres
    type(modelParam_t) :: m,JTd
    real(kind=prec) :: SS,mNorm
    integer :: Ndata
@@ -146,7 +146,7 @@ Contains
 
 
    ! compute residual: res = d-dHat
-   call linComb_DvecMTX(ONE,d,MinusONE,dHat,res)
+   call linComb_dataVecMTX(ONE,d,MinusONE,dHat,res)
 
    ! normalize residuals, compute sum of squares
    call CdInvMult(res,Nres)
@@ -160,7 +160,7 @@ Contains
 
    ! if required, compute the Root Mean Squared misfit
    if (present(RMS)) then
-   	Ndata = count_DvecMTX(res)
+   	Ndata = countData(res)
    	RMS = sqrt(SS/Ndata)
    end if
 
@@ -181,15 +181,15 @@ Contains
    !  call fwdPred(m,dHat,eAll)
 
    real(kind=prec), intent(in)  :: lambda
-   type(dvecMTX), intent(in)              :: d
+   type(dataVecMTX_t), intent(in)              :: d
    type(modelParam_t), intent(in)           :: m0
    type(modelParam_t), intent(in)           :: mHat
    type(modelParam_t), intent(out)          :: grad
-   type(dvecMTX), intent(in)              :: dHat
+   type(dataVecMTX_t), intent(in)              :: dHat
    type(EMsolnMTX), intent(in)            :: eAll
 
    !  local variables
-   type(dvecMTX)    :: res
+   type(dataVecMTX_t)    :: res
    type(modelParam_t) :: m,JTd,CmJTd
 
    ! integer :: j, Ny, NzEarth
@@ -199,7 +199,7 @@ Contains
    call linComb_modelParam(ONE,m,ONE,m0,m)
 
    ! compute residual: res = d-dHat
-   call linComb_DvecMTX(ONE,d,MinusONE,dHat,res)
+   call linComb_dataVecMTX(ONE,d,MinusONE,dHat,res)
 
    ! loop over transmitters:
    !do j = 1,res%nTx
@@ -255,19 +255,19 @@ Contains
    ! operator. Divides by the variances (squared error bars)
    ! and scales by the number of data (degrees of freedom).
 
-   type(dvecMTX), intent(inout)           :: d_in
-   type(dvecMTX), optional, intent(out)   :: d_out
-   type(dvecMTX)                          :: d
+   type(dataVecMTX_t), intent(inout)           :: d_in
+   type(dataVecMTX_t), optional, intent(out)   :: d_out
+   type(dataVecMTX_t)                          :: d
    !integer                                :: Ndata
 
     d = d_in
 
     ! divide each data component by its variance
-    call normalize2_DvecMTX(d)
+    call normalize_dataVecMTX(d,2)
 
     ! divide by the number of data
-    !Ndata = count_DvecMTX(d)
-    !call scDivide_DvecMTX(ONE*Ndata,d)
+    !Ndata = countData(d)
+    !d = scMult(ONE/Ndata,d)
 
    	if (present(d_out)) then
    		d_out = d
@@ -321,7 +321,7 @@ Contains
    !  d is data; on output it contains the responses for the inverse model
    !  NOTE: trying to set d = dHat on exit results in a corrupted data structure
    !  that is not readable by Matlab. Have to figure out why!..
-   type(dvecMTX), intent(in)		       :: d
+   type(dataVecMTX_t), intent(in)		       :: d
    !  lambda is regularization parameter
    real(kind=prec), intent(inout)  :: lambda
    !  m0 is prior model parameter
@@ -335,7 +335,7 @@ Contains
    character(80)                           :: flavor = 'Cubic'
 
    !  local variables
-   type(dvecMTX)			:: dHat, res
+   type(dataVecMTX_t)			:: dHat, res
    type(modelParam_t)			:: mHat, m_minus_m0, grad, g, h, gPrev
    !type(NLCGiterControl_t)			:: iterControl
    real(kind=prec)		:: value, valuePrev, rms, rmsPrev, alpha, beta, gnorm
@@ -484,8 +484,8 @@ Contains
    write(*,'(a25,i5,a25,i5)') 'NLCG iterations:',iter,' function evaluations:',nfunc
 
    ! cleaning up
-   call deall_dvecMTX(dHat)
-   call deall_dvecMTX(res)
+   call deall_dataVecMTX(dHat)
+   call deall_dataVecMTX(res)
    call deall_modelParam(mHat)
    call deall_modelParam(m_minus_m0)
    call deall_modelParam(grad)
@@ -538,7 +538,7 @@ Contains
    ! To the best of my knowledge, it is not useful for NLCG.
 
    real(kind=prec), intent(in)     :: lambda
-   type(dvecMTX), intent(in)		       :: d
+   type(dataVecMTX_t), intent(in)		       :: d
    type(modelParam_t), intent(in)		       :: m0
    type(modelParam_t), intent(in)            :: h  ! search direction
    real(kind=prec), intent(inout)  :: alpha ! step size
@@ -558,7 +558,7 @@ Contains
    real(kind=prec)                 :: eps,k,c,a,b
    real(kind=prec)                 :: g_0,f_0,f_1,f_i,rms_1
    type(modelParam_t)                        :: mHat_0,mHat_1
-   type(dvecMTX)                           :: dHat,dHat_1
+   type(dataVecMTX_t)                           :: dHat,dHat_1
    type(EMsolnMTX)                         :: eAll,eAll_1
 
    ! parameters
@@ -706,7 +706,7 @@ Contains
    ! To the best of my knowledge, it is not useful for NLCG.
 
    real(kind=prec), intent(in)     :: lambda
-   type(dvecMTX), intent(in)		       :: d
+   type(dataVecMTX_t), intent(in)		       :: d
    type(modelParam_t), intent(in)		       :: m0
    type(modelParam_t), intent(in)            :: h  ! search direction
    real(kind=prec), intent(inout)  :: alpha ! step size
@@ -726,7 +726,7 @@ Contains
    real(kind=prec)                 :: eps,k,c,a,b,q1,q2,q3
    real(kind=prec)                 :: g_0,f_0,f_1,f_i,f_j,rms_1
    type(modelParam_t)                        :: mHat_0,mHat_1
-   type(dvecMTX)                           :: dHat,dHat_1
+   type(dataVecMTX_t)                           :: dHat,dHat_1
    type(EMsolnMTX)                         :: eAll,eAll_1
 
    ! parameters

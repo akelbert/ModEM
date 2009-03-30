@@ -3,7 +3,7 @@ module DCG
 use math_constants
 use utilities
 use sensmatrix
-   ! inherits meascomb,  dataspace, dataFunc, solnrhs, 
+   ! inherits meascomb,  dataspace, dataFunc, solnrhs,
    !            modelspace, soln2d
 
 ! iteration control for PCG solver
@@ -38,20 +38,22 @@ Contains
 
    !use wscovar, only: CmMult => solveDiff
 	 use modelparameter, only: CmMult => solveDiff
-   type(dvecMTX), intent(in)        :: d
-   type(dvecMTX), intent(out)       :: Ad
+   type(dataVecMTX_t), intent(in)        :: d
+   type(dataVecMTX_t), intent(out)       :: Ad
 
    !  local variables
-   integer      :: j
+   integer      :: i,j
 
    ! multiply by J Cm J^T
    call JmultT(sigma,d,JTd,eAll)
    call CmMult(JTd)
    call Jmult(JTd,sigma,Ad,eAll)
 
-   ! add lambda to result  (need to know about details of dvec)
+   ! add lambda to result  (need to know about details of dataVec)
    do j = 1,d%nTx
-      Ad%d(j)%data = Ad%d(j)%data + lambda
+     do i = 1,d%d(j)%nDt
+       Ad%d(j)%data(i)%value = Ad%d(j)%data(i)%value + lambda
+     enddo
    enddo
 
    end subroutine multA
@@ -61,8 +63,8 @@ Contains
    !  precondtioner for PCG routine
    !   dummy routine ... no preconditioner at present
 
-   type(dvecMTX), intent(in)        :: d
-   type(dvecMTX), intent(out)       :: Md
+   type(dataVecMTX_t), intent(in)        :: d
+   type(dataVecMTX_t), intent(out)       :: Md
 
    Md = d
 
@@ -77,7 +79,7 @@ Contains
 
    !  create data structure to save solutions for all transmitters
    call CreateSolnMTX(d,m%grid,eAll)
-   
+
    PCGiter%maxit = 20
    PCGiter%tol = .001
    PCGiter%niter = 0
@@ -91,13 +93,13 @@ Contains
 
    ! computes inverse solution minimizing penalty functional
    !   for fixed value of regularization parameter, by
-   !   Gauss-Newton iteration.  Inner loop Gauss-Newton 
+   !   Gauss-Newton iteration.  Inner loop Gauss-Newton
    !   equations are solved in the data space with CG
    ! iteration control of solver/output of diagnostics is through
    !   module data block
 
    !  d is data
-   type(dvecMTX), intent(in)		:: d
+   type(dataVecMTX_t), intent(in)		:: d
    !  lambda is regularization parameter
    real(kind=prec)		:: lambda
    !   m0 is prior model parameter
@@ -106,11 +108,11 @@ Contains
    type(modelParam_t), intent(inout)	:: m
 
    !  local variables
-   type(dvecMTX)			:: dHat, b, res
+   type(dataVecMTX_t)			:: dHat, b, res
    type(modelParam_t)			:: m_minus_m0
    type(iterControl_t)			:: PCGiter
    real(kind=prec)		:: rms
-   integer				:: iter
+   integer				:: iter, ndata
 
    ! these copies are just used to create data vectors with the
    !   proper structure
@@ -119,21 +121,22 @@ Contains
 
    !  create data structure to save solutions for all transmitters
    call create_EMSolnMTX(d,eAll)
-   
+
    call setIterControl(PCGiter)
 
    iter = 0
    do
-      !  compute predicted data for current model parameter m 
+      !  compute predicted data for current model parameter m
       !   also sets up forward solutions for all transmitters in eAll
       Call fwdPred(m,res,eAll)
-       
+
       ! compute residual: res = d-dHat
-      call linCombDvecMTX(ONE,d,MinusONE,dHat,res)
+      call linComb_dataVecMTX(ONE,d,MinusONE,dHat,res)
 
       ! normalize data, compute rms
       call normalizeData(res,b)
-      rms = sqrt((b.dot.b)/d%Ndata)
+      ndata = countData(d)
+      rms = sqrt((b.dot.b)/ndata)
 
       !  test for convergence ...
       if((rms.lt.tol).or.(iter.ge.maxIter)) then
@@ -145,8 +148,8 @@ Contains
       ! compute dHat for next iteration
       call linComb_modelParam(ONE,m,MinusONE,m0,m_minus_m0)
       call Jmult(m_minus_m0,m,b,eAll)
-      call linCombDvecMTX(ONE,res,ONE,b,dHat)
-    
+      call linComb_dataVecMTX(ONE,res,ONE,b,dHat)
+
       ! normalize
       call normalizeData(dHat)
 
@@ -169,11 +172,11 @@ Contains
 
 !**********************************************************************
 
-subroutine PCG_dvecMTC(b,x, PCGiter)
+subroutine PCG_dataVecMTC(b,x, PCGiter)
 ! Quasi-generic pre-conditioned conjugate gradient
 ! Actual code is generic, but the interface is not, and must be edited
 !    to create a PCG which will work for different data types
-!   parts that must be edited are marked by ===> 
+!   parts that must be edited are marked by ===>
 !  Also need to provide multA (to multiply by the coefficient matrix
 !    for the system that is being solved with PCG) and Minv (to
 !     precondition)
@@ -184,11 +187,11 @@ subroutine PCG_dvecMTC(b,x, PCGiter)
 !        use copy (i.e., assume that we have overloaded = with this
 !        procedure) to create input objects
 !        dot product for input/output data type is assumed to overload .dot.
-    use dataspace, only: delete => deall_DvecMTX, &
-        		   linComb => linComb_DvecMTX, &
-                           scMultAdd => scMultAdd_DvecMTX
+    use dataspace, only: delete => deall_dataVecMTX, &
+        		   linComb => linComb_dataVecMTX, &
+                           scMultAdd => scMultAdd_dataVecMTX
 
-! ===> define names of procedures for multiplication by A 
+! ===> define names of procedures for multiplication by A
 !         (solving Ax = b), and for preconditioning
 !  I am actually setting the names of multiplication by A
 !    and Minv inside this module   ... otherwise we seem to end up
@@ -196,15 +199,15 @@ subroutine PCG_dvecMTC(b,x, PCGiter)
 
   implicit none
   ! ====> Define type of input and outputs for soln, rhs (must be same type)
-  type (dvecMTX), intent(in)            :: b
-  type (dvecMTX), intent(inout)         :: x
+  type (dataVecMTX_t), intent(in)            :: b
+  type (dataVecMTX_t), intent(inout)         :: x
 
   type (iterControl_t), intent(inout)     :: PCGiter
 
   ! local variables
   !======>  these local variables must be declared as same
   !           type as input (b) and output (x)
-  type (dvecMTX)        		:: r,z,p,q
+  type (dataVecMTX_t)        		:: r,z,p,q
 
   !  also need to change types on these for complex case
   !   We assume here that data objects are real, so result of
@@ -240,13 +243,13 @@ subroutine PCG_dvecMTC(b,x, PCGiter)
 
      call multA(p,q)
      alpha = rho/(p.dot.q)
-     call scMultAdd(alpha,p,x)
-     call scMultAdd(-alpha,q,r)
+     call linComb(ONE,x,alpha,p,x)
+     call linComb(ONE,r,-alpha,q,r)
      rhoOld = rho
      i = i + 1
      rnorm = r.dot.r
      PCGiter%rerr(i) = rnorm/bnorm
-     
+
 
   end do loop
 

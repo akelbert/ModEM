@@ -3,7 +3,7 @@ module Main
 	! These subroutines are called from the main program only
 
   use modelparameter
-  use dataspace ! dvecMTX
+  use dataspace ! dataVecMTX_t
   use datafunc ! to deallocate rxDict
   use emsolver ! txDict, EMsolnMTX
   use userctrl
@@ -33,14 +33,14 @@ module Main
   real (kind=prec), pointer, dimension(:,:), save	:: sites
   character(80), pointer, dimension(:,:), save        :: siteids
   character(2), pointer, dimension(:), save    		:: modes
-  character(200), save                              :: data_comments
+  character(15), pointer, dimension(:), save        :: compids
   character(80), save                               :: data_units
 
   ! grid geometry data structure
   type(grid3d_t), target, save	:: grid
 
   ! impedance data structure
-  type(dvecMTX), save		:: allData
+  type(dataVecMTX_t), save		:: allData
 
   !  storage for the "background" conductivity parameter
   type(modelParam_t), save		:: sigma0
@@ -106,7 +106,7 @@ Contains
 	inquire(FILE=cUserDef%rFile_Data,EXIST=exists)
 
 	if (exists) then
-	   call read_Z(fidRead,cUserDef%rFile_Data,nPer,periods,nSites,sites,siteids,data_units,data_comments,allData)
+	   call read_Z(fidRead,cUserDef%rFile_Data,nPer,periods,nSites,sites,siteids,data_units,compids,allData)
        !  Using periods, sites obtained from data file
        !     set up transmitter and receiver dictionaries
        call TXdictSetUp(nPer,periods)
@@ -127,21 +127,6 @@ Contains
 	   else
 	      call warning('The input model perturbation file does not exist')
 	   end if
-
-
-     case (MULT_BY_J_MTX)
-        nTx = allData%nTx
-        paramtype = ''
-        allocate(sigma(nTx),STAT=istat)
-        do i = 1,nTx
-           call create_ModelParam(grid,paramtype,sigma(i))
-        enddo
-        inquire(FILE=cUserDef%rFile_dModelMTX,EXIST=exists)
-	    if (exists) then
-           call readVec_modelParam(fidRead,cUserDef%rFile_dModelMTX,nTx,sigma,header)
-        else
-	       call warning('The input model perturbation file does not exist')
-	    end if
 
      case (INVERSE)
 	   inquire(FILE=cUserDef%rFile_Cov,EXIST=exists)
@@ -223,14 +208,33 @@ Contains
 	integer	:: i, istat
 
 	! Deallocate global variables that have been allocated by InitGlobalData()
+	if (output_level > 3) then
+	   write(0,*) 'Cleaning up grid...'
+	endif
 	call deall_grid3d(grid)
-	call deall_dvecMTX(allData)
+
+	if (output_level > 3) then
+	   write(0,*) 'Cleaning up data...'
+	endif
+	call deall_dataVecMTX(allData)
+
+	if (output_level > 3) then
+	   write(0,*) 'Cleaning up EM soln...'
+	endif
 	call deall_EMsolnMTX(eAll)
+
+	if (output_level > 3) then
+	   write(0,*) 'Cleaning up models...'
+	endif
 	call deall_modelParam(sigma0)
 	call deall_modelParam(dsigma)
 	call deall_modelParam(sigma1)
+
 	deallocate(modes,periods,sites,STAT=istat)
 
+    if (output_level > 3) then
+       write(0,*) 'Cleaning up dictionaries...'
+    endif
 	call deall_txDict() ! 3D_MT/EMsolver.f90
 	call deall_rxDict() ! 3D_MT/DataFunc.f90
 	call deall_typeDict() ! 3D_MT/DataFunc.f90
@@ -242,10 +246,13 @@ Contains
 	   deallocate(sigma,STAT=istat)
 	end if
 
-	call delete_SolnRHS_grid() ! 3D_MT/EMsolver.f90
 	call deallEMsolveControl() ! 3D_MT/FWD/EMsolve3D.f90
 
 	call deall_CmSqrt()
+
+    if (output_level > 3) then
+       write(0,*) 'All done.'
+    endif
 
   end subroutine deallGlobalData	! deallGlobalData
 

@@ -11,7 +11,8 @@ Contains
   subroutine errStop(msg)
 
     character(*), intent(in)  :: msg
-    write(0,*) 'Error: ',msg
+    write(0,'(a9)',advance='no') 'Error: '
+    write(0,*) trim(msg)
     stop
 
   end subroutine errStop
@@ -20,7 +21,8 @@ Contains
   subroutine warning(msg)
 
     character(*), intent(in)  :: msg
-    write(0,*) 'Warning: ',msg
+    write(0,'(a9)',advance='no') 'Warning: '
+    write(0,*) trim(msg)
 
   end subroutine warning
 

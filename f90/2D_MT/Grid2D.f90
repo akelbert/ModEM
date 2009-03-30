@@ -35,20 +35,21 @@ module Grid2D
        !  size Nz x Ny, allocates arrays
        !
        implicit none
-       integer, intent(in)		:: Nz,Ny,Nza
-       type (grid2d_t) , intent(inout)	:: grid
+       integer, intent(in)		        :: Nz,Ny,Nza
+       type (grid2d_t), intent(inout)	:: grid
+       integer                          :: istat
 
        grid%Nza = Nza
        grid%Nz = Nz
        grid%Ny = Ny
-       allocate(grid%Dz(Nz))
-       allocate(grid%Dy(Ny))
-       allocate(grid%Delz(Nz+1))
-       allocate(grid%Dely(Ny+1))
-       allocate(grid%zNode(Nz+1))
-       allocate(grid%yNode(Ny+1))
-       allocate(grid%zCenter(Nz))
-       allocate(grid%yCenter(Ny))
+       allocate(grid%Dz(Nz), STAT=istat)
+       allocate(grid%Dy(Ny), STAT=istat)
+       allocate(grid%Delz(Nz+1), STAT=istat)
+       allocate(grid%Dely(Ny+1), STAT=istat)
+       allocate(grid%zNode(Nz+1), STAT=istat)
+       allocate(grid%yNode(Ny+1), STAT=istat)
+       allocate(grid%zCenter(Nz), STAT=istat)
+       allocate(grid%yCenter(Ny), STAT=istat)
 
      end subroutine create_grid2d
 
@@ -57,16 +58,17 @@ module Grid2D
        !  deallocates finite differences grid2d_t structure
        !
        implicit none
-       type (grid2d_t) , intent(inout)	:: grid
+       type (grid2d_t), intent(inout)	:: grid
+       integer                          :: istat
 
-       if (associated(grid%Dz)) deallocate(grid%Dz)
-       if (associated(grid%Dy)) deallocate(grid%Dy)
-       if (associated(grid%Delz)) deallocate(grid%Delz)
-       if (associated(grid%Dely)) deallocate(grid%Dely)
-       if (associated(grid%zNode)) deallocate(grid%zNode)
-       if (associated(grid%yNode)) deallocate(grid%yNode)
-       if (associated(grid%zCenter)) deallocate(grid%zCenter)
-       if (associated(grid%yCenter)) deallocate(grid%yCenter)
+       if (associated(grid%Dz)) deallocate(grid%Dz, STAT=istat)
+       if (associated(grid%Dy)) deallocate(grid%Dy, STAT=istat)
+       if (associated(grid%Delz)) deallocate(grid%Delz, STAT=istat)
+       if (associated(grid%Dely)) deallocate(grid%Dely, STAT=istat)
+       if (associated(grid%zNode)) deallocate(grid%zNode, STAT=istat)
+       if (associated(grid%yNode)) deallocate(grid%yNode, STAT=istat)
+       if (associated(grid%zCenter)) deallocate(grid%zCenter, STAT=istat)
+       if (associated(grid%yCenter)) deallocate(grid%yCenter, STAT=istat)
 
      end subroutine deall_grid2d
 

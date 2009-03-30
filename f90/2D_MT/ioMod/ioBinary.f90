@@ -209,7 +209,7 @@ module ioBinary
       real(kind =8),intent(in)   :: periods(nTx)
       character*2, intent(in)	:: modes(nTx)
       real(kind = 8),intent(in)   :: sites(2,nSites)
-      type(dvecMTX), intent(in)      :: allData
+      type(dataVecMTX_t), intent(in)      :: allData
       real(kind = 8), dimension(:,:), allocatable :: siteTemp
 
      ! local variables
@@ -247,7 +247,7 @@ module ioBinary
       real(kind = 8),dimension(:), pointer     :: periods
       real(kind = 8),dimension(:,:), pointer   :: sites
       character*2, dimension(:), pointer	:: modes
-      type(dvecMTX), intent(inout)   :: allData
+      type(dataVecMTX_t), intent(inout)   :: allData
 
      ! local variables
       integer   :: nComp = 2
@@ -271,9 +271,9 @@ module ioBinary
          ! read in site locations
          allocate(siteTemp(2,ns))
          read(fid) siteTemp
-         ! create dvec object, read in data
+         ! create dataVec object, read in data
          allData%d(iTx)%errorBar = .true.
-         call create_Dvec(nComp,ns,allData%d(iTx))
+         call create_dataVec(nComp,ns,allData%d(iTx))
          Ndata  = Ndata + nComp*ns
          allData%d(iTx)%tx = iTx
 	 if(modes(iTx) .eq. 'TM') then
@@ -317,7 +317,7 @@ module ioBinary
          endif
          deallocate(siteTemp)
       enddo
-      allData%Ndata = Ndata
+
       ! copy list of unique sites into "sites" array
       allocate(sites(2,nSites))
       do k = 1,nSites

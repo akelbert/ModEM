@@ -46,6 +46,7 @@ module ioAscii
   public                   :: DfileWrite
   public                   :: ZfileRead, ZfileWrite
   public                   :: read_Z,write_Z
+  public                   :: write_EMsolnMTX
 
 Contains
 
@@ -401,7 +402,7 @@ Contains
   ! ***************************************************************************
   ! writes impedances for nSites for one frequency
   subroutine ZfileWrite(ioNum,Omega,ifreq,nSites,Z,ifBzTF)
-  !   NOTE: impedances are stored in real dvec structure:
+  !   NOTE: impedances are stored in real dataVec structure:
   !    first dimension is mode, second component (real/imag for
   !     two impedance components + BzTF  ... rows and
   !     columns are switched compared to usual impedance
@@ -466,22 +467,22 @@ Contains
 !*******************************************************************************
 !*******************************************************************************
 
-!   Routines to read and write dvecMTX objects; these are generalized
+!   Routines to read and write dataVecMTX objects; these are generalized
 !   versions of write_Z and read_Z from Modular2D  ...
 !    BUT NOTE: we still have to work on a more generic way to deal with
-!    IO of dvec objects (issue is meta-data, which is stored in transmitter
+!    IO of dataVec objects (issue is meta-data, which is stored in transmitter
 !    and receiver dictionaries for use by the program, but which here is
 !    kept with the data in the file
 !
 
    !**********************************************************************
-   subroutine write_Z(fid,cfile,nTx,periods,nSites,sites,siteids,units,comments,allData)
+   subroutine write_Z(fid,cfile,nTx,periods,nSites,sites,siteids,units,compids,allData)
    ! writes impedance file, including list of periods, siteLocations
    !   NOTE: this assumes that the arrays "sites" and "periods" are
      !    essentially identical to the receiver and transmitter dictionaries
      !    (in which case, why have both these arrays and the dicts?)
-     !   Also, we just get ncomp from each dvec, and infer dataType
-     !    from this.  Not at all general with regard to dvec objects.
+     !   Also, we just get ncomp from each dataVec, and infer dataType
+     !    from this.  Not at all general with regard to dataVec objects.
 
       integer, intent(in)			:: fid
       character(*), intent(in)			:: cfile
@@ -490,14 +491,15 @@ Contains
       real(kind=prec),intent(in)	:: sites(3,nSites)
       character(*), intent(in)              :: siteids(:,:)
       character(*), intent(in)              :: units
-      character(*), intent(in)              :: comments
-      type(dvecMTX),intent(in)			:: allData
+      character(*), intent(in)      :: compids(:)
+      type(dataVecMTX_t),intent(in)			:: allData
       real(kind=prec), dimension(:,:), pointer :: siteTemp
 
      ! local variables
+      type(dataVec_t) :: data
       character(80)   :: info
       real(kind=8)    :: SI_factor
-      integer   :: ns,iTx,k,j,nComp,icomp,isite
+      integer   :: iTx,iDt,k,j,nComp,icomp,nSite,isite
       character(10) :: siteid, tab='           '
       character(80) :: header
 
@@ -526,50 +528,61 @@ Contains
       write(fid,'(i5)') allData%nTx
       ! loop over periods
       do iTx = 1,allData%nTx
-         ns = allData%d(iTx)%nSite
-         ncomp = allData%d(iTx)%nComp
-         ! write period, number of sites for this period
-         write(fid,'(es12.6,2i5)') periods(iTx),nComp,ns
-         ! write site locations for this period
-         allocate(siteTemp(3,ns))
-         do k = 1,ns
-            siteTemp(:,k) = sites(:,allData%d(iTx)%rx(k))
-         enddo
-		 ! write latitude, longitude and elevation
-		 do j = 1,3
-		   do k = 1,ns
-         	  write(fid,'(f14.3)',advance='no') siteTemp(j,k)
-		   enddo
-           write(fid,*)
-		 enddo
-		 write(fid,'(a8)',advance='no') ' '
-		 ! write the descriptor
-         write(fid,'(a200)') typeDict(allData%d(iTx)%dataType)%comment !comments
+         do iDt = 1,allData%d(iTx)%nDt
+             data = allData%d(iTx)%data(iDt)
+	         nSite = data%nSite
+	         nComp = data%nComp
+	         ! write period, number of sites for this period
+	         write(fid,'(es12.6,2i5)') periods(iTx),nComp,nSite
+	         ! write site locations for this period
+	         allocate(siteTemp(3,nSite))
+	         do k = 1,nSite
+	            siteTemp(:,k) = sites(:,data%rx(k))
+	         enddo
+			 ! write latitude, longitude and elevation
+			 do j = 1,3
+			   do k = 1,nSite
+	         	  write(fid,'(f14.3)',advance='no') siteTemp(j,k)
+			   enddo
+	           write(fid,*)
+			 enddo
+			 write(fid,'(a8)',advance='no') ' '
+			 ! write the descriptor
+			 do icomp = 1,nComp
+			 	write(fid,'(a15)',advance='no') trim(compids(icomp))
+			 enddo
+			 write(fid,*)
 
-         ! write data
-         do isite = 1,ns
-         	! Note: temporarily, we write site id's according to their number;
-         	! in the future, they will be stored in the receiver dictionary
-         	write(siteid,'(i5)') isite
-         	write(fid,'(a10)',advance='no') trim(siteids(iTx,isite))
-         	!  note that each data field in a dvec (i.e., allData%d(iTx)%data)
-         	!   is a real array of size (nComp,ns)
-         	do icomp = 1,ncomp
-         		write(fid,'(es15.6)',advance='no') allData%d(iTx)%data(icomp,isite)/SI_factor
-         	enddo
-         	write(fid,*)
-         	write(fid,'(a10)',advance='no') tab
-         	do icomp = 1,ncomp
-         		write(fid,'(es15.6)',advance='no') allData%d(iTx)%err(icomp,isite)/SI_factor
-         	enddo
-         	write(fid,*)
+	         ! write data
+	         do isite = 1,nSite
+	         	! Note: temporarily, we write site id's according to their number;
+	         	! in the future, they will be stored in the receiver dictionary
+	         	write(siteid,'(i5)') isite
+	         	write(fid,'(a10)',advance='no') trim(siteids(iTx,isite))
+	         	!  note that each data field in a dataVec (i.e., allData%d(iTx)%data)
+	         	!   is a real array of size (nComp,ns)
+	         	do icomp = 1,ncomp
+	         		write(fid,'(es15.6)',advance='no') data%value(icomp,isite)/SI_factor
+	         	enddo
+	         	write(fid,*)
+	         	write(fid,'(a10)',advance='no') tab
+	         	do icomp = 1,ncomp
+	         	    if (data%errorBar) then
+	         		   write(fid,'(es15.6)',advance='no') data%error(icomp,isite)/SI_factor
+	         		else
+	         		   write(fid,'(es15.6)',advance='no') R_ZERO
+	         		endif
+	         	enddo
+	         	write(fid,*)
+	         enddo
+	         deallocate(siteTemp)
          enddo
-         deallocate(siteTemp)
       enddo
       close(fid)
-      end subroutine write_Z
-      !******************************************************************
-     subroutine read_Z(fid,cfile,nTx,periods,nSites,sites,siteids,units,comments,allData)
+   end subroutine write_Z
+
+   !******************************************************************
+   subroutine read_Z(fid,cfile,nTx,periods,nSites,sites,siteids,units,compids,allData)
      ! reads in data file, returns list of periods, , siteLocations, and
      !   sets up data vector structure, including data and error bars
      !   Also returns a list of periods, and sites ... not very general!
@@ -580,11 +593,12 @@ Contains
       real(kind=prec),dimension(:,:), pointer   :: sites
       character(*), dimension(:,:), pointer   :: siteids
       character(*), intent(out)             :: units
-      character(*), intent(out)             :: comments
-      type(dvecMTX), intent(inout)   			:: allData
+      character(*), dimension(:), pointer, intent(out) :: compids
+      type(dataVecMTX_t), intent(inout)   			:: allData
 
-     ! local variables
-      integer   	:: nComp,ns,iTx,k,l,j,Ndata,istat
+      ! local variables
+      integer       :: nDt
+      integer   	:: nComp,nSite,iTx,iDt,k,l,j,Ndata,istat
       character(10) :: siteid
       real(kind=prec), pointer, dimension(:,:) :: siteTemp,siteTempAll
       logical		:: newSite
@@ -592,6 +606,8 @@ Contains
       integer   :: sign_in_file
       real(kind=8) :: SI_factor
       logical      :: conjugate
+      character(200) :: comments
+      logical      :: errorBar, isComplex
 
       open(unit=fid,file=cfile,form='formatted',status='old')
       read(fid,'(a13,a80)') temp,description
@@ -621,103 +637,180 @@ Contains
       end if
 
       read(fid,*) nTx
-     ! write(6,*) nTx
+      ! write(6,*) nTx
+      call create(nTx,allData)
       allocate(periods(nTx))
-      allocate(allData%d(nTx))
       allocate(siteids(nTx,1000))
-      allData%allocated = .true.
-      allData%errorBar = .true.
-      allData%nTx = nTx
 
-     ! loop over dvec instances
+     ! loop over dataVec instances
       Ndata = 0
       do iTx = 1,nTx
-         ! read in number of sites for this dvec
-         !  nTx is number of dvecs ... might not all be for different periods!
-         !   really should clean up list of periods (effectively the
-	 !    transmitter dictionary
-        read(fid,*) periods(iTx),nComp,ns
 
-         ! read in site locations
-         allocate(siteTemp(3,ns))
-
-          read(fid,*) (siteTemp(1,j),j=1,ns)
-          read(fid,*) (siteTemp(2,j),j=1,ns)
-          read(fid,*) (siteTemp(3,j),j=1,ns)
-
-         ! create dvec object, read in data
-         allData%d(iTx)%errorBar = .true.
-         call create_Dvec(nComp,ns,allData%d(iTx))
-         Ndata  = Ndata + nComp*ns
+         ! hey, for now we have to assume that there's only one data type per period
+         ! in the data file - otherwise the reading would be too tedious... (no need
+         ! for this assumption anywhere else in the code, including write_Z routine)
+         ! the structure of the data file should really be different.
+         nDt = 1
+         call create(nDt, allData%d(iTx))
          allData%d(iTx)%tx = iTx
+         allData%d(iTx)%allocated = .true.
 
-         select case (nComp)
-            case(8)
-               allData%d(iTx)%datatype =  Full_Impedance
-            case(12)
-               allData%d(iTx)%datatype =  Impedance_Plus_Hz
-            case(4)
-               allData%d(iTx)%datatype =  Off_Diagonal_Impedance
-         end select
-         read(fid,'(a200)') comments ! header line: will need to parse this in the future
-         do k=1,ns
-         read(fid,*)siteids(iTx,k), (allData%d(iTx)%data(j,k),j=1,nComp)
-         read(fid,*)                (allData%d(iTx)%err(j,k),j=1,nComp)
-         end do
+         do iDt = 1,nDt
+	         ! read in number of sites for this dataVec
+	         !  nTx is number of dataVecs ... might not all be for different periods!
+	         !   really should clean up list of periods (effectively the
+		     !    transmitter dictionary
+	         read(fid,*) periods(iTx),nComp,nSite
 
-        ! convert data to SI units
-         allData%d(iTx)%data = SI_factor * allData%d(iTx)%data
-         allData%d(iTx)%err  = SI_factor * allData%d(iTx)%err
+	         ! read in site locations
+	         allocate(siteTemp(3,nSite))
 
-         ! conjugate data as necessary
-         if (conjugate) then
-           do j=2,nComp,2
-              allData%d(iTx)%data(j,:) = - allData%d(iTx)%data(j,:)
-           end do
-         end if
+	          read(fid,*) (siteTemp(1,j),j=1,nSite)
+	          read(fid,*) (siteTemp(2,j),j=1,nSite)
+	          read(fid,*) (siteTemp(3,j),j=1,nSite)
 
-         if(iTx .eq. 1) then
-           ! allocate temporary storage for full sites list
-           ! (this might not always work ... I am assuming that the
-           !        max number of sites is ns from period one * nTx)
-            allocate(siteTempAll(3,ns*nTx))
-            nSites = ns
-            do k = 1,ns
-               siteTempAll(:,k) = siteTemp(:,k)
-               allData%d(iTx)%rx(k) = k
-            enddo
-         else
-            ! check to see if site locations are already in list
-            !  if not add to list; in any event set reciever "pointer" rx
-            do k = 1,ns
-               newSite = .true.
-               do l = 1,nSites
-                  if((siteTemp(1,k).eq.siteTempAll(1,l)).and.  &
-                        (siteTemp(2,k).eq.siteTempAll(2,l)).and. &
-                        (siteTemp(3,k).eq.siteTempAll(3,l))) then
-                     newSite = .false.
-                     allData%d(iTx)%rx(k) = l
-                     exit
-                  endif
-               enddo
-               if(newSite) then
-                  nSites = nSites+1
-                  siteTempAll(:,nSites) = siteTemp(:,k)
-                  allData%d(iTx)%rx(k) = nSites
-               endif
-            enddo
-         endif
-         deallocate(siteTemp,STAT=istat)
+             ! create component names
+             allocate(compids(nComp),STAT=istat)
+
+	         ! create dataVec object, read in data
+	         isComplex = .true.
+	         errorBar = .true.
+	         call create_dataVec(nComp,nSite,allData%d(iTx)%data(nDt),isComplex,errorBar)
+	         Ndata  = Ndata + nComp*nSite
+
+	         allData%d(iTx)%data(iDt)%tx = iTx
+
+	         read(fid,'(a200)') comments ! header line: need to parse this
+	         select case (nComp)
+	            case(8)
+	               allData%d(iTx)%data(iDt)%datatype =  Full_Impedance
+	            case(12)
+	               allData%d(iTx)%data(iDt)%datatype =  Impedance_Plus_Hz
+	            case(4)
+	               allData%d(iTx)%data(iDt)%datatype =  Off_Diagonal_Impedance
+	         end select
+             read(comments,*) compids
+
+	         do k=1,nSite
+	         read(fid,*)siteids(iTx,k), (allData%d(iTx)%data(iDt)%value(j,k),j=1,nComp)
+	         read(fid,*)                (allData%d(iTx)%data(iDt)%error(j,k),j=1,nComp)
+	         end do
+
+	        ! convert data to SI units
+	         allData%d(iTx)%data(iDt)%value = SI_factor * allData%d(iTx)%data(iDt)%value
+	         allData%d(iTx)%data(iDt)%error = SI_factor * allData%d(iTx)%data(iDt)%error
+
+	         ! conjugate data as necessary
+	         if (conjugate) then
+	           do j=2,nComp,2
+	              allData%d(iTx)%data(iDt)%value(j,:) = - allData%d(iTx)%data(iDt)%value(j,:)
+	           end do
+	         end if
+
+	         if(iTx .eq. 1) then
+	           ! allocate temporary storage for full sites list
+	           ! (this might not always work ... I am assuming that the
+	           !        max number of sites is ns from period one * nTx)
+	            allocate(siteTempAll(3,nSite*nTx))
+	            nSites = nSite
+	            do k = 1,nSite
+	               siteTempAll(:,k) = siteTemp(:,k)
+	               allData%d(iTx)%data(iDt)%rx(k) = k
+	            enddo
+	         else
+	            ! check to see if site locations are already in list
+	            !  if not add to list; in any event set reciever "pointer" rx
+	            do k = 1,nSite
+	               newSite = .true.
+	               do l = 1,nSites
+	                  if((siteTemp(1,k).eq.siteTempAll(1,l)).and.  &
+	                        (siteTemp(2,k).eq.siteTempAll(2,l)).and. &
+	                        (siteTemp(3,k).eq.siteTempAll(3,l))) then
+	                     newSite = .false.
+	                     allData%d(iTx)%data(iDt)%rx(k) = l
+	                     exit
+	                  endif
+	               enddo
+	               if(newSite) then
+	                  nSites = nSites+1
+	                  siteTempAll(:,nSites) = siteTemp(:,k)
+	                  allData%d(iTx)%data(iDt)%rx(k) = nSites
+	               endif
+	            enddo
+	         endif
+	         deallocate(siteTemp,STAT=istat)
+         enddo
       enddo
-      allData%Ndata = Ndata
+
       ! copy list of unique sites into "sites" array
       allocate(sites(3,nSites))
       do k = 1,nSites
          sites(:,k) = siteTempAll(:,k)
       enddo
       close(fid)
+
+      allData%allocated = .true.
       deallocate(siteTempAll,STAT=istat)
-      end subroutine read_Z
+  end subroutine read_Z
+
+!**********************************************************************
+  subroutine setError_dataVec(err,d)
+   !  whether error bars exist or not, sets new error bars
+	 !  according to the input parameter err, which specifies the
+	 !  fractional error in the output; any errors stored in d
+	 !  are overwritten
+	 ! TEMPORARY - need to be replaced with something data type specific
+
+   real (kind=prec), intent(in) :: err
+   type(dataVec_t),intent(inout)             :: d
+
+   !  local variables
+   integer      			:: nComp, nSite
+
+   if(.not.d%allocated) then
+      call errStop('data vector not allocated in setError_dataVec')
+   endif
+
+   nComp = d%nComp
+   nSite = d%nSite
+   if (.not. d%errorBar) then
+     allocate(d%error(nComp,nSite))
+	 d%errorBar = .true.
+   end if
+
+   ! we should really be using dataType%isComplex information
+	 ! create data errors for complex data, but we currently do not
+	 ! have access to the dataType dictionary from here (I think);
+	 ! so this is a temporary solution
+
+	 d%error = err * abs(d%value)
+
+  end subroutine setError_dataVec
+
+!**********************************************************************
+  subroutine setError_dataVecMTX(err,d)
+   !  whether error bars exist or not, sets new error bars
+	 !  according to the input parameter err, which specifies the
+	 !  fractional error in the output; any errors stored in d
+	 !  are overwritten
+
+	 real (kind=prec), intent(in) :: err
+   type(dataVecMTX_t),intent(inout)          :: d
+
+   !  local variables
+   integer      			:: nTx, nData, j, k
+
+   if(.not.d%allocated) then
+      call errStop('data vector in setError_dataVecMTX not allocated')
+   endif
+
+   do j = 1, d%nTx
+     do k = 1, d%d(j)%nDt
+        call setError_dataVec(err,d%d(j)%data(k))
+     enddo
+   enddo
+
+ end subroutine setError_dataVecMTX
 
 !******************************************************************
       subroutine write_EMsolnMTX(fid,cfile,eAll)

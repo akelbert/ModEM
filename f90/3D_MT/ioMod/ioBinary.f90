@@ -401,7 +401,7 @@ Contains
   ! ***************************************************************************
   ! writes impedances for nSites for one frequency
   subroutine ZfileWrite(ioNum,Omega,ifreq,nSites,Z,ifBzTF)
-  !   NOTE: impedances are stored in real dvec structure:
+  !   NOTE: impedances are stored in real dataVec structure:
   !    first dimension is mode, second component (real/imag for
   !     two impedance components + BzTF  ... rows and
   !     columns are switched compared to usual impedance
@@ -466,10 +466,10 @@ Contains
 !*******************************************************************************
 !*******************************************************************************
 
-!   Routines to read and write dvecMTX objects; these are generalized
+!   Routines to read and write dataVecMTX objects; these are generalized
 !   versions of write_Z and read_Z from Modular2D  ...
 !    BUT NOTE: we still have to work on a more generic way to deal with
-!    IO of dvec objects (issue is meta-data, which is stored in transmitter
+!    IO of dataVec objects (issue is meta-data, which is stored in transmitter
 !    and receiver dictionaries for use by the program, but which here is
 !    kept with the data in the file
 !
@@ -479,15 +479,15 @@ Contains
    !   NOTE: this assumes that the arrays "sites" and "periods" are
      !    essentially identical to the receiver and transmitter dictionaries
      !    (in which case, why have both these arrays and the dicts?)
-     !   Also, we just get ncomp from each dvec, and infer dataType
-     !    from this.  Not at all general with regard to dvec objects.
+     !   Also, we just get ncomp from each dataVec, and infer dataType
+     !    from this.  Not at all general with regard to dataVec objects.
 
       integer, intent(in)			:: fid
       character(*), intent(in)			:: cfile
       integer, intent(in)			:: nTx,nSites
       real(kind=prec),intent(in)	:: periods(nTx)
       real(kind=prec),intent(in)	:: sites(3,nSites)
-      type(dvecMTX),intent(in)			:: allData
+      type(dataVecMTX_t),intent(in)			:: allData
       real(kind=prec), dimension(:,:), pointer :: siteTemp
 
      ! local variables
@@ -507,7 +507,7 @@ Contains
             siteTemp(:,k) = sites(:,allData%d(iTx)%rx(k))
          enddo
          write(fid) siteTemp
-         !  note that each data field in a dvec (i.e., allData%d(iTx)%data)
+         !  note that each data field in a dataVec (i.e., allData%d(iTx)%data)
          !   is a real array of size (nComp,ns)
          write(fid) allData%d(iTx)%data
          write(fid) allData%d(iTx)%err
@@ -525,7 +525,7 @@ Contains
       integer, intent(out)      			:: nTx,nSites
       real(kind=prec),dimension(:), pointer     :: periods
       real(kind=prec),dimension(:,:), pointer   :: sites
-      type(dvecMTX), intent(inout)   			:: allData
+      type(dataVecMTX_t), intent(inout)   			:: allData
 
      ! local variables
       integer   	:: nComp,ns,iTx,k,l,j,Ndata
@@ -540,20 +540,20 @@ Contains
       allData%errorBar = .true.
       allData%nTx = nTx
 
-     ! loop over dvec instances
+     ! loop over dataVec instances
       Ndata = 0
       do iTx = 1,nTx
-         ! read in number of sites for this dvec
-         !  nTx is number of dvecs ... might not all be for different periods!
+         ! read in number of sites for this dataVec
+         !  nTx is number of dataVecs ... might not all be for different periods!
          !   really should clean up list of periods (effectively the
 	 !    transmitter dictionary
          read(fid) periods(iTx),nComp,ns
          ! read in site locations
          allocate(siteTemp(3,ns))
          read(fid) siteTemp
-         ! create dvec object, read in data
+         ! create dataVec object, read in data
          allData%d(iTx)%errorBar = .true.
-         call create_Dvec(nComp,ns,allData%d(iTx))
+         call create_dataVec(nComp,ns,allData%d(iTx))
          Ndata  = Ndata + nComp*ns
          allData%d(iTx)%tx = iTx
 
@@ -602,7 +602,7 @@ Contains
          endif
          deallocate(siteTemp)
       enddo
-      allData%Ndata = Ndata
+
       ! copy list of unique sites into "sites" array
       allocate(sites(3,nSites))
       do k = 1,nSites

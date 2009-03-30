@@ -27,30 +27,30 @@ module dataFunc
 
   implicit none
 
-  public			:: RXdictSetup, deall_RXdict
+  public			:: RXdictSetUp, deall_RXdict, typeDictSetUp, deall_typeDict
   !   Names of these routines must be as here, as these are called by
   !    top-level inversion routines
   public                        :: nonLinDataFunc, linDataFunc
   public                        :: EMSparseQtoModelParam
 
+  !  multiple receiver dictionaries can be defined, as
+  !   different sorts of meta-data may be required for different data
+  !   types; e.g., intersite TFs would require two locations.
+  !   Note that the location must be specified relative to the same
+  !     coordinate system used for the grid, with consistent units:
+  !     in 3D MT, the origin of the grid is given relative to
+  !     a refernce origin, with everything in meters.  The data site
+  !     locations should also be given in meters, relative to this
+  !     same physical origin.  All 3 components are required, to support
+  !     observations anywhere within the solution domain.
+  !  Additonal data types, to be used as elements of additional
+  !    dictionaries can be added to accomodate additional data types
   type :: MTrx
-     ! x gives location of EM measurements
-     !  multiple receiver dictionaries can be defined, as
-     !   different sorts of meta-data may be required for different data
-     !   types; e.g., intersite TFs would require two locations.
-     !   Note that the location must be specified relative to the same
-     !     coordinate system used for the grid, with consistent units:
-     !     in 3D MT, the origin of the grid is given relative to
-     !     a refernce origin, with everything in meters.  The data site
-     !     locations should also be given in meters, relative to this
-     !     same physical origin.  All 3 components are required, to support
-     !     observations anywhere within the solution domain.
-     !  Additonal data types, to be used as elements of additional
-     !    dictionaries can be added to accomodate additional data types
+     ! x gives location of EM measurements;
   	 ! x(1) points North, x(2) points East, x(3) points down
-     real(kind=prec)                    ::  x(3)
+     real (kind=prec)                   ::  x(3)
      ! optional site ID; needed for input and output only
-     character(80)                              ::  id=''
+     character(80)                      ::  id=''
   end type MTrx
 
   ! receiver dictionary for 3D MT data will be an array of
@@ -59,63 +59,68 @@ module dataFunc
   !    data functional module, and can thus be private
   type (MTrx), pointer, save, private, dimension(:) :: rxDict
 
+
+  !  stores information about the "data type" -- which could include
+  !   information that is relevant to transmitter, receiver, or both
+  !   E.g., for 2D MT, "mode" (TE/TM) is relevant to both receiver and
+  !    transmitter.  For 3D MT, this can be used to distinguish between
+  !    full impedance tensors, impedance tensors+vertical field TFs,
+  !    off-diagonal impedance only, interstation TFs, etc.
+  !    Different data types may correspond to different EM solutions
+  !     (TE vs. TM; joint inversion of data from multiple geophysical
+  !        techniques), or not (different receiver configurations in 3D MT).
+  !    In some cases, multiple transmitter dictionaries may be needed (and
+  !     which to use would be determined in, e.g., EMsolve).
+  !    Similarly, in some cases multiple receiver dictionaries may or may not
+  !     be required when there are multiple dataTypes
+  !       (e.g., interstation TFs require more information, to
+  !        specify a pair of site locations; adding more local TF components
+  !         would not require multiple receiver dictionaries)
   type :: dataType
-!
-     !  stores information about the "data type" -- which could include
-     !   information that is relevant to transmitter, receiver, or both
-     !   E.g., for 2D MT, "mode" (TE/TM) is relevant to both receiver and
-     !    transmitter.  For 3D MT, this can be used to distinguish between
-     !    full impedance tensors, impedance tensors+vertical field TFs,
-     !    off-diagonal impedance only, interstation TFs, etc.
-     !    Different data types may correspond to different EM solutions
-     !     (TE vs. TM; joint inversion of data from multiple geophysical
-     !        techniques), or not (different receiver configurations in 3D MT).
-     !    In some cases, multiple transmitter dictionaries may be needed (and
-     !     which to use would be determined in, e.g., EMsolve).
-     !    Similarly, in some cases multiple receiver dictionaries may or may not
-     !     be required when there are multiple dataTypes
-     !       (e.g., interstation TFs require more information, to
-     !        specify a pair of site locations; adding more local TF components
-     !         would not require multiple receiver dictionaries)
-     !     dictionaries may be required
+
+     ! The following two attributes (essentially receiver attributes)
+     ! must be defined for all data types.  These are accessed
+     ! and used by the top-level inversion routines.
      !
-     !   The following two attributes (essentially receiver attributes)
-     !      must be defined for all data types.  These are accessed
-     !       and used by the top-level inversion routines:
-     logical                    :: isComplex = .false.
-     logical                    :: calcQ = .false.
+     ! AK: It is debatable whether this is a good idea... I suggest rethinking:
+     ! isComplex can easily be stored in dataVec, and calcQ ... well, needs to
+     ! be done differently! I think that the sole purpose of the dataType
+     ! should be to identify the mapping from the EM solution to the data vector.
+     logical           :: isComplex = .false.
+     logical           :: calcQ = .false.
 
-     character(80)              :: name = ''
-     !  for 3D MT data types will initially be used only to distinguish
-     !    between local transfer function types
-     !         (later maybe add interstation TFs)
-     integer			:: tfType, nComp
+     ! a user-friendly description of this data type
+     character(80)     :: name = ''
 
-     ! AK: id(nComp) are the text comments that describe the components
-     !character(80), pointer, dimension(:)   :: id
-     ! however, in order to implement this everything has to be done differently.
-     ! I don't like the whole dictionary business, it's just not logical... one
-     ! should be able to set up the dvec uniquely from the dictionaries and the
-     ! data values; the way this is done is backwards, and requires supplementary
-     ! temporary information in the upper level routines to set everything up
-     ! or to gather the information together, which really defeats the whole purpose
-     ! of this headache. It just hasn't been thought through. For now, we stick
-     ! with the typeDict, and assume our data is in the correct order etc.
-     character(200)             :: comment = ''
-     ! AK: let us also store the units for a dataType here (obviously, the way
-     ! this is currently formulated, Impedance_Plus_Hz will be partly non-dimensional)
-     character(80)              :: units = ''
-!
+     ! for 3D MT data types will initially be used only to distinguish
+     ! between local transfer function types (later maybe add interstation TFs)
+     integer		   :: tfType
+
+     ! the number of components in the data type
+     integer           :: nComp
+
+     ! id(nComp) are the text comments that describe the components; these are
+     ! initialized, but can be overwritten by the info from the data file.
+     !
+     ! AK: I suspect the way this is currently set up implies that the default order
+     ! of components must be preserved! This needs more attention; until then,
+     ! the user should specify the components in the default order.
+     character(15), pointer, dimension(:) :: id
+
+     ! the units of the data type
+     ! (obviously, the way this is currently formulated, Impedance_Plus_Hz will
+     ! be partly non-dimensional; but this works for practical purposes)
+     character(80)     :: units = ''
+
   end type dataType
 
   ! data type dictionary must be public; some attributes are referenced
   !   by top-level inversion routines
   type (dataType), pointer, save, public, dimension(:) :: typeDict
 
-  ! obviously much more needs to be done to streamline addition of data types ...
-  integer, parameter    :: Full_Impedance = 1
-  integer, parameter    :: Impedance_Plus_Hz = 2
-  integer, parameter    :: Off_Diagonal_Impedance = 3
+  integer, parameter   :: Full_Impedance = 1
+  integer, parameter   :: Impedance_Plus_Hz = 2
+  integer, parameter   :: Off_Diagonal_Impedance = 3
 
 
 Contains
@@ -162,7 +167,7 @@ Contains
 
 !**************************************************************************
 ! Initializes and sets up data type dictionary
-  subroutine TypeDictSetup()
+  subroutine TypeDictSetUp()
 
   	 integer     :: istat
 
@@ -172,28 +177,49 @@ Contains
      typeDict(Full_Impedance)%isComplex = .true.
      typeDict(Full_Impedance)%calcQ     = .false.
      typeDict(Full_Impedance)%tfType     = Full_Impedance
-     typeDict(Full_Impedance)%nComp     = 8
      typeDict(Full_Impedance)%units   = '[V/m]/[T]'
-     write(typeDict(Full_Impedance)%comment,'(8a15)') &
-     	'Re(Zxx)','Im(Zxx)','Re(Zxy)','Im(Zxy)','Re(Zyx)','Im(Zyx)','Re(Zyy)','Im(Zyy)'
+     typeDict(Full_Impedance)%nComp     = 8
+     allocate(typeDict(Full_Impedance)%id(8),STAT=istat)
+     typeDict(Full_Impedance)%id(1) = 'Re(Zxx)'
+     typeDict(Full_Impedance)%id(2) = 'Im(Zxx)'
+     typeDict(Full_Impedance)%id(3) = 'Re(Zxy)'
+     typeDict(Full_Impedance)%id(4) = 'Im(Zxy)'
+     typeDict(Full_Impedance)%id(5) = 'Re(Zyx)'
+     typeDict(Full_Impedance)%id(6) = 'Im(Zyx)'
+     typeDict(Full_Impedance)%id(7) = 'Re(Zyy)'
+     typeDict(Full_Impedance)%id(8) = 'Im(Zyy)'
 
      typeDict(Impedance_Plus_Hz)%name = 'Full Impedance Plus Hz'
      typeDict(Impedance_Plus_Hz)%isComplex = .true.
      typeDict(Impedance_Plus_Hz)%calcQ     = .false.
      typeDict(Impedance_Plus_Hz)%tfType     = Impedance_Plus_Hz
-     typeDict(Impedance_Plus_Hz)%nComp     = 12
      typeDict(Impedance_Plus_Hz)%units   = '[V/m]/[T]'
-     write(typeDict(Impedance_Plus_Hz)%comment,'(12a15)') &
-     	'Re(Zxx)','Im(Zxx)','Re(Zxy)','Im(Zxy)','Re(Zyx)','Im(Zyx)','Re(Zyy)','Im(Zyy)','Re(Tx)','Im(Tx)','Re(Ty)','Im(Ty)'
+     typeDict(Impedance_Plus_Hz)%nComp     = 12
+     allocate(typeDict(Full_Impedance)%id(12),STAT=istat)
+     typeDict(Full_Impedance)%id(1)  = 'Re(Zxx)'
+     typeDict(Full_Impedance)%id(2)  = 'Im(Zxx)'
+     typeDict(Full_Impedance)%id(3)  = 'Re(Zxy)'
+     typeDict(Full_Impedance)%id(4)  = 'Im(Zxy)'
+     typeDict(Full_Impedance)%id(5)  = 'Re(Zyx)'
+     typeDict(Full_Impedance)%id(6)  = 'Im(Zyx)'
+     typeDict(Full_Impedance)%id(7)  = 'Re(Zyy)'
+     typeDict(Full_Impedance)%id(8)  = 'Im(Zyy)'
+     typeDict(Full_Impedance)%id(9)  = 'Re(Tx)'
+     typeDict(Full_Impedance)%id(10) = 'Im(Tx)'
+     typeDict(Full_Impedance)%id(11) = 'Re(Ty)'
+     typeDict(Full_Impedance)%id(12) = 'Im(Ty)'
 
      typeDict(Off_Diagonal_Impedance)%name = 'Off Diagonal Impedance'
      typeDict(Off_Diagonal_Impedance)%isComplex = .true.
      typeDict(Off_Diagonal_Impedance)%calcQ     = .false.
      typeDict(Off_Diagonal_Impedance)%tfType     = Off_Diagonal_Impedance
-     typeDict(Off_Diagonal_Impedance)%nComp     = 4
      typeDict(Off_Diagonal_Impedance)%units  = '[V/m]/[T]'
-     write(typeDict(Off_Diagonal_Impedance)%comment,'(4a15)') &
-     	'Re(Zxy)','Im(Zxy)','Re(Zyx)','Im(Zyx)'
+     typeDict(Off_Diagonal_Impedance)%nComp     = 4
+     allocate(typeDict(Full_Impedance)%id(4),STAT=istat)
+     typeDict(Full_Impedance)%id(1) = 'Re(Zxy)'
+     typeDict(Full_Impedance)%id(2) = 'Im(Zxy)'
+     typeDict(Full_Impedance)%id(3) = 'Re(Zyx)'
+     typeDict(Full_Impedance)%id(4) = 'Im(Zyx)'
 
   end subroutine TypeDictSetUp
 

@@ -359,7 +359,7 @@ Contains
 !**********************************************************************
    subroutine create_EMsolnMTX(d,eAll)
 
-      type(dvecMTX),intent(in)          :: d
+      type(dataVecMTX_t),intent(in)          :: d
       type(EMsolnMTX), intent(inout)     :: eAll
 
       !  local variables

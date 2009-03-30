@@ -9,8 +9,6 @@ module UserCtrl
   character*1, parameter	:: COMPUTE_J = 'J'
   character*1, parameter	:: MULT_BY_J = 'M'
   character*1, parameter	:: MULT_BY_J_T = 'T'
-  character*1, parameter	:: MULT_BY_J_MTX = 'L'
-  character*1, parameter	:: MULT_BY_J_T_MTX = 'K'
   character*1, parameter	:: INVERSE = 'I'
   character*1, parameter	:: TEST_COV = 'C'
 
@@ -20,7 +18,7 @@ module UserCtrl
   type :: userdef_control
 
 	! Options: FORWARD, COMPUTE_J, MULT_BY_J, MULT_BY_J_T,
-	!          MULT_BY_J_MTX, MULT_BY_J_T_MTX, NLCG, TEST_COV
+	!          NLCG, TEST_COV, READ_WRITE
 	character(80)       :: job
 
 	! File to set up inversion controls
@@ -31,11 +29,11 @@ module UserCtrl
 
 	! Input files
 	character(80)       :: rFile_Grid, rFile_Model, rFile_Data
-	character(80)       :: rFile_dModel, rFile_dModelMTX
+	character(80)       :: rFile_dModel
 
 	! Output files
 	character(80)       :: wFile_Grid, wFile_Model, wFile_Data
-	character(80)       :: wFile_dModel, wFile_dModelMTX
+	character(80)       :: wFile_dModel
 	character(80)       :: wFile_EMsoln, wFile_Sens
 
 	! Specify damping parameter for the inversion
@@ -72,8 +70,6 @@ Contains
   	ctrl%wFile_Data = ''
   	ctrl%rFile_dModel = ''
   	ctrl%wFile_dModel = ''
-  	ctrl%rFile_dModelMTX = ''
-  	ctrl%wFile_dModelMTX = ''
   	ctrl%wFile_EMsoln = ''
   	ctrl%wFile_Sens = ''
   	ctrl%lambda = 1
@@ -121,16 +117,8 @@ Contains
         write(*,*) '[MULT_BY_J_T]'
         write(*,*) ' -T  rFile_Model rFile_Data wFile_dModel'
         write(*,*) '  Multiplies a data vector by J^T to create a model'
-        write(*,*) '[MULT_BY_J_MTX]'
-        write(*,*) ' -L  rFile_Model rFile_dModelMTX rFile_Data wFile_Data'
-        write(*,*) '  Evaluates sum( J m_i ) over transmitters to yield a data'
-        write(*,*) '  vector; reads a sensitivity matrix from file to do this'
-        write(*,*) '[MULT_BY_J_T_MTX]'
-        write(*,*) ' -K  rFile_Model rFile_Data wFile_dModelMTX'
-        write(*,*) '  Multiples d_i by J_i^T separately for each transmitter,'
-        write(*,*) '  to yield a bunch of models, one for each transmitter'
         write(*,*) '[INVERSE]'
-        write(*,*) ' -I NLCG  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda delta]'
+        write(*,*) ' -I NLCG rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda delta]'
         write(*,*) '  Runs an inverse search to yield an inverse model'
         write(*,*) '  Here, lambda =  the initial damping parameter'
         write(*,*) '        delta  =  the initial line search step size in the model units'
@@ -210,30 +198,9 @@ Contains
 	       ctrl%wFile_dModel = temp(3)
 	    end if
 
-      case (MULT_BY_J_MTX) ! L
-        if (narg < 4) then
-           write(0,*) 'Usage: -L  rFile_Model rFile_dModelMTX rFile_Data wFile_Data'
-           stop
-        else
-	       ctrl%rFile_Model = temp(1)
-	       ctrl%rFile_dModelMTX = temp(2)
-	       ctrl%rFile_Data = temp(3)
-	       ctrl%wFile_Data = temp(4)
-	    end if
-
-      case (MULT_BY_J_T_MTX) ! K
-        if (narg < 3) then
-           write(0,*) 'Usage: -K  rFile_Model rFile_Data wFile_dModelMTX'
-           stop
-        else
-	       ctrl%rFile_Model = temp(1)
-	       ctrl%rFile_Data = temp(2)
-	       ctrl%wFile_dModelMTX = temp(3)
-	    end if
-
       case (INVERSE) ! I
         if (narg < 4) then
-           write(0,*) 'Usage: -I NLCG  rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda sigma]'
+           write(0,*) 'Usage: -I NLCG rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda sigma]'
            stop
         else
            ctrl%search = temp(1)

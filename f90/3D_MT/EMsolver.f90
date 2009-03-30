@@ -111,6 +111,18 @@ Contains
 
   end subroutine TXdictSetUp
 
+!  subroutine update_txDict(Periods)
+!
+!     real (kind=prec), intent(in)  :: Periods(:)
+!     integer                       :: nTx, iTx
+!
+!     nTx = size(Periods)
+!     do iTx = 1, nTx
+!
+!     enddo
+!
+!  end subroutine update_txDict
+
 ! **************************************************************************
 ! Cleans up and deletes transmitter dictionary at end of program execution
   subroutine deall_txDict()
@@ -323,7 +335,7 @@ Contains
 !**********************************************************************
    subroutine create_EMsolnMTX(d,eAll)
 
-      type(dvecMTX),intent(in)          :: d
+      type(dataVecMTX_t),intent(in)          :: d
       type(EMsolnMTX), intent(inout)     :: eAll
 
       !  local variables

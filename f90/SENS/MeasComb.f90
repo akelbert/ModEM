@@ -1,9 +1,9 @@
 module MeasComb
 !  higher level module that calls routines in dataFunc2D to
 !   --> evaluate non-linear and linear data functionals for all sites
-!       in a dvec object
+!       in a dataVec object
 !   --> construct the comb for forcing the adjoint model for the linear
-!       combination of data functionals corresponding to a dvec object
+!       combination of data functionals corresponding to a dataVec object
 !   This module is generic, and should work for a broad range of different
 !     problems (in particular, 2D and 3D MT).  Much of the code in these
 !     routines is for handling two general efficiency issues that arise
@@ -34,14 +34,14 @@ Contains
   ! given the background model parameter (Sigma0) and both
   ! measured and  background electric field solutions (ef,e0)
   ! evaluate linearized data functionals for all sites represented
-  !  in a dvec object.
+  !  in a dataVec object.
 
   !  electric field solutions are stored as type EMsoln
   type (EMsoln), intent(in)			:: ef,e0
   ! d provides indices into receiver dictionary on
   ! input.  Predicted impedances are computed using
   ! these and the input electric field solutions
-  type (dvec), intent(inout)            	:: d
+  type (dataVec_t), intent(inout)            	:: d
   !  background model parameter
   type (modelParam_t), intent(in)	        :: Sigma0
   !  optional input of conductivity perturbation dSigma used to
@@ -110,27 +110,27 @@ Contains
      do iFunc  = 1, nFunc
         Z = dotProd_EMsparseEMsoln(Lz(iFunc),ef,Conj_Case)
         if(typeDict(iDT)%isComplex) then
-           d%data(iComp,iSite) = real(Z)
+           d%value(iComp,iSite) = real(Z)
            iComp = iComp + 1
-           d%data(iComp,iSite) = imag(Z)
+           d%value(iComp,iSite) = imag(Z)
            iComp = iComp + 1
            if(calcQ) then
               call zero_ModelParam(sigmaQreal)
               call zero_ModelParam(sigmaQimag)
               call EMSparseQtoModelParam(C_ONE,Qz(iFunc), &
 			    Sigma0,sigmaQreal,sigmaQimag)
-              d%data(iComp-2,iSite) = d%data(iComp-2,iSite) &
+              d%value(iComp-2,iSite) = d%value(iComp-2,iSite) &
 	      		+ dotProd_modelParam(sigmaQreal,dSigma)	
-              d%data(iComp-1,iSite) = d%data(iComp-1,iSite) &
+              d%value(iComp-1,iSite) = d%value(iComp-1,iSite) &
        			+ dotProd_modelParam(sigmaQimag,dSigma)				
            endif
         else
-           d%data(iComp,iSite) = real(Z)
+           d%value(iComp,iSite) = real(Z)
            iComp = iComp + 1
            if(calcQ) then
               call zero_ModelParam(sigmaQreal)
               call EMSparseQtoModelParam(C_ONE,Qz(iFunc),Sigma0,sigmaQreal)
-              d%data(iComp-1,iSite) = d%data(iComp-1,iSite) +  &
+              d%value(iComp-1,iSite) = d%value(iComp-1,iSite) +  &
 			dotProd_modelParam(sigmaQreal,dSigma)
            endif
         endif
@@ -156,7 +156,7 @@ Contains
   subroutine linDataComb(e0,Sigma0,d,comb,Qcomb)
 
   ! given background electric field solution
-  ! and a dvec object (element of data space containing
+  ! and a dataVec object (element of data space containing
   ! MT data for one frequency, one or more sites) compute adjoint
   ! of measurement operator: i.e., the comb constructed from the scaled
   ! superposition of data kernals (scaled by conjugate of data values ...
@@ -167,7 +167,7 @@ Contains
   !   with respect to model parameters
   !
   !  NOTE: this will not zero comb (or Qcomb): repeated calls with different
-  !  instances of dvec will add new comb elements to input comb
+  !  instances of dataVec will add new comb elements to input comb
   !  NOTE: we are only supporting full storage sources in comb;
   !    the elements of comb should be allocated and zeroed before calling
   ! As with linDataPred, all of the receiver, transmitter, and data type
@@ -181,7 +181,7 @@ Contains
   ! d provides indices into receiver dictionary on
   ! input.  Predicted impedances are computed using
   ! these and the input electric field solutions
-  type (dvec), intent(in)               	:: d
+  type (dataVec_t), intent(in)               	:: d
   ! Output 
   type (EMrhs), intent(inout)          		:: comb
   ! Optional output
@@ -224,13 +224,13 @@ Contains
      iComp = 1
      do iFunc  = 1, nFunc
         if(typeDict(iDT)%isComplex) then
-           !  move real data in dvec into complex conjugate of TF (impedance)
+           !  move real data in dataVec into complex conjugate of TF (impedance)
            !  multiply this by data kernel for complex impedance ...
            !      (take real part in parameter space)
-           Z = cmplx(d%data(iComp,iSite),-d%data(iComp+1,iSite),8)
+           Z = cmplx(d%value(iComp,iSite),-d%value(iComp+1,iSite),8)
            iComp = iComp+2
         else
-           Z = cmplx(d%data(iComp,iSite),0.0,8)
+           Z = cmplx(d%value(iComp,iSite),0.0,8)
            iComp = iComp+1
         endif
         call add_EMsparseEMrhs(Z,Lz(iFunc),comb)
@@ -265,7 +265,7 @@ Contains
   ! d provides indices into receiver dictionary on
   ! input. Predicted impedances are computed using
   ! these and the input electric field solutions
-  type (dvec), intent(inout)    :: d
+  type (dataVec_t), intent(inout)    :: d
   ! model parameter used to compute ef
   type (modelParam_t), intent(in)  :: Sigma
 
@@ -292,18 +292,18 @@ Contains
   do iSite = 1,d%nSite
      call nonLinDataFunc(ef,Sigma,iDT,d%rx(iSite),Z)
      !  copy responses in Z (possibly complex, possibly multiple
-     !         components) into dvec object d
+     !         components) into dataVec object d
      !  Loop over components
      iComp = 0
      do iFunc  = 1, nFunc
         if(typeDict(iDT)%isComplex) then
            iComp = iComp + 1
-           d%data(iComp,iSite) = real(Z(iFunc))
+           d%value(iComp,iSite) = real(Z(iFunc))
            iComp = iComp + 1
-           d%data(iComp,iSite) = imag(Z(iFunc))
+           d%value(iComp,iSite) = imag(Z(iFunc))
         else
            iComp = iComp + 1
-           d%data(iComp,iSite) = real(Z(iFunc))
+           d%value(iComp,iSite) = real(Z(iFunc))
         endif  
      enddo  
   enddo

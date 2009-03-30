@@ -184,7 +184,7 @@ module ioAscii
       end subroutine write_EMsolnMTX
 
      !**********************************************************************
-      subroutine write_Z(fid,cfile,nTx,periods,modes,nSites,sites,allData)
+      subroutine write_Z(fid,cfile,nTx,periods,modes,nSites,sites,units,allData)
      ! writes impedance file, including list of periods, siteLocations
      !   NOTE: this assumes that the arrays "sites" and "periods" are
      !    essentially identical to the receiver and transmitter dictionaries
@@ -197,19 +197,32 @@ module ioAscii
       real(kind=8),intent(in)   :: periods(nTx)
       character*2, intent(in)	:: modes(nTx)
       real(kind=8),intent(in)   :: sites(2,nSites)
-      type(dvecMTX), intent(in)      :: allData
+      type(dataVecMTX_t), intent(in)      :: allData
       real(kind=8), dimension(:,:), allocatable :: siteTemp
       character(80)   :: info,units
       integer   :: nComp = 2
       complex*8  temp
 
-     ! local variables
-      integer   :: ns,iTx,k,j,isite,icomp
+      ! local variables
+      type(dataVec_t) :: data
+      integer   :: nSite,iTx,iDt,k,j,isite,icomp
       character(10) :: siteid, tab='           '
       character(80) :: header
+      real(kind=8) :: SI_factor
 
       info = 'Impedance responses from ModEM'
-      units = '[V/m]/[A/m]'
+      if (index(units,'[V/m]/[T]')>0) then
+         ! SI units for E/B
+         SI_factor = 1.0
+      else if (index(units,'[mV/km]/[nT]')>0) then
+         ! practical units for E/B
+         SI_factor = 1000.0
+      else if ((index(units,'[V/m]/[A/m]')>0) .or. (index(units,'Ohm')>0)) then
+         ! SI units for E/H
+         SI_factor = 1000.0 * 10000.0/(4*PI) ! approx. 796000.0
+      else
+         call errStop('Unknown units in output data file '//cfile)
+      end if
 
       open(unit=fid,file=cfile,form='formatted',status='unknown')
       write(fid,'(a12)',advance='no') 'Description:'
@@ -222,55 +235,62 @@ module ioAscii
       write(fid,'(i5)') allData%nTx
       ! loop over periods
       do iTx = 1,allData%nTx
-         header = tab//'  Re   '//tab//'   Im    '
-         ns = allData%d(iTx)%nSite
-         ncomp = allData%d(iTx)%nComp
-         ! write period, number of sites for this period
-         write(fid,'(es12.6,a5,i5)') periods(iTx),modes(iTx),ns
-         ! write site locations for this period
-         allocate(siteTemp(2,ns))
-         do k = 1,ns
-            siteTemp(:,k) = sites(:,allData%d(iTx)%rx(k))
+         do iDt = 1,allData%d(iTx)%nDt
+             data = allData%d(iTx)%data(iDt)
+	         header = tab//'  Re   '//tab//'   Im    '
+	         nSite = data%nSite
+	         nComp = data%nComp
+	         ! write period, number of sites for this period
+	         write(fid,'(es12.6,a5,i5)') periods(iTx),modes(iTx),nSite
+	         ! write site locations for this period
+	         allocate(siteTemp(2,nSite))
+	         do k = 1,nSite
+	            siteTemp(:,k) = sites(:,data%rx(k))
+	         enddo
+			! write latitude, longitude and elevation
+			 do j = 1,2
+			   do k = 1,nSite
+	        	  write(fid,'(f14.3)',advance='no') siteTemp(j,k)
+			   enddo
+	           write(fid,*)
+			 enddo
+		    ! write the comment line for the data block
+		     write(fid,'(a80)') header
+	         do isite = 1,nSite
+	         	! Note: temporarily, we write site id's according to their number;
+	         	! in the future, they will be stored in the receiver dictionary
+	         	write(siteid,'(i5)') isite
+	         	write(fid,'(a10)',advance='no') trim(siteid)
+	         	!  note that each data field in a dataVec (i.e., allData%d(iTx)%data(iDt))
+	         	!   is a real array of size (nComp,nSite)
+	         	do icomp = 1,nComp
+	         		write(fid,'(es15.6)',advance='no') data%value(icomp,isite)/SI_factor
+	         	enddo
+	         	write(fid,*)
+	         	write(fid,'(a10)',advance='no') tab
+	         	do icomp = 1,nComp
+	         	    if (data%errorBar) then
+	         		   write(fid,'(es15.6)',advance='no') data%error(icomp,isite)/SI_factor
+	         		else
+	         		   write(fid,'(es15.6)',advance='no') R_ZERO
+	         		endif
+	         	enddo
+	         	write(fid,*)
+	         enddo
+	         deallocate(siteTemp)
          enddo
-		! write latitude, longitude and elevation
-		 do j = 1,2
-		   do k = 1,ns
-        	  write(fid,'(f14.3)',advance='no') siteTemp(j,k)
-		   enddo
-           write(fid,*)
-		 enddo
-	    ! write the comment line for the data block
-	     write(fid,'(a80)') header
-         do isite = 1,ns
-         	! Note: temporarily, we write site id's according to their number;
-         	! in the future, they will be stored in the receiver dictionary
-         	write(siteid,'(i5)') isite
-         	write(fid,'(a10)',advance='no') trim(siteid)
-         	!  note that each data field in a dvec (i.e., allData%d(iTx)%data)
-         	!   is a real array of size (nComp,ns)
-         	do icomp = 1,ncomp
-         		write(fid,'(es15.6)',advance='no') allData%d(iTx)%data(icomp,isite)
-         	enddo
-         	write(fid,*)
-         	write(fid,'(a10)',advance='no') tab
-         	do icomp = 1,ncomp
-         		write(fid,'(es15.6)',advance='no') allData%d(iTx)%err(icomp,isite)
-         	enddo
-         	write(fid,*)
-         enddo
-         deallocate(siteTemp)
       enddo
       close(fid)
 
-			! Calculating apparent resistivities and phases
-      !temp=dcmplx(allData%d(iTx)%data(1,k),allData%d(iTx)%data(2,k))
-      !write(fid,*)tab, ((periods(iTx)*MU_0)/(2.0*PI))*abs(temp)**2, abs(atan(allData%d(iTx)%data(2,k)/allData%d(iTx)%data(1,k)))*(180/PI)
+      ! Calculating apparent resistivities and phases
+      !temp=dcmplx(data%value(1,k),data%value(2,k))
+      !write(fid,*)tab, ((periods(iTx)*MU_0)/(2.0*PI))*abs(temp)**2, abs(atan(data%value(2,k)/data%value(1,k)))*(180/PI)
 
       end subroutine write_Z
 
 
      !**********************************************************************
-      subroutine read_Z(fid,cfile,nTx,periods,modes,nSites,sites,allData)
+      subroutine read_Z(fid,cfile,nTx,periods,modes,nSites,sites,units,allData)
      ! reads in data file, returns list of periods, modes, siteLocations, and
      !   sets up data vector structure, including data and error bars
      ! First four lines are assumed to be:
@@ -284,14 +304,15 @@ module ioAscii
       real(kind=8),dimension(:), pointer     :: periods
       real(kind=8),dimension(:,:), pointer   :: sites
       character*2, dimension(:), pointer	:: modes
-      type(dvecMTX), intent(inout)   :: allData
+      type(dataVecMTX_t), intent(inout)   :: allData
 
      ! local variables
       integer   :: nComp = 2
-      integer   :: ns,iTx,k,l,j,Ndata
+      integer   :: nSite,nDt,iTx,iDt,k,l,j,Ndata
       character(10)siteid
       real(kind=8), allocatable, dimension(:,:) :: siteTemp,siteTempAll
       logical   :: newSite, conjugate
+      logical   :: isComplex, errorBar
       character(80) temp, description, units
       integer   :: sign_in_file
       real(kind=8) :: SI_factor
@@ -302,10 +323,15 @@ module ioAscii
       read(fid,'(a17,i3)') temp,sign_in_file
       read(fid,*)
 
-      if (index(units,'[V/m]/[A/m]')>0) then
+      if (index(units,'[V/m]/[T]')>0) then
+         ! SI units for E/B
          SI_factor = 1.0
       else if (index(units,'[mV/km]/[nT]')>0) then
+         ! practical units for E/B
          SI_factor = 1000.0
+      else if ((index(units,'[V/m]/[A/m]')>0) .or. (index(units,'Ohm')>0)) then
+         ! SI units for E/H
+         SI_factor = 1000.0 * 10000.0/(4*PI) ! approx. 796000.0
       else
          call errStop('Unknown units in input data file '//cfile)
       end if
@@ -319,92 +345,104 @@ module ioAscii
       end if
 
       read(fid,*) nTx
+      call create(nTx, allData)
       allocate(periods(nTx))
       allocate(modes(nTx))
-      allocate(allData%d(nTx))
-      allData%allocated = .true.
-      allData%errorBar = .true.
-      allData%nTx = nTx
+
+
      ! loop over transmitters (periods/modes)
       Ndata = 0
       do iTx = 1,nTx
 
-         ! read in number of sites for this period
-         read(fid,*) periods(iTx),modes(iTx),ns
-         ! read in site locations
-         allocate(siteTemp(2,ns))
-
-         read(fid,*) (siteTemp(1,k),k=1,ns)
-         read(fid,*) (siteTemp(2,k),k=1,ns)
-
-         ! read comment line just before the data block
-         read(fid,*)
-
-         ! create dvec object, read in data
-         allData%d(iTx)%errorBar = .true.
-         call create_Dvec(nComp,ns,allData%d(iTx))
-         Ndata  = Ndata + nComp*ns
+         ! hey, for now we have to assume that there's only one data type per period
+         ! in the data file - otherwise the reading would be too tedious... (no need
+         ! for this assumption anywhere else in the code, including write_Z routine)
+         ! the structure of the data file should really be different.
+         nDt = 1
+         call create(nDt, allData%d(iTx))
          allData%d(iTx)%tx = iTx
-	     if(modes(iTx) .eq. 'TM') then
-	         allData%d(iTx)%datatype = 2
-	     else
-	         allData%d(iTx)%datatype = 1
-	     endif
-         do k=1,ns
-             read(fid,*)siteid, (allData%d(iTx)%data(j,k),j=1,nComp)
-             read(fid,*)        (allData%d(iTx)%err(j,k),j=1,nComp)
-						! TEMPORARY: set error bounds
-						!do j=1,nComp
-						!	allData%d(iTx)%err(j,k) = max(allData%d(iTx)%err(j,k),0.05*abs(allData%d(iTx)%data(j,k)))
-						!end do
-         end do
+         allData%d(iTx)%allocated = .true.
 
-         ! convert data to SI units
-         allData%d(iTx)%data = SI_factor * allData%d(iTx)%data
-         allData%d(iTx)%err  = SI_factor * allData%d(iTx)%err
+         do iDt = 1,nDt
+	         ! read in number of sites for this period
+	         read(fid,*) periods(iTx),modes(iTx),nSite
+	         ! read in site locations
+	         allocate(siteTemp(2,nSite))
 
-         ! conjugate data as necessary
-         if (conjugate) then
-           do j=1,nComp,2
-              allData%d(iTx)%data(j,:) = - allData%d(iTx)%data(j,:)
-           end do
-         end if
+	         read(fid,*) (siteTemp(1,k),k=1,nSite)
+	         read(fid,*) (siteTemp(2,k),k=1,nSite)
 
-         if(iTx .eq. 1) then
-           ! allocate temporary storage for full sites list
-           ! (this might not always work ... I am assuming that the
-           !        max number of sites is ns from period one * nTx)
-            allocate(siteTempAll(2,ns*nTx))
-            nSites = ns
-            do k = 1,ns
-               siteTempAll(1,k) = siteTemp(1,k)
-               siteTempAll(2,k) = siteTemp(2,k)
-               allData%d(iTx)%rx(k) = k
-            enddo
-         else
-            ! check to see if site locations are already in list
-            !  if not add to list; in any event set reciever "pointer" rx
-            do k = 1,ns
-               newSite = .true.
-               do l = 1,nSites
-                  if((siteTemp(1,k).eq.siteTempAll(1,l)).and.  &
-		  	(siteTemp(2,k).eq.siteTempAll(2,l))) then
-                     newSite = .false.
-                     allData%d(iTx)%rx(k) = l
-                     exit
-                  endif
-               enddo
-               if(newSite) then
-                  nSites = nSites+1
-                  siteTempAll(1,nSites) = siteTemp(1,k)
-                  siteTempAll(2,nSites) = siteTemp(2,k)
-                  allData%d(iTx)%rx(k) = nSites
-               endif
-            enddo
-         endif
-         deallocate(siteTemp)
+	         ! read comment line just before the data block
+	         read(fid,*)
+
+	         ! create dataVec object, read in data
+	         isComplex = .true.
+	         errorBar = .true.
+	         call create_dataVec(nComp,nSite,allData%d(iTx)%data(iDt),isComplex,errorBar)
+	         Ndata  = Ndata + nComp*nSite
+
+	         allData%d(iTx)%data(iDt)%tx = iTx
+
+		     if(modes(iTx) .eq. 'TM') then
+		         allData%d(iTx)%data(iDt)%datatype = 2
+		     else
+		         allData%d(iTx)%data(iDt)%datatype = 1
+		     endif
+
+	         do k=1,nSite
+	             read(fid,*)siteid, (allData%d(iTx)%data(iDt)%value(j,k),j=1,nComp)
+	             read(fid,*)        (allData%d(iTx)%data(iDt)%error(j,k),j=1,nComp)
+	         end do
+
+	         ! convert data to SI units
+	         allData%d(iTx)%data(iDt)%value = SI_factor * allData%d(iTx)%data(iDt)%value
+	         allData%d(iTx)%data(iDt)%error = SI_factor * allData%d(iTx)%data(iDt)%error
+
+	         ! conjugate data as necessary
+	         if (conjugate) then
+	           do j=2,nComp,2
+	              allData%d(iTx)%data(iDt)%value(j,:) = - allData%d(iTx)%data(iDt)%value(j,:)
+	           end do
+	         end if
+
+	         if(iTx .eq. 1) then
+	           ! allocate temporary storage for full sites list
+	           ! (this might not always work ... I am assuming that the
+	           !        max number of sites is ns from period one * nTx)
+	            allocate(siteTempAll(2,nSite*nTx))
+	            nSites = nSite
+	            do k = 1,nSite
+	               siteTempAll(1,k) = siteTemp(1,k)
+	               siteTempAll(2,k) = siteTemp(2,k)
+	               allData%d(iTx)%data(iDt)%rx(k) = k
+	            enddo
+	         else
+	            ! check to see if site locations are already in list
+	            !  if not add to list; in any event set reciever "pointer" rx
+	            do k = 1,nSite
+	               newSite = .true.
+	               do l = 1,nSites
+	                  if((siteTemp(1,k).eq.siteTempAll(1,l)).and.  &
+			  	(siteTemp(2,k).eq.siteTempAll(2,l))) then
+	                     newSite = .false.
+	                     allData%d(iTx)%data(iDt)%rx(k) = l
+	                     exit
+	                  endif
+	               enddo
+	               if(newSite) then
+	                  nSites = nSites+1
+	                  siteTempAll(1,nSites) = siteTemp(1,k)
+	                  siteTempAll(2,nSites) = siteTemp(2,k)
+	                  allData%d(iTx)%data(iDt)%rx(k) = nSites
+	               endif
+	            enddo
+	         endif
+	         deallocate(siteTemp)
+         enddo
       enddo
-      allData%Ndata = Ndata
+
+      allData%allocated = .true.
+
       ! copy list of unique sites into "sites" array
       allocate(sites(2,nSites))
       do k = 1,nSites
