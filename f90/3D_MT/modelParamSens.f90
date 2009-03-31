@@ -32,10 +32,10 @@ module modelParamSens
    !    e is output ... used for forcing, created before calling
    !    this routine
 
-   type(EMsoln), intent(in)		    :: e0
+   type(EMsoln_t), intent(in)		    :: e0
    type(modelParam_t), intent(in)	:: sigma0 ! used to compute e0
    type(modelParam_t), intent(in)	:: dsigma
-   type(EMrhs), intent(inout)		:: e
+   type(EMrhs_t), intent(inout)		:: e
 
    !  local variables
    complex(kind=prec)		:: minus_i_omega_mu
@@ -67,9 +67,9 @@ module modelParamSens
    !       the adjoint mapping returns separate data structures
    !        for real and imaginary parts; imaginary output is optional ...
 
-   type(EMsoln), intent(in)			:: e0
+   type(EMsoln_t), intent(in)			:: e0
    type(modelParam_t), intent(in)	:: sigma0 ! used to compute e0
-   type(EMsoln), intent(in)			:: e
+   type(EMsoln_t), intent(in)			:: e
    type(modelParam_t), intent(inout)		:: dsigmaReal
    type(modelParam_t), intent(inout),optional	:: dsigmaImag
 

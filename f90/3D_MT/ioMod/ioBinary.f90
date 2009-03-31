@@ -623,7 +623,7 @@ Contains
 
       integer, intent(in)               :: fid
       character(*), intent(in)          :: cfile
-      type(EMsolnMTX), intent(in)               :: eAll
+      type(EMsolnMTX_t), intent(in)               :: eAll
 
       !   local variables
       integer           :: j,k,nMode = 2, ios

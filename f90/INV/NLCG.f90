@@ -118,7 +118,7 @@ Contains
    type(modelParam_t), intent(in)           :: mHat
    real(kind=prec), intent(out) :: F
    type(dataVecMTX_t), optional, intent(out)   :: dHat
-   type(EMsolnMTX), optional, intent(out) :: eAll
+   type(EMsolnMTX_t), optional, intent(out) :: eAll
    real(kind=prec), optional, intent(out) :: RMS
 
    !  local variables
@@ -186,7 +186,7 @@ Contains
    type(modelParam_t), intent(in)           :: mHat
    type(modelParam_t), intent(out)          :: grad
    type(dataVecMTX_t), intent(in)              :: dHat
-   type(EMsolnMTX), intent(in)            :: eAll
+   type(EMsolnMTX_t), intent(in)            :: eAll
 
    !  local variables
    type(dataVecMTX_t)    :: res
@@ -343,7 +343,7 @@ Contains
    integer				:: iter, nCG, nLS, nfunc
    character(3)         :: iterChar
    character(100)       :: modelFile, gradFile
-   type(EMsolnMTX)      :: eAll
+   type(EMsolnMTX_t)      :: eAll
 
    call set_NLCGiterControl(iterControl)
 
@@ -559,7 +559,7 @@ Contains
    real(kind=prec)                 :: g_0,f_0,f_1,f_i,rms_1
    type(modelParam_t)                        :: mHat_0,mHat_1
    type(dataVecMTX_t)                           :: dHat,dHat_1
-   type(EMsolnMTX)                         :: eAll,eAll_1
+   type(EMsolnMTX_t)                         :: eAll,eAll_1
 
    ! parameters
    c = iterControl%c
@@ -727,7 +727,7 @@ Contains
    real(kind=prec)                 :: g_0,f_0,f_1,f_i,f_j,rms_1
    type(modelParam_t)                        :: mHat_0,mHat_1
    type(dataVecMTX_t)                           :: dHat,dHat_1
-   type(EMsolnMTX)                         :: eAll,eAll_1
+   type(EMsolnMTX_t)                         :: eAll,eAll_1
 
    ! parameters
    c = iterControl%c

@@ -96,7 +96,7 @@ Contains
 
     implicit none
     !  INPUTS:
-    type (RHS), intent(in)		:: bRHS
+    type (RHS_t), intent(in)		:: bRHS
     real(kind=prec), intent(in)	:: omega
     !  OUTPUTS:
     !     eSol must be allocated before calling this routine

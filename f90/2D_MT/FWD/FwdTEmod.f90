@@ -124,7 +124,7 @@ module fwdtemod
       !   solution of adjoint problem ... not yet coded to return proper BC
       !   for adjoint solution!
 
-      type(EMrhs), intent(in)	:: b
+      type(EMrhs_t), intent(in)	:: b
       !  The solution is returned in array Esol ...
       !  could make a derived data type to carry soln and info
       !   about grid size

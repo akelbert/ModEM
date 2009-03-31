@@ -44,11 +44,11 @@ Contains
 
    !  local variables
    type(dataVec_t)  :: dVec
-   type(EMsoln)		:: e,e0
-   type(EMrhs)		:: comb
+   type(EMsoln_t)		:: e,e0
+   type(EMrhs_t)		:: comb
    integer 		:: i,j,nTx,k,nSite,nTot,ii,iTx, &
 				iDT,nfunc,ncomp,iRx,iFunc
-   type(EMsparse), pointer	:: L(:),Q(:)
+   type(EMsparse_t), pointer	:: L(:),Q(:)
    logical 		:: calcQ
 
    ! nTot is number of real data
@@ -179,11 +179,11 @@ Contains
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
    type(dataVecMTX_t), intent(inout)		:: d
-   type(EMsolnMTX), intent(inout), optional	:: eAll
+   type(EMsolnMTX_t), intent(inout), optional	:: eAll
 
    !  local variables
-   type(EMsoln)		:: e,e0
-   type(EMrhs)		:: comb
+   type(EMsoln_t)		:: e,e0
+   type(EMrhs_t)		:: comb
    integer 		:: i,j,iTx,iDT
    logical		:: savedSolns
 
@@ -265,11 +265,11 @@ Contains
    type(dataVecMTX_t), intent(in)		:: d
    !   dsigma is the output conductivity parameter
    type(modelParam_t), intent(Out)  	:: dsigma
-   type(EMsolnMTX), intent(in), optional	:: eAll
+   type(EMsolnMTX_t), intent(in), optional	:: eAll
 
    !  local variables
-   type(EMsoln)		:: e,e0
-   type(EMrhs) 		:: comb
+   type(EMsoln_t)		:: e,e0
+   type(EMrhs_t) 		:: comb
    type(modelParam_t)	:: sigmaTemp, Qcomb
    integer 		:: i,j,iTx,iDT
    logical		:: calcSomeQ, firstQ
@@ -385,10 +385,10 @@ Contains
    type(dataVecMTX_t), intent(inout)	:: d
    !  structure containing array of solution vectors (should be
    !   allocated before calling)
-   type(EMsolnMTX), intent(inout), optional	:: eAll
+   type(EMsolnMTX_t), intent(inout), optional	:: eAll
 
    ! local variables
-   type(EMsoln)				:: e0
+   type(EMsoln_t)				:: e0
    integer				:: iTx,i,j
 
    if(.not.d%allocated) then

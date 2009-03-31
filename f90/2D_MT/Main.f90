@@ -47,7 +47,7 @@ module Main
   type(modelParam_t), save		:: sigma1
 
   !  storage for EM solutions
-  type(EMsolnMTX), save            :: eAll
+  type(EMsolnMTX_t), save            :: eAll
 
   logical                   :: write_model, write_data, write_EMsoln
 

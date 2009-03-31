@@ -158,7 +158,7 @@ Contains
   !   This now creates the required sparse vectors 
   !      (either for TE or TM, as appropriate) for impedance evaluation
 
-  type (EMsoln), intent(in)			:: ef
+  type (EMsoln_t), intent(in)			:: ef
   ! model parameter used to computed ef
   type (modelParam_t), intent(in)   :: Sigma
   ! indicies into data type and receiver dictionaries
@@ -232,7 +232,7 @@ Contains
   !     be returned by data functional routines could be > 1)
   
   !  electric field solutions are stored as type EMsoln
-  type (EMsoln), intent(in)		:: e0
+  type (EMsoln_t), intent(in)		:: e0
   ! model parameter used to computed e0
   type (modelParam_t), intent(in)   :: Sigma0
   ! indicies into data type and receiver dictionaries
@@ -242,7 +242,7 @@ Contains
   !    be treated as arrays here, even if there is only one element.
   !   As an example: to add tippers to TE mode, dimension on LZ will
   !    have to be changed to 2. 
-  type(EMsparse), intent(inout)		:: Lz(1), Qz(1)
+  type(EMsparse_t), intent(inout)		:: Lz(1), Qz(1)
 
   !  local variables
   complex (kind=prec)		:: B,E,c_E,c_B
@@ -317,7 +317,7 @@ Contains
    !  Now, this also is used to multiply Q by cs before adding.
 
    complex(kind=prec),intent(in)	:: cs
-   type (EMsparse), intent(in)                  :: Q
+   type (EMsparse_t), intent(in)                  :: Q
    type (modelParam_t), intent(in)                :: sigma0
    type (modelParam_t), intent(inout)             :: dsigmaReal
    type (modelParam_t), intent(inout),optional    :: dsigmaImag

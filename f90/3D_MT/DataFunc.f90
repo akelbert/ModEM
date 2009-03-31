@@ -245,7 +245,7 @@ Contains
   ! impedance calculation in this module (not used by higher levels)
 
   implicit none
-  type (EMsoln), intent(in)		:: ef
+  type (EMsoln_t), intent(in)		:: ef
   type (modelParam_t), intent(in) :: Sigma ! used to compute ef
   integer, intent(in)			:: iDT
   integer, intent(in) 			:: iRX
@@ -359,7 +359,7 @@ Contains
   !     derivative of data functional with respect to model paramters
   !         (NOT YET IMPLEMENTED FOR 3D MT!!!!)
 
-  type (EMsoln), intent(in)		   :: e0
+  type (EMsoln_t), intent(in)		   :: e0
   type (modelParam_t), intent(in)  :: Sigma0
   integer, intent(in)			   :: iDT, iRX
   !   NOTE: Lz and Qz have to be declared as arrays for
@@ -368,7 +368,7 @@ Contains
   !     be returned by data functional routines could be > 1)
   !   NOTE:  in principal the comparable input arguments in
   !        the 2D program should also be of type EMsparse!
-  type(EMsparse), intent(inout)		:: L(*),Q(*)
+  type(EMsparse_t), intent(inout)		:: L(*),Q(*)
 
   !  local variables
   complex(kind=prec)	:: Binv(2,2)
@@ -485,7 +485,7 @@ Contains
    !  Now, this also is used to multiply Q by cs before adding.
 
    complex(kind=prec),intent(in)	:: cs
-   type (EMsparse), intent(in)                  :: Q
+   type (EMsparse_t), intent(in)                  :: Q
    type (modelParam_t), intent(in)                :: sigma0
    type (modelParam_t), intent(inout)             :: dsigmaReal
    type (modelParam_t), intent(inout),optional    :: dsigmaImag

@@ -35,7 +35,7 @@ module ioAscii
   use emsolve3d
   use dataspace
   use datafunc ! for data types
-  use emsolver, only: EMsolnMTX
+  use emsolver, only: EMsolnMTX_t
 
   implicit none
 
@@ -824,7 +824,7 @@ Contains
 
       integer, intent(in)               :: fid
       character(*), intent(in)          :: cfile
-      type(EMsolnMTX), intent(in)               :: eAll
+      type(EMsolnMTX_t), intent(in)               :: eAll
 
       !   local variables
       integer           :: j,k,nMode = 2, ios

@@ -37,7 +37,7 @@ Contains
   !  in a dataVec object.
 
   !  electric field solutions are stored as type EMsoln
-  type (EMsoln), intent(in)			:: ef,e0
+  type (EMsoln_t), intent(in)			:: ef,e0
   ! d provides indices into receiver dictionary on
   ! input.  Predicted impedances are computed using
   ! these and the input electric field solutions
@@ -52,7 +52,7 @@ Contains
 
   !  local variables
   complex(kind=prec)	:: Z
-  type(EMsparse), pointer	:: Lz(:), Qz(:)
+  type(EMsparse_t), pointer	:: Lz(:), Qz(:)
   logical               	:: Conj_Case = .false.
   logical               	:: calcQ
   integer               	:: iSite, ncomp, itx, &
@@ -177,13 +177,13 @@ Contains
   ! background model parameter
   type (modelParam_t), intent(in)  :: Sigma0
   !  electric field solutions are stored as type EMsoln
-  type (EMsoln), intent(in)     :: e0
+  type (EMsoln_t), intent(in)     :: e0
   ! d provides indices into receiver dictionary on
   ! input.  Predicted impedances are computed using
   ! these and the input electric field solutions
   type (dataVec_t), intent(in)               	:: d
   ! Output 
-  type (EMrhs), intent(inout)          		:: comb
+  type (EMrhs_t), intent(inout)          		:: comb
   ! Optional output
   type (modelParam_t), intent(inout),optional	:: Qcomb
 
@@ -192,7 +192,7 @@ Contains
 					 nFunc, iComp, iFunc
   complex(kind=prec)		:: Z
   logical               		:: calcQ
-  type(EMSparse),pointer    	:: Lz(:),Qz(:)
+  type(EMsparse_t),pointer    	:: Lz(:),Qz(:)
 
   itx = d%tx
   iDT = d%dataType
@@ -261,7 +261,7 @@ Contains
   !   using dictionary indices stored in d%dataType
   !   Calls nonLinDataFunc to do the actual impedance calculation
   
-  type (EMsoln), intent(in)     :: ef
+  type (EMsoln_t), intent(in)     :: ef
   ! d provides indices into receiver dictionary on
   ! input. Predicted impedances are computed using
   ! these and the input electric field solutions

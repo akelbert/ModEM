@@ -155,7 +155,7 @@ module ioBinary
 
       integer, intent(in)		:: fid
       character*80, intent(in)		:: cfile
-      type(EMsolnMTX), intent(in)		:: eAll
+      type(EMsolnMTX_t), intent(in)		:: eAll
 
       integer		:: j
 

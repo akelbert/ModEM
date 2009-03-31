@@ -22,7 +22,7 @@ use sensmatrix
   end type iterControl_t
 
  save
-   type(EMsolnMTX), private		:: eAll
+   type(EMsolnMTX_t), private		:: eAll
    real(kind=prec), private	:: lambda
    type(modelParam_t), private		:: sigma, JTd
 

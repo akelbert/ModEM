@@ -43,7 +43,7 @@ implicit none
 !    keep data structures used only by
 !    routines in this module private
 !   rhs data structures for solving forward, sensitivity probs
-type(RHS), save, private		:: b0
+type(RHS_t), save, private		:: b0
 
 ! new type to store multiple EM solutions, one for each transmitter
 !  NOTE: creation routine for this data type cannot be at the level
@@ -51,12 +51,12 @@ type(RHS), save, private		:: b0
 !    for the lower level routine).  Might as well also leave the
 !    type definition here, since you can't use the type until instances
 !    can be created!
-type :: EMsolnMTX
+type :: EMsolnMTX_t
   !  derived data type for storing solutions from multiple transmitters
   integer			:: nTx = 0
-  type(EMsoln), pointer		:: solns(:)
+  type(EMsoln_t), pointer		:: solns(:)
   logical			:: allocated = .false.
-end type EMsolnMTX
+end type EMsolnMTX_t
 
 !  initialization routines (call Fwd version if no sensitivities are
 !     are calculated).  Note that these routines are set up to
@@ -157,11 +157,11 @@ Contains
    type(modelParam_t),intent(in), target		:: sigma
    !  following structures are initialized
    !	solution vector for forward problem
-   type(EMsoln), intent(inout)			:: e0
+   type(EMsoln_t), intent(inout)			:: e0
    !	solution vector for sensitivity
-   type(EMsoln), intent(inout), optional	:: e
+   type(EMsoln_t), intent(inout), optional	:: e
    !	forcing for sensitivity
-   type(EMrhs), intent(inout), optional		:: comb
+   type(EMrhs_t), intent(inout), optional		:: comb
 
    !  local variables
    integer		:: IER,k
@@ -226,9 +226,9 @@ Contains
    !**********************************************************************
    subroutine exitSolver(e0,e,comb)
    !   deallocates b0, comb, e0, e and solver arrays
-   type(EMsoln), intent(inout)			:: e0
-   type(EMsoln), intent(inout), optional	::e
-   type(EMrhs), intent(inout), optional		::comb
+   type(EMsoln_t), intent(inout)			:: e0
+   type(EMsoln_t), intent(inout), optional	::e
+   type(EMrhs_t), intent(inout), optional		::comb
 
    ! local variables
    logical			:: initForSens
@@ -266,7 +266,7 @@ Contains
    !   initialization of solver for a particular frequency.
 
    integer, intent(in)		:: iTx
-   type(EMsoln), intent(inout)	:: e0
+   type(EMsoln_t), intent(inout)	:: e0
 
    ! local variables
    real(kind=prec)	:: period, omega
@@ -308,8 +308,8 @@ Contains
 
    integer, intent(in)          	:: iTx
    character*3, intent(in)		:: FWDorADJ
-   type(EMrhs), intent(inout)		:: comb
-   type(EMsoln), intent(inout)		:: e
+   type(EMrhs_t), intent(inout)		:: comb
+   type(EMsoln_t), intent(inout)		:: e
 
    ! local variables
    integer      			:: IER,iMode
@@ -336,7 +336,7 @@ Contains
    subroutine create_EMsolnMTX(d,eAll)
 
       type(dataVecMTX_t),intent(in)          :: d
-      type(EMsolnMTX), intent(inout)     :: eAll
+      type(EMsolnMTX_t), intent(inout)     :: eAll
 
       !  local variables
       integer                           :: j
@@ -354,7 +354,7 @@ Contains
    !**********************************************************************
    subroutine deall_EMsolnMTX(eAll)
 
-      type(EMsolnMTX), intent(inout)     :: eAll
+      type(EMsolnMTX_t), intent(inout)     :: eAll
 
       !  local variables
       integer                           :: j

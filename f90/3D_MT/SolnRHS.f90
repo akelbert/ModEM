@@ -15,7 +15,7 @@ use sg_sparse_vector
 
 implicit none
 
-  type :: EMsoln
+  type :: EMsoln_t
     !!   Generic solution type, same name must be used to allow
     !!   use of higher level inversion modules on different problems.
     !!
@@ -36,25 +36,25 @@ implicit none
     real(kind=prec)	:: period = R_ZERO
     integer 			:: tx = 0
 
-    !! sigma, grid are pointers to the model parameter and grid used 
+    !! sigma, grid are pointers to the model parameter and grid used
     type(modelParam_t), pointer	:: sigma
     type(grid3d_t), pointer	:: grid
 
 		!! allocated when the EMsoln was created but not yet deallocated
     logical			:: allocated = .false.
 
-  end type EMsoln
+  end type EMsoln_t
 
-  type :: EMsparse
+  type :: EMsparse_t
     !!   Generic solution type, same name must be used to allow
     !!   use of higher level inversion modules on different problems.
     !!   Here we need two sparse vectors, one for each polarization
     !!    to represent linear data functionals on objects of type EMsoln
     integer			:: nPol = 2
     type(sparseVecC)		:: L(2)
-  end type EMsparse
+  end type EMsparse_t
 
-  type :: RHS
+  type :: RHS_t
      ! merges internal sources and boundary conditions into a single
      ! data structure; this is a compact representation of the right
      !  hand side for the induction equations for ONE mode
@@ -69,16 +69,16 @@ implicit none
      type (sparsevecc) 		:: sSparse
      type (cboundary) 		:: bc
      type(grid3d_t), pointer	:: grid
-  end type RHS
+  end type RHS_t
 
-  type :: EMrhs
+  type :: EMrhs_t
      ! rhs data structure for multiple polarizations, the abstract
      !  full rhs used for the abstract full EMsoln
 
      integer			:: nPol = 2
-     type (RHS) 		:: b(2)
+     type (RHS_t) 		:: b(2)
      logical			:: allocated = .false.
-  end type EMrhs
+  end type EMrhs_t
 
 contains
 
@@ -92,8 +92,8 @@ contains
      !  does not set transmitter or pointer to conductivity
        implicit none
        type(grid3d_t), intent(in), target	:: grid
-       type (EMsoln), intent(inout)		:: e
-      
+       type (EMsoln_t), intent(inout)		:: e
+
        ! local variables
        integer				:: k
 
@@ -103,7 +103,7 @@ contains
 			 end if
 
        e%nPol = 2
-       do k = 1,e%nPol 
+       do k = 1,e%nPol
           call create_cvector(grid,e%pol(k),EDGE)
        enddo
        e%grid => grid
@@ -116,12 +116,12 @@ contains
      subroutine deall_EMsoln(e)
      !  3D-MT  version
        implicit none
-       type (EMsoln), intent(inout)   :: e
+       type (EMsoln_t), intent(inout)   :: e
 
        ! local variables
        integer				:: k
 
-       do k = 1,e%nPol 
+       do k = 1,e%nPol
           call deall_cvector(e%pol(k))
        enddo
 
@@ -137,16 +137,16 @@ contains
      subroutine copy_EMsoln(eOut,eIn)
      !  3D-MT  version
        implicit none
-       type (EMsoln), intent(in)	:: eIn
-       type (EMsoln), intent(inout)	:: eOut
-       
+       type (EMsoln_t), intent(in)	:: eIn
+       type (EMsoln_t), intent(inout)	:: eOut
+
        ! local variables
        integer				:: k
        !  should have some error checking for eIn ...
-       do k = 1,eIn%nPol 
+       do k = 1,eIn%nPol
           call copy_cvector(eOut%pol(k),eIn%pol(k))
        enddo
-       
+
        eOut%omega = eIn%omega
        eOut%period = eIn%period
        eOut%tx = eIn%tx
@@ -157,13 +157,13 @@ contains
      !**********************************************************************
      subroutine zero_EMsoln(e)
      !  zeros a solution space object
-   
-       type(EMsoln), intent(inout)	:: e
+
+       type(EMsoln_t), intent(inout)	:: e
 
        ! local variables
        integer				:: k
 
-       do k = 1,e%nPol 
+       do k = 1,e%nPol
           call zero_cvector(e%pol(k))
        enddo
 
@@ -179,13 +179,13 @@ contains
      subroutine deall_EMsparse(LC)
 
        ! 3D version
-       type (EMsparse), intent(inout)   	:: LC
+       type (EMsparse_t), intent(inout)   	:: LC
 
        ! local variables
        integer				:: k
-       
+
        LC%nPol = 2
-       do k = 1,LC%nPol 
+       do k = 1,LC%nPol
           call deall_sparsevecc(LC%L(k))
        enddo
 
@@ -195,12 +195,12 @@ contains
 !**********************************************************************
      function dotProd_EMsparseEMsoln(SV,FV,Conj_Case) result(c)
 
-       type (EMsparse), intent(in)             :: SV  ! sparse vector
-       type (EMsoln), intent(in)               :: FV  ! full vector
+       type (EMsparse_t), intent(in)             :: SV  ! sparse vector
+       type (EMsoln_t), intent(in)               :: FV  ! full vector
        logical, intent(in)                     :: conj_Case ! = .true.
        complex(kind=prec)		:: c
        integer					:: k
-     
+
        c = C_ZERO
        if(conj_case) then
           do k = 1,SV%nPol
@@ -226,14 +226,14 @@ contains
      !   NO gridType needed for 3DMT
 
      subroutine create_RHS(grid,b)
-     !   3D version  ... 
+     !   3D version  ...
      !     does not create sparse vectors if sparsesource = .true.
      !       (this would in any event require knowing number of
-     !         non-zero coefficients to allow for)  
-		 ! NOTE: Does not do anything if b%allocated is .true.    
-     
+     !         non-zero coefficients to allow for)
+		 ! NOTE: Does not do anything if b%allocated is .true.
+
        type(grid3d_t), intent(in),target	:: grid
-       type (rhs), intent(inout)   	:: b
+       type (RHS_t), intent(inout)   	:: b
 
 			 if (b%allocated) then
 					! do nothing - exit the create subroutine
@@ -243,7 +243,7 @@ contains
        if (b%nonzero_BC) then
           ! create boundary condition data structures for each polarization
           !  NOTE: get rid of "used for" in BC type def
-          call create_cboundary(grid,b%bc) 
+          call create_cboundary(grid,b%bc)
           b%allocated = .true.
        endif
 
@@ -266,7 +266,7 @@ contains
     !************************************************************
      subroutine deall_RHS(b)
 
-       type (rhs), intent(inout)   :: b
+       type (RHS_t), intent(inout)   :: b
 
        if (b%nonzero_BC) then
           call deall_cboundary(b%bc)
@@ -292,8 +292,8 @@ contains
      !**********************************************************************
      subroutine zero_RHS(b)
      !  zeros a RHS object
-   
-       type(RHS), intent(inout)	:: b
+
+       type(RHS_t), intent(inout)	:: b
 
        if(b%nonzero_source .and. b%allocated) then
           if(b%sparse_source) then
@@ -301,7 +301,7 @@ contains
              !    deleted ...
              call deall_sparsevecc(b%sSparse)
           else
-             call zero_cvector(b%s) 
+             call zero_cvector(b%s)
           endif
        else if(b%nonzero_bc .and. b%allocated) then
           call zero_cboundary(b%bc)
@@ -319,13 +319,13 @@ contains
      !   NO gridType needed for 3DMT
 
      subroutine create_EMrhs(grid,b)
-     !   3D version  ... 
+     !   3D version  ...
      !     does not create sparse vectors if sparsesource = .true.
      !       (this would in any event require knowing number of
-     !         non-zero coefficients to allow for)      
-     
+     !         non-zero coefficients to allow for)
+
        type(grid3d_t), intent(in),target	:: grid
-       type (EMrhs), intent(inout)   	:: b
+       type (EMrhs_t), intent(inout)   	:: b
 
        integer				:: k
 
@@ -335,7 +335,7 @@ contains
        endif
 
        do k = 1,b%nPol
-          call create_RHS(grid,b%b(k)) 
+          call create_RHS(grid,b%b(k))
        enddo
 
        b%allocated = .true.
@@ -345,7 +345,7 @@ contains
     !************************************************************
      subroutine deall_EMrhs(b)
 
-       type (EMrhs), intent(inout)   :: b
+       type (EMrhs_t), intent(inout)   :: b
 
        integer			:: k
 
@@ -370,8 +370,8 @@ contains
      !   In this implementation, an EMrhs object
 
        complex(kind=prec), intent(in)  :: cs
-       type (EMsparse), intent(in)             :: SV  ! sparse vector
-       type (EMrhs), intent(inout)             :: comb  ! full vector
+       type (EMsparse_t), intent(in)             :: SV  ! sparse vector
+       type (EMrhs_t), intent(inout)             :: comb  ! full vector
 
      !  local variables
        type(sparsevecc)			:: temp
@@ -380,7 +380,7 @@ contains
        do k = 1,comb%nPol
           comb%b(k)%nonzero_source = .true.
           if(comb%b(k)%sparse_Source) then
-             ! use sparse vector storage for output  
+             ! use sparse vector storage for output
              if(comb%b(k)%sSparse%allocated) then
                 !  add to contentes of comb sparse vector and cs*SV
                 call linComb_sparsevecc(comb%b(k)%sSparse,C_ONE, &
@@ -400,8 +400,8 @@ contains
      !**********************************************************************
      subroutine zero_EMrhs(b)
      !  zeros a EMrhs object
-   
-       type(EMrhs), intent(inout)	:: b
+
+       type(EMrhs_t), intent(inout)	:: b
 
        integer			:: k
 
