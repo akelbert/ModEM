@@ -19,7 +19,7 @@ Contains
 
   subroutine initObsList(grid,obsList)
 
-	type (grid3d_t), intent(in)				:: grid
+	type (grid_t), intent(in)				:: grid
 	type (Obs_List), intent(inout)				:: obsList
 	integer										:: nobs,i
 
@@ -73,7 +73,7 @@ Contains
 
   subroutine ComputeInterpWeights(grid,obs)
 
-	type (grid3d_t) , intent(in)					:: grid
+	type (grid_t) , intent(in)					:: grid
 	type (receiver)	 , intent(inout)				:: obs
 	type (sparsevecc)								:: Lx,Ly,Lz
 	integer											:: i,j,k,index
@@ -247,7 +247,7 @@ Contains
 
   subroutine LocateReceiver(grid,o)
 
-	type (grid3d_t), intent(in)	:: grid
+	type (grid_t), intent(in)	:: grid
 	type (receiver), intent(inout)	:: o
 	integer							:: i,j,k
 	real(8)							:: ph,th,r

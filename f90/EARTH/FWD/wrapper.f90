@@ -20,7 +20,7 @@ module wrapper
 
   use dimensions
   use elements
-  use grid3d
+  use griddef
   use sg_vector
   use sg_sparse_vector
   implicit none
@@ -449,7 +449,7 @@ Contains
 
 	complex(8), dimension(:), intent(out)				  :: rvec !np2
 	type (cvector), intent(in)							  :: vecE
-	type (grid3d_t), intent(in)						  :: igrid
+	type (grid_t), intent(in)						  :: igrid
 	integer												  :: l,m,n
     real(8),dimension(:),allocatable					  :: x
     real(8),dimension(:),allocatable					  :: y
@@ -537,7 +537,7 @@ Contains
   subroutine copyd1_d3_d(rvec,vecE,igrid,bc)
 
 	complex(8), dimension(:), intent(in)				  :: rvec !np2
-	type (grid3d_t), intent(in)						  :: igrid
+	type (grid_t), intent(in)						  :: igrid
 	type (cvector), intent(out)							  :: vecE
 	type (sparsevecc), intent(in), optional				  :: bc
 	integer												  :: i,j,k,ii,ic
@@ -638,7 +638,7 @@ Contains
   subroutine initBoundaryValues(bvH,Hx,Hy,Hz,grid)
 
 	type (sparsevecc), intent(out)			:: bvH
-	type (grid3d_t), intent(in), target	:: grid
+	type (grid_t), intent(in), target	:: grid
 	complex(8), dimension(:), intent(in)	:: Hx,Hy,Hz
 	integer									:: i,j,k,ii,ib
 	integer									:: bv1,bv2,bv3
@@ -860,7 +860,7 @@ Contains
   subroutine calcb_from_bc(l,m,n,bc,bvec,resist,x,y,z)
 
 
-	  use grid3d
+	  use griddef
       implicit none
 
       integer                     :: l,m,n,i,j,k,ii,jj

@@ -32,7 +32,7 @@ module Main
   character(80), save                               :: data_units
 
   ! grid geometry data structure
-  type(grid2d_t), target, save	:: grid
+  type(grid_t), target, save	:: grid
 
   ! impedance data structure
   type(dataVecMTX_t), save		:: allData
@@ -185,7 +185,7 @@ Contains
 	if (output_level > 3) then
 	   write(0,*) 'Cleaning up grid...'
 	endif
-	call deall_grid2d(grid)
+	call deall_grid(grid)
 
 	if (output_level > 3) then
 	   write(0,*) 'Cleaning up data...'

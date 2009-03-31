@@ -10,7 +10,7 @@ module sg_scalar
   ! specific to EM problem, no dependency on outside (from other classes) modules.
 
   use math_constants		! math/ physics constants
-  use grid3d
+  use griddef
   implicit none
 
   ! Generic interfaces are done through subroutines
@@ -143,7 +143,7 @@ module sg_scalar
   type :: cscalar
 
      ! store the intention of the use in a character string defined
-     ! in Grid3D as a parameter: CENTER, CORNER, CELL_EARTH
+     ! in GridDef as a parameter: CENTER, CORNER, CELL_EARTH
      character (len=80)	                               :: gridType
 
      ! Note that the arrays are defined through dynamic memory allocation
@@ -159,7 +159,7 @@ module sg_scalar
      logical		                               :: allocated = .false.
 
      ! pointer to parent grid
-     type (grid3d_t), pointer                              :: grid
+     type (grid_t), pointer                              :: grid
 
   end type cscalar
 
@@ -170,7 +170,7 @@ module sg_scalar
   type :: rscalar
 
      ! store the intention of the use in a character string defined
-     ! in Grid3D as a parameter: CENTER, CORNER, CELL_EARTH
+     ! in GridDef as a parameter: CENTER, CORNER, CELL_EARTH
      character (len=80)	                           	:: gridType
 
      ! Typical usage:  conductivity averaged on centers of
@@ -189,7 +189,7 @@ module sg_scalar
      logical		                                :: allocated = .false.
 
      ! pointer to parent grid
-     type (grid3d_t), pointer                               :: grid
+     type (grid_t), pointer                               :: grid
 
   end type rscalar
 
@@ -200,7 +200,7 @@ module sg_scalar
   type :: iscalar
 
      ! store the intention of the use in a character string defined
-     ! in Grid3D as a parameter: CENTER, CORNER, CELL_EARTH
+     ! in GridDef as a parameter: CENTER, CORNER, CELL_EARTH
      character (len=80)	                           	:: gridType
 
      ! Typical usage:  conductivity averaged on centers of
@@ -219,7 +219,7 @@ module sg_scalar
      logical		                                :: allocated = .false.
 
      ! pointer to parent grid
-     type (grid3d_t), pointer                               :: grid
+     type (grid_t), pointer                               :: grid
 
   end type iscalar
 
@@ -318,7 +318,7 @@ Contains
   subroutine create_rscalar(igrid, E, gridType)
 
     implicit none
-    type(grid3d_t), target, intent(in)    :: igrid
+    type(grid_t), target, intent(in)    :: igrid
     ! the grid for which an scalar (center or corner) node field is being
     ! initialized
     type (rscalar), intent(inout)      :: E
@@ -373,7 +373,7 @@ Contains
   subroutine create_cscalar(igrid, E, gridType)
 
     implicit none
-    type (grid3d_t), target, intent(in)     :: igrid
+    type (grid_t), target, intent(in)     :: igrid
     ! the grid for which an scalar (center or corner) node field is being
     ! initialized
     type (cscalar), intent(inout)       :: E
@@ -427,7 +427,7 @@ Contains
   subroutine create_iscalar(igrid, E, gridType)
 
     implicit none
-    type (grid3d_t), target, intent(in)    :: igrid
+    type (grid_t), target, intent(in)    :: igrid
     type (iscalar),  intent(inout)         :: E
 
     integer                            :: status,nx,ny,nz,nzEarth

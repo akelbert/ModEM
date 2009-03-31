@@ -62,7 +62,7 @@
 
   subroutine setup1DCM(gd,Cm)
 
-  type (grid2d_t),   intent(in)    :: gd
+  type (grid_t),   intent(in)    :: gd
   type (modelCov_t), intent(out)   :: Cm
 
   real (kind=prec), pointer, dimension(:,:)   ::  YDF

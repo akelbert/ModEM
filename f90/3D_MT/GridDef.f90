@@ -4,7 +4,7 @@
 ! Belongs to SG_Basics class: staggered cartesian grid, data
 ! types defined on this grid, and operations defined on these data types. Not
 ! specific to EM problem, no dependency on outside (from other classes) modules.
-module grid3d
+module GridDef
 
   use math_constants
   implicit none
@@ -13,12 +13,12 @@ module grid3d
   ! legal in fortran to say y = x for data types, but that doesn't copy
   ! allocatable or pointer arrays
   INTERFACE ASSIGNMENT (=)
-     MODULE PROCEDURE copy_grid3d
+     MODULE PROCEDURE copy_grid
   END INTERFACE
 
   ! Initialization routines
-  public                            :: create_grid3d, deall_grid3d
-  public                            :: copy_grid3d, setup_grid3d
+  public                            :: create_grid, deall_grid
+  public                            :: copy_grid, setup_grid
 
   ! Possible grid types for EMfield, storing the intention of use for types
   ! such as cvector, cscalar, rvector, rscalar, sparsevecc.
@@ -31,7 +31,7 @@ module grid3d
   ! ***************************************************************************
   ! type grid_param consists of parameters that define the basic grid geometry
   ! used for three dimensional numerical modeling
-  type :: grid3d_t
+  type :: grid_t
 
      ! Grid coordinate system; important - used in EMfield
      character (len=80)			:: coords = Cartesian
@@ -84,18 +84,18 @@ module grid3d
      ! allocated:  .true.  all the arrays have been allocated
      logical		                             :: allocated = .false.
 
-  end type grid3d_t
+  end type grid_t
 
 Contains
 
   !************************************************************************
-  subroutine create_grid3d(Nx,Ny,NzAir,NzEarth,grid)
-    !  creates finite differences grid3d_t structure of
+  subroutine create_grid(Nx,Ny,NzAir,NzEarth,grid)
+    !  creates finite differences grid_t structure of
     !  size  Nx x Ny Nz, allocates arrays
     !
     implicit none
     integer, intent(in)				    :: Nx,Ny,NzAir,NzEarth
-    type (grid3d_t) , intent(inout)		:: grid
+    type (grid_t) , intent(inout)		:: grid
 
     !local variables
     integer					:: Nz
@@ -141,22 +141,22 @@ Contains
 	grid%coords = Cartesian
     grid%allocated = .true.
 
-  end subroutine create_grid3d
+  end subroutine create_grid
 
   ! **************************************************************************
-  subroutine copy_grid3d(gridOut,gridIn)
+  subroutine copy_grid(gridOut,gridIn)
 
   !  copies gridIn to gridOut; cannot overwrite, of course!
 
-  type(grid3d_t),intent(in)		    :: gridIn
-  type(grid3d_t),intent(inout)		:: gridOut
+  type(grid_t),intent(in)		    :: gridIn
+  type(grid_t),intent(inout)		:: gridOut
 
      if(gridOut%allocated) then
         !  just deallocate, and start over cleanly
-        call deall_grid3d(gridOut)
+        call deall_grid(gridOut)
      endif
 
-     call create_grid3d(gridIn%Nx,gridIn%Ny,gridIn%NzAir, &
+     call create_grid(gridIn%Nx,gridIn%Ny,gridIn%NzAir, &
              gridIn%NzEarth,gridOut)
 
      gridOut%Dz = gridIn%Dz
@@ -169,14 +169,14 @@ Contains
      gridOut%rotdeg = gridIn%rotdeg
      gridOut%coords = gridIn%coords
 
-     call setup_grid3d(gridOut)
+     call setup_grid(gridOut)
 
-  end subroutine copy_grid3d
+  end subroutine copy_grid
 
   ! **************************************************************************
-  subroutine deall_grid3d(grid)
+  subroutine deall_grid(grid)
 
-    type (grid3d_t) , intent(inout)	:: grid
+    type (grid_t) , intent(inout)	:: grid
 
     deallocate(grid%Dx)
     deallocate(grid%Dy)
@@ -208,23 +208,23 @@ Contains
     grid%NzEarth = 0
     grid%Nz = 0
 
- end subroutine deall_grid3d
+ end subroutine deall_grid
 
   ! **************************************************************************
-  ! setup_grid3d does calculations for grid geometry, which cannot be done
+  ! setup_grid does calculations for grid geometry, which cannot be done
   ! until dx, dy, dz, and the origin are set.
-  ! Normal usage is to first call create_grid3d to set grid dimensions
+  ! Normal usage is to first call create_grid to set grid dimensions
   ! and allocate arrays, read dx, dy, dz and set these elements of the grid,
-  ! then call setup_grid3d to do all other computations.  By including the optional
+  ! then call setup_grid to do all other computations.  By including the optional
   ! origin argument, grid centers and edges are given in absolute coordinates
   ! (i.e., the origin of the grid at the Earth surface is set to the origin,
   ! and variables like xCenter, yEdge, etc. are given in the same coordinate
   ! system).  If argument origin is not present, whatever is set already in the grid
   ! origin is used; by default this is initialized to zero.
-  subroutine setup_grid3d(grid, origin)
+  subroutine setup_grid(grid, origin)
 
     implicit none
-    type(grid3d_t), target, intent(inout)    :: grid
+    type(grid_t), target, intent(inout)    :: grid
     real(kind=prec), intent(in), optional	  :: origin(3)
 
     integer                               :: ix,iy,iz,i,j
@@ -336,6 +336,6 @@ Contains
     grid%zEdge(grid%nz+1) = grid%zEdge(grid%nz+1)-grid%zAirThick+grid%oz
 
 
-  end subroutine setup_grid3d
+  end subroutine setup_grid
 
-end module Grid3D
+end module GridDef

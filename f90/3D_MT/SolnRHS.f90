@@ -38,7 +38,7 @@ implicit none
 
     !! sigma, grid are pointers to the model parameter and grid used
     type(modelParam_t), pointer	:: sigma
-    type(grid3d_t), pointer	:: grid
+    type(grid_t), pointer	:: grid
 
 		!! allocated when the EMsoln was created but not yet deallocated
     logical			:: allocated = .false.
@@ -68,7 +68,7 @@ implicit none
      type (cvector) 		:: s
      type (sparsevecc) 		:: sSparse
      type (cboundary) 		:: bc
-     type(grid3d_t), pointer	:: grid
+     type(grid_t), pointer	:: grid
   end type RHS_t
 
   type :: EMrhs_t
@@ -91,7 +91,7 @@ contains
      !  3DMT  version:  NO gridType needed
      !  does not set transmitter or pointer to conductivity
        implicit none
-       type(grid3d_t), intent(in), target	:: grid
+       type(grid_t), intent(in), target	:: grid
        type (EMsoln_t), intent(inout)		:: e
 
        ! local variables
@@ -232,7 +232,7 @@ contains
      !         non-zero coefficients to allow for)
 		 ! NOTE: Does not do anything if b%allocated is .true.
 
-       type(grid3d_t), intent(in),target	:: grid
+       type(grid_t), intent(in),target	:: grid
        type (RHS_t), intent(inout)   	:: b
 
 			 if (b%allocated) then
@@ -324,7 +324,7 @@ contains
      !       (this would in any event require knowing number of
      !         non-zero coefficients to allow for)
 
-       type(grid3d_t), intent(in),target	:: grid
+       type(grid_t), intent(in),target	:: grid
        type (EMrhs_t), intent(inout)   	:: b
 
        integer				:: k

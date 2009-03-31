@@ -10,7 +10,7 @@
       character(*), intent(in)             :: cfile
       type(modelParam_t), intent(out)	   :: m
       character(80), intent(out)           :: paramType
-      type(grid3d_t), intent(inout)        :: grid
+      type(grid_t), intent(inout)        :: grid
       ! local variables
       type(rscalar)                        :: rho, ccond
       character(80)                        :: someChar=''
@@ -45,7 +45,7 @@
 	  nzAir = 6
 
 	  ! Initialize and read in the grid
-      call create_Grid3D(Nx,Ny,NzAir,NzEarth,grid)
+      call create_grid(Nx,Ny,NzAir,NzEarth,grid)
 
       read(fid,*) (grid%dx(j),j=1,grid%nx)
       read(fid,*) (grid%dy(j),j=1,grid%ny)
@@ -131,7 +131,7 @@
       type(modelParam_t), intent(in)	   :: m
       character(*), intent(in), optional   :: comment
       ! local variables
-      type(grid3d_t)                       :: grid
+      type(grid_t)                       :: grid
       type(rscalar)                        :: rho,ccond
       character(80)                        :: paramType
       integer                              :: Nx, Ny, NzEarth, i, j, k, istat
@@ -204,6 +204,6 @@
 	  ! Now done with ccond, rho and grid, so deallocate
 	  call deall_rscalar(rho)
 	  call deall_rscalar(ccond)
-	  call deall_grid3d(grid)
+	  call deall_grid(grid)
 
       end subroutine write_modelParam_WS

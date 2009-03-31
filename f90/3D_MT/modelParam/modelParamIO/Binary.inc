@@ -14,7 +14,7 @@
       type(modelParam_t), intent(in)              :: m
 
       type(rscalar)           :: ccond
-      type(grid3d_t)          :: grid
+      type(grid_t)          :: grid
       real(kind=prec) :: AirCond
       character(80)           :: paramType
 
@@ -35,7 +35,7 @@
       close(fid)
 
       call deall_rscalar(ccond)
-      call deall_grid3d(grid)
+      call deall_grid(grid)
 
       end subroutine write_modelParam_binary
 
@@ -50,7 +50,7 @@
       character(*), intent(in) 		       :: cfile
       type(modelParam_t), intent(out)      :: m
       character(80), intent(in)            :: paramType
-      type(grid3d_t), intent(inout), optional :: grid
+      type(grid_t), intent(inout), optional :: grid
 
       integer		:: NzAir,Nz,Nx,Ny,NzEarth
       real(kind=prec) 	:: AirCond
@@ -61,11 +61,11 @@
 
       read(fid) Nx,Ny,NzEarth,NzAir
 
-      call create_grid3d(Nx,Ny,NzAir,NzEarth,grid)
+      call create_grid(Nx,Ny,NzAir,NzEarth,grid)
       read(fid)  grid%dx
       read(fid)  grid%dy
       read(fid)  grid%dz(NzAir+1:NzAir+NzEarth)
-      call setup_grid3d(grid)
+      call setup_grid(grid)
 
       read(fid) rParamType
 

@@ -18,7 +18,7 @@ module EMfield
 
 use math_constants
 use utilities
-use grid2d
+use griddef
 implicit none
 
  type :: cvector
@@ -29,7 +29,7 @@ implicit none
     integer   :: N1=0
     integer   :: N2=0
     complex(kind=prec), pointer, dimension(:,:)      :: v
-    type(grid2d_t), pointer		:: grid
+    type(grid_t), pointer		:: grid
     !   corners, cells, sides ... full ...interior, whatever
     !   supported types at present:
     !         CELL, NODE, CELL_EARTH, NODE_EARTH, EDGE_EARTH
@@ -48,7 +48,7 @@ implicit none
      ! has sparse vector been allocated?
      logical				:: allocated = .false.
      ! pointer to the parent grid
-     type (grid2d_t), pointer		:: grid
+     type (grid_t), pointer		:: grid
 
   end type sparsevecc
  
@@ -77,11 +77,11 @@ contains
    !************************************************************************
      !  create_cvector allocates and initializes arrays for
      !   Earth-cell conductivity structure;
-     !   Pass grid of type grid2d_t to set array sizes
+     !   Pass grid of type grid_t to set array sizes
      subroutine create_cvector(grid,gridType,vec)
 
        implicit none
-       type (grid2d_t), intent(in), target	:: grid
+       type (grid_t), intent(in), target	:: grid
        character*80				:: gridType
        type (cvector), intent(inout)		:: vec
        !  local variables
@@ -226,7 +226,7 @@ contains
   subroutine create_sparsevecc(grid,gridType,nCoeff,newLC)
 
     implicit none	
-    type(grid2d_t), intent(in), target	:: grid
+    type(grid_t), intent(in), target	:: grid
     character (len=80), intent(in)     	:: gridType
     integer, intent(in) 		:: nCoeff
     type (sparsevecc), intent(inout) 	:: newLC

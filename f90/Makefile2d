@@ -39,7 +39,7 @@ MODULE = -module $(OBJDIR)
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
-OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/Grid2D.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/InterpEB.o $(OBJDIR)/DataFunc.o $(OBJDIR)/MeasComb.o $(OBJDIR)/modelParamSens.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 
+OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/GridDef.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/InterpEB.o $(OBJDIR)/DataFunc.o $(OBJDIR)/MeasComb.o $(OBJDIR)/ModelSens.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 
 
 
 all: Mod2DMT 
@@ -62,10 +62,10 @@ $(OBJDIR)/utilities.o:UTILS/utilities.f90 $(OBJDIR)/math_constants.o
 $(OBJDIR)/DataSpace.o:SENS/DataSpace.f90 $(OBJDIR)/utilities.o $(OBJDIR)/math_constants.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) SENS/DataSpace.f90 -o $(OBJDIR)/DataSpace.o
 
-$(OBJDIR)/Grid2D.o:2D_MT/Grid2D.f90 $(OBJDIR)/math_constants.o 
-	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/Grid2D.f90 -o $(OBJDIR)/Grid2D.o
+$(OBJDIR)/GridDef.o:2D_MT/GridDef.f90 $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/GridDef.f90 -o $(OBJDIR)/GridDef.o
 
-$(OBJDIR)/EMfield.o:2D_MT/EMfield.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/Grid2D.o 
+$(OBJDIR)/EMfield.o:2D_MT/EMfield.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/GridDef.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/EMfield.f90 -o $(OBJDIR)/EMfield.o
 
 $(OBJDIR)/ModelParameter.o:2D_MT/modelParam/ModelParameter.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/EMfield.o 2D_MT/modelParam/modelCov/Diffusion.hd 2D_MT/modelParam/CondMap.inc 2D_MT/modelParam/modelCov/Diffusion.inc 2D_MT/modelParam/modelParamIO/Binary.inc 2D_MT/modelParam/modelParamIO/Mackie.inc
@@ -83,8 +83,8 @@ $(OBJDIR)/DataFunc.o:2D_MT/DataFunc.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/uti
 $(OBJDIR)/MeasComb.o:SENS/MeasComb.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/DataFunc.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) SENS/MeasComb.f90 -o $(OBJDIR)/MeasComb.o
 
-$(OBJDIR)/modelParamSens.o:2D_MT/modelParamSens.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataFunc.o 
-	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/modelParamSens.f90 -o $(OBJDIR)/modelParamSens.o
+$(OBJDIR)/ModelSens.o:2D_MT/ModelSens.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataFunc.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/ModelSens.f90 -o $(OBJDIR)/ModelSens.o
 
 $(OBJDIR)/WSfwd2D.o:2D_MT/FWD/WSfwd2D.f90 $(OBJDIR)/math_constants.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/FWD/WSfwd2D.f90 -o $(OBJDIR)/WSfwd2D.o
@@ -98,7 +98,7 @@ $(OBJDIR)/FwdTMmod.o:2D_MT/FWD/FwdTMmod.f90 $(OBJDIR)/math_constants.o $(OBJDIR)
 $(OBJDIR)/EMsolver.o:2D_MT/EMsolver.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataFunc.o $(OBJDIR)/DataSpace.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/SolnRHS.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/EMsolver.f90 -o $(OBJDIR)/EMsolver.o
 
-$(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/MeasComb.o $(OBJDIR)/modelParamSens.o $(OBJDIR)/EMsolver.o 
+$(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/MeasComb.o $(OBJDIR)/ModelSens.o $(OBJDIR)/EMsolver.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) SENS/SensMatrix.f90 -o $(OBJDIR)/SensMatrix.o
 
 $(OBJDIR)/UserCtrl.o:./UserCtrl.f90  

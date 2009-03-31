@@ -30,7 +30,7 @@ module ioAscii
   ! This module contains io routines for boundary nodes,
   ! electric field solutions, impedances, and solver diagnostics
 
-  use grid3d
+  use griddef
   use math_constants
   use emsolve3d
   use dataspace
@@ -65,7 +65,7 @@ Contains
 
     !  file header contents
     character (len=20), intent(out)             :: fileVersion
-    type (grid3d_t), intent(out)                :: fileGrid
+    type (grid_t), intent(out)                :: fileGrid
     integer, intent(out)                        :: filePer
     integer, intent(out)                        :: fileMode
     integer, intent(out)                        :: ios
@@ -93,7 +93,7 @@ Contains
   !**********************************************************************
   ! check consistency between grids, number of periods
   subroutine CheckgridConsist(runGrid, fileGrid, nPer, filePer, ier)
-    type (grid3d_t), intent(in)         :: fileGrid, runGrid
+    type (grid_t), intent(in)         :: fileGrid, runGrid
     integer, intent(in)			:: nPer, filePer
     integer, intent(out)		:: ier
     logical				:: ok = .true.
@@ -170,7 +170,7 @@ Contains
     ! the version of the software in use
     character (len=80), intent(in)		:: outFile
     ! the filename
-    type(grid3d_t), intent(in)			:: inGrid
+    type(grid_t), intent(in)			:: inGrid
     integer, intent(in)				:: nPer
     integer, intent(in)				:: nMode
     integer, intent(in)				:: ioNum

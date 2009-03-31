@@ -82,7 +82,7 @@ logical, save, private		:: modelDataInitialized = .false.
   !   grid geometry parameters in this module at the start of
   !   the inversion.
 
-type(grid3d_t), target, save, private         :: SolnRHS_grid
+type(grid_t), target, save, private         :: SolnRHS_grid
 
 Contains
 
@@ -153,7 +153,7 @@ Contains
    !     both should be present if one is
 
    integer, intent(in)				:: iTx
-   ! type(grid3d_t), intent(in)       :: grid
+   ! type(grid_t), intent(in)       :: grid
    type(modelParam_t),intent(in), target		:: sigma
    !  following structures are initialized
    !	solution vector for forward problem
@@ -236,7 +236,7 @@ Contains
    initForSens = present(comb)
 
    ! deallocate the grid
-   ! call deall_grid3d(SolnRHS_grid)
+   ! call deall_grid(SolnRHS_grid)
 
    call deall_RHS(b0)
    call deall_EMsoln(e0)
@@ -375,7 +375,7 @@ Contains
 !       before using any other routines in this module (most depend
 !       on saved SolnRHS_grid to define grid geometry)
 
-       type (grid3d_t), intent(in)     :: grid
+       type (grid_t), intent(in)     :: grid
 
        SolnRHS_grid = grid
 
@@ -385,7 +385,7 @@ Contains
     subroutine delete_SolnRHS_grid
 !    Call this routine when SolnRHS_grid is no longer needed
 
-       call deall_grid3d(SolnRHS_grid)
+       call deall_grid(SolnRHS_grid)
 
     end subroutine delete_SolnRHS_grid
 

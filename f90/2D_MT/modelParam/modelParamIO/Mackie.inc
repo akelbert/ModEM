@@ -12,7 +12,7 @@
       integer, intent(in)		:: fid
       character(*), intent(in)  :: cfile
       type(modelParam_t), intent(in)		   :: cond
-      type(grid2d_t)              :: grid
+      type(grid_t)              :: grid
       real (kind=prec), allocatable    :: value(:,:)
       Integer                     ::k,j,Nz,Nza,NzEarth,Ny
       logical                     :: newFile
@@ -46,7 +46,7 @@
 
         write(fid,'(10g11.4)') (grid%Dz(j),j=Nza+1,Nz)
 
-      !call write_grid2d(fid,'',grid)
+      !call write_grid(fid,'',grid)
       !Ny = grid%Ny
       !NzEarth = grid%Nz-grid%Nza
 
@@ -86,7 +86,7 @@
       integer, intent(in)		:: fid
       character(*), intent(in)  :: cfile
       type(modelParam_t), intent(out)		   :: cond
-      type(grid2d_t), intent(inout), optional  :: grid
+      type(grid_t), intent(inout), optional  :: grid
       real (kind=prec), allocatable    :: value(:,:)
       Integer                     ::k,j,Nz,Nza,NzEarth,Ny
       logical                     :: newFile
@@ -119,7 +119,7 @@
 
       Nz = NzEarth + Nza
       ! then allocate for grid
-      call create_Grid2D(Ny,Nz,Nza,grid)
+      call create_grid(Ny,Nz,Nza,grid)
 
       !    read in grid spacings
 
@@ -134,9 +134,9 @@
       	grid%Dz(Nza-j) = 3. * grid%Dz(Nza-j+1)
       end do
 
-      !call read_grid2d(fid,'',grid)
+      !call read_grid(fid,'',grid)
             ! complete grid definition
-      call setup_grid2d(grid)
+      call setup_grid(grid)
 
       !Ny = grid%Ny
       !NzEarth = grid%Nz-grid%Nza

@@ -19,7 +19,7 @@ module ModelParameter
 !    modelParamToCellCond, ModelParamToEdge, EdgeToModelParam,
 !    QtoModelParam, sigC
 
-  use grid3d
+  use griddef
   use math_constants
   use utilities
   use sg_scalar
@@ -48,7 +48,7 @@ module ModelParameter
      private
      integer			:: Nx,Ny,NzEarth
      type(rscalar)		:: cellCond
-     type(grid3d_t),pointer    :: grid
+     type(grid_t),pointer    :: grid
      real (kind=prec)   :: AirCond
      logical			:: allocated = .false.
      character (len=80)		:: paramType = ''
@@ -110,13 +110,13 @@ Contains
 !
    !  create_modelParam allocates and initializes arrays for
    !   conductivity parameter structure
-   !   Pass grid of type grid3d_t to set array sizes
+   !   Pass grid of type grid_t to set array sizes
    ! optional arguments v and vAir are assumed to be consistent
    ! with paramType
    subroutine create_modelParam(grid,paramtype,m,v,vAir)
 
      implicit none
-     type (grid3d_t), intent(in), target	:: grid
+     type (grid_t), intent(in), target	:: grid
      character(80), intent(in)			    :: paramtype
      type (modelParam_t), intent(inout)		:: m
      type (rscalar), intent(in), optional   :: v

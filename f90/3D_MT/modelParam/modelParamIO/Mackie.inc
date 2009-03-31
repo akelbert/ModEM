@@ -12,7 +12,7 @@
       integer, intent(in)		           :: fid
       character(*), intent(in)             :: cfile
       type(modelParam_t), intent(out)	   :: m
-      type(grid3d_t), intent(inout)        :: grid
+      type(grid_t), intent(inout)        :: grid
       character(80), intent(out)           :: type
       type(rscalar)                        :: ccond
 
@@ -46,7 +46,7 @@
       character(*), intent(in)             :: cfile
       type(modelParam_t), intent(in)	   :: m
       type(rscalar)                        :: ccond
-      type(grid3d_t)                       :: grid
+      type(grid_t)                       :: grid
       character(80)                        :: type = ''
 
  	  ! Read input files and set up basic grid geometry, conductivities,
@@ -61,7 +61,7 @@
 
 	  ! now done with ccond and grid, so deallocate
 	  call deall_rscalar(ccond)
-	  call deall_grid3d(grid)
+	  call deall_grid(grid)
 
       end subroutine write_modelParam_mackie
 
@@ -75,7 +75,7 @@
 
     integer,intent(in)                          :: fidRM
     character(*), intent(in)                   :: inputFile
-    type (grid3d_t), intent(inout)             :: grid
+    type (grid_t), intent(inout)             :: grid
     type (rscalar), intent(inout), optional     :: Cond
     character (len=80), intent(out), optional   :: paramType
 
@@ -113,7 +113,7 @@
        paramType = 'LINEAR'
     end if
 
-    call create_Grid3D(Nx,Ny,NzAir,NzEarth,grid)
+    call create_grid(Nx,Ny,NzAir,NzEarth,grid)
 
     ! In Randy Mackie's format, dx is read forwwards, as is dy and dz
     read(fidRM,*) (grid%dx(ix),ix=1,grid%nx)
@@ -218,7 +218,7 @@
 
     integer,intent(in)                          :: fidRM
     character(*), intent(in)                   :: cFile
-    type (grid3d_t), intent(inout)             :: grid
+    type (grid_t), intent(inout)             :: grid
     type (rscalar), intent(inout)     			:: Cond
     character(*), intent(in)         			:: paramType
     real(kind=prec), allocatable       :: value(:,:,:)

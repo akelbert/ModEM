@@ -11,7 +11,7 @@
 ! modules other than from SG_Basics.
 ! * EOP
 
-module Grid3D
+module GridDef
 
   ! all the modules being used are being listed explicitly (no
   ! inheritance)
@@ -30,7 +30,7 @@ module Grid3D
   ! * BOP
   ! type grid_param consists of parameters that define the basic grid geometry
   ! used for three dimensional numerical modeling
-  type :: grid3d_t
+  type :: grid_t
   ! * EOP
 
      ! Grid coordinate system; important - used in EMfield
@@ -75,7 +75,7 @@ module Grid3D
      ! allocated:  .true.  all the arrays have been allocated
      logical		                             :: allocated = .false.
 
-  end type grid3d_t
+  end type grid_t
 
 
   ! ***************************************************************************
@@ -111,4 +111,4 @@ module Grid3D
   end type grid_def
 
 
-end module Grid3D
+end module GridDef

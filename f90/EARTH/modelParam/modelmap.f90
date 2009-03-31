@@ -4,7 +4,7 @@ module modelmap
   ! information is available
 
   !use basics
-  use grid3d
+  use griddef
   use modeldef
   use paramfunc
   implicit none
@@ -21,7 +21,7 @@ Contains
 
   subroutine initResist(grid,crust,resist)
 
-    type (grid3d_t), intent(in)					:: grid
+    type (grid_t), intent(in)					:: grid
 	type (shell_info), intent(in)					:: crust
 	real(8), dimension(:,:,:), intent(out)			:: resist !(nx,ny,nz)
 	real(8)											:: crust_depth
@@ -57,7 +57,7 @@ Contains
     
   subroutine initModel(grid,param,resist)
 
-    type (grid3d_t), intent(in)					:: grid
+    type (grid_t), intent(in)					:: grid
     type (param_info), intent(inout)				:: param 
 	!type (rscalar), intent(out)					:: resist
 	real(8), dimension(:,:,:), intent(inout)		:: resist !(nx,ny,nz)

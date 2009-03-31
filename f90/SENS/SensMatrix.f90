@@ -3,7 +3,7 @@ module sensMatrix
 use math_constants
 use utilities
 use meascomb	 !!!!  inherits : dataspace, dataFunc, solnrhs
-use modelparamsens  !!!  inherits : modelspace, soln2d
+use modelsens  !!!  inherits : modelspace, soln2d
 use emsolver
 
 implicit none

@@ -6,7 +6,7 @@ module global
 	! This is crucial, since some of the data contains pointers to values
 	! stored here. These global variables are initialized in the module main.
 
-  use grid3d
+  use griddef
   use modeldef
   use datadef
   use iotypes
@@ -30,7 +30,7 @@ module global
 
   ! ***************************************************************************
   ! * grid: Contains the information about the user-specified grid
-  type (grid3d_t), save								:: grid
+  type (grid_t), save								:: grid
 
   ! ***************************************************************************
   ! * shell: Contains the information about thin-shell conductance

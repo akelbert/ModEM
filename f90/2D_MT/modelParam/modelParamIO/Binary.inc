@@ -10,7 +10,7 @@
       integer, intent(in)		:: fid
       character*80, intent(in)	:: cfile
       type(modelParam_t), intent(in)		:: cond
-      type(grid2d_t)              :: grid
+      type(grid_t)              :: grid
       real (kind=prec), allocatable :: v(:,:)
       Integer                     ::k,j,Nz,Nza,NzEarth,Ny,stat
       character*80                :: paramType
@@ -53,7 +53,7 @@
       integer, intent(in)		:: fid
       character(*), intent(in)	:: cfile
       type(modelParam_t), intent(inout)		:: cond
-      type(grid2d_t), intent(inout), optional :: grid
+      type(grid_t), intent(inout), optional :: grid
       real (kind=prec), allocatable :: v(:,:)
 
       !  local variables
@@ -67,14 +67,14 @@
       read(fid) Ny,Nz,Nza
 
       ! then allocate for grid
-      call create_grid2d(Ny,Nz,Nza,grid)
+      call create_grid(Ny,Nz,Nza,grid)
 
       !    read in grid spacings
       read(fid) grid%Dy
       read(fid) grid%Dz
 
       ! complete grid definition
-      call setup_grid2d(grid)
+      call setup_grid(grid)
 
       read(fid) paramType
       read(fid) Ny,NzEarth

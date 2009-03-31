@@ -190,9 +190,9 @@ module modeldef
 
 
   ! ***************************************************************************
-  ! * type grid3d_t contains the necessary information about user-defined grid
+  ! * type grid_t contains the necessary information about user-defined grid
   ! This is now part of SG_Basics/stag_grid.f90
-!  type :: grid3d_t
+!  type :: grid_t
 !
 !	  ! storing the grid dimensions
 !	  integer               					:: nx, ny, nz, nzEarth, nzAir
@@ -203,7 +203,7 @@ module modeldef
 !	  ! dimensions are ph(nx+1), th(ny+1), r(nz+1)
 !	  real(8), pointer, dimension(:)  			:: ph,th,r
 !
-!  end type grid3d_t	! grid3d_t
+!  end type grid_t	! grid_t
 
 
 

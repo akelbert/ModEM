@@ -11,7 +11,7 @@ module ioBinary
 
    !  routines that are public
    public	::  read_cvector,write_cvector,write_EMsolnMTX, &
-		read_Grid2D, write_Z, read_Z
+		read_grid, write_Z, read_Z
 
    Contains
      !******************************************************************
@@ -172,11 +172,11 @@ module ioBinary
       end subroutine write_EMsolnMTX
 
      !**********************************************************************
-      subroutine read_Grid2D(fid,cfile,grid)
+      subroutine read_grid(fid,cfile,grid)
      !  reads in basic grid, allocating for Dy, Dz
       integer, intent(in)		:: fid
       character*80, intent(in)		:: cfile
-      type(grid2d_t), intent(inout)	:: grid
+      type(grid_t), intent(inout)	:: grid
 
       ! local variables:
       integer				:: Ny, Nz, Nza
@@ -187,13 +187,13 @@ module ioBinary
       read(fid) Ny,Nz,Nza
 
       ! then allocate for grid
-      call create_Grid2D(Ny,Nz,Nza,grid)
+      call create_grid(Ny,Nz,Nza,grid)
 
       !    read in grid spacings
       read(fid) grid%Dy
       read(fid) grid%Dz
       close(fid)
-      end subroutine read_Grid2D
+      end subroutine read_grid
 
 
      !**********************************************************************

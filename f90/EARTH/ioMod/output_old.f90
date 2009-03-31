@@ -6,7 +6,7 @@ module output_old
 
   use iotypes
   use iospec
-  use grid3d
+  use griddef
   use sg_vector
   use sg_sparse_vector
   use modeldef
@@ -163,7 +163,7 @@ Contains
 
 	  character(len=*), intent(in)			:: fname
 	  type (cvector), intent(in)		:: H
-	  type (grid3d_t), intent(in)		:: grid
+	  type (grid_t), intent(in)		:: grid
 	  integer						   	 :: l,m,n
       real(8),dimension(:),allocatable	             :: x
       real(8),dimension(:),allocatable             :: y

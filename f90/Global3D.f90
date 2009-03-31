@@ -451,7 +451,7 @@ end program earth
 
   subroutine calc_responses(rtime)
 
-	use grid3d
+	use griddef
 	use data_vectors
 	use global
 	use dataFunc

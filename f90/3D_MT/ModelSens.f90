@@ -10,7 +10,7 @@
 !	 ModelParam.  This module has no dependence on the specific
 !        conductivity parameterization
 !
-module modelParamSens
+module ModelSens
    use math_constants
    use utilities
    use modelparameter
@@ -109,4 +109,4 @@ module modelParamSens
    end subroutine PmultT
 
    !**********************************************************************
-end module modelParamSens
+end module ModelSens

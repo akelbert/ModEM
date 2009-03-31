@@ -52,7 +52,7 @@ module fwdtmmod
       Subroutine FWD2DsetupTM(grid,Sigma,IER)
       !  routine allocates and initializes everything
       !  Inputs
-      type (grid2d_t), intent(in)     :: grid
+      type (grid_t), intent(in)     :: grid
       type (modelParam_t), intent(in) :: Sigma
       !  outputs ... just allocates saved module arrays 
       !         IER = 0 if everyting works, -1 otherwise

@@ -3,7 +3,7 @@ module input
   ! This module defines input file information and input routines
 
   use math_constants
-  use grid3d
+  use griddef
   use utilities
   use modeldef
   use datadef
@@ -100,7 +100,7 @@ Contains
   subroutine initGrid(cUserDef,mygrid)
 
     type (input_info), intent(in)					:: cUserDef
-    type (grid3d_t) , intent(out)					:: mygrid
+    type (grid_t) , intent(out)					:: mygrid
     integer				                            :: ios,istat,i
     integer				                            :: nx,ny,nz,nzAir,nzCrust
 	real(8), dimension(:), allocatable				:: x,y,z
@@ -198,7 +198,7 @@ Contains
   subroutine initCrust(cUserDef,mygrid,mycrust)
 
     type (input_info), intent(in)					:: cUserDef
-    type (grid3d_t) , intent(in)					:: mygrid
+    type (grid_t) , intent(in)					:: mygrid
     type (shell_info) , intent(out)					:: mycrust
     integer				                            :: ios,istat,i
 

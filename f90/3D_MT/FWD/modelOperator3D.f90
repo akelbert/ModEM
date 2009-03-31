@@ -30,7 +30,7 @@ module modelOperator3D
 
   save
   !!!!!!!>>>>>>>>> FROM model_data
-  type(grid3d_t), private, target 	::	mGrid   ! THE model grid
+  type(grid_t), private, target 	::	mGrid   ! THE model grid
   type(rvector), public			::	volE    ! THE volume elements
   type(rvector), private		::	condE   ! THE edge conductivities
   real(kind=prec),private	::      omega   ! THE (active) frequency
@@ -134,10 +134,10 @@ Contains
 
     implicit none
     !  INPUTS:
-    type (grid3d_t), intent(in)		  :: inGrid
+    type (grid_t), intent(in)		  :: inGrid
 
     !   copy inGrid to mGrid
-    call copy_grid3D(mGrid,inGrid)
+    call copy_grid(mGrid,inGrid)
 
     ! Allocate data structure for volume elements, and compute these
     Call create(mGrid, volE, EDGE)
@@ -155,7 +155,7 @@ Contains
 
   subroutine ModelDataCleanUp
 
-    call deall_grid3d(mGrid)
+    call deall_grid(mGrid)
     call deall_rvector(volE)
     call deall_rvector(condE)
 

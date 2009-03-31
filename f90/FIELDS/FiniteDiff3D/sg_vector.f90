@@ -10,7 +10,7 @@ module sg_vector
   ! specific to EM problem, no dependency on outside (from other classes) modules.
 
   use math_constants		! math/ physics constants
-  use grid3d
+  use griddef
   implicit none
 
   ! Generic interfaces are done through subroutines
@@ -162,7 +162,7 @@ module sg_vector
   type :: cvector
 
      ! store the intention of the use in a character string defined
-     ! in Grid3D as a parameter: EDGE or FACE are two possibilities
+     ! in GridDef as a parameter: EDGE or FACE are two possibilities
      character (len=80)	                             :: gridType
 
      ! Typical usage:  electrical fields on cell edges of
@@ -184,7 +184,7 @@ module sg_vector
      logical		                              :: allocated = .false.
 
      ! pointer to parent grid
-     type (grid3d_t), pointer                             :: grid
+     type (grid_t), pointer                             :: grid
 
   end type cvector
 
@@ -194,7 +194,7 @@ module sg_vector
   type :: rvector
 
      ! store the intention of the use in a character string defined
-     ! in Grid3D as a parameter: EDGE or FACE are two possibilities
+     ! in GridDef as a parameter: EDGE or FACE are two possibilities
      character (len=80)	                              :: gridType
 
      ! Typical usage:  conductivity averaged on cell edges of
@@ -216,7 +216,7 @@ module sg_vector
      logical		                              :: allocated = .false.
 
      ! pointer to parent grid
-     type (grid3d_t), pointer                             :: grid
+     type (grid_t), pointer                             :: grid
 
   end type rvector
 
@@ -323,7 +323,7 @@ Contains
   subroutine create_rvector(igrid, E, gridType)
 
     implicit none
-    type(grid3d_t), target, intent(in)    :: igrid
+    type(grid_t), target, intent(in)    :: igrid
     ! the grid for which an edge/ face node field is being initialized
     type (rvector), intent(inout)      :: E
 
@@ -395,7 +395,7 @@ Contains
   subroutine create_cvector(igrid, E, gridType)
 
     implicit none
-    type(grid3d_t), target, intent(in)     :: igrid
+    type(grid_t), target, intent(in)     :: igrid
     ! the grid for which an edge/ face node field is being initialized
     type (cvector), intent(inout)       :: E
 

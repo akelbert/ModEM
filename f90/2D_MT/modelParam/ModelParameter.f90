@@ -37,7 +37,7 @@ type ::  modelParam_t
    private
    integer   				:: Ny = 0
    integer   				:: NzEarth = 0
-   type(grid2d_t), pointer  		:: grid
+   type(grid_t), pointer  		:: grid
    real (kind=prec), pointer, dimension(:,:) :: v
    real (kind=prec)		:: AirCond = SIGMA_AIR
    logical           			:: allocated = .false.
@@ -98,11 +98,11 @@ Contains
 !************************************************************************
    !  allocateEarthCond allocates and initializes arrays for
    !   Earth-cell conductivity structure;
-   !   Pass grid of type grid2d_t to set array sizes
+   !   Pass grid of type grid_t to set array sizes
    subroutine create_modelParam(grid,paramtype,cond,value,airCond)
 
      implicit none
-     type (grid2d_t), intent(in), target   	:: grid
+     type (grid_t), intent(in), target   	:: grid
      character(*), intent(in)   		    :: paramtype
      type (modelParam_t), intent(inout)   	:: cond
      real (kind=prec), intent(in), optional :: value(:,:)

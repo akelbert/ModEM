@@ -75,7 +75,7 @@
 ! currently only contains the WS model covariance,
 !**********************************************************************
 ! Note that only the driver subroutine requires knowledge of modelParam.
-! Without it, we would only need to include sg_scalar & grid3d.
+! Without it, we would only need to include sg_scalar & grid.
 
   subroutine WScov(m)
 
@@ -106,7 +106,7 @@
   SUBROUTINE Setup1DCM(gd,Cm)
 
      integer, dimension(:,:,:), intent(in)   :: PMod
-     type (grid3d_t), intent(in)             :: gd
+     type (grid_t), intent(in)             :: gd
      type (mCov_t), intent(out)              :: Cm
 
 

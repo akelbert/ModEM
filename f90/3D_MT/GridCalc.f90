@@ -24,7 +24,7 @@ Contains
   subroutine EdgeVolume(inGr, eV)
 
     implicit none
-    type (grid3d_t), intent(in)           :: inGr     ! input model
+    type (grid_t), intent(in)           :: inGr     ! input model
     type (rvector), intent(inout)         :: eV       ! edge volume
     integer                               :: ix, iy, iz
 
@@ -91,7 +91,7 @@ Contains
 
   subroutine CornerVolume(inGr, cV)
 
-    type (grid3d_t), intent(in)        :: inGr  ! input grid
+    type (grid_t), intent(in)        :: inGr  ! input grid
     type (rscalar), intent(inout)      :: cV    ! center volume as output
     integer                            :: ix, iy, iz
 

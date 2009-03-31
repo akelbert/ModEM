@@ -11,7 +11,7 @@ module interpEB
 
   use math_constants
   use utilities
-  use modelparameter 	!!!! inherit : soln2d, grid2d
+  use modelparameter 	!!!! inherit : soln2d, grid
 
   implicit none
   public				:: NodeInterpSetup2D
@@ -35,7 +35,7 @@ Contains
 
     !  on at least some compilers need to use intent(inout) for pointer
     !    targets????
-    type (grid2d_t), target, intent(in)	:: inGrid
+    type (grid_t), target, intent(in)	:: inGrid
     real (kind=prec), dimension(2), intent(in)     :: x
     character (len=2), intent(in)     		:: mode  ! = 'TE' or 'TM'
     type (sparsevecc), intent(inout)          :: LC
@@ -116,7 +116,7 @@ Contains
     ! INTERPOLATION METHOD:  bilinear spline
     !   NEED TO MODIFY TO ALLOW INTERPOLATION OF VERTICAL
 
-    type (grid2d_t), target, intent(in)	:: inGrid
+    type (grid_t), target, intent(in)	:: inGrid
     real (kind=prec), dimension(2), intent(in) 	:: x
     type (sparsevecc), intent(inout) 		:: LC
 
@@ -185,7 +185,7 @@ Contains
     !  Calls BinterpSetUp, and various sparse_vector routines
     !   NEED TO MODIFY TO ALLOW INTERPOLATION OF VERTICAL
 
-    type (grid2d_t), target, intent(in)	:: inGrid
+    type (grid_t), target, intent(in)	:: inGrid
     real (kind=prec), dimension(2), intent(in)	:: x
     real (kind=prec), intent(in)	:: omega
     type (sparsevecc), intent(inout) 		:: LC
@@ -259,7 +259,7 @@ Contains
     !
     ! INTERPOLATION METHOD:  bilinear spline
 
-    type (grid2d_t), target, intent(in)        :: inGrid
+    type (grid_t), target, intent(in)        :: inGrid
     real (kind=prec), dimension(2), intent(in)    :: x
     type (modelParam_t), intent(in)		:: sigma
     type (sparsevecc), intent(inout)		:: LC
@@ -391,7 +391,7 @@ Contains
     !  Calls EinterpSetUp_TM, and various sparse_vector routines
 
     !  Input: model grid data structure
-    type (grid2d_t), target, intent(in)	:: inGrid
+    type (grid_t), target, intent(in)	:: inGrid
     !  Input: location of point observation of electric field
     real (kind=prec), dimension(2), intent(in)	:: x
     !  Input: frequency

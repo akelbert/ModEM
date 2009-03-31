@@ -28,7 +28,7 @@ Contains
     integer, intent(in)		:: imode
     real(kind=prec)	:: period
     !  Input 3D grid
-    type(grid3d_t), intent(in)	:: grid3D
+    type(grid_t), intent(in)	:: grid3D
     !  Input 3D conductivity in cells
     type(rscalar), intent(in)	:: Cond3D
 

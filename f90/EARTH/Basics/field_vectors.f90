@@ -4,7 +4,7 @@ module field_vectors
   ! going to be used by the main program, and the memory allocation/deallocation
   ! subroutines
 
-  use grid3d
+  use griddef
   implicit none
 
 

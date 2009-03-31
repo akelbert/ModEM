@@ -7,7 +7,7 @@ module jacobian
   use model_operators
   use elements
   use dimensions
-  use grid3d
+  use griddef
   use sg_vector
   use sg_scalar
   use sg_spherical
@@ -56,7 +56,7 @@ Contains
 	type (cvector), intent(inout)			  :: Xfull
 	type (cvector), intent(in)				  :: Yfull
 	type (sparsevecc)						  :: Xb,Yb
-	type (grid3d_t), intent(in)			  :: grid
+	type (grid_t), intent(in)			  :: grid
 	real(8), intent(in)						  :: omega
 	real(8)									  :: om
 	real(8), dimension(:,:,:), intent(in)	  :: rho
@@ -211,7 +211,7 @@ Contains
   subroutine operatorD_Si_divide(Xfull,grid)
 
 	type (cvector), intent(inout)			  :: Xfull
-	type (grid3d_t), intent(in)			  :: grid
+	type (grid_t), intent(in)			  :: grid
 	complex(8),dimension(:),allocatable		  :: vectorx
 	integer									  :: istat,nx,ny,nz
 
@@ -238,7 +238,7 @@ Contains
 
 	type (cvector), intent(inout)			  :: Xfull
 	type (sparsevecc)						  :: Xb,bc
-	type (grid3d_t), intent(in)			  :: grid
+	type (grid_t), intent(in)			  :: grid
 	complex(8),dimension(:),allocatable		  :: vectorx
 	integer									  :: istat,nx,ny,nz
 
@@ -267,7 +267,7 @@ Contains
 
 	type (cvector), intent(inout)			  :: Xfull
 	type (sparsevecc)						  :: Xb,bc
-	type (grid3d_t), intent(in)			  :: grid
+	type (grid_t), intent(in)			  :: grid
 	complex(8),dimension(:),allocatable		  :: vectorx
 	integer									  :: istat,nx,ny,nz
 
@@ -301,7 +301,7 @@ Contains
     implicit none
 	type (cvector), intent(in)					 :: vecE
 	type (cvector), intent(out)					 :: vecF
-	type (grid3d_t), intent(in)				 :: grid
+	type (grid_t), intent(in)				 :: grid
     real(8)										 :: xlen,xlenjp,xlenkp
     real(8)										 :: ylen,ylenip,ylenkp
 	real(8)										 :: zlen,zlenip,zlenjp
@@ -413,7 +413,7 @@ Contains
     implicit none
 	type (cvector), intent(inout)				 :: vecE
 	type (cvector), intent(out)					 :: vecF
-	type (grid3d_t), intent(in)				 :: grid
+	type (grid_t), intent(in)				 :: grid
 	logical										 :: verbose
     integer										 :: i,j,k,istat
 	integer										 :: nx,ny,nz
@@ -529,7 +529,7 @@ Contains
     implicit none
 	type (cvector), intent(inout)				 :: vecF
 	type (cvector), intent(out)					 :: vecE
-	type (grid3d_t), intent(in)				 :: grid
+	type (grid_t), intent(in)				 :: grid
 	logical										 :: verbose
     integer										 :: i,j,k,istat
 	integer										 :: nx,ny,nz
@@ -701,7 +701,7 @@ Contains
     implicit none
 	real(8),dimension(:,:,:),intent(in)			 :: resist	 !(nx,ny,nz)
 	type (rvector), intent(out)					 :: vecF
-	type (grid3d_t), intent(in)				 :: grid
+	type (grid_t), intent(in)				 :: grid
     real(8)										 :: lm,lp,S
 	integer										 :: i,j,k,istat
 	integer										 :: nx,ny,nz
@@ -808,7 +808,7 @@ Contains
     implicit none
 	real(8),dimension(:,:,:),intent(inout)		 :: resist	 !(nx,ny,nz)
 	type (rvector), intent(inout)				 :: vecF
-	type (grid3d_t), intent(in)				 :: grid
+	type (grid_t), intent(in)				 :: grid
     real(8)										 :: l,S,Sp
 	integer										 :: i,j,k,istat
 	integer										 :: nx,ny,nz

@@ -6,7 +6,7 @@ module dataFunc
   use global
   use modeldef
   use datadef
-  use grid3d
+  use griddef
   use sg_vector
   use sg_sparse_vector
   use interp

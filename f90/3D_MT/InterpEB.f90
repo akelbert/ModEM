@@ -30,7 +30,7 @@ Contains
     !    of currents instead of electric field in direction of component
 
     implicit none
-    type(grid3d_t), target, intent(in)              :: inGrid
+    type(grid_t), target, intent(in)              :: inGrid
     real(kind=prec), dimension(3), intent(in)     :: x
     integer, intent(in)                         :: xyz
     type(sparsevecc), intent(inout)             :: LC
@@ -214,7 +214,7 @@ Contains
     ! except usage of xEdge and xCener are reversed
 
     implicit none
-    type (grid3d_t), target, intent(in)    		:: inGrid
+    type (grid_t), target, intent(in)    		:: inGrid
     real (kind=prec), dimension(3), intent(in) 	:: x
     integer, intent(in)        			:: xyz
     type (sparsevecc), intent(inout) 		:: LC
@@ -347,7 +347,7 @@ Contains
     !  grid edges.  Calls BinterpSetUp, and various sparse_vector routines
 
     implicit none
-    type (grid3d_t), target, intent(in) 		:: inGrid
+    type (grid_t), target, intent(in) 		:: inGrid
     real(kind=prec), 	intent(in)	:: omega
     real(kind=prec), dimension(3), intent(in)	:: x
     integer, intent(in)              		:: xyz

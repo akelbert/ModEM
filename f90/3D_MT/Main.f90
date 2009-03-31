@@ -37,7 +37,7 @@ module Main
   character(80), save                               :: data_units
 
   ! grid geometry data structure
-  type(grid3d_t), target, save	:: grid
+  type(grid_t), target, save	:: grid
 
   ! impedance data structure
   type(dataVecMTX_t), save		:: allData
@@ -89,7 +89,7 @@ Contains
        call read_modelParam(fidRead,cUserDef%rFile_Model,sigma0,paramType,grid)
 
        ! Finish setting up the grid (if that is not done in the read subroutine)
-       call setup_grid3d(grid)
+       call setup_grid(grid)
 
        !  set grid for higher level solver routines
        call set_SolnRHS_grid(grid)
@@ -211,7 +211,7 @@ Contains
 	if (output_level > 3) then
 	   write(0,*) 'Cleaning up grid...'
 	endif
-	call deall_grid3d(grid)
+	call deall_grid(grid)
 
 	if (output_level > 3) then
 	   write(0,*) 'Cleaning up data...'

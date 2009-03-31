@@ -20,7 +20,7 @@ module ioAscii
 
    !  routines that are public
    private	::  read_cvector,write_cvector, &
-		read_grid2d, write_grid2d
+		read_grid, write_grid
 
    public   :: write_Z, read_Z, write_EMsolnMTX
 
@@ -454,11 +454,11 @@ module ioAscii
       end subroutine read_Z
 
      !**********************************************************************
-      subroutine read_grid2d(fid,cfile,grid)
+      subroutine read_grid(fid,cfile,grid)
      !  reads in basic grid, allocating for Dy, Dz
       integer, intent(in)		:: fid
       character(*), intent(in)		:: cfile
-      type(grid2d_t), intent(inout)	:: grid
+      type(grid_t), intent(inout)	:: grid
 
       ! local variables:
       integer				:: Ny, Nz, Nza, NzEarth, j
@@ -478,7 +478,7 @@ module ioAscii
       read(fid,*) Ny,NzEarth
       Nz = NzEarth + Nza
       ! then allocate for grid
-      call create_grid2d(Ny,Nz,Nza,grid)
+      call create_grid(Ny,Nz,Nza,grid)
 
       !    read in grid spacings
 
@@ -489,7 +489,7 @@ module ioAscii
         ! set the air layers spacing to that of the top 10 Earth layers
         if (NzEarth <= Nza) then
         	close(fid)
-            call errStop('Too few Earth layers in the Mackie input model file in read_grid2d')
+            call errStop('Too few Earth layers in the Mackie input model file in read_grid')
         else
         	do j = 1,Nza
         		grid%Dz(Nza-j+1) = grid%Dz(Nza+j)
@@ -501,16 +501,16 @@ module ioAscii
       end if
 
       ! complete grid definition
-      call setup_grid2d(grid)
+      call setup_grid(grid)
 
-      end subroutine read_grid2d
+      end subroutine read_grid
 
      !**********************************************************************
-      subroutine write_grid2d(fid,cfile,grid)
+      subroutine write_grid(fid,cfile,grid)
      !  writes basic grid, if cfile is empty, assumes file already open
       integer, intent(in)		    :: fid
       character(*), intent(in)		:: cfile
-      type(grid2d_t), intent(in)	:: grid
+      type(grid_t), intent(in)	:: grid
 
       ! local variables:
       integer				:: Ny, Nz, Nza, NzEarth, j
@@ -540,6 +540,6 @@ module ioAscii
          close(fid)
       end if
 
-      end subroutine write_grid2d
+      end subroutine write_grid
 
 end module ioAscii

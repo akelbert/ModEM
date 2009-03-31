@@ -11,7 +11,7 @@ module sg_boundary
   ! specific to EM problem, no dependency on outside (from other classes) modules.
 
   use math_constants
-  use grid3d
+  use griddef
   use sg_vector
   implicit none
 
@@ -123,7 +123,7 @@ module sg_boundary
      logical		                              :: allocated = .false.
 
      ! pointer to parent grid
-     type (grid3d_t), pointer                             :: grid
+     type (grid_t), pointer                             :: grid
 
   end type cboundary
 
@@ -180,7 +180,7 @@ Contains
   subroutine create_cboundary(igrid, E)
 
     implicit none
-    type(grid3d_t), target, intent(in)     :: igrid
+    type(grid_t), target, intent(in)     :: igrid
     ! the grid for which boundary edge fields are being initialized
     type (cboundary), intent(inout)     :: E
     integer                             :: status,nx,ny,nz

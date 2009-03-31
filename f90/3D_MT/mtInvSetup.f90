@@ -59,7 +59,7 @@ Contains
 
      character(len=80),intent(in)	:: StartFile
      character(len=80),intent(in)	:: paramType
-     type(grid3d_t), intent(out)	:: grid
+     type(grid_t), intent(out)	:: grid
      type(emsolve_control), intent(out)	:: solverParams		
      type(modelParam_t), intent(out)	:: Sigma
      !  reinstate use of this to pass output file names back to main

@@ -10,7 +10,7 @@ module sg_sparse_vector
   !  modules.
 
   use math_constants
-  use grid3d
+  use griddef
   use sg_vector
   implicit none
 
@@ -78,7 +78,7 @@ module sg_sparse_vector
 
      ! complex vector defined on edge/ face nodes;
      ! store the intention of the use in a character string defined
-     ! as in Grid3D as a parameter: EDGE or FACE
+     ! as in GridDef as a parameter: EDGE or FACE
      character (len=80)	                             	:: gridType=''
      ! nCoeff is number of non-zero nodes
      integer 						:: nCoeff  = 0
@@ -90,7 +90,7 @@ module sg_sparse_vector
      ! has sparse vector been allocated?
      logical					:: allocated = .false.
      ! pointer to the parent grid
-     type (grid3d_t), pointer                 	:: grid
+     type (grid_t), pointer                 	:: grid
 
   end type sparsevecc
 

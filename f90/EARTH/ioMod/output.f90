@@ -6,7 +6,7 @@ module output
 
   use iotypes
   use iospec
-  use grid3d
+  use griddef
   use sg_vector
   use sg_sparse_vector
   use modeldef
@@ -31,7 +31,7 @@ Contains
 	type (input_info), intent(in)			  :: cUserDef
 	type (transmitter), intent(in)			  :: freq
 	type (Rad_List), intent(in)				  :: slices
-	type (grid3d_t), intent(in)			  :: grid
+	type (grid_t), intent(in)			  :: grid
 	type (cvector), intent(in)				  :: H
 	type (solution)							  :: Hij
 	type (receiver)							  :: obs
@@ -429,7 +429,7 @@ Contains
   subroutine outputModel(fn_model,mygrid,rho)
 
 	character(80), intent(in)		  :: fn_model
-	type (grid3d_t), intent(in)	  :: mygrid
+	type (grid_t), intent(in)	  :: mygrid
 	real(8), dimension(:,:,:), intent(in)	:: rho	!(nx,ny,nz)
 	real(8)													:: lon,lat,depth
 	integer							  :: ios,i,j,k

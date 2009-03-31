@@ -25,7 +25,7 @@ implicit none
     real(kind=prec)		:: period = R_ZERO
     type(modelParam_t), pointer		:: sigma
     integer 				:: tx = 0
-    type(grid2d_t), pointer		:: grid
+    type(grid_t), pointer		:: grid
   end type EMsoln_t
 
   type :: EMsparse_t
@@ -45,7 +45,7 @@ implicit none
      logical				:: allocated = .false.
      type(cvector)			:: source
      complex(kind=prec), pointer, dimension(:)	:: bc
-     type(grid2d_t), pointer		:: grid
+     type(grid_t), pointer		:: grid
   end type EMrhs_t
 
 contains
@@ -58,7 +58,7 @@ contains
 
      !  does not set mode, transmitter, pointer to conductivity ????
        implicit none
-       type(grid2d_t), intent(in), target	:: grid
+       type(grid_t), intent(in), target	:: grid
        character(2), intent(in)         :: mode
        type (EMsoln_t), intent(inout)	:: e
 
@@ -136,7 +136,7 @@ contains
 
      subroutine create_EMsparse(grid,gridType,nCoeff,LC)
 
-       type(grid2d_t), intent(in)	:: grid
+       type(grid_t), intent(in)	:: grid
        character (len=80), intent(in)	:: gridType
        integer, intent(in)		:: nCoeff
        type(EMsparse_t)			:: LC
@@ -198,7 +198,7 @@ contains
      !   set pointer to grid + mode/source fields of rhs before calling
      subroutine create_EMrhs(grid,mode,b)
 
-       type(grid2d_t), intent(in),target	:: grid
+       type(grid_t), intent(in),target	:: grid
        character(2), intent(in)         :: mode
        type (EMrhs_t), intent(inout)   	:: b
 

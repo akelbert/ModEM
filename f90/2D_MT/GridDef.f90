@@ -1,4 +1,4 @@
-module Grid2D
+module GridDef
    !  Defines grid data structure, basic grid methods
 
    use math_constants
@@ -14,8 +14,8 @@ module Grid2D
    character(len=80), parameter		:: CELL_EARTH = 'CELL EARTH'
    character(len=80), parameter		:: EDGE_EARTH = 'EDGE EARTH'
 
-   type ::  grid2d_t
-      !  grid2d_t is derived data type used to store grid geometry
+   type ::  grid_t
+      !  grid_t is derived data type used to store grid geometry
       integer   :: Nz = 0
       integer   :: Ny = 0
       integer   :: Nza = 0
@@ -23,20 +23,20 @@ module Grid2D
       real (kind=prec), pointer, dimension(:) :: Dely,Delz
       real (kind=prec), pointer, dimension(:) :: yNode,zNode
       real (kind=prec), pointer, dimension(:) :: yCenter,zCenter
-   end type grid2d_t
+   end type grid_t
 
-   public         :: create_grid2d, deall_grid2d, setup_grid2d
+   public         :: create_grid, deall_grid, setup_grid
 
    Contains
 
      !************************************************************************
-     subroutine create_grid2d(Ny,Nz,Nza,grid)
-       !  creates finite differences grid2d_t structure of
+     subroutine create_grid(Ny,Nz,Nza,grid)
+       !  creates finite differences grid_t structure of
        !  size Nz x Ny, allocates arrays
        !
        implicit none
        integer, intent(in)		        :: Nz,Ny,Nza
-       type (grid2d_t), intent(inout)	:: grid
+       type (grid_t), intent(inout)	:: grid
        integer                          :: istat
 
        grid%Nza = Nza
@@ -51,14 +51,14 @@ module Grid2D
        allocate(grid%zCenter(Nz), STAT=istat)
        allocate(grid%yCenter(Ny), STAT=istat)
 
-     end subroutine create_grid2d
+     end subroutine create_grid
 
      !************************************************************************
-     subroutine deall_grid2d(grid)
-       !  deallocates finite differences grid2d_t structure
+     subroutine deall_grid(grid)
+       !  deallocates finite differences grid_t structure
        !
        implicit none
-       type (grid2d_t), intent(inout)	:: grid
+       type (grid_t), intent(inout)	:: grid
        integer                          :: istat
 
        if (associated(grid%Dz)) deallocate(grid%Dz, STAT=istat)
@@ -70,13 +70,13 @@ module Grid2D
        if (associated(grid%zCenter)) deallocate(grid%zCenter, STAT=istat)
        if (associated(grid%yCenter)) deallocate(grid%yCenter, STAT=istat)
 
-     end subroutine deall_grid2d
+     end subroutine deall_grid
 
      !***********************************************************************
-     ! setup_grid2d: after allocation, read in Dy, Dz, then call:
-     subroutine setup_grid2d(grid)
+     ! setup_grid: after allocation, read in Dy, Dz, then call:
+     subroutine setup_grid(grid)
        implicit none
-       type (grid2d_t) , intent(inout)	:: grid
+       type (grid_t) , intent(inout)	:: grid
        !  local variables
        integer ::	Nz,Ny,iy,iz,Nza
 
@@ -111,6 +111,6 @@ module Grid2D
         do iz = 1,grid%Nz
            grid%zCenter(iz) = (grid%zNode(iz)+grid%zNode(iz+1))/2.;
         enddo
-     end subroutine setup_grid2d
+     end subroutine setup_grid
 
-end module Grid2D
+end module GridDef

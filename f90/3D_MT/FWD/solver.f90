@@ -7,7 +7,7 @@ module solver
 
    use math_constants	! math/ physics constants
    use utilities, only: isnan
-   !use grid3d	! staggered grid definitions
+   !use griddef	! staggered grid definitions
    !use sg_scalar
    !use sg_vector
    implicit none

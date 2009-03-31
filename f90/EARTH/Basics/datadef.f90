@@ -4,7 +4,7 @@ module datadef
 	! the full information about the data and data functionals, frequencies and
 	! other data-related information
 
-  use grid3d
+  use griddef
   use sg_scalar
   use sg_sparse_vector
   implicit none

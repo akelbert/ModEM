@@ -15,7 +15,7 @@
 !       Note that the functionality is always needed, but names can be
 !        flexible ... these routines are called by the interpolation
 !        routines in InterpEB* (for the latter two only), by the forward
-!        modeling codes (the non-linear mapping only), and by modelParamSens
+!        modeling codes (the non-linear mapping only), and by ModelSens
 !        (the linearized mappings and adjoint) and thus names/interfaces
 !        need to be kept consistent with what is used in these routines.
 !        Note that for 2D MT different mapping routines are used for
@@ -28,7 +28,7 @@
      type(modelParam_t), intent(in)        :: m
      type(rscalar), intent(inout)	       :: cCond
      character(80), intent(out), optional  :: paramType
-     type(grid3d_t), intent(out), optional :: grid
+     type(grid_t), intent(out), optional :: grid
      real(kind=prec), intent(out), optional :: AirCond
 
      if(cCond%allocated) then
@@ -54,7 +54,7 @@
 
      if (present(grid)) then
         if (grid%allocated) then
-           call deall_grid3d(grid)
+           call deall_grid(grid)
         end if
         grid = m%grid
      end if
