@@ -1,15 +1,16 @@
 ! Binary IO routines for 2D_MT modelParam (Gary Egbert's format)
 
       !******************************************************************
-      subroutine write_modelParam_binary(fid,cfile,cond)
+      subroutine write_modelParam_binary(cond,cfile)
 
-      !  open cfile on unit fid, writes out object of
+      !  open cfile on unit ioPrm, writes out object of
       !   type modelParam in standard format (readable by matlab
       !   routine readCond_2D.m), closes file
 
-      integer, intent(in)		:: fid
-      character*80, intent(in)	:: cfile
-      type(modelParam_t), intent(in)		:: cond
+      type(modelParam_t), intent(in)	:: cond
+      character(*), intent(in)          :: cfile
+      integer                           :: ios
+      ! local
       type(grid_t)              :: grid
       real (kind=prec), allocatable :: v(:,:)
       Integer                     ::k,j,Nz,Nza,NzEarth,Ny,stat
@@ -24,36 +25,39 @@
       ! extract conductivity values from the modelParam structure
       call getValue_modelParam(cond,v,paramType,AirCond)
 
-      open(unit=fid, file=cfile, form='unformatted')
+      open(unit=ioPrm, file=cfile, form='unformatted',iostat=ios)
       ! write grid dimensions ...
-      write(fid) grid%Ny,grid%Nz,grid%Nza
+      write(ioPrm) grid%Ny,grid%Nz,grid%Nza
 
       ! write grid spacings
-      write(fid) grid%Dy
-      write(fid) grid%Dz
+      write(ioPrm) grid%Dy
+      write(ioPrm) grid%Dz
 
       ! write model parameter
-      write(fid) paramType
-      write(fid) Ny,NzEarth
-      write(fid) v
-      write(fid) AirCond
-      close(fid)
+      write(ioPrm) paramType
+      write(ioPrm) Ny,NzEarth
+      write(ioPrm) v
+      write(ioPrm) AirCond
+      close(ioPrm)
 
       deallocate(v)
 
       end subroutine write_modelParam_binary
 
      !******************************************************************
-      subroutine read_modelParam_binary(fid,cfile,cond,grid)
+      subroutine read_modelParam_binary(grid,cond,cfile)
 
-      !  open cfile on unit fid, read in object of
+      !  open cfile on unit ioPrm, read in object of
       !   type modelParam in standard format
-      !   must either know or read in the grid
+      ! we can update the grid here, but the grid as an input is critical
+      ! for setting the pointer to the grid in the modelParam
 
-      integer, intent(in)		:: fid
-      character(*), intent(in)	:: cfile
-      type(modelParam_t), intent(inout)		:: cond
-      type(grid_t), intent(inout), optional :: grid
+      type(grid_t), target, intent(inout)       :: grid
+      type(modelParam_t), intent(out)	:: cond
+      character(*), intent(in)          :: cfile
+      integer                           :: ios
+      ! local
+
       real (kind=prec), allocatable :: v(:,:)
 
       !  local variables
@@ -61,26 +65,26 @@
       character*80	:: paramType
       real (kind=prec) :: AirCond
 
-      open(unit=fid, file=cfile, form='unformatted',status='OLD')
+      open(unit=ioPrm, file=cfile, form='unformatted',status='old', iostat=ios)
       !  Read in grid geometry definitions, store in structure TEgrid
       !    first grid dimensions ...
-      read(fid) Ny,Nz,Nza
+      read(ioPrm) Ny,Nz,Nza
 
       ! then allocate for grid
       call create_grid(Ny,Nz,Nza,grid)
 
       !    read in grid spacings
-      read(fid) grid%Dy
-      read(fid) grid%Dz
+      read(ioPrm) grid%Dy
+      read(ioPrm) grid%Dz
 
       ! complete grid definition
       call setup_grid(grid)
 
-      read(fid) paramType
-      read(fid) Ny,NzEarth
+      read(ioPrm) paramType
+      read(ioPrm) Ny,NzEarth
 
       if((grid%Ny .NE. Ny).OR.(grid%Nz - grid%Nza .NE. NzEarth)) then
-         close(fid)
+         close(ioPrm)
          call errStop('Grid size does not agree with model parameter size in readCond_2D')
       end if
 
@@ -89,9 +93,9 @@
 
       ! read info from file
       allocate(v(Ny,NzEarth))
-      read(fid) v
-      read(fid) AirCond
-      close(fid)
+      read(ioPrm) v
+      read(ioPrm) AirCond
+      close(ioPrm)
 
       ! write into the modelParam structure
       call create_modelParam(grid,paramType,cond,v,AirCond)
@@ -102,66 +106,71 @@
       end subroutine read_modelParam_binary
 
       !******************************************************************
-      subroutine writeVec_modelParam_binary(fid,cfile,nSigma,sigma,header)
+      subroutine writeVec_modelParam_binary(nSigma,sigma,header,cfile)
 
-      !  open cfile on unit fid, writes out nSigma objects of
+      !  open cfile on unit ioPrm, writes out nSigma objects of
       !   type modelParam , closes file
 
-      integer, intent(in)		:: fid,nSigma
-      character(*), intent(in)		:: cfile, header
+      integer, intent(in)		:: nSigma
+      character(*), intent(in)		:: header, cfile
       type(modelParam_t), intent(in)	:: sigma(nSigma)
+      integer      :: ios
 
       integer i
       character(80) temp
 
       temp = header
 
-      open(unit=fid, file=cfile, form='unformatted')
-      write(fid) temp
-      write(fid) nSigma
+      open(unit=ioPrm, file=cfile, form='unformatted', iostat=ios)
+      write(ioPrm) temp
+      write(ioPrm) nSigma
       do i = 1,nSigma
-         write(fid) sigma(i)%paramType
-         write(fid) sigma(i)%Ny,sigma(i)%NzEarth
-         write(fid) sigma(i)%v
-         write(fid) sigma(i)%AirCond
+         write(ioPrm) sigma(i)%paramType
+         write(ioPrm) sigma(i)%Ny,sigma(i)%NzEarth
+         write(ioPrm) sigma(i)%v
+         write(ioPrm) sigma(i)%AirCond
       enddo
-      close(fid)
+      close(ioPrm)
       end subroutine writeVec_modelParam_binary
 
      !******************************************************************
-      subroutine readVec_modelParam_binary(fid,cfile,nSigma,sigma,header)
+      subroutine readVec_modelParam_binary(grid,nSigma,sigma,header,cfile)
 
-      !  open cfile on unit fid, read nSigma objects of
+      !  open cfile on unit ioPrm, read nSigma objects of
       !   type modelParam , closes file
       !  sigma(nsigma) must be allocated before calling
+      !  note - the code will not work unless the global grid already exists
+      !         (it has to be initialized outside of this routine)
 
-      integer, intent(in)		:: fid
-      character(*), intent(in)		:: cfile
+      type(grid_t), target, intent(inout)   :: grid
       integer, intent(in)		:: nSigma
-      character(80), intent(out)		:: header
-      type(modelParam_t), intent(inout) 	:: sigma(nsigma)
+      type(modelParam_t), intent(inout) 	:: sigma(nSigma)
+      character(*), intent(out)		:: header
+      character(*), intent(in)		:: cfile
+      integer		:: ios
 
       ! local variables
       integer i, nS, Ny,NzEarth
 
-      open(unit=fid, file=cfile, form='unformatted')
-      read(fid) header
-      read(fid) nS
+      open(unit=ioPrm, file=cfile, form='unformatted', iostat=ios)
+      read(ioPrm) header
+      read(ioPrm) nS
       if(nS .NE. nSigma) then
           call errStop('size of sigma does not agree with contents of file in readAll_Cond2D')
       endif
 
       do i = 1,nSigma
-         read(fid) sigma(i)%paramType
-         read(fid) Ny,NzEarth
+         read(ioPrm) sigma(i)%paramType
+         read(ioPrm) Ny,NzEarth
          if((sigma(i)%Ny .NE. Ny).OR. (sigma(i)%NzEarth .NE. NzEarth)) then
-            close(fid)
+            close(ioPrm)
             call errStop('Size of cond does not agree with contents of file in readAll_Cond2D')
          else
-            read(fid) sigma(i)%v
-            read(fid) sigma(i)%AirCond
+            read(ioPrm) sigma(i)%v
+            read(ioPrm) sigma(i)%AirCond
          endif
+         sigma(i)%grid => grid
       enddo
-      close(fid)
+      close(ioPrm)
 
       end subroutine readVec_modelParam_binary

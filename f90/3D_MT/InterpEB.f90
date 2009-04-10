@@ -6,13 +6,13 @@ module InterpEB
 
   use utilities
   use sg_sparse_vector
-  use modelparameter
+  use modelparameter, sigC => ModelParamToOneEdge
 
   implicit none
 
   public				:: EinterpSetUp
   public				:: BinterpSetUp, BfromESetUp
- 
+
 Contains
 
   ! **************************************************************************
@@ -210,7 +210,7 @@ Contains
     ! H at arbitrary points directly from electric fields defined on
     ! staggered grid edges; see BfromESetup)
     ! INTERPOLATION METHOD:  bilinear spline
-    ! NOTE: this is essentially identical to EinterpSetUp, 
+    ! NOTE: this is essentially identical to EinterpSetUp,
     ! except usage of xEdge and xCener are reversed
 
     implicit none
@@ -265,14 +265,14 @@ Contains
        ! maximum number of edge nodes
        nzMax = nzMax + 1
     else
-       write(0,*) 'Error: component # out of range in BinterpSetUp'  
+       write(0,*) 'Error: component # out of range in BinterpSetUp'
     endif
 
     if((i0.gt.0).and.(i0.lt.nxMax)) then
        if(xyz.eq.1) then
           w(1,2) = (x(1) - inGrid%xEdge(i0))/(inGrid%dx(i0))
        else
-          w(1,2) = (x(1) - inGrid%xCenter(i0))/(inGrid%delX(i0+1))           
+          w(1,2) = (x(1) - inGrid%xCenter(i0))/(inGrid%delX(i0+1))
        endif
     elseif(i0.le.0) then
        w(1,2) = 1
@@ -282,7 +282,7 @@ Contains
 
     if((j0.gt.0).and.(j0.lt.nyMax)) then
        if(xyz.eq.2) then
-          w(2,2) = (x(2) - inGrid%yEdge(j0))/(inGrid%dy(j0)) 
+          w(2,2) = (x(2) - inGrid%yEdge(j0))/(inGrid%dy(j0))
        else
           w(2,2) = (x(2) - inGrid%yCenter(j0))/(inGrid%delY(j0+1))
        endif
@@ -296,7 +296,7 @@ Contains
        if(xyz.eq.3) then
           w(3,2) = (x(3) - inGrid%zEdge(k0))/(inGrid%dz(k0))
        else
-          w(3,2) = (x(3) - inGrid%zCenter(k0))/(inGrid%delZ(k0+1))          
+          w(3,2) = (x(3) - inGrid%zCenter(k0))/(inGrid%delZ(k0+1))
        endif
     elseif(k0.le.0) then
        w(3,2) = 1
@@ -304,9 +304,9 @@ Contains
        w(3,2) = 0
     endif
 
-    w(1,1) = 1-w(1,2) 
-    w(2,1) = 1-w(2,2) 
-    w(3,1) = 1-w(3,2) 
+    w(1,1) = 1-w(1,2)
+    w(2,1) = 1-w(2,2)
+    w(3,1) = 1-w(3,2)
 
     ii = 0
     do n = 1,2
@@ -364,7 +364,7 @@ Contains
     character (len=80)				:: gridType = ''
     integer					:: status
 
-    !   NOTE: Careful about minus sign here ... 
+    !   NOTE: Careful about minus sign here ...
     i_omega_inv = ISIGN*cmplx(0.0 ,1./omega,kind=prec)
 
     if(LC%allocated) then
@@ -378,7 +378,7 @@ Contains
     endif
 
     ! we work with electrical fields here, therefore gridType = EDGE
-    gridType = EDGE   
+    gridType = EDGE
     ! compute coefficients for bi-linear spline interpolation of
     ! magnetic fields from grid cell faces to location x
     Call BinterpSetUp(inGrid,x,xyz,LCH)
@@ -392,39 +392,39 @@ Contains
           AXES(2) = 2
           AXES(3) = 3
           AXES(4) = 3
-          I(1) = LCH%i(ii) 
-          I(2) = LCH%i(ii) 
-          I(3) = LCH%i(ii) 
-          I(4) = LCH%i(ii) 
-          J(1) = LCH%j(ii) 
-          J(2) = LCH%j(ii) 
-          J(3) = LCH%j(ii) 
-          J(4) = LCH%j(ii)+1 
-          K(1) = LCH%k(ii) 
+          I(1) = LCH%i(ii)
+          I(2) = LCH%i(ii)
+          I(3) = LCH%i(ii)
+          I(4) = LCH%i(ii)
+          J(1) = LCH%j(ii)
+          J(2) = LCH%j(ii)
+          J(3) = LCH%j(ii)
+          J(4) = LCH%j(ii)+1
+          K(1) = LCH%k(ii)
           K(2) = LCH%k(ii)+1
-          K(3) = LCH%k(ii) 
-          K(4) = LCH%k(ii) 
+          K(3) = LCH%k(ii)
+          K(4) = LCH%k(ii)
           C(1) = 1./inGrid%dz(K(1))
 	  C(2) = -1./inGrid%dz(K(1))
           C(3) = -1./inGrid%dy(J(1))
-          C(4) = 1./inGrid%dy(J(1))  
+          C(4) = 1./inGrid%dy(J(1))
 
        elseif(LCH%xyz(ii).eq.2) then
           AXES(1) = 3
           AXES(2) = 3
           AXES(3) = 1
           AXES(4) = 1
-          J(1) = LCH%j(ii) 
-          J(2) = LCH%j(ii) 
-          J(3) = LCH%j(ii) 
-          J(4) = LCH%j(ii) 
-          K(1) = LCH%k(ii) 
+          J(1) = LCH%j(ii)
+          J(2) = LCH%j(ii)
+          J(3) = LCH%j(ii)
+          J(4) = LCH%j(ii)
+          K(1) = LCH%k(ii)
           K(2) = LCH%k(ii)
-          K(3) = LCH%k(ii) 
-          K(4) = LCH%k(ii)+1 
-          I(1) = LCH%i(ii) 
+          K(3) = LCH%k(ii)
+          K(4) = LCH%k(ii)+1
+          I(1) = LCH%i(ii)
           I(2) = LCH%i(ii)+1
-          I(3) = LCH%i(ii) 
+          I(3) = LCH%i(ii)
           I(4) = LCH%i(ii)
           C(1) = 1./inGrid%dx(I(1))
           C(2) = -1./inGrid%dx(I(1))
@@ -436,17 +436,17 @@ Contains
           AXES(2) = 1
           AXES(3) = 2
           AXES(4) = 2
-          K(1) = LCH%k(ii) 
-          K(2) = LCH%k(ii) 
-          K(3) = LCH%k(ii) 
-          K(4) = LCH%k(ii) 
-          I(1) = LCH%i(ii) 
+          K(1) = LCH%k(ii)
+          K(2) = LCH%k(ii)
+          K(3) = LCH%k(ii)
+          K(4) = LCH%k(ii)
+          I(1) = LCH%i(ii)
           I(2) = LCH%i(ii)
-          I(3) = LCH%i(ii) 
-          I(4) = LCH%i(ii)+1 
-          J(1) = LCH%j(ii) 
+          I(3) = LCH%i(ii)
+          I(4) = LCH%i(ii)+1
+          J(1) = LCH%j(ii)
           J(2) = LCH%j(ii)+1
-          J(3) = LCH%j(ii) 
+          J(3) = LCH%j(ii)
           J(4) = LCH%j(ii)
           C(1) = 1./inGrid%dy(J(1))
           C(2) = -1./inGrid%dy(J(1))
@@ -456,9 +456,9 @@ Contains
 
        if(ii.eq.1) then
           ! initialize LC (coefficients for H measurement functional:
-          ! coefficients for first face   
+          ! coefficients for first face
           Call create_sparsevecc(num,LConeH,gridType)
-	  Call create_sparsevecc(num,LCtemp, gridType)    
+	  Call create_sparsevecc(num,LCtemp, gridType)
           LC%i = I
           LC%j = J
           LC%k = K

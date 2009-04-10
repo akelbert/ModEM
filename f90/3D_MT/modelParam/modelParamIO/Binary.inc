@@ -1,18 +1,18 @@
 ! Binary IO routines for 3D_MT modelParam (Gary Egbert's format)
 
   !******************************************************************
-   subroutine write_modelParam_binary(fid,cfile,m)
+   subroutine write_modelParam_binary(m,cfile)
 
-   !  open cfile on unit fid, writes out object of
+   !  open cfile on unit ioPrm, writes out object of
    !   type modelParam in standard *binary* format (comparable
    !   format written by write_Cond3D), then close file
    ! NOTE: uses grid for the model size; needs to be thought
    !       about if we decide to decouple grid and the model
 
-      integer, intent(in)               :: fid
       character(*), intent(in)  :: cfile
       type(modelParam_t), intent(in)              :: m
-
+       integer               :: ios
+      ! local
       type(rscalar)           :: ccond
       type(grid_t)          :: grid
       real(kind=prec) :: AirCond
@@ -24,15 +24,15 @@
 
       grid = ccond%grid
 
-      open(unit=fid, file=cfile, form='unformatted')
-      write(fid) grid%nx,grid%ny,grid%nzEarth,grid%nzAir
-      write(fid) grid%dx
-      write(fid) grid%dy
-      write(fid) grid%dz(grid%NzAir+1:grid%Nz)
-      write(fid) paramType
-      write(fid) AirCond
-      write(fid) ccond%v
-      close(fid)
+      open(unit=ioPrm, file=cfile, form='unformatted', iostat=ios)
+      write(ioPrm) grid%nx,grid%ny,grid%nzEarth,grid%nzAir
+      write(ioPrm) grid%dx
+      write(ioPrm) grid%dy
+      write(ioPrm) grid%dz(grid%NzAir+1:grid%Nz)
+      write(ioPrm) paramType
+      write(ioPrm) AirCond
+      write(ioPrm) ccond%v
+      close(ioPrm)
 
       call deall_rscalar(ccond)
       call deall_grid(grid)
@@ -40,47 +40,46 @@
       end subroutine write_modelParam_binary
 
   !******************************************************************
-   subroutine read_modelParam_binary(fid,cfile,m,paramType,grid)
+   subroutine read_modelParam_binary(grid,m,cfile)
 
-   !  open cfile on unit fid, writes out object of
+   !  open cfile on unit ioPrm, writes out object of
    !   type modelParam in standard *binary* format (comparable
    !   format written by write_Cond3D), then close file
 
-      integer, intent(in)                  :: fid
-      character(*), intent(in) 		       :: cfile
+      type(grid_t), target, intent(inout)  :: grid
       type(modelParam_t), intent(out)      :: m
-      character(80), intent(in)            :: paramType
-      type(grid_t), intent(inout), optional :: grid
+      character(*), intent(in) 		       :: cfile
+      integer                  :: ios
 
       integer		:: NzAir,Nz,Nx,Ny,NzEarth
       real(kind=prec) 	:: AirCond
       type(rscalar)             :: ccond
-      character(80)             :: gridType,rParamType
+      character(80)             :: gridType,paramType
 
-      open(unit=fid, file=cfile, form='unformatted',status='old')
+      open(unit=ioPrm, file=cfile, form='unformatted',status='old')
 
-      read(fid) Nx,Ny,NzEarth,NzAir
+      read(ioPrm) Nx,Ny,NzEarth,NzAir
 
       call create_grid(Nx,Ny,NzAir,NzEarth,grid)
-      read(fid)  grid%dx
-      read(fid)  grid%dy
-      read(fid)  grid%dz(NzAir+1:NzAir+NzEarth)
+      read(ioPrm)  grid%dx
+      read(ioPrm)  grid%dy
+      read(ioPrm)  grid%dz(NzAir+1:NzAir+NzEarth)
       call setup_grid(grid)
 
-      read(fid) rParamType
+      read(ioPrm) paramType
 
       gridType = CELL_EARTH
       call create_rscalar(grid,ccond,gridType)
 
-      read(fid) AirCond
-      read(fid) ccond%v
+      read(ioPrm) AirCond
+      read(ioPrm) ccond%v
 
-      close(fid)
+      close(ioPrm)
 
       ! move cell conductivities read into rscalar object into a modelParam
 	  ! object ... this dance needed to keep modelParam attributes private
 	  !   First need to create model parameter
-	  call create_modelParam(grid,rParamType,m,ccond,AirCond)
+	  call create_modelParam(grid,paramType,m,ccond,AirCond)
 
 	  ! convert modelParam to the required paramType
 	  call setType_modelParam(m,paramType)
@@ -91,72 +90,77 @@
       end subroutine read_modelParam_binary
 
      !******************************************************************
-      subroutine writeVec_modelParam_binary(fid,cfile,nSigma,m,header)
+      subroutine writeVec_modelParam_binary(nSigma,m,header,cfile)
 
-      !  open cfile on unit fid, writes out nSigma objects of
+      !  open cfile on unit ioPrm, writes out nSigma objects of
       !   type modelParam , closes file
 
-      integer, intent(in)               :: fid,nSigma
+      integer, intent(in)               :: nSigma
       character(*), intent(in)          :: cfile, header
       type(modelParam_t), intent(in)      :: m(nSigma)
+      integer                :: ios
 
       integer 		:: i,Nz,NzAir
 
-      open(unit=fid, file=cfile, form='unformatted')
-      write(fid) header
-      write(fid) nSigma
+      open(unit=ioPrm, file=cfile, form='unformatted', iostat=ios)
+      write(ioPrm) header
+      write(ioPrm) nSigma
 
       do i = 1,nSigma
          Nz = m(i)%grid%Nz
          NzAir = m(i)%grid%Nz-m(i)%NzEarth
-         write(fid) m(i)%paramType
-         write(fid) m(i)%Nx,m(i)%Ny,m(i)%NzEarth
-         write(fid) m(i)%grid%dx
-         write(fid) m(i)%grid%dy
-         write(fid) m(i)%grid%dz(NzAir+1:Nz)
-         write(fid) m(i)%AirCond
-         write(fid) m(i)%CellCond%v
+         write(ioPrm) m(i)%paramType
+         write(ioPrm) m(i)%Nx,m(i)%Ny,m(i)%NzEarth
+         write(ioPrm) m(i)%grid%dx
+         write(ioPrm) m(i)%grid%dy
+         write(ioPrm) m(i)%grid%dz(NzAir+1:Nz)
+         write(ioPrm) m(i)%AirCond
+         write(ioPrm) m(i)%CellCond%v
       enddo
-      close(fid)
+      close(ioPrm)
       end subroutine writeVec_modelParam_binary
 
      !******************************************************************
-      subroutine readVec_modelParam_binary(fid,cfile,nSigma,m,header)
+      subroutine readVec_modelParam_binary(grid,nSigma,m,header,cfile)
 
-      !  open cfile on unit fid, writes out nSigma objects of
+      !  open cfile on unit ioPrm, writes out nSigma objects of
       !   type modelParam , closes file
+      !  note - the code will not work unless the global grid already exists
+      !         (it has to be initialized outside of this routine)
 
-      integer, intent(in)               :: fid
+      type(grid_t), target, intent(inout)      :: grid
       integer, intent(in)              :: nSigma
       character(*), intent(in)          :: cfile
       character(80), intent(out)        :: header
       type(modelParam_t), intent(inout)   :: m(nSigma)
+      integer                :: ios
 
       integer 		:: i,nS,Nx,Ny,Nz,NzAir,NzEarth,istat
 
-      open(unit=fid, file=cfile, form='unformatted')
-      read(fid) header
-      read(fid) nS
+      open(unit=ioPrm, file=cfile, form='unformatted', iostat=ios)
+      read(ioPrm) header
+      read(ioPrm) nS
 
       if(nS .NE. nSigma) then
           call errStop('size of sigma does not agree with contents of file in readAll_Cond2D')
       endif
 
       do i = 1,nSigma
-         read(fid) m(i)%paramType
-         read(fid) Nx,Ny,NzEarth
+         read(ioPrm) m(i)%paramType
+         read(ioPrm) Nx,Ny,NzEarth
          if((m(i)%Nx .NE. Nx) .OR. (m(i)%Ny .NE. Ny) .OR. (m(i)%NzEarth .NE. NzEarth)) then
-            close(fid)
+            close(ioPrm)
             call errStop('Size of cond does not agree with contents of file in readAll_Cond2D')
          else
             Nz = m(i)%grid%Nz
             NzAir = m(i)%grid%Nz-m(i)%NzEarth
-            read(fid) m(i)%grid%dx
-            read(fid) m(i)%grid%dy
-            read(fid) m(i)%grid%dz(NzAir+1:Nz)
-            read(fid) m(i)%AirCond
-            read(fid) m(i)%CellCond%v
+            read(ioPrm) m(i)%grid%dx
+            read(ioPrm) m(i)%grid%dy
+            read(ioPrm) m(i)%grid%dz(NzAir+1:Nz)
+            read(ioPrm) m(i)%AirCond
+            read(ioPrm) m(i)%CellCond%v
          endif
+         m(i)%grid => grid
       enddo
-      close(fid)
+      close(ioPrm)
       end subroutine readVec_modelParam_binary

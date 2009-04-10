@@ -18,8 +18,9 @@
 module fwdtmmod
    use math_constants
    use wsfwd2d
-   use solnrhs ! inherit modelparameter
-   
+   use solnrhs
+   use modelparameter
+
    implicit none
 
    !  routines that are public
@@ -29,7 +30,7 @@ module fwdtmmod
 			HarrayToIntVec
    !  variables declared in module header are available
    !  to all module routines, and are saved between calls
-   save 
+   save
 
    !  integer parameters are calculated and set by initialization
    !   routine
@@ -46,15 +47,15 @@ module fwdtmmod
    logical		:: Initialized  = .false.
 
    Contains
-   
-   
+
+
    ! *****************************************************************************
       Subroutine FWD2DsetupTM(grid,Sigma,IER)
       !  routine allocates and initializes everything
       !  Inputs
       type (grid_t), intent(in)     :: grid
       type (modelParam_t), intent(in) :: Sigma
-      !  outputs ... just allocates saved module arrays 
+      !  outputs ... just allocates saved module arrays
       !         IER = 0 if everyting works, -1 otherwise
       !         could add different error codes for different
       !         errors ... not much is checked here!
@@ -64,7 +65,7 @@ module fwdtmmod
       integer	::  iy,iz
 
       if(.not.Initialized) then
-         ! initialize ... 
+         ! initialize ...
          !  first set array sizes using WS names
          Ny = grid%Ny
          Nz = grid%Nz
@@ -91,7 +92,7 @@ module fwdtmmod
          ! compute block center differences (actually 2xDistance!)
          Call DistanceBetweenBlocks(Nzb,Dzb,Czb)
 	 Call DistanceBetweenBlocks(Ny,Dy,Cy)
-      
+
          ! set Initialization flag
          Initialized = .true.
          IER = 0
@@ -105,7 +106,7 @@ module fwdtmmod
          IER = -1
       endif
       end subroutine FWD2DsetupTM
-      
+
 !**********************************************************************
       Subroutine Fwd2DsolveTM(b,Hsol,IER)
 	!!!!!!!   DOCUMENTATION KNOWN TO BE INCORRECT ... MODIFIED
@@ -126,7 +127,7 @@ module fwdtmmod
       complex(kind=prec), intent(out)	:: Hsol(Ny+1,Nzb+1)
       integer, intent(out)	::IER
       character*1    :: NTC
- 
+
       ! local variables
       integer mmi,mmb,kl,ku,iz,iy
 
@@ -205,7 +206,7 @@ module fwdtmmod
 	  Hsol(:,Nzb+1) = 0.
 	  Hsol(Ny+1,:)  = 0.
         endif
-      else 
+      else
         ! for adjoint case, post-multiply by area weights
         call multHarrayByArea(Hsol,Hsol)
 	! coding of output BC for adjoint case not done yet
@@ -226,7 +227,7 @@ module fwdtmmod
 
       real (kind=prec)  :: Cond2D(Ny,Nz)
 
-         call CondParamToArray(Sigma,Ny,Nz,Cond2D)
+         call ModelParamToCell(Sigma,Ny,Nz,Cond2D)
          ! Copy inputs into local grid variables
          !  NOTE: order of indices changed for compatability
          !    with 2D TM routines
@@ -247,7 +248,7 @@ module fwdtmmod
 !**********************************************************************
       Subroutine UpdateFreqTM(per)
 !      updates frequency (period) dependence, modifying AII
-      real(kind=prec), intent(in)	:: per 
+      real(kind=prec), intent(in)	:: per
 
       Call FormAII(per,Nzb,Ny,ATM,AII,ipiv)
 
@@ -256,7 +257,7 @@ module fwdtmmod
 
 !**********************************************************************
       Subroutine SetBoundTM(per,HXB)
-!     wrapper for WSfwdMod routine SetBound2D_TM 
+!     wrapper for WSfwdMod routine SetBound2D_TM
       real(kind=prec),intent(in)		:: per
       complex(kind=prec), intent(inout)	:: HXB(MMBMX)
 

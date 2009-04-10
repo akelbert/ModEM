@@ -11,7 +11,7 @@ program Mod2DMT
 !        and then reads the outputs.  Generalize to a mex file!
 
 !   All new module names ....
-!     use modelparameter
+!     use modelspace
 !     use dataspace
 !     use solnrhs
 !     use wsfwd2d
@@ -52,12 +52,12 @@ program Mod2DMT
      case (READ_WRITE)
         if (write_model .and. write_data) then
         	write(*,*) 'Writing model and data files and exiting...'
-        	call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma0)
+        	call write_modelParam(sigma0,cUserDef%wFile_Model)
         	call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,modes,   &
 				nSites,sites,data_units,allData)
 		else if (write_model) then
         	write(*,*) 'Writing model and exiting...'
-        	call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma0)
+        	call write_modelParam(sigma0,cUserDef%wFile_Model)
 		end if
 
      case (FORWARD)
@@ -76,8 +76,7 @@ program Mod2DMT
         write(*,*) 'Calculating the full sensitivity matrix...'
         call calcSensMatrix(allData,sigma0,sigma)
         nData = countData(allData)
-        call writeVec_modelParam(fidWrite,cUserDef%wFile_Sens,   &
-                        nData,sigma,'Sensitivity matrix')
+        call writeVec_modelParam(nData,sigma,'Sensitivity matrix',cUserDef%wFile_Sens)
 
      case (MULT_BY_J)
         write(*,*) 'Multiplying by J...'
@@ -88,7 +87,7 @@ program Mod2DMT
      case (MULT_BY_J_T)
         write(*,*) 'Multiplying by J^T...'
         call JmultT(sigma0,allData,dsigma)
-        call write_modelParam(fidWrite,cUserDef%wFile_dModel,dsigma)
+        call write_modelParam(dsigma,cUserDef%wFile_dModel)
 
      case (INVERSE)
      	if (trim(cUserDef%search) == 'NLCG') then
@@ -98,7 +97,7 @@ program Mod2DMT
         	write(*,*) 'Inverse search ',trim(cUserDef%search),' not yet implemented. Exiting...'
         	stop
         end if
-        call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma1)
+        call write_modelParam(sigma1,cUserDef%wFile_Model)
         if (write_data) then
         	call fwdPred(sigma1,allData)
         	call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,modes,nSites,sites,data_units,allData)

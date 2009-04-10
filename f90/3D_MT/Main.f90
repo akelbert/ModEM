@@ -85,8 +85,8 @@ Contains
 	inquire(FILE=cUserDef%rFile_Model,EXIST=exists)
 
 	if (exists) then
-	   ! Read input files and set up basic grid geometry & conductivities
-       call read_modelParam(fidRead,cUserDef%rFile_Model,sigma0,paramType,grid)
+	   ! Read background conductivity parameter and grid
+       call read_modelParam(grid,sigma0,cUserDef%rFile_Model)
 
        ! Finish setting up the grid (if that is not done in the read subroutine)
        call setup_grid(grid)
@@ -123,7 +123,7 @@ Contains
      case (MULT_BY_J)
 	   inquire(FILE=cUserDef%rFile_dModel,EXIST=exists)
 	   if (exists) then
-	   	  call read_modelParam(fidRead,cUserDef%rFile_dModel,dsigma,paramType,grid)
+	   	  call read_modelParam(grid,dsigma,cUserDef%rFile_dModel)
 	   else
 	      call warning('The input model perturbation file does not exist')
 	   end if
@@ -151,7 +151,8 @@ Contains
        else
           call create_CmSqrt(sigma0)
        end if
-       call create_ModelParam(grid,paramtype,sigma1)
+       sigma1 = sigma0
+       call zero_modelParam(sigma1)
 
     end select
 

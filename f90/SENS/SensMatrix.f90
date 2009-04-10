@@ -138,13 +138,13 @@ Contains
                  ii = ii + 2
                  call PmultT(e0,sigma0,e,dsigma(ii-1),dsigma(ii))
                  if(calcQ) then
-                    call EMSparseQtoModelParam(C_ONE,Q(iFunc),sigma0,dsigma(ii-1),dsigma(ii))
+                    call QaddT(C_ONE,Q(iFunc),sigma0,dsigma(ii-1),dsigma(ii))
                  endif
               else
                  ii = ii+1
                  call PmultT(e0,sigma0,e,dsigma(ii))
                  if(calcQ) then
-                    call EMSparseQtoModelParam(C_ONE,Q(iFunc),sigma0,dsigma(ii))
+                    call QaddT(C_ONE,Q(iFunc),sigma0,dsigma(ii))
                  endif
               endif
            enddo  ! iFunc

@@ -33,11 +33,11 @@ program Mod3DMT
      case (READ_WRITE)
         if (write_model .and. write_data) then
         	write(*,*) 'Writing model and data files and exiting...'
-        	call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma0)
+        	call write_modelParam(sigma0,cUserDef%wFile_Model)
         	call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,siteids,data_units,compids,allData)
 		else if (write_model) then
         	write(*,*) 'Writing model and exiting...'
-        	call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma0)
+        	call write_modelParam(sigma0,cUserDef%wFile_Model)
 		end if
 
      case (FORWARD)
@@ -55,8 +55,7 @@ program Mod3DMT
         write(*,*) 'Calculating the full sensitivity matrix...'
         call calcSensMatrix(allData,sigma0,sigma)
         nData = countData(allData)
-        call writeVec_modelParam(fidWrite,cUserDef%wFile_Sens,   &
-                        nData,sigma,'Sensitivity matrix')
+        call writeVec_modelParam(nData,sigma,'Sensitivity matrix',cUserDef%wFile_Sens)
 
      case (MULT_BY_J)
         write(*,*) 'Multiplying by J...'
@@ -66,7 +65,7 @@ program Mod3DMT
      case (MULT_BY_J_T)
         write(*,*) 'Multiplying by J^T...'
         call JmultT(sigma0,allData,dsigma)
-        call write_modelParam(fidWrite,cUserDef%wFile_dModel,dsigma)
+        call write_modelParam(dsigma,cUserDef%wFile_dModel)
 
      case (INVERSE)
      	if (trim(cUserDef%search) == 'NLCG') then
@@ -76,7 +75,7 @@ program Mod3DMT
         	write(*,*) 'Inverse search ',trim(cUserDef%search),' not yet implemented. Exiting...'
         	stop
         end if
-        call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma1)
+        call write_modelParam(sigma1,cUserDef%wFile_Model)
         if (write_data) then
         	call fwdPred(sigma1,allData)
         	call write_Z(fidWrite,cUserDef%wFile_Data,nPer,periods,nSites,sites,siteids,data_units,compids,allData)
@@ -85,7 +84,7 @@ program Mod3DMT
      case (TEST_COV)
         write(*,*) 'Multiplying input model parameter by covariance ...'
         call multBy_CmSqrt(sigma0,sigma1)
-        call write_modelParam(fidWrite,cUserDef%wFile_Model,sigma1)
+        call write_modelParam(sigma1,cUserDef%wFile_Model)
 
      case default
 

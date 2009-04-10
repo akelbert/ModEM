@@ -13,14 +13,14 @@
 module ModelSens
    use math_constants
    use utilities
-   use modelparameter
    use datafunc
-   use sg_vector
+   use dataspace
 
    implicit none
 
    !  public routines
    public	::  Pmult, PmultT
+   public   ::  Qmult, QmultT, QaddT
 
    Contains
 
@@ -46,7 +46,7 @@ module ModelSens
    call create_rvector(e0%grid,temp,EDGE)
 
    ! map dsigma to edges, storing in array temp
-   call ModelParamToEdge(dsigma,temp,sigma0)
+   call dModelParamToEdge(dsigma,temp,sigma0)
 
    !  multiply temp by i_omeag_mu*e0, put result in e
    do k = 1,2
@@ -94,12 +94,12 @@ module ModelSens
 
    ! map real/imag parts onto parameter space
    temp = real(Ctemp(1))
-   call EdgeToModelParam(temp,dsigmaReal,sigma0)
+   call dEdgeToModelParam(temp,dsigmaReal,sigma0)
 
    if(present(dsigmaImag)) then
       ! also compute imaginary part
       temp = imag(Ctemp(1))
-      call EdgeToModelParam(temp,dsigmaImag,sigma0)
+      call dEdgeToModelParam(temp,dsigmaImag,sigma0)
    endif
 
    call deall_rvector(temp)
@@ -107,6 +107,83 @@ module ModelSens
    call deall_cvector(Ctemp(2))
 
    end subroutine PmultT
+
+   !**********************************************************************
+   subroutine Qmult(e0,sigma0,dsigma,d)
+   ! a dummy routine at present:
+   ! outputs zero data vector when Q doesn't exist
+
+   type(EMsoln_t), intent(in)             :: e0
+   type(modelParam_t), intent(in)	    :: sigma0 ! used to compute e0
+   type(modelParam_t), intent(in)		:: dsigma
+   type(dataVec_t), intent(inout)          	:: d
+
+   call zero_dataVec(d)
+
+   end subroutine Qmult
+
+!**********************************************************************
+   subroutine QmultT(e0,sigma0,d,dsigmaReal,dsigmaImag)
+   !  a dummy routine at present:
+   !  outputs zero vectors when Q doesn't exist
+
+   type(EMsoln_t), intent(in)             :: e0
+   type(modelParam_t), intent(in)	    :: sigma0 ! used to compute e0
+   type(dataVec_t), intent(in)             :: d
+   type(modelParam_t), intent(inout)               :: dsigmaReal
+   type(modelParam_t), intent(inout),optional      :: dsigmaImag
+
+   dsigmaReal = sigma0
+   call zero_modelParam(dsigmaReal)
+
+   if(present(dsigmaImag)) then
+      dsigmaImag = sigma0
+      call zero_modelParam(dsigmaImag)
+   endif
+
+  end subroutine QmultT
+
+  !****************************************************************************
+  subroutine QaddT(cs,dpsiT,sigma0,dsigmaReal,dsigmaImag)
+
+   !   QaddT (formerly EMsparseQtoModelParam)
+   !   Maps the input sparse vector to the model space by multiplying it with
+   !   (d\pi/dm)^T. This is different from QmultT in that the latter acts on
+   !   a data vector to obtain a model vector. Thus, QmultT is used to multiply
+   !   with J^T, while this routine is needed to compute the full sensitivity
+   !   matrix. In practice, used to make Q_J^T = (d\pi/dm)^T * (d\psi_j/d\pi)^T,
+   !   then add cs*Q_j^T to (dsigmaReal,dSigmaImag)
+   !   cs is a complex constant, Q is a sparse scalar field defined on
+   !     grid cells (but represented with EMsparse data object ... the
+   !     xyz component indicators are ignored).  dsigmaReal/dsigmaImag
+   !     are used to collect sums of real and imaginary parts; dsigmaImag
+   !     is optional.
+   !   In 3D MT this has not been implemented yet.
+   !   This is a dummy routine that makes and adds a zero model parameter.
+
+   complex(kind=prec),intent(in)	:: cs
+   type (EMsparse_t), intent(in)                  :: dpsiT
+   type (modelParam_t), intent(in)                :: sigma0
+   type (modelParam_t), intent(inout)             :: dsigmaReal
+   type (modelParam_t), intent(inout),optional    :: dsigmaImag
+
+   !  local variables
+   type (modelParam_t)    :: csQReal, csQImag
+
+   csQReal = sigma0
+   call zero_modelParam(csQReal)
+   call linComb_modelParam(ONE,dsigmaReal,ONE,csQReal,dsigmaReal)
+
+   if(present(dSigmaImag)) then
+      csQImag = sigma0
+      call zero_modelParam(csQImag)
+      call linComb_modelParam(ONE,dsigmaImag,ONE,csQImag,dsigmaImag)
+   endif
+
+   call deall_modelParam(csQReal)
+   call deall_modelParam(csQImag)
+
+  end subroutine QaddT
 
    !**********************************************************************
 end module ModelSens

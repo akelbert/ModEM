@@ -18,18 +18,19 @@
 module fwdtemod
    use math_constants
    use wsfwd2d
-   use solnrhs ! inherit modelparameter
-   
+   use solnrhs
+   use modelparameter
+
    implicit none
 
    !  routines that are public
    public	:: 	Fwd2DsetupTE, Fwd2DsolveTE, Fwd2DdeallTE, &
 			UpdateCondTE,UpdateFreqTE,SetBoundTE
    private	::	multEarrayByArea, IntVecToEarray,EarrayToIntVec
-			
+
    !  variables declared in module header are available
    !  to all module routines, and are saved between calls
-   save 
+   save
 
    !  integer parameters are calculated and set by initialization
    !   routine
@@ -46,15 +47,15 @@ module fwdtemod
    logical		:: Initialized  = .false.
 
    Contains
-   
+
    ! *****************************************************************************
-   
+
       Subroutine FWD2DsetupTE(grid,Sigma,IER)
       !  routine allocates and initializes everything
       type (grid_t), intent(in)	    :: grid
       type (modelParam_t), intent(in)	:: Sigma
-      !  allocates saved module arrays 
-      !  IER is only output ... 
+      !  allocates saved module arrays
+      !  IER is only output ...
       !     = 0 if everyting works, -1 otherwise
       !         could add different error codes for different
       !         errors ... not much is checked here!
@@ -64,14 +65,14 @@ module fwdtemod
       integer	::  iy,iz
 
       if(.not.Initialized) then
-         ! initialize ... 
+         ! initialize ...
          !  first set array sizes using WS names
          Ny = grid%Ny
          Nz = grid%Nz
          Nza = grid%Nza
 
          ! allocate arrays for use within module
-         !   NOTE: the array size parameters are all set by a call 
+         !   NOTE: the array size parameters are all set by a call
          !        to SetWSparams(Ny,Nz)
          allocate(Dz(NZ0MX))
          allocate(Dy(NY0MX))
@@ -93,7 +94,7 @@ module fwdtemod
          ! compute block center differences (actually 2xDistance!)
          call DistanceBetweenBlocks(Nz,Dz,Cz)
 	 call DistanceBetweenBlocks(Ny,Dy,Cy)
-      
+
          ! set Initialization flag
          Initialized = .true.
          IER = 0
@@ -131,7 +132,7 @@ module fwdtemod
       complex(kind=prec), intent(out)	:: Esol(Ny+1,Nz+1)
       integer, intent(out)	::IER
       character*1		:: NTC
- 
+
       ! local variables
       integer mmi,mmb,kl,ku,iz,iy
 
@@ -153,7 +154,7 @@ module fwdtemod
       mmb = 2*Ny + 2*Nz
       kl = Nz-1
       ku = Nz-1
-      
+
       if ((b%nonzero_bc).and.(b%adj.eq.'FWD')) then
          call MulAibWithXb(Nz,Ny,BTE,b%bc,EXI)
       else
@@ -171,7 +172,7 @@ module fwdtemod
             call addEarrayToIntVec(b%source%v,EXI)
 	 endif
       endif
-      
+
       !  same call for forward, adjoint (or transposed) problems
       call ZGBTRS(NTC,mmi,kl,ku,1,AII,NZ3MX,ipiv,EXI,MMIMX,IER)
 
@@ -185,7 +186,7 @@ module fwdtemod
       call IntVecToEarray(EXI,Esol)
 
       if(b%adj .eq. 'FWD') then
-         if(b%nonzero_bc) then  
+         if(b%nonzero_bc) then
             !  copy boundary nodes into solution vector
             !  left side of domain
             ! NOTE: not coded for adjt BC!
@@ -215,9 +216,9 @@ module fwdtemod
          call multEarrayByArea(Esol,Esol)
          !  coding of output BC for adjoint case not done yet
       endif
- 
+
       end subroutine Fwd2DsolveTE
-      
+
 !**********************************************************************
 
       Subroutine UpdateCondTE(Sigma)
@@ -231,7 +232,7 @@ module fwdtemod
       real(kind=prec)	::	Cond2D(Ny,Nz)
       integer	:: iy, iz
 
-         call CondParamToArray(Sigma,Ny,Nz,Cond2D)
+         call ModelParamToCell(Sigma,Ny,Nz,Cond2D)
          ! Copy inputs into local grid variables
          !  NOTE: order of indices changed for compatability
          !    with 2D TE routines
@@ -252,7 +253,7 @@ module fwdtemod
       Subroutine UpdateFreqTE(per)
 
 !      updates frequency (period) dependence, modifying AII
-      real(kind=prec), intent(in)	:: per 
+      real(kind=prec), intent(in)	:: per
 
       call FormAII(per,Nz,Ny,ATE,AII,ipiv)
 
@@ -262,14 +263,14 @@ module fwdtemod
 
       Subroutine SetBoundTE(per,EXB)
 
-!     wrapper for WSfwdMod routine SetBound2D_TE 
+!     wrapper for WSfwdMod routine SetBound2D_TE
       real(kind=prec),intent(in)		:: per
       complex(kind=prec), intent(inout)	:: EXB(MMBMX)
 
       call SetBound2D_TE(per,Nza,Nz,Ny,Dz,Dy,CCon,EXI,EXB)
 
-      end subroutine SetBoundTE    
-      
+      end subroutine SetBoundTE
+
 !**********************************************************************
 
       Subroutine Fwd2DdeallTE()
@@ -288,9 +289,9 @@ module fwdtemod
          deallocate(EXI)
          deallocate(ipiv)
          Initialized = .False.
-	 
+
       end subroutine Fwd2DdeallTE
-      
+
 !**********************************************************************
 
      subroutine EarrayToIntVec(E,V)
@@ -308,7 +309,7 @@ module fwdtemod
            enddo
         enddo
      end subroutine EarrayToIntVec
-     
+
 !**********************************************************************
 
      subroutine IntVecToEarray(V,E)
@@ -326,7 +327,7 @@ module fwdtemod
            enddo
         enddo
      end subroutine IntVecToEarray
-     
+
 !**********************************************************************
 
      subroutine addEarrayToIntVec(E,V)
@@ -344,7 +345,7 @@ module fwdtemod
            enddo
         enddo
      end subroutine addEarrayToIntVec
-     
+
 !**********************************************************************
 
      subroutine multEarrayByArea(Ein,Eout)

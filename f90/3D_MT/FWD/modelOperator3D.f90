@@ -198,7 +198,7 @@ Contains
 
     ! TEMPORARY; REQUIRED FOR BOUNDARY CONDITIONS
     !  set static array for cell conductivities
-    call modelParamToCellCond(CondParam,Cond3D)
+    call ModelParamToCell(CondParam,Cond3D)
 
   end subroutine UpdateCond  ! UpdateCond
 
@@ -225,7 +225,7 @@ Contains
 
     ! TEMPORARY; REQUIRED FOR BOUNDARY CONDITIONS
     !  set static array for cell conductivities
-    call modelParamToCellCond(CondParam,Cond3D)
+    call ModelParamToCell(CondParam,Cond3D)
 
   end subroutine UpdateFreqCond  ! UpdateFreqCond
 

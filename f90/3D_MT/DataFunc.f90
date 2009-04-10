@@ -31,7 +31,6 @@ module dataFunc
   !   Names of these routines must be as here, as these are called by
   !    top-level inversion routines
   public                        :: nonLinDataFunc, linDataFunc
-  public                        :: EMSparseQtoModelParam
 
   !  multiple receiver dictionaries can be defined, as
   !   different sorts of meta-data may be required for different data
@@ -465,49 +464,5 @@ Contains
   call deall_sparsevecc(Lbz)
 
   end subroutine linDataFunc
-!****************************************************************************
- subroutine EMSparseQtoModelParam(cs,Q,sigma0,dsigmaReal,dSigmaImag)
-
-   !   adds cs*Q to (dsigmaReal,dSigmaImag)
-   !   cs is a complex constant, Q is a sparse scalar field defined on
-   !     grid cells (but represented with EMsparse data object ... the
-   !     xyz component indicators are ignored).  dsigmaReal/dsigmaImag
-   !     are used to collect sums of real and imaginary parts; dsigmaImag
-   !     is optional.
-   !
-   !  Mostly this is just a wrapper for QtoModelParam.
-   !   QtoModelParam has to be part of the modelParameter module,
-   !   in order to keep modelParam attributes private.
-   !  To avoid reference to objects below the level of generic SolnRHS
-   !   module objects in higher level inversion routines it is necessary
-   !   to wrap QtoModelParam with this simple routine.
-   !
-   !  Now, this also is used to multiply Q by cs before adding.
-
-   complex(kind=prec),intent(in)	:: cs
-   type (EMsparse_t), intent(in)                  :: Q
-   type (modelParam_t), intent(in)                :: sigma0
-   type (modelParam_t), intent(inout)             :: dsigmaReal
-   type (modelParam_t), intent(inout),optional    :: dsigmaImag
-
-   !  local variables
-   integer		:: k
-   type(sparsevecc)	:: Ltemp
-
-   if(present(dSigmaImag)) then
-      do k = 1,Q%nPol
-         call scMult_sparsevecc(cs,Q%L(k),Ltemp)
-         call QtoModelParam(Ltemp,sigma0,dsigmaReal,dSigmaImag)
-      enddo
-   else
-      do k = 1,Q%nPol
-         call scMult_sparsevecc(cs,Q%L(k),Ltemp)
-         call QtoModelParam(Ltemp,sigma0,dsigmaReal)
-      enddo
-   endif
-
-   call deall_sparsevecc(Ltemp)
-
-   end subroutine EMSparseQtoModelParam
 
 end module dataFunc

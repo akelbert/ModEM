@@ -16,9 +16,10 @@ module ModelParameter
 !    read_modelParam, write_modelParam.
 !
 ! Also includes condictivity mappings on the grid:
-!    CellToNode, NodeToCell, CondParamToArray,
+!    CellToNode, NodeToCell, ModelParamToCell,
 !    rhoC, CellToEdge, EdgeToCell, QtoModelParam
 
+use file_units
 use math_constants
 use utilities
 use emfield
@@ -344,5 +345,22 @@ Contains
 
    end subroutine getValue_modelParam
 
+  !**********************************************************************
+  !  extracts the grid from a modelParam object; this is only needed since
+  !  the attributes are private (in F2003, can declare everything private
+  !  while grid and allocated attributes could be public)
+
+  subroutine getGrid_modelParam(mIn,grid)
+
+    type (modelParam_t), intent(in)     :: mIn
+    type (grid_t), intent(out)          :: grid
+
+    if (.not. mIn%allocated) then
+       call warning('model vector not allocated on call to getGrid_modelParam')
+    endif
+
+    grid = mIn%grid
+
+  end subroutine getGrid_modelParam
 
 end module ModelParameter

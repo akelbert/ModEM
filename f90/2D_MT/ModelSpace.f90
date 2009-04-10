@@ -1,15 +1,5 @@
 module ModelSpace
 
-  ! This model only seems to make sense as an upper-level module; otherwise,
-  ! it's an extra layer of complication that doesn't seem to be justified.
-  ! All of the interfaces are generic, except for the ModelMap interfaces,
-  ! and the model covariances.
-  ! These can (and should!?) be made generic, but they are not at the moment.
-  ! I am including both sets (2D and 3D MT) in case we later want to come
-  ! back to this idea and merge these into something general.
-  ! This module as is won't work! The 2D and 3D versions conflict.
-  ! The generic routines could still be useful in the future.
-
   use griddef
   use math_constants
   use utilities
@@ -19,7 +9,7 @@ module ModelSpace
 
   type :: modelVec_t
 
-     private
+     !private
      type (modelParam_t)         :: m
      type (grid_t), pointer      :: grid
      logical			         :: allocated = .false.
@@ -357,8 +347,6 @@ Contains
   ! modelVec. However, for the 3D MT problem, grid is already part of
   ! the model parameter. For simplicity, leaving it the way it is.
 
-  ! 2D MT
-
   !**********************************************************************
   ! Non-linear mapping from model parameter to a single grid cell
 
@@ -472,73 +460,5 @@ Contains
    endif
 
   end subroutine dCellToModel
-
-  ! 3D MT
-
-  !**********************************************************************
-  ! Non-linear mapping from model parameter to a single grid edge
-
-  function ModelToOneEdge(mVec,xyz,ix,iy,iz) result (r)
-
-     type (modelVec_t), intent(in)           :: mVec
-     integer, intent(in)                     :: xyz,ix,iy,iz
-     real (kind=prec)                        :: r
-
-     r = sigC(mVec%m,xyz,ix,iy,iz)
-
-  end function ModelToOneEdge
-
-  !**********************************************************************
-  ! Non-linear mapping from model parameter to grid edges \pi(m)
-
-  subroutine ModelToEdge(mVec, eCond)
-
-     type (modelVec_t), intent(in)           :: mVec
-     type (rvector), intent(out)             :: eCond
-
-     call ModelParamToEdge(mVec%m, eCond)
-
-  end subroutine ModelToEdge
-
-  !**********************************************************************
-  ! Linear mapping from model parameter to grid edges d\pi/dm
-
-  subroutine dModelToEdge(mVec, eCond, mVec0)
-
-     type (modelVec_t), intent(in)           :: mVec
-     type (rvector), intent(out)             :: eCond
-     type (modelVec_t), intent(in)           :: mVec0
-
-     call ModelParamToEdge(mVec%m, eCond, mVec0%m)
-
-  end subroutine dModelToEdge
-
-  !**********************************************************************
-  ! Linear mapping from grid edges to model parameter (d\pi/dm)^T
-  ! (adjoint of dModelToEdge)
-
-  subroutine dEdgeToModel(eCond, mVec, mVec0)
-
-     type (rvector), intent(in)              :: eCond
-     type (modelVec_t), intent(out)          :: mVec
-     type (modelVec_t), intent(in)           :: mVec0
-
-     call EdgeToModelParam(eCond, mVec%m, mVec0%m)
-     mVec%grid = mVec0%grid
-     mVec%allocated = .true.
-
-  end subroutine dEdgeToModel
-
-  !**********************************************************************
-  ! Non-linear mapping from model parameter to grid cell centers
-
-  subroutine ModelToCell(mVec, cCond)
-
-     type (modelVec_t), intent(in)           :: mVec
-     type (rscalar), intent(out)             :: cCond
-
-     call modelParamToCellCond(mVec%m,cCond)
-
-  end subroutine ModelToCell
 
 end module ModelSpace

@@ -26,6 +26,12 @@ module DataSpace
      MODULE PROCEDURE deall_dataVecMTX
   end interface
 
+  interface zero
+     MODULE PROCEDURE zero_dataVec
+     MODULE PROCEDURE zero_dataVecTX
+     MODULE PROCEDURE zero_dataVecMTX
+  end interface
+
   interface linComb
      MODULE PROCEDURE linComb_dataVec
      MODULE PROCEDURE linComb_dataVecTX
@@ -129,6 +135,7 @@ module DataSpace
   ! basic operators for all dataVec types
   public			:: create_dataVec, create_dataVecTX, create_dataVecMTX
   public            :: deall_dataVec, deall_dataVecTX, deall_dataVecMTX
+  public            :: zero_dataVec, zero_dataVecTX, zero_dataVecMTX
   public			:: copy_dataVec, copy_dataVecTX, copy_dataVecMTX
   public			:: linComb_dataVec, linComb_dataVecTX, linComb_dataVecMTX
   public            :: scMult_dataVec_f, scMult_dataVecTX_f, scMult_dataVecMTX_f
@@ -248,6 +255,21 @@ Contains
     d%allocated = .false.
 
   end subroutine deall_dataVec
+
+  !**********************************************************************
+  ! set the data values and error bars to zero
+
+  subroutine zero_dataVec(d)
+
+    type (dataVec_t), intent(inout)	:: d
+
+    if(d%allocated) then
+       d%value = R_ZERO
+       if (associated(d%error)) d%error = R_ZERO
+       d%errorBar = .false.
+    endif
+
+  end subroutine zero_dataVec
 
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...
@@ -545,6 +567,23 @@ Contains
 
   end subroutine deall_dataVecTX
 
+  !**********************************************************************
+  ! set the data values and error bars to zero
+
+  subroutine zero_dataVecTX(d)
+
+    type (dataVecTX_t), intent(inout)	:: d
+    ! local
+    integer                             :: i
+
+    if(d%allocated) then
+       do i = 1,d%nDt
+          call zero_dataVec(d%data(i))
+       enddo
+    endif
+
+  end subroutine zero_dataVecTX
+
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...
   ! interface to =
@@ -770,6 +809,23 @@ Contains
     d%allocated = .false.
 
   end subroutine deall_dataVecMTX
+
+  !**********************************************************************
+  ! set the data values and error bars to zero
+
+  subroutine zero_dataVecMTX(d)
+
+    type (dataVecMTX_t), intent(inout)	:: d
+    ! local
+    integer                             :: j
+
+    if(d%allocated) then
+       do j = 1,d%nTx
+          call zero_dataVecTX(d%d(j))
+       enddo
+    endif
+
+  end subroutine zero_dataVecMTX
 
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...

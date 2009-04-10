@@ -23,7 +23,7 @@
 !        are different (conductivity vs. resistivity)
 
    !**********************************************************************
-   subroutine modelParamToCellCond(m,cCond,paramType,grid,AirCond)
+   subroutine ModelParamToCell(m,cCond,paramType,grid,AirCond)
 
      type(modelParam_t), intent(in)        :: m
      type(rscalar), intent(inout)	       :: cCond
@@ -63,7 +63,25 @@
         AirCond = m%AirCond
      end if
 
-   end subroutine modelParamToCellCond
+   end subroutine ModelParamToCell
+  !**********************************************************************
+
+  subroutine dModelParamToEdge(m, Econd,m0)
+  !  Maps conductivity defined on grid cells (prisms) to edge-nodes ...
+  !  Linear interface to ModelParamToEdge which makes the code more readable.
+
+    implicit none
+    !  INPUTS:  model parameter
+    type(modelParam_t), intent(in)            :: m
+    !  OUTPUTS: conductivities on edge nodes, as needed for FD calc.
+    !    stored as rvector; allocate Econd before calling
+    type(rvector), intent(inout)         :: Econd
+    !  INPUT: background model parameter for linearization
+    type(modelParam_t),  intent(in)	     :: m0
+
+    call ModelParamToEdge(m, Econd,m0)
+
+  end subroutine dModelParamToEdge
 
   !**********************************************************************
 
@@ -221,7 +239,26 @@
 
   end subroutine ModelParamToEdge
 
-   !**********************************************************************
+  !**********************************************************************
+
+  subroutine dEdgeToModelParam(Econd,m,m0)
+  !  Maps from a real vector (defined on edges) to modelParam;
+  !    the adjoint of linear mapping implemented by ModelParamToEdge
+  !  Interface to EdgeToModelParam that makes the code more readable.
+
+    implicit none
+    !  INPUTS:  real vector defined on edges
+    type(rvector), intent(in)            :: Econd
+    !  OUTPUTS: model parameter
+    type(modelParam_t), intent(inout)         :: m
+    !  INPUT background model parameter
+    type(modelParam_t), intent(in)	    :: m0
+
+    call EdgeToModelParam(Econd,m,m0)
+
+  end subroutine dEdgeToModelParam
+
+  !**********************************************************************
 
   subroutine EdgeToModelParam(Econd,m,m0)
   !  Maps from a real vector (defined on edges) to modelParam;
@@ -335,50 +372,8 @@
 
   end subroutine EdgeToModelParam
 
-!**********************************************************************
-   subroutine QtoModelParam(Qj,sigma0,dsigmaReal,dSigmaImag)
-
-   !  THIS IS NOT EVEN LOOKED AT WITH REGARD TO CORRECTNESS OF
-   !   FORMULAE FOR 3D!!!!! JUST COPIED FROM 2D-TM !!!!!!
-
-   !  given input sparse vector defined on cells,
-   !   compute vector defined on parameter space
-   !   add result to inputs dsigmaReal, dsigmaImag
-   !    Q_j^T \partial\rho_cell/\partial\theta
-
-   type (sparseVecC), intent(in)   :: Qj
-   type (modelParam_t), intent(in) :: sigma0
-   type (modelParam_t), intent(inout)    :: dsigmaReal
-   type (modelParam_t), intent(inout),optional    :: dsigmaImag
-
-   ! local variables
-   integer              :: jk,i,j,k
-
-   do jk = 1,Qj%nCoeff
-      i = Qj%I(jk)
-      j = Qj%J(jk)
-      k = Qj%K(jk)
-      if(sigma0%paramType .eq. LOGE) then
-         dsigmaReal%CellCond%v(i,j,k) = dSigmaReal%CellCond%v(i,j,k) &
-                        -real(Qj%C(jk))/exp(sigma0%CellCond%v(i,j,k))
-         if(present(dSigmaImag)) then
-            dsigmaImag%CellCond%v(i,j,k) = dSigmaImag%CellCond%v(i,j,k) &
-                        -imag(Qj%C(jk))/exp(sigma0%CellCond%v(i,j,k))
-         endif
-      else
-         dsigmaReal%CellCond%v(i,j,k) = dSigmaReal%CellCond%v(i,j,k) &
-           -real(Qj%C(jk))/(sigma0%CellCond%v(i,j,k)*sigma0%CellCond%v(i,j,k))
-         if(present(dSigmaImag)) then
-            dsigmaImag%CellCond%v(i,j,k) = dSigmaImag%CellCond%v(i,j,k) &
-             -imag(Qj%C(jk))/(sigma0%CellCond%v(i,j,k)*sigma0%CellCond%v(i,j,k))
-         endif
-      endif
-   enddo
-
-   end subroutine QtoModelParam
-
   !**********************************************************************
-  function sigC(m,xyz,ix,iy,iz) result(r)
+  function ModelParamToOneEdge(m,xyz,ix,iy,iz) result(r)
   !   computes conductivity for edge xyz/i,j,k using input modelParam
   !    structure m.  This function defines how the abstract
   !     conductivity parameter is mapped to edge conductivities needed
@@ -460,4 +455,4 @@
             temp(1,2)*w12 + temp(2,2)*w22)/S
 
     endselect
-  end function sigC
+  end function ModelParamToOneEdge

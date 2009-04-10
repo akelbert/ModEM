@@ -1,32 +1,34 @@
 ! I/O routines for 3D_MT modelParam - extended Weerachai Siripunvaraporn's format
 
 	!******************************************************************
-	subroutine read_modelParam_WS(fid,cfile,m,paramType,grid)
+	subroutine read_modelParam_ws(grid,m,cfile)
 
-      ! opens cfile on unit fid, writes out object of
+      ! opens cfile on unit ioPrm, writes out object of
       ! type modelParam in Weerachai Siripunvaraporn's format, closes file
+      ! we can update the grid here, but the grid as an input is critical
+      ! for setting the pointer to the grid in the modelParam
 
-      integer, intent(in)		           :: fid
-      character(*), intent(in)             :: cfile
+      type(grid_t), target, intent(inout)  :: grid
       type(modelParam_t), intent(out)	   :: m
-      character(80), intent(out)           :: paramType
-      type(grid_t), intent(inout)        :: grid
+      character(*), intent(in)             :: cfile
+      integer		                       :: istat
       ! local variables
+
       type(rscalar)                        :: rho, ccond
-      character(80)                        :: someChar=''
-      integer                              :: Nx, Ny, NzEarth, NzAir, someIndex=0, i, j, k, istat
+      character(80)                        :: someChar='',paramType=''
+      integer                              :: Nx, Ny, NzEarth, NzAir, someIndex=0, i, j, k
       real(8)                              :: alpha=3.
-      
+
 	  paramType = ''
 
       ! Open file and read grid
-      open(unit=fid, file=cfile, status='old')
+      open(unit=ioPrm, file=cfile, status='old', iostat=istat)
 
       ! First read the comment line
-      read(fid,'(a80)') someChar
+      read(ioPrm,'(a80)') someChar
 
 	  ! Now read the second line with the grid dimensions
-      read(fid,'(a80)') someChar
+      read(ioPrm,'(a80)') someChar
       read(someChar,*) Nx, Ny, NzEarth, someIndex
 
       if (someIndex /= 0) then
@@ -47,9 +49,9 @@
 	  ! Initialize and read in the grid
       call create_grid(Nx,Ny,NzAir,NzEarth,grid)
 
-      read(fid,*) (grid%dx(j),j=1,grid%nx)
-      read(fid,*) (grid%dy(j),j=1,grid%ny)
-      read(fid,*) (grid%dz(j),j=grid%nzAir+1,grid%nzAir+grid%nzEarth)
+      read(ioPrm,*) (grid%dx(j),j=1,grid%nx)
+      read(ioPrm,*) (grid%dy(j),j=1,grid%ny)
+      read(ioPrm,*) (grid%dz(j),j=grid%nzAir+1,grid%nzAir+grid%nzEarth)
 
       !   Following is Kush's approach to setting air layers:
       ! mirror imaging the dz values in the air layer with respect to
@@ -74,13 +76,13 @@
  	  ! Read the resistivity
  	  do k=1,nzEarth
  	  	do j=1,Ny
-			read(fid,*,iostat=istat) (rho%v(i,j,k), i=Nx,1,-1)
+			read(ioPrm,*,iostat=istat) (rho%v(i,j,k), i=Nx,1,-1)
  	  	end do
  	  end do
 
  	  ! Note that our standard subroutine doesn't work with Weerachai's
  	  ! real value format. It is still better than either Mackie's or WS's...
-      ! call read_rscalar(fid,rho)
+      ! call read_rscalar(ioPrm,rho)
 
       ! Convert from conductivity to resistivity
       call copy_rscalar(ccond,rho)
@@ -91,7 +93,7 @@
  	  end if
 
       ! In case the grid origin is stored next (in metres!)...
-      read(fid,*,iostat=istat) grid%ox, grid%oy, grid%oz
+      read(ioPrm,*,iostat=istat) grid%ox, grid%oy, grid%oz
 
 	  ! Defaults to the grid centre at the Earth's surface
       if (istat /= 0) then
@@ -100,12 +102,12 @@
           grid%oz = 0.0
       endif
 
-      read(fid,*,iostat=istat) grid%rotdeg
+      read(ioPrm,*,iostat=istat) grid%rotdeg
       if (istat /= 0) then
           grid%rotdeg = 0.0
       end if
 
-      close(fid)
+      close(ioPrm)
 
 	  ! Finally create the model parameter
 	  call create_modelParam(grid,paramType,m,ccond)
@@ -118,23 +120,23 @@
 	  call deall_rscalar(rho)
 	  call deall_rscalar(ccond)
 
-	end subroutine read_modelParam_WS
+	end subroutine read_modelParam_ws
 
 	!******************************************************************
-	subroutine write_modelParam_WS(fid,cfile,m,comment)
+	subroutine write_modelParam_ws(m,cfile,comment)
 
-      ! opens cfile on unit fid, writes out object of
+      ! opens cfile on unit ioPrm, writes out object of
       ! type modelParam in Weerachai Siripunvaraporn's format, closes file
 
-      integer, intent(in)		           :: fid
-      character(*), intent(in)             :: cfile
       type(modelParam_t), intent(in)	   :: m
+      character(*), intent(in)             :: cfile
       character(*), intent(in), optional   :: comment
+      integer           		           :: istat
       ! local variables
-      type(grid_t)                       :: grid
+      type(grid_t)                         :: grid
       type(rscalar)                        :: rho,ccond
       character(80)                        :: paramType
-      integer                              :: Nx, Ny, NzEarth, i, j, k, istat
+      integer                              :: Nx, Ny, NzEarth, i, j, k
 
 	  ! Convert modelParam to linear for output
 	  paramType = LINEAR
@@ -142,12 +144,12 @@
 
 	  grid = ccond%grid
 
-      open(unit=fid, file=cfile, status='unknown')
+      open(unit=ioPrm, file=cfile, status='unknown', iostat=istat)
 
 	  if (present(comment)) then
-	  	write(fid,*) '# ',trim(comment)
+	  	write(ioPrm,*) '# ',trim(comment)
 	  else
-      	write(fid,*) '# Model written by ModEM in WS format'
+      	write(ioPrm,*) '# 3D MT model written by ModEM in WS format'
       end if
 
       ! Write grid geometry definitions
@@ -155,22 +157,22 @@
       Ny=grid%ny
       NzEarth=grid%nz - grid%nzAir
 
-      write(fid,'(4i5)',advance='no') Nx,Ny,NzEarth,0
-      write(fid,*) trim(paramType)
+      write(ioPrm,'(4i5)',advance='no') Nx,Ny,NzEarth,0
+      write(ioPrm,*) trim(paramType)
 
       ! Write grid spacings
       do j=1,grid%nx
-      	write(fid,'(f12.3)',advance='no') grid%dx(j)
+      	write(ioPrm,'(f12.3)',advance='no') grid%dx(j)
 	  end do
-	  write(fid,*)
+	  write(ioPrm,*)
 	  do j=1,grid%ny
-      	write(fid,'(f12.3)',advance='no') grid%dy(j)
+      	write(ioPrm,'(f12.3)',advance='no') grid%dy(j)
 	  end do
-	  write(fid,*)
+	  write(ioPrm,*)
 	  do j=grid%nzAir+1,grid%nz
-      	write(fid,'(f12.3)',advance='no') grid%dz(j)
+      	write(ioPrm,'(f12.3)',advance='no') grid%dz(j)
 	  end do
-	  write(fid,*)
+	  write(ioPrm,*)
 
       ! Convert conductivity to resistivity
       call copy_rscalar(rho,ccond)
@@ -181,29 +183,29 @@
  	  end if
 
  	  ! Write the resistivity
- 	  write(fid,*)
+ 	  write(ioPrm,*)
  	  do k=1,nzEarth
  	  	do j=1,Ny
  	  		do i=Nx,1,-1
- 	  			write(fid,'(es13.5)',iostat=istat,advance='no') rho%v(i,j,k)
+ 	  			write(ioPrm,'(es13.5)',iostat=istat,advance='no') rho%v(i,j,k)
  	  		end do
- 	  		write(fid,*)
+ 	  		write(ioPrm,*)
  	  	end do
- 	  	write(fid,*)
+ 	  	write(ioPrm,*)
  	  end do
 
  	  ! Note that our standard subroutine doesn't work with Weerachai's
  	  ! real value format. It is still better than either Mackie's or WS's...
-	  ! call write_rscalar(fid,rho)
+	  ! call write_rscalar(ioPrm,rho)
 
       ! Also write the grid origin (in metres!) and rotation (in degrees)...
-      write(fid,'(3f9.3)',iostat=istat) grid%ox, grid%oy, grid%oz
-      write(fid,'(f9.3)',iostat=istat)  grid%rotdeg
-      close(fid)
+      write(ioPrm,'(3f9.3)',iostat=istat) grid%ox, grid%oy, grid%oz
+      write(ioPrm,'(f9.3)',iostat=istat)  grid%rotdeg
+      close(ioPrm)
 
 	  ! Now done with ccond, rho and grid, so deallocate
 	  call deall_rscalar(rho)
 	  call deall_rscalar(ccond)
 	  call deall_grid(grid)
 
-      end subroutine write_modelParam_WS
+    end subroutine write_modelParam_ws

@@ -11,7 +11,7 @@ module interpEB
 
   use math_constants
   use utilities
-  use modelparameter 	!!!! inherit : soln2d, grid
+  use modelparameter, rhoC => ModelParamToOneCell
 
   implicit none
   public				:: NodeInterpSetup2D

@@ -372,7 +372,7 @@ Contains
    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
    write(iterChar,'(i3.3)') 0
    gradFile = trim(iterControl%modelFile)//'_NLCG_'//iterChar//'.grt'
-   call write_modelParam(iterControl%fid,trim(gradFile),grad)
+   call write_modelParam(grad,trim(gradFile))
 
    ! update the initial value of alpha if necessary
    gnorm = sqrt(dotProd_modelParam(grad,grad))
@@ -428,7 +428,7 @@ Contains
    	  call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
    	  write(iterChar,'(i3.3)') iter
    	  modelFile = trim(iterControl%modelFile)//'_NLCG_'//iterChar//'.cpr'
-      call write_modelParam(iterControl%fid,trim(modelFile),m)
+      call write_modelParam(m,trim(modelFile))
 
 	  ! if alpha is too small, we are not making progress: update lambda
 	  if (abs(rmsPrev - rms) < iterControl%fdiffTol) then

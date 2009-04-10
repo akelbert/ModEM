@@ -1,24 +1,24 @@
 ! I/O routines for 3D_MT modelParam - extended Randie Mackie's format
 
-      !******************************************************************
-      subroutine read_modelParam_mackie(fid,cfile,m,type,grid)
+  !******************************************************************
+  subroutine read_modelParam_mackie(grid,m,cfile)
 
       !  open cfile on unit fid, writes out object of
       !   type modelParam in Randie Mackie's format, closes file
-      ! note that while this is in general a good interface for
-      ! a write subroutine for modelParam, we do not have to write
-      ! out the grid unless we want to do so
+      ! we can update the grid here, but the grid as an input is critical
+      ! for setting the pointer to the grid in the modelParam
 
-      integer, intent(in)		           :: fid
-      character(*), intent(in)             :: cfile
-      type(modelParam_t), intent(out)	   :: m
-      type(grid_t), intent(inout)        :: grid
-      character(80), intent(out)           :: type
-      type(rscalar)                        :: ccond
+      type(grid_t), target, intent(inout) :: grid
+      type(modelParam_t), intent(out)	:: m
+      character(*), intent(in)          :: cfile
+      integer              :: ios
+      ! local
+      character(80)                     :: type
+      type(rscalar)                     :: ccond
 
  	  ! Read input files and set up basic grid geometry, conductivities,
 	  ! and frequencies (stored in the transmitter dictionary, txDictMT)
-	  call readRMgridCond(fid,cfile,ccond,grid,type)
+	  call readRMgridCond(ioPrm,cfile,ccond,grid,type,ios)
 
 	  ! move cell conductivities read into rscalar object into a modelParam
 	  ! object ... this dance needed to keep modelParam attributes private
@@ -31,10 +31,10 @@
 	  ! now done with ccond, so deallocate
 	  call deall_rscalar(ccond)
 
-      end subroutine read_modelParam_mackie
+  end subroutine read_modelParam_mackie
 
-      !******************************************************************
-      subroutine write_modelParam_mackie(fid,cfile,m)
+  !******************************************************************
+  subroutine write_modelParam_mackie(m,cfile)
 
       !  open cfile on unit fid, writes out object of
       !   type modelParam in Randie Mackie's format, closes file
@@ -42,31 +42,31 @@
       ! a write subroutine for modelParam, we do not have to write
       ! out the grid unless we want to do so
 
-      integer, intent(in)		           :: fid
-      character(*), intent(in)             :: cfile
-      type(modelParam_t), intent(in)	   :: m
-      type(rscalar)                        :: ccond
-      type(grid_t)                       :: grid
-      character(80)                        :: type = ''
+      character(*), intent(in)          :: cfile
+      type(modelParam_t), intent(in)	:: m
+      integer              :: ios
+      ! local
+      type(rscalar)                     :: ccond
+      type(grid_t)                      :: grid
+      character(80)                     :: type = ''
 
  	  ! Read input files and set up basic grid geometry, conductivities,
 	  ! and frequencies (stored in the transmitter dictionary, txDictMT)
-	  ! call modelParamToCellCond(m,ccond,paramType,grid)
 
 	  call getValue_modelParam(m,type,ccond)
 
 	  grid = ccond%grid
 
-	  call writeRMgridCond(fid,cfile,ccond,grid,type)
+	  call writeRMgridCond(ioPrm,cfile,ccond,grid,type,ios)
 
 	  ! now done with ccond and grid, so deallocate
 	  call deall_rscalar(ccond)
 	  call deall_grid(grid)
 
-      end subroutine write_modelParam_mackie
+  end subroutine write_modelParam_mackie
 
   ! ***************************************************************************
-  subroutine readRMgridCond(fidRM,inputFile,Cond,grid,paramType)
+  subroutine readRMgridCond(fidRM,inputFile,Cond,grid,paramType,ioerr)
   ! this routine reads files in Mackie's 3D formats, returning the basic
   !   grid components, and optionally also conductivity
   !   If present, Cond is created during call
@@ -78,6 +78,7 @@
     type (grid_t), intent(inout)             :: grid
     type (rscalar), intent(inout), optional     :: Cond
     character (len=80), intent(out), optional   :: paramType
+    integer, intent(out), optional              :: ioerr
 
     real(kind=prec)                     :: origin(3)
     real(kind=prec),pointer,dimension(:)    :: res
@@ -85,7 +86,7 @@
     integer                                     :: ix,iy,iz,ip,i,j
     real(kind=prec)                     :: alpha = 3.
     integer                                     :: jj,Nx,Ny,Nz,NzEarth,NzAir
-    integer                                     :: status, ioerr
+    integer                                     :: status
 
     character (len=80)                          :: ifValues = ''
     character (len=80)                          :: someChar = ''
@@ -96,7 +97,7 @@
     paramType = ''
 
     ! Open file and read grid
-    open(unit=fidRM,file=inputFile,status='old',ERR=9000)
+    open(unit=fidRM,file=inputFile,status='old',ERR=9000,iostat=ioerr)
 
     read(fidRM,'(a80)') someChar
     read(someChar,*) Nx, Ny, NzEarth, nzAir, ifValues
@@ -210,7 +211,7 @@
   end subroutine readRMgridCond
 
  ! ***************************************************************************
-  subroutine writeRMgridCond(fidRM,cFile,Cond,grid,paramType)
+  subroutine writeRMgridCond(fidRM,cFile,Cond,grid,paramType,ioerr)
   ! this routine writes files in Mackie's 3D formats, including the basic
   !   grid components and conductivity
 
@@ -221,14 +222,15 @@
     type (grid_t), intent(inout)             :: grid
     type (rscalar), intent(inout)     			:: Cond
     character(*), intent(in)         			:: paramType
+    integer, intent(out)                        :: ioerr
     real(kind=prec), allocatable       :: value(:,:,:)
-    integer                                    :: i,j,k,ioerr
+    integer                                    :: i,j,k
     integer                                    :: Nx,Ny,NzEarth,Nza,Nz
     logical                                    :: newFile
 
       if (len_trim(cfile)>0) then
          newFile = .true.
-         open(unit=fidRM,file=cfile,status='unknown')
+         open(unit=fidRM,file=cfile,status='unknown',iostat=ioerr)
       end if
 
       ! write grid geometry definitions

@@ -1,27 +1,27 @@
 !!!!!!  >>>>>>>>>>>>>>>>>>>>   TE mode routines <<<<<<<<<<<<<<<<<<
 ! *****************************************************************************
-      subroutine CellToNode(CellCond,NodeCond,Sigma0)
+      subroutine dModelParamToNode(CellCond,NodeCond,Sigma0)
       !  LINEARIZED mapping from conductivity or log conductivity,
-      !      defined on Earth cells to interior Earth node conductivities, 
-      !      averaging over adjacent cells.  Overwrites inputs on 
-      !      these cells, leaving  other nodes (in air, 
+      !      defined on Earth cells to interior Earth node conductivities,
+      !      averaging over adjacent cells.  Overwrites inputs on
+      !      these cells, leaving  other nodes (in air,
       !      on grid boundaries) unaltered
       !   Sigma0 is background conductivity for linearization
-      !        -- this is an optional argument, 
+      !        -- this is an optional argument,
       !           required when CellCond%paramType == 'LOGE'
-      !    
+      !
       !   NOTE: CellCond array is real, while NodeCond array is
       !       complex  !!!
       !
       type (modelParam_t), intent(in)   :: CellCond
       type (modelParam_t), intent(in), optional   :: Sigma0
-  
+
       !  OUTPUT is of type vec2D, of gridType NODE
       !   i.e., output should be defined on all grid nodes, though
       !   this routine only modifies interior nodes within the
       !   Earth.
       type (cvector), intent(inout)   :: NodeCond
-      
+
       ! local variables
       integer iy,iz,Ny,Nz,Nza,izc, NzE
       real(kind=prec) w00,w01,w10,w11,wsum
@@ -32,20 +32,20 @@
       Nza = cellCond%grid%Nza
       NzE = Nz-Nza
       allocate(temp(Ny,NzE))
-      if(NodeCond%gridType .NE. NODE) then 
+      if(NodeCond%gridType .NE. NODE) then
          call errStop('NodeCond must be of gridType NODE in CellToNode')
       endif
-      if(CellCond%paramType .EQ. LOGE) then 
+      if(CellCond%paramType .EQ. LOGE) then
          if(present(Sigma0)) then
             temp = CellCond%v*exp(Sigma0%v)
          else
             call errStop('Sigma0 input to CellToNode is required for case LOGE')
          endif
       else
-         temp = CellCond%v 
+         temp = CellCond%v
       endif
 
-      !  loop over interior Earth nodes 
+      !  loop over interior Earth nodes
       !        (including air/earth interface)
       do iz = Nza+1,Nz
          izc = iz-Nza
@@ -68,29 +68,29 @@
 			      w01*temp(iy-1,izc) + &
 			      w11*temp(iy,izc)
             endif
-         enddo            
-      enddo 
-      deallocate(temp)           
-      end subroutine CellToNode
+         enddo
+      enddo
+      deallocate(temp)
+      end subroutine dModelParamToNode
 
    ! *****************************************************************************
-      subroutine NodeToCell(NodeCond,CellCond,Sigma0)
+      subroutine dNodeToModelParam(NodeCond,CellCond,Sigma0)
       !  Maps from interior Earth nodes to Earth cells;
       !   transpose (adjoint) of EarthCellToNode
       !  INPUT is of type vec2D, of gridType NODE
       !   NodeCond is assumed defined on all nodes, but only
-      !   interior Earth nodes are used 
+      !   interior Earth nodes are used
       type (cvector), intent(in)   :: NodeCond
-      
+
 
       !  OUTPUT is linear cell conductivity parameter structure
       !    (paramType should be LINEAR)
       !  CellCond is overwritten by call to this routine
       type (modelParam_t), intent(inout)   :: CellCond
       !   Optional input Sigma0 is background conductivity, required
-      !        for log conductivity parameterization          
+      !        for log conductivity parameterization
       type (modelParam_t), intent(in), optional   :: Sigma0
-      
+
       !   NOTE: CellCond array is real, while NodeCond array is
       !       complex  !!!
 
@@ -98,7 +98,7 @@
       integer iy,iz,izc,Ny,Nz,Nza
       real(kind=prec) w00,w01,w10,w11,wsum
 
-      if(NodeCond%gridType .NE. NODE) then 
+      if(NodeCond%gridType .NE. NODE) then
          call errStop('NodeCond must be of gridType NODE in NodeToCell')
       endif
       if((CellCond%paramType .eq. LOGE) .and. (.not.present(Sigma0))) then
@@ -112,12 +112,12 @@
       !   zero cell conductivity values
       CellCond%v = R_ZERO
 
-      !  loop over interior Earth nodes 
+      !  loop over interior Earth nodes
       !        (including air/earth interface)
       do iz = Nza+1,Nz
          izc = iz-Nza
          do iy = 2,Ny
-            w00 = CellCond%grid%Dy(iy-1)*CellCond%grid%Dz(iz-1) 
+            w00 = CellCond%grid%Dy(iy-1)*CellCond%grid%Dz(iz-1)
             w10 = CellCond%grid%Dy(iy)*CellCond%grid%Dz(iz-1)
             w01 = CellCond%grid%Dy(iy-1)*CellCond%grid%Dz(iz)
             w11 = CellCond%grid%Dy(iy)*CellCond%grid%Dz(iz)
@@ -136,16 +136,16 @@
 		 CellCond%v(iy-1,izc)+w01*real(NodeCond%v(iy,iz))
             CellCond%v(iy,izc) = &
 		 CellCond%v(iy,izc)+w11*real(NodeCond%v(iy,iz))
-         enddo           
+         enddo
       enddo
       if(CellCond%paramType .eq. LOGE) then
          CellCond%v = CellCond%v*exp(Sigma0%v)
       endif
 
-      end subroutine NodeToCell
+      end subroutine dNodeToModelParam
 
       !**********************************************************************
-      subroutine CondParamToArray(CellCond,Ny,Nz,Cond)
+      subroutine ModelParamToCell(CellCond,Ny,Nz,Cond)
       !  Copies from formal Earth cell conductivity structure
       !    to a standard real array defined for the whole grid.
       !     Sets air cells to AirCond
@@ -154,32 +154,36 @@
       !    (i.e., paramType should be LINEAR)
       type (modelParam_t), intent(in)   :: CellCond
       integer, intent(in)	:: Ny,Nz
-  
+
       real(kind=prec), intent(inout)   :: Cond(Ny,Nz)
-      
+
       ! local variables
       integer iy,iz,izc,NyC,NzC,Nza
+
+      if (.not. cellCond%allocated) then
+        call errStop('CellCond not allocated on input to ModelParamToCell')
+      endif
 
       NyC = cellCond%grid%Ny
       NzC = cellCond%grid%Nz
       Nza = cellCond%grid%Nza
 
-      if((NyC .NE. Ny).or.NzC .NE. Nz) then
-        call errStop('dimensions of CellCond, Cond disagree in CondParamToArray')
+      if((NyC .NE. Ny).or.(NzC .NE. Nz)) then
+        call errStop('dimensions of CellCond, Cond disagree in ModelParamToCell')
       endif
-     
+
       Cond = CellCond%AirCond
       do iz = Nza+1,Nz
          izc = iz-Nza
          do iy = 1,Ny
             Cond(iy,iz) = CellCond%v(iy,izc)
-         enddo            
-      enddo  
+         enddo
+      enddo
       if(CellCond%paramType .eq. LOGE) then
          Cond = exp(Cond)
       endif
-                
-      end subroutine CondParamToArray
+
+      end subroutine ModelParamToCell
 
 !!!!!!  >>>>>>>>>>>>>>>>>>>>   TM mode routines <<<<<<<<<<<<<<<<<<
       !**********************************************************************
@@ -188,9 +192,9 @@
       !     conductivity parameter is mapped to cell resistivites needed
       !     for TM electric field interpolation functions.  The derivative
       !     of this function is required for evaluation of linearized
-      !     data functionals, and for construction of the direct 
+      !     data functionals, and for construction of the direct
       !     parameter space part of the comb
-      function rhoC(sigma,j,k) result(r)
+      function ModelParamToOneCell(sigma,j,k) result(r)
       type (modelParam_t), intent(in)	:: sigma
       integer, intent(in)		:: j,k
       real(kind=prec)	                :: r
@@ -202,10 +206,10 @@
          r = 1./sigma%v(j,k)
       endif
 
-      end function rhoC
+      end function ModelParamToOneCell
 
    !**********************************************************************
-   subroutine CellToEdge(CellCond, sigma0, EdgeCond_y,EdgeCond_z)
+   subroutine dModelParamToEdge(CellCond, EdgeCond_y,EdgeCond_z, sigma0)
    ! map from Cell to Edge on Y and Z axis
 
    type (modelParam_t), intent(in)    :: CellCond
@@ -238,8 +242,8 @@
        wrr = wrr/wsum
        EdgeCond_y%v(iy,iz) = wll*(temp(iy-1,iz)) + &
                              wrr*(temp(iy,iz))
-     enddo 
-   enddo 
+     enddo
+   enddo
 
    do iz = 2, Nzb
      do iy = 1, Ny
@@ -255,11 +259,11 @@
 
    deallocate(temp)
 
-   end subroutine CellToEdge
+   end subroutine dModelParamToEdge
 
    !**********************************************************************
 
-   subroutine EdgeToCell(EdgeCond_y,EdgeCond_z,sigma0,CellCond)
+   subroutine dEdgeToModelParam(EdgeCond_y,EdgeCond_z, CellCond, sigma0)
    ! map from Edge to Cell on Y and Z axis
 
    type (cvector), intent(in)   :: EdgeCond_y, EdgeCond_z
@@ -285,8 +289,8 @@
        wrr = wrr/wsum
        CellCond%v(iy-1,iz) = CellCond%v(iy-1,iz) + wll*real(EdgeCond_y%v(iy,iz))
        CellCond%v(iy,iz)   = CellCond%v(iy,iz)   + wrr*real(EdgeCond_y%v(iy,iz))
-     enddo 
-   enddo 
+     enddo
+   enddo
 
    do iz = 2, Nzb
      do iy = 1, Ny
@@ -306,23 +310,32 @@
       CellCond%v = - CellCond%v/(sigma0%v*sigma0%v)
    endif
 
-   end subroutine EdgeToCell
+   end subroutine dEdgeToModelParam
 
    !**********************************************************************
-   subroutine QtoModelParam(Qj,sigma0,dsigmaReal,dSigmaImag)
+   subroutine SparseCellToModelParam(Qj,sigma0,dsigmaReal,dSigmaImag)
 
    !  given input sparse vector defined on cells,
    !   compute vector defined on parameter space
-   !   add result to inputs dsigmaReal, dsigmaImag
-   !    Q_j^T \partial\rho_cell/\partial\theta
+   !   output result as dsigmaReal, dsigmaImag
+   !   i.e. multiplies a sparse vector by (d\pi/dm)^T
+   !   used to compute and multiply by Q^T
 
    type (sparsevecc), intent(in)   :: Qj
    type (modelParam_t), intent(in) :: sigma0
-   type (modelParam_t), intent(inout)    :: dsigmaReal
-   type (modelParam_t), intent(inout),optional    :: dsigmaImag
+   type (modelParam_t), intent(out)    :: dsigmaReal
+   type (modelParam_t), intent(out),optional    :: dsigmaImag
 
    ! local variables
    integer		:: jk,j,k
+
+   dsigmaReal = sigma0
+   call zero_modelParam(dsigmaReal)
+
+   if(present(dSigmaImag)) then
+      dsigmaImag = sigma0
+      call zero_modelParam(dsigmaImag)
+   endif
 
    do jk = 1,Qj%nCoeff
       j = Qj%J(jk)
@@ -344,4 +357,4 @@
       endif
    enddo
 
-   end subroutine QtoModelParam
+   end subroutine SparseCellToModelParam

@@ -7,15 +7,15 @@ module MeasComb
 !   This module is generic, and should work for a broad range of different
 !     problems (in particular, 2D and 3D MT).  Much of the code in these
 !     routines is for handling two general efficiency issues that arise
-!     with frequency domain EM data: Even at a single site there can be multiple 
+!     with frequency domain EM data: Even at a single site there can be multiple
 !     components that can be evaluated from a single EMsoln object: e.g.,
 !     in 2D MT, TE mode impedance and Tipper; or for 3D 4 components of
 !     impedance tensor; and data can be complex or real.  These modules
-!     handle these different cases efficiently, so that these details 
+!     handle these different cases efficiently, so that these details
 !     are hidden from manipulations in the sensitivity calculation module
 !   This module also handles the sparse vectors Q, which define the
 !     direct sensitivity of the data functionals to model parameters.
- 
+
 !*****************************************************************************
 use math_constants
 use utilities
@@ -23,6 +23,7 @@ use dataspace
 use modelparameter
 use solnrhs
 use dataFunc
+use modelSens
 
 implicit none
 
@@ -48,7 +49,7 @@ Contains
   !   solve for ef, needed if data functional depends on input parameter
   !   and this routine is used to multiply J (sensitivity matrix) times
   !    a model parameter vector
-  type (modelParam_t), intent(in), optional	:: dSigma	
+  type (modelParam_t), intent(in), optional	:: dSigma
 
   !  local variables
   complex(kind=prec)	:: Z
@@ -70,7 +71,7 @@ Contains
   iDT = d%dataType
   calcQ = typeDict(iDT)%calcQ
   !  calcQ is true when data functional coefficients depend on
-  !   model parameters 
+  !   model parameters
   if(calcQ .and. .not.present(dSigma)) then
      call errStop('dSigma required as input to linDataMeas for this data type')
   endif
@@ -105,7 +106,7 @@ Contains
         if(typeDict(iDT)%isComplex) then
            call copy_ModelParam(sigmaQimag,Sigma0)
         endif
-     endif 
+     endif
      iComp = 1
      do iFunc  = 1, nFunc
         Z = dotProd_EMsparseEMsoln(Lz(iFunc),ef,Conj_Case)
@@ -117,19 +118,18 @@ Contains
            if(calcQ) then
               call zero_ModelParam(sigmaQreal)
               call zero_ModelParam(sigmaQimag)
-              call EMSparseQtoModelParam(C_ONE,Qz(iFunc), &
-			    Sigma0,sigmaQreal,sigmaQimag)
+              call QaddT(C_ONE,Qz(iFunc),Sigma0,sigmaQreal,sigmaQimag)
               d%value(iComp-2,iSite) = d%value(iComp-2,iSite) &
-	      		+ dotProd_modelParam(sigmaQreal,dSigma)	
+	      		+ dotProd_modelParam(sigmaQreal,dSigma)
               d%value(iComp-1,iSite) = d%value(iComp-1,iSite) &
-       			+ dotProd_modelParam(sigmaQimag,dSigma)				
+       			+ dotProd_modelParam(sigmaQimag,dSigma)
            endif
         else
            d%value(iComp,iSite) = real(Z)
            iComp = iComp + 1
            if(calcQ) then
               call zero_ModelParam(sigmaQreal)
-              call EMSparseQtoModelParam(C_ONE,Qz(iFunc),Sigma0,sigmaQreal)
+              call QaddT(C_ONE,Qz(iFunc),Sigma0,sigmaQreal)
               d%value(iComp-1,iSite) = d%value(iComp-1,iSite) +  &
 			dotProd_modelParam(sigmaQreal,dSigma)
            endif
@@ -145,7 +145,7 @@ Contains
         if(typeDict(iDT)%isComplex) then
            call deall_modelParam(sigmaQimag)
         endif
-     endif 
+     endif
   enddo
   deallocate(Lz)
   deallocate(Qz)
@@ -171,7 +171,7 @@ Contains
   !  NOTE: we are only supporting full storage sources in comb;
   !    the elements of comb should be allocated and zeroed before calling
   ! As with linDataPred, all of the receiver, transmitter, and data type
-  !   information is obtained from the dictionaries using indices 
+  !   information is obtained from the dictionaries using indices
   !    stored in d%rx, d%tx, d%dataType
 
   ! background model parameter
@@ -182,7 +182,7 @@ Contains
   ! input.  Predicted impedances are computed using
   ! these and the input electric field solutions
   type (dataVec_t), intent(in)               	:: d
-  ! Output 
+  ! Output
   type (EMrhs_t), intent(inout)          		:: comb
   ! Optional output
   type (modelParam_t), intent(inout),optional	:: Qcomb
@@ -198,7 +198,7 @@ Contains
   iDT = d%dataType
   calcQ = typeDict(iDT)%calcQ
   !  calcQ is true when data functional coefficients depend on
-  !   model parameters   
+  !   model parameters
   nComp = d%nComp
   if(typeDict(iDT)%isComplex) then
      !  data are complex; one sensitivity calculation can be
@@ -214,7 +214,7 @@ Contains
   endif
   allocate(Lz(nFunc))
   allocate(Qz(nFunc))
-  
+
   !  loop over sites
   do iSite = 1,d%nSite
      ! compute sparse vector representations of linearized
@@ -236,7 +236,7 @@ Contains
         call add_EMsparseEMrhs(Z,Lz(iFunc),comb)
         if(calcQ) then
            ! adds to input Qcomb (type modelParam)
-           call EMSparseQtoModelParam(Z,Qz(iFunc),Sigma0,Qcomb)
+           call QaddT(Z,Qz(iFunc),Sigma0,Qcomb)
         endif
      enddo
    enddo
@@ -246,7 +246,7 @@ Contains
      call deall_EMSparse(Lz(iFunc))
      if(calcQ) then
         call deall_EMSparse(Qz(iFunc))
-     endif 
+     endif
   enddo
   deallocate(Lz)
   deallocate(Qz)
@@ -255,12 +255,12 @@ Contains
 
 !****************************************************************************
   subroutine dataMeas(ef,Sigma,d)
-  ! given solution for a single TX ef compute predicted data 
+  ! given solution for a single TX ef compute predicted data
   !  at all sites, returning result in d
-  !   Data type information is obtained from typeDict, 
+  !   Data type information is obtained from typeDict,
   !   using dictionary indices stored in d%dataType
   !   Calls nonLinDataFunc to do the actual impedance calculation
-  
+
   type (EMsoln_t), intent(in)     :: ef
   ! d provides indices into receiver dictionary on
   ! input. Predicted impedances are computed using
@@ -272,7 +272,7 @@ Contains
   !  local variables
   integer               ::  iSite, ncomp,nFunc,iDT,iComp, iFunc
   complex (kind=prec), pointer, dimension(:)      ::  Z
-  
+
   iDT = d%dataType
   ncomp = d%ncomp
   if(typeDict(iDT)%isComplex) then
@@ -304,10 +304,10 @@ Contains
         else
            iComp = iComp + 1
            d%value(iComp,iSite) = real(Z(iFunc))
-        endif  
-     enddo  
+        endif
+     enddo
   enddo
-  
+
   ! predicted data have no error bars defined
   d%errorBar = .false.
   deallocate(Z)

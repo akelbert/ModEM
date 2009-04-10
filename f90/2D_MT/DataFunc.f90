@@ -1,7 +1,7 @@
 ! *****************************************************************************
 module datafunc
   ! 2D MT data functionals ... now for TE + TM impedance ... could add
-  !  This module contains 
+  !  This module contains
   !  (1) receiver dictionary (rxDict); representation of
   !    data functionals for MT impedance are eliminated
   !  (2) transmitter dictionary (txDict), information about sources,
@@ -13,7 +13,7 @@ module datafunc
   !	  interpretation parameters
   !  (5) routines to compute data functionals for linearized
   !       impedances,  and ultimately other interpretation paramters
-  !   The idea: 
+  !   The idea:
   !     -> rxDict and txDict are still private to this module
   !     -> first initialize txDict and rxDict by calling
   !          appropriate initialization/setup routines
@@ -31,25 +31,24 @@ module datafunc
   use interpeb        !  basic interpolation routines for 2D TE and TM
                         !    solution grids; allow computation of both E and B
                         !    at an arbitrary point in either grid
-  use modelparameter, only:	rhoC	!  model parameterization
+  use modelparameter, only:	rhoC => ModelParamToOneCell	!  model parameterization
 					!  dependent function needed
 					!  for TM mode data
 					!  functionals
   use solnrhs
- 
+
   implicit none
 
   public			:: RXdictSetup, deall_RXdict
   !   Names of these routines must be as here, as these are called by
   !    top-level inversion routines
   public			:: nonLinDataFunc, linDataFunc
-  public			:: EMSparseQtoModelParam
 
   type :: MTrx
      ! x gives location of EM measurements
      !  multiple receiver dictionaries can be defined, and
      !   different dictionaries can be used for different data types
-     !  Additonal elements of MTrx data type can be added to 
+     !  Additonal elements of MTrx data type can be added to
      !   accomodate additional data types
      real(kind=prec)			::  x(2)
   end type MTrx
@@ -120,7 +119,7 @@ Contains
        deallocate(rxDict,STAT=istat)
     end if
 
-  end subroutine deall_RXdict 
+  end subroutine deall_RXdict
 
 !**************************************************************************
 ! Initializes and sets up data type dictionary
@@ -146,16 +145,16 @@ Contains
        deallocate(typeDict,STAT=istat)
     end if
 
-  end subroutine deall_typeDict 
+  end subroutine deall_typeDict
 
 !******************************************************************************
   subroutine nonLinDataFunc(ef,Sigma,iDT,iRX,Z)
 
   !   2D MT impedance; gets mode from solution
   ! given electric field solution  (stored as type cvector)
-  !   + indices into receiver dictionary 
+  !   + indices into receiver dictionary
   ! compute complex scalar imepdance
-  !   This now creates the required sparse vectors 
+  !   This now creates the required sparse vectors
   !      (either for TE or TM, as appropriate) for impedance evaluation
 
   type (EMsoln_t), intent(in)			:: ef
@@ -168,7 +167,7 @@ Contains
   !    routine)  and (b) Z will always be an array in the calling
   !    routine (as in top-level inversion routines) and so needs to
   !    be treated as an array here, even if there is only one element.
-  !   As an example: to add tippers to TE mode, dimension on Z 
+  !   As an example: to add tippers to TE mode, dimension on Z
   !     will have to be changed to 2!
   complex(kind=prec), intent(inout)	:: Z(1)
 
@@ -202,12 +201,12 @@ Contains
      call errStop('option not available in nonLinDataFunc')
   endif
 
-  !  Using sparse vector representations of data functionals, 
+  !  Using sparse vector representations of data functionals,
   !          compute impedance
-  E = dotProd_scvector(Le,ef%vec,Conj_case)  
+  E = dotProd_scvector(Le,ef%vec,Conj_case)
   ! magnetic field
-  B = dotProd_scvector(Lb,ef%vec,Conj_case)  
-  
+  B = dotProd_scvector(Lb,ef%vec,Conj_case)
+
   ! impedance is trivial for 2D!
   Z = E/B
 
@@ -226,11 +225,11 @@ Contains
   !  For TM mode solution also returns sparse vector Q (model
   !     paramter space) for derivative of data functional with
   !     respect to model paramters; Q is not referenced for TE data
-  !   NOTE: Lz and Qz have to be declared as arrays for 
+  !   NOTE: Lz and Qz have to be declared as arrays for
   !     consistency with calling program (in general the
   !     number nFunc of complex data functionals that will
   !     be returned by data functional routines could be > 1)
-  
+
   !  electric field solutions are stored as type EMsoln
   type (EMsoln_t), intent(in)		:: e0
   ! model parameter used to computed e0
@@ -241,7 +240,7 @@ Contains
   !    routine (as in top-level inversion routines) and so need to
   !    be treated as arrays here, even if there is only one element.
   !   As an example: to add tippers to TE mode, dimension on LZ will
-  !    have to be changed to 2. 
+  !    have to be changed to 2.
   type(EMsparse_t), intent(inout)		:: Lz(1), Qz(1)
 
   !  local variables
@@ -271,19 +270,19 @@ Contains
   else
      call errStop('option not available in linDataFunc')
   endif
-  
-  !  Compute electric, magnetic field for background soln.
-  E = dotProd_scvector(Le,e0%vec,Conj_case)  
-  B = dotProd_scvector(Lb,e0%vec,Conj_case)  
 
-  !  compute sparse vector representations of linearized 
+  !  Compute electric, magnetic field for background soln.
+  E = dotProd_scvector(Le,e0%vec,Conj_case)
+  B = dotProd_scvector(Lb,e0%vec,Conj_case)
+
+  !  compute sparse vector representations of linearized
   !    impedance functional; coefficients depend on E, B
   c_E = C_ONE/B
   c_B = -E/(B*B)
   !  Nominally, Lz = c_E*Le + c_B*Lb
   ! However, note that Lz is of type EMsparse (here just a wrapped
   !    version of a sparsevecc object)
-  call linComb_sparsevecc(Le,c_E,Lb,c_B,Lz(1)%L) 
+  call linComb_sparsevecc(Le,c_E,Lb,c_B,Lz(1)%L)
 
   if(mode .eq. 'TM') then
      !  also need to multiply parameter space sparse vector
@@ -297,45 +296,5 @@ Contains
   call deall_sparsevecc(Lb)
 
   end subroutine linDataFunc
-!****************************************************************************
-    subroutine EMSparseQtoModelParam(cs,Q,sigma0,dsigmaReal,dSigmaImag)
-
-   !   adds cs*Q to (dsigmaReal,dSigmaImag)
-   !   cs is a complex constant, Q is a sparse scalar field defined on
-   !     grid cells (but represented with EMsparse data object ... the
-   !     xyz component indicators are ignored).  dsigmaReal/dsigmaImag
-   !     are used to collect sums of real and imaginary parts; dsigmaImag
-   !     is optional.
-   !
-   !  Mostly this is just a wrapper for QtoModelParam.   
-   !   QtoModelParam has to be part of the modelParameter module,
-   !   in order to keep modelParam attributes private.  
-   !  To avoid reference to objects below the level of generic SolnRHS 
-   !   module objects in higher level inversion routines it is necessary 
-   !   to wrap QtoModelParam with this simple routine.
-   !
-   !  Now, this also is used to multiply Q by cs before adding.
-
-   complex(kind=prec),intent(in)	:: cs
-   type (EMsparse_t), intent(in)                  :: Q
-   type (modelParam_t), intent(in)                :: sigma0
-   type (modelParam_t), intent(inout)             :: dsigmaReal
-   type (modelParam_t), intent(inout),optional    :: dsigmaImag
-   
-   !  local variables
-   type(sparsevecc)	:: Ltemp
-
-   if(present(dSigmaImag)) then
-         call scMult_sparsevecc(cs,Q%L,Ltemp)
-         call QtoModelParam(Ltemp,sigma0,dsigmaReal,dSigmaImag)
-   else
-         call scMult_sparsevecc(cs,Q%L,Ltemp)
-         call QtoModelParam(Ltemp,sigma0,dsigmaReal)
-   endif
-
-   call deall_sparsevecc(Ltemp)
-
-   end subroutine EMSparseQtoModelParam
-   
 
 end module dataFunc

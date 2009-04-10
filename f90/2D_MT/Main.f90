@@ -81,7 +81,7 @@ Contains
 
 	if (exists) then
 	   ! Read background conductivity parameter and grid
-       call read_modelParam(fidRead,cUserDef%rFile_Model,sigma0,grid)
+       call read_modelParam(grid,sigma0,cUserDef%rFile_Model)
 
        !  set array size parameters in WS forward code module
        !   these stay fixed for all forward modeling with this grid
@@ -115,7 +115,7 @@ Contains
      case (MULT_BY_J)
 	   inquire(FILE=cUserDef%rFile_dModel,EXIST=exists)
 	   if (exists) then
-	   	  call read_modelParam(fidRead,cUserDef%rFile_dModel,dsigma,grid)
+	   	  call read_modelParam(grid,dsigma,cUserDef%rFile_dModel)
 	   else
 	      call warning('The input model perturbation file does not exist')
 	   end if
