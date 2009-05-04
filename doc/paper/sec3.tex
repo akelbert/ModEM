@@ -1,0 +1,239 @@
+\section{A Modular System for EM Inversion: Overview}
+
+We now turn to implementation of a modular system of computer
+codes for inversion of EM data with gradient based search algorithms,
+guided by the general mathematical developments
+in the previous section.  
+First we outline the basic structure of the system, which is represented schematically
+in Figure 3.  The specific modules shown in this figure
+are then discussed in more detail in section 4.
+
+In Figure 3 red lettering is used to denote modules which define
+the principal public data types, i.e., those that are used 
+extensively in the modular system for all applications.
+The arrows between modules define the use dependency: arrowheads point
+at modules which use the module that the tail is touching,
+or inside of.  
+Thus modules in the upper parts of the diagram
+depend directly or indirectly on data
+objects and methods from modules 
+in the lower parts of the figure.
+At the same time routines at the top level in the figure
+are the most general, intended to be used for multiple problems.
+A key challenge is thus to ensure that these general purpose
+``Level I'' inversion modules do not depend on specific
+details of how the lower level modules,
+which may be much more application specific, have been implemented.
+Further discussion of model use dependencies is thus warranted.
+
+If an arrow originates from within the
+box representing a module, then at least some 
+attributes of data objects within
+the scope of the originating module need to be public to
+the using module.  If the tail of the arrow does not extend into
+the interior, then lower level data types or methods used
+are more abstract: the using module does not
+reference internal attributes of the data objects.  
+The only module where a data type is defined with
+purely private attributes is ModelParameter.
+However, there is generally only one "layer" of
+surrounding modules that reference
+specific attributes of lower level data objects.
+Higher level routines (for which the use arrows start outside
+of the boxes) treat used data objects abstractly, and
+do not, by convention, reference internal attributes.
+However, except for the case of the model parameter,
+derived data type attributes are public,
+and because in Fortran usage is inherited,
+the compiler cannot enforce this convention.
+
+There are three groups of modules delineated by dashed lines
+in Figure 3.  The uppermost layer consists of
+the fully generic modules intended to be used
+for a wide range of EM inverse problems.  In particular, these Level I
+modules have been used for implementation of inversion codes for
+both the 2D and 3D MT examples discussed in section 2.
+Routines in these modules make no
+reference to specific attributes of the abstract data objects
+they manipulate.  Of course, this generality makes the code somewhat more
+complicated than would be required if only a single specific application
+(e.g., 2D MT) were allowed for.  The actual inversion algorithms
+are implemented at this top generic level; two example modules that have
+been implemented are shown in the upper right corner of Figure 3.
+Other inversion algorithms developed and tested within the modular
+framework for a specific application (e.g., 2D MT) should 
+be immediately applicable to other problems as well.
+
+Modules in the second level in Fig. 1 provide an interface
+between the generic top level modules, and the numerical
+implementation specific modules below.  This group of
+modules is also very specific to a particular EM
+application.  Problem specific source and receiver
+details are implemented at this level.  In particular,
+any EM inverse problem (MT or active source)
+which could be reasonably modeled with the same
+discrete numerical scheme could be accommodated
+by appropriate changes to routines at this level only--i.e.,
+by redefining sources and data functionals, without any changes
+to higher or lower level modules.
+
+Aside from model parameter objects and methods
+only data types and methods defined in these
+Level II modules are referred to by the 
+generic top level inversion modules.  All data types referenced
+by the Level I modules must obviously have fixed names.
+Similarly, functions or subroutines called
+from the Level I modules must have fixed names and interfaces,
+including having the same data types for all arguments.  All of these
+data types and methods
+must be instantiated for each specific application
+with new versions of the Level II modules.  The specific data type
+and procedure names are given explicitly in section 4, where
+they are denoted with bold fonts.  Interfaces (inputs and outputs
+arguments) for all generic Level I and Level II procedures
+are also given explicitly in Tables 2 and 3,
+discussed in section 4.
+
+Although the abstract meaning
+of the data types are fixed, the actual structures declared can
+be quite different.  For example, we have shown in section 2
+that the fundamental EM solution data object ($\ee$)
+in 3D MT consists of a pair of vector fields on a 3D grid,
+while for the 2D MT problem this object is
+a single scalar solution on a 2D grid.
+These very different data structures must be stored in
+data types with identical names
+defined in two separate instances of the level 2 module SolnRHS.
+Similarly, while all routines at this level
+have fixed names, and fixed functionality, implementation details
+are application specific.  Coding of level 2 routines is
+in fact straightforward, as the same routines from a previous 
+application can be used as a template.  As we shall see when
+we discuss our specific applications to 2D and 3D MT,
+the routines and data objects defined at Level II are mostly
+just wrappers of lower level objects and methods, that serve to
+hide application specific details from the generic top
+level routines.  These extra layers of apparent complication are
+the price of generality.
+
+The third group of modules delineated in Figure 3 are the
+numerical discretization modules.  These modules are specific
+to the fundamental numerical discretization used by the forward
+modeling modules.  This is where, in the terminology of section 2,
+the numerical grid, the primary and auxiliary 
+EM field data objects,
+and the methods needed to manipulate them are defined.  The basic EM
+field interpolation functionals, which depend only on the
+numerical discretization of the PDE, are also a part of this
+group of modules.  Modules at this level are not specific to a particular
+EM application; the same implementations could be used for
+any source/receiver configurations which could be reasonably
+modeled with the particular numerical approach.  Since no specific
+data type or procedure names defined in these numerical 
+discretization modules are referenced by the generic Level I
+inversion routines our discussion of these routines in section 4 is also
+non-specific.
+
+The forward modeling module, the core workhorse of the inversion,
+is represented as a single module, but in general may have more
+complex structure itself.
+Indeed, implementations for the 2D and 3D MT cases
+are quite different, in part reflecting
+the very different development histories for these two examples.
+The 2D forward modeling code was
+originally written in F77, and was the core of the REBOCC inversion
+of Sripunvaraporn et al. (2000).   For
+the 3D MT case, forward modeling code was
+developed from scratch in F95 using a modular approach,
+based on the forward solver described by Sripunvaraporn et al. (2002).
+The 3D code thus makes extensive use of the numerical discretization
+modules, while the 2D code does not.
+The internal details of the core forward modeling
+routines are not central to our discussion of the modular
+system, although interfaces and functionality of these
+components are important.
+
+Three fundamental data objects appear in the general abstract development
+of EM inversion of section 2: data vectors ($\dd$),
+EM solutions ($\ee$), and model parameters ($\mm$).  In addition,
+we have found it useful to define a "right hand side" (RHS) object
+($\bb$) which generally defines sources and boundary conditions
+that determine an EM solution.  Although in principal RHS and EM solution
+objects might be taken to be in the same space, it turns out to
+be useful to distinguish these objects explicitly.
+EM solutions, RHS objects, and model parameters are viewed as abstract
+data types (ADTs) with no specific attributes referenced by
+the generic Level I routines.
+
+Our treatment of data vectors is rather different,
+as the Level I routines make reference to the
+structure of these objects, and all attributes
+of this data type are public.  Indeed, the data space module
+(where the basic data vector types and methods are defined)
+is essentially in Level I (although it is useful to also allow Level II
+routines to use this module).
+The major rationale for this approach is to take advantage of
+the very common "multi-transmitter" structure of EM datasets.
+In a large number of cases (in particular for 2D and 3D MT, or
+for a large fraction of CSEM applications) there are
+multiple receivers (sites) and multiple transmitters (e.g., different
+frequencies for MT, different source locations or orientations
+for CSEM).  The resulting structure in the data has significant
+implications for inversion algorithms--e.g., a separate forward
+problem must be solved for each transmitter, but not for each
+receiver (although note that taking advantage of reciprocity 
+one can reverse roles of receivers and transmitters to achieve
+computational efficiencies; e.g., see Commer and Neuman, 2007).
+To simplify development of inversion algorithms that
+take advantage of this data vector structure,
+we have built this into our implementation of the basic
+data space objects, and we make use of this specific structure
+throughout the Level I modules.  Further details on this 
+multi-transmitter structure are provided in the next section.
+
+It is also worth singling out the model parameter module
+(lower right in Fig. 1).
+The fundamental data type defined in this module is
+{\bf ModelParam\_t}.  In contrast to other derived data
+types defined in other modules, all attributes of this
+data type are private to this module.  This means
+that the rest of the
+code does not know about, and cannot make explicit use of, any details in
+the way the model parameter has been defined.  
+Furthermore, since all model parameter attributes 
+are private, it is necessary to include 
+within this module all functions and methods that need to make reference
+to internal model parameter attributes.
+This includes functions which map from
+the model parameter to the numerical grid (i.e., $\pi(\mm)$ or
+the corresponding linearization or adjoint), and the model
+parameter covariance, along with any needed basic model parameter methods,
+including linear algebra and dot products required by
+inversion routines.  The advantage of
+keeping all {\bf ModelParam\_t} attributes private is
+that we can guarantee that no other parts of the code
+depend explicitly on implementation details of a specific instance.
+Thus, the model parameterization, defined broadly to
+include regularization, constraints, etc., can be modified without
+touching any other modules.  We view modification of
+the model parameterization as something that should be
+relatively easy, and accessible to the broader community of
+research scientists.  Making this part of the inversion system
+comparatively easy to modify (at least in the sense that it
+is decoupled from the rest of the inversion code) has thus
+been given high priority.
+
+In summary, our modular system is built around a very specific
+structure for data space objects, with much more general structures
+allowed for representation of model parameters and EM solution
+objects.  Inversion routines are generic, and their implementations
+are to be coded in terms of ADTs, much as our discussion
+of EM inversion in the previous section was abstract and
+non-specific.  Much of the rest of the system, represented
+by the lower level modules in Fig. 1, must be coded explicitly
+based on the specific intended application, and the specific
+forward modeling approach used.  However, as we shall show with
+specific examples, the modular system as developed for our
+specific examples provides a fairly complete template for development
+and testing of modules suitable
+for a wide range of specific inversion applications.

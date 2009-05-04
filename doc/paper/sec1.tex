@@ -1,0 +1,131 @@
+\section{Introduction}
+
+The purpose of this paper is to provide an overview
+of a modular system of computer codes we have developed over
+the past few years for solving electromagnetic inverse problems
+with gradient-based search methods.
+As the reader will quickly see, there is little here that
+is by itself novel: the geophysical inversion algorithms discussed
+have all been previously implemented and described in
+the literature, and the ideas from computational sciences
+(e.g., object oriented programming, abstract data types)
+are conventional.  However, to our knowledge, the integrated
+system we are describing is novel, and we believe it
+is worth describing in some detail.
+
+There are several motivations for taking the modular 
+approach described here.  Our initial motivation
+was to develop a "test-bed" which could be used for 
+more efficient prototyping of inversion algorithms,
+for example specialized inversion algorithms that
+take better advantage of the specific structure of 
+multi-transmitter EM inverse problems.
+In particular, the modular system simplifies
+development of inversion codes for 3D problems,
+allowing initial debugging and testing of algorithms
+on computationally much simpler 2D analogues, before application
+to the more challenging 3D case.
+More generally, a modular inversion system
+allows for more rapid adaptation of inversion codes developed
+for one purpose (e.g., 3D magnetotellurics (MT)) to other EM problems
+(e.g., marine controlled source EM (CSEM))
+with comparatively minimal modification.
+Finally, a modular approach can simplify
+maintenance of an inversion code, as
+well as development of new capabilities--e.g., allowing easier
+modification of the model parameterization
+(including different regularizations, and inclusion of prior
+information), or treatment of new data types (e.g., inter-site
+transfer functions in MT).
+
+The first step in code modularization 
+is to abstract the basic data objects that appear
+in an inversion scheme (model parameters, EM solution, data vectors).
+These are treated as abstract data types, with basic
+methods developed for each class, including creation and destruction, 
+and, as appropriate, linear algebra or other vector space methods.
+Then, the fundamental mappings between classes are developed, along
+with the linearizations and adjoints, required for gradient
+computations.
+At the highest levels of the inversion system, only these abstract
+data objects, and the abstracted mappings, are manipulated,
+with no reference to implementation specific
+attributes of these objects.  
+Our approach could be termed object oriented,
+although some deviations from a strict adherence to
+this programming model seem warranted for
+the computationally intensive problem of 3D EM inversion--for example,
+strict adherence to data hiding appears to result
+in too much overhead.  
+Furthermore, the code has been written in Fortran 95,
+and some aspects of an object oriented approach are difficult to
+implement in this programming language.
+We do make extensive use of advanced features 
+of Fortran 95 (such as they are):
+all code is written using modules, 
+with explicit interfaces for all routines,
+data hiding through use of the "private" attribute (where practical),
+operator overloading, and extensive use of derived data types.
+
+Modularity in our inversion system functions at two levels.
+Some parts of the system are literally generic: the same
+source code can be used for a wide range of problems.  For other
+parts of the system
+it is necessary to have separate module instances
+for different applications.   Even here, however,
+there are significant opportunities for code reuse: modules
+for a previously developed application serve essentially as 
+templates for variants that must be developed for a second application.
+Of course this notion of code templates can be formalized
+using computer languages other than F95.
+
+Throughout the development we refer to two specific example
+problems, which have served as test cases in
+our development of the modular system: 2D and 3D MT.
+These two EM inverse problems are actually quite different and provide
+good specific examples of some of the abstractions required of
+the modular system.  For example, in the 2D MT problem, there
+are two decoupled modes: the transverse electric (TE) and transverse
+magnetic (TM) modes. The fundamental EM field solutions
+are scalar electric or magnetic fields, which are obtained by
+solving different scalar diffusion equations.  
+For the 3D MT problem, there is no comparable decomposition into modes,
+and the fundamental EM solution consists of a pair of
+vector fields computed with boundary conditions appropriate
+to two external source polarizations.  To develop a modular
+system capable of handling both cases, it is necessary to
+formulate the notion of an EM field solution abstractly,
+and hide instance specific attributes of the EM field solution
+object (e.g., TE/TM mode, source polarization) from higher level
+general inversion routines.  Similarly, operators such as forward
+solvers or data functionals must have interfaces that make no
+reference to problem specific attributes of EM solution or
+data objects.  In our discussion we consider implementation
+details for the 2D and 3D MT cases, to illustrate with concrete
+examples some of the issues involved in abstraction and development
+of the modular system.  
+
+The paper is organized as follows.  
+In section 2 we provide mathematical background, developing
+the formal ``recipes'' for EM inversion.  We begin with 
+a brief summary of linearized EM inversion methods
+based on gradient based minimization of a penalty functional,
+and then develop general expressions
+for the Jacobian of the mapping from model parameters to data.
+In particular we show how operations with the Jacobian can
+be factored into reusable components, and consider how these
+components depend on each other, and on details of the EM method
+(e.g., sources and receivers), model parameterization, and numerical
+discretization.  To be specific in our developments we consider
+2D and 3D MT inverse problems as examples.
+In the third section we provide an overview of our
+implementation of the modular system of computer codes.
+Further details on specific modules, including some
+discussion of implementation for
+the 2D and 3D MT cases are provided in section four.
+In section five we discuss parallelization issues (or do we???).  
+Some discussion
+on our experiences in developing the system, prospects for futures
+developments, and concluding remarks are given
+in the closing section.
+

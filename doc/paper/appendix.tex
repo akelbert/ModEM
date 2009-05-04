@@ -1,0 +1,172 @@
+\appendix
+
+\subsection{3D staggered grid details}
+
+In this section we give a slightly more precise definition
+of the discrete operator corresponding to 
+$\nabla \times \nabla \times - i \omega \mu \sigma$,
+and clarify implentation of boundary conditions and the
+meaning of adjoints in this context.
+The discrete curl operator
+is naturally defined as a mapping from 
+all edges to all faces, but we need only consider the partial
+mapping which computes the discrete curl
+only for interior faces.  Denote this as
+\begin{equation}
+\bar \CC : \bar{\cal S}_P \mapsto {\cal S}_A
+\end{equation}
+and partition $\bar{\ee} \in \bar{\cal S}_P$
+and $\bar\CC$ into interior and boundary edge components
+\begin{equation}
+\bar{\ee} = \left[ \begin{array}{c}
+\ee \\ \ee_b \end{array}\right]
+\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,\,
+\bar{\CC} = \left[ \begin{array}{c c}
+\CC & \CC_b \end{array}\right]
+\end{equation}
+so that $\CC : {\cal S}_P \mapsto {\cal S}_A $.
+
+To define adjoints preciscely we need to specify
+inner products.  The natural inner products for the primary
+and auxiliary spaces are
+\begin{equation}
+\label{e.IPdef}
+\left< \ee_1 , \ee_2 \right>_P = \ee_1^*\VV_E\ee_2
+\,\,\,\,\,\,\,\,\,\,\,
+\left< \FF_1 , \FF_2 \right>_A = \FF_1^*\VV_F\FF_2 .
+\end{equation}
+In (\ref{e.IPdef}) $\VV_E$ ane $\VV_F$ are diagonal matrices of edge 
+and face volume elements.  Edge volumes, for example, are
+defined as one fourth
+of the total volume of the four cells sharing the edge,
+so that the first discrete inner product in (\ref{e.IPdef})
+approximates the integral $L_2$ inner product for vector fields
+$\int\int\int \EE_1(\ee)^*\EE_2(\xx) dV$.
+The adjoint of the interior curl operator
+$\CC^{\dagger} : {\cal S}_P \mapsto {\cal S}_A$
+satisfies, by definition,
+\begin{equation}
+\left< \FF , \CC\ee \right>_A =  
+\left< \CC^\dagger \FF , \ee \right>_P  
+\forall \ee\in{\cal S}_P, \FF\in{\cal S}_A .
+\end{equation}
+Noting that $\CC$ is real, one then readily derives
+\begin{equation}
+\label{e.Cadjt}
+\CC^\dagger = \VV_E^{-1}\CC^T\VV_F .
+\end{equation}
+From the definitionsof $\VV_E$ and $\VV_F$ one can verify that
+$\CC^{\dagger}$ indeed corresponds to the appropriate
+geometric definition of the curl operator defined on cell
+faces.  Thus the electric field vector diffusion equation with
+source $\jj_s$
+\begin{equation}
+\nabla \times \nabla \times \EE - i \omega \mu \sigma\EE
+= \jj_s
+\end{equation}
+can be approximated on the discrete grid as
+\begin{equation}
+\label{e.fullDiscrete}
+[\CC^{\dagger}\bar\CC -i\omega\mu\sigma]\bar\ee = 
+[\CC^{\dagger}\CC -i\omega\mu\sigma]\ee + \CC^{\dagger}\CC_b\ee_b
+= {\bf s} ,
+\end{equation}
+where $\bf s$ is the discretization of the source currents $\jj_s$,
+which vanishes for the 3D MT example we have focused on.
+The discrete system (\ref{e.fullDiscrete}) has one equation
+for each interior node, and to complete specficiation of the
+system boundary conditions are required.  We take these
+as specification of the boundary electric field components,
+adding
+\begin{equation}
+\ee_b = \ee_b^0 .
+\end{equation}
+Eliminating the boundary edges results in a well-posed problem
+for electric fields restricted to interior edges
+\begin{equation}
+\label{e.Discrete}
+\left[
+\CC^\dagger \CC - i \omega\mu\sigma\II
+\right] \ee = 
+{\bf s} - \CC^\dagger\CC_b\ee_b^0 = \bb ,
+\end{equation}
+with the RHS determined from the boundary
+data, and any source terms in the domain.
+
+Using (\ref{e.Cadjt})  and multiplying (\ref{e.Discrete}) by
+$\VV_E$ we obtain
+\begin{equation}
+\label{e.Symmetric}
+\left[
+\CC^T\VV_F\CC - i \omega\mu\sigma\VV_E
+\right] \ee = \VV_E\bb ,
+\end{equation}
+which is clearly symetric, as noted in section 2.
+
+\subsection{Interpolation functions for TM mode impedances}
+
+\subsection{Degeneracy of impedance sensitivities}
+
+\subsection{Complex Data, Real Model Parameters}
+
+{\em [Relic text ... not deleting in case some of it might
+be needed, but won't be in a paper in anything like this form!]}
+
+The frequency domain EM differential equations
+are formulated in the complex domain,
+and the EM solutions are complex fields.  For simplicity
+data are also generally complex, e.g., impedance components.
+On the other hand the unknown model parameter,
+electrical conductivity, is generally taken to be real.
+As a result care is required in
+interpreting the sensitivity matrix $\JJ$.  Literally
+${\bf S}_{\omega, \mm}$ represents a matrix with complex entries,
+so the formal expression for the Jacobian in (\ref{e.SensModel})
+also represents a complex matrix which we here
+call $\bar \JJ$.  The real (imaginary) part of the product
+$\bar \JJ  \delta \mm$ gives the sensitivity of the real (imaginary) part of
+the data, so one can separate the real and imaginary parts of $\bar \JJ$ and
+the data vector to obtain a real matrix
+$\JJ$ (with twice as many rows) which maps
+real model parameters to real data.  This is the approach we
+have implicitly taken in our discussion of inversion methods, in which
+we have assumed that all matrices were real.
+
+Using reciprocity to calculate $\bar \JJ$ with (\ref{e.SensAdjtApp})
+requires solution of the adjoint equations once for each data vector
+element.
+The result of the formal calculation is an $M$-dimensional complex
+vector, one row of $\bar \JJ$.
+Thus sensitivities for real and imaginary
+parts of the data are calculated with a single solution of the
+transposed complex system ${\bf S}_{\omega, \mm}^T$.  Hence, if
+we take $N_d$ to be the total number of real data, which actually
+consist of real and imaginary parts of complex data, the number
+of model solutions required for complete calculation of the Jacobian
+is $N_d/2$.  Note that apparent resistivity and phase data can also
+be treated essentially as real and imaginary parts of the natural
+log of the complex impedance, so sensitivities for both of these
+responses can also be computed with a single call to the solver.
+
+Next consider computation of something like $\JJ^T \rr$
+The actual code based on (\ref{e.SensAdjtApp})
+implements multiplication of complex vectors
+$\bar \rr$ by $\bar \JJ$ resulting in
+a complex $M$-dimensional vector.
+To compute the desired real matrix vector product
+$\Re [\bar \JJ^T] \rr_r + \Im [\bar \JJ^T] \rr_i$, where
+$\rr_r, \rr_i$ correspond to real and imaginary data components,
+we must set $\bar \rr = \rr_r - i \rr_i$,
+and take the real part of the complex product $\Re [\bar \JJ \bar \rr]$.
+Key to our development of the new inversion algorithm is our
+observation that $\JJ^T \rr$ is the sensitivity for a particular
+linear data contrast, $\rr^T\dd$.  In the process of computing
+this we obtain also $\Im [\bar \JJ \bar \rr]$. In fact, this is
+the sensitivity for the data contrast  $\tilde \rr^T\dd$,
+where $\tilde \rr$ is the real data vector corresponding to
+$i\bar \rr$. Thus we actually generate sensitivities for
+a two dimensional subspace of the real data space when
+we compute $\bar \JJ^T\bar \rr$.
+The additional sensitivity could in principal be used to
+improve the approximation of the Jacobian, at the cost of saving
+$\Im [\bar \JJ \bar \rr]$.

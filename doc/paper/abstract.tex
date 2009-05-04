@@ -1,0 +1,40 @@
+\begin{abstract}
+We have developed a flexible modular system of computer codes for
+inversion of electromagnetic (EM) geophyisical data.
+We first present a general mathematical framework for 
+computations involving the Jacobian of the 
+non-linear mapping from model parameters to observations.
+Such computations arise in all gradient based inversion
+methods, including variants on Gauss-Newton and non-linear conjugate
+gradients.  Our analysis divides computations into components
+(data functionals, forward and adjoint solvers, model parameter
+mappings), and clarifies dependencies among these elements
+within reallistic numerical inversion codes.  To be concrete we focus
+on the 2D and 3D magnetotelluric (MT) inverse problems, but
+our analysis is applicable to a wide rand of active
+and passive source EM methods.  In the second part of the paper
+we use this framework as a basis for development of a modular system
+for EM inversion, which we have coded in Fortran95.
+Inversion algorithms in the system are generic, in the sense
+that they manipulate abstract data objects representing model
+parameters, EM field solutions, and data vectors, without reference
+to implementation details for specific problems.  As a specific
+illustration of this flexibility, the same top level inversion 
+modules are applied to both 2D and 3D MT problems, which are in
+fact quite different.  Model paramter objects are in particular treatead 
+as an abstract data type, with all object attributes private.
+This construction decouples the model parameterization and
+regularization from the remainder of the inversion system,
+allowing greater flexibility for users, and simplifying modification 
+of these critically important scientific inputs to the inversion.
+The modular inversion system allows for rapid adaptation of 
+inversion codes developed for one purpose 
+(e.g., 3D magnetotellurics (MT)) to other EM problems
+(e.g., marine controlled source EM (CSEM))
+with comparatively minimal modification.
+The modular approach can also simplify
+maintenance of the inversion code, as
+well as development of new capabilities--e.g.,
+allowing for new data types such as inter-site
+transfer functions in MT.
+\end{abstract}

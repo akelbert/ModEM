@@ -1,0 +1,926 @@
+\section{Module Details}
+
+Here we discuss each of the components in Figure 3 in greater detail,
+using the 2D and 3D MT inverse problems as concrete
+examples.  We begin with two key modules which
+define the most basic objects required of any inversion:
+data vectors ($\dd$) and model parameters ($\mm$).
+
+\subsection{DataSpace}
+
+Two key observations motivate the structure of the basic
+data space objects, which underpin the Level I inversion modules. 
+First, EM data are generally multivariate.  
+Even considering a simple problem such as 2D MT,
+data for a single mode and frequency, at a single site, consists
+of two components: real and imaginary parts of an impedance,
+or apparent resistivity and phase.  For 3D MT, for a single
+frequency and site the full impedance tensor consists of 
+four complex, or 8 real  components.  If vertical field transfer
+functions are added, there are 12 real data components.
+Second, these multi-component data can be organized, or indexed,
+by three attributes which we refer to generically
+as {\it transmitter}, {\it dataType}, and {\it receiver}.
+In general the {\it transmitter} attribute uniquely defines
+the forward problem that must be solved, including the sources and
+boundary conditions.  The {\it receiver} attribute
+is used to define, possibly in conjunction with {\it dataType},
+the measurement process that must be applied to the forward
+solution to allow comparison between model and data.  
+
+A key point is that all of these attributes 
+({\it transmitter}, {\it dataType}, and {\it receiver})
+are treated abstractly at the level of the data space and inversion
+modules.  The list of possible values for these attributes,
+and their explicit meaning, will depend on the specific application.
+For example, for 3D MT {\it transmitter} defines only the frequency.
+For 2D MT, {\it transmitter} also defines
+the source polarization or mode (TE or TM).
+For both 2D and 3D MT problems {\it receiver}
+refers to the site location, and {\it dataType} can
+be used to distinguish between cases where 
+vertical field transfer functions are or are not available,
+or between complex impedances and apparent resistivity/phase.
+Additional data types within the framework of 3D MT 
+inversion would also be possible--e.g., inter-station transfer
+functions.  Note that for such a {\em dataType},
+a full description of the 
+{\it receiver} would require locations for a pair of sites.
+
+To allow abstract treatment of these
+data attributes in Level I modules, we use dictionaries
+to carry the actual descriptive meta-data (site location or
+locations, mode, frequency, etc.)  Data vector objects refer to
+specific entries in these dictionaries through three
+integer indices.  This allows for a flexible and general
+treatment of the meta-data needed to fully characterize complex
+multi-component EM data sets, while still allowing a fixed structure
+for data vector objects, and the generic inversion routines
+which must manipulate these objects.
+
+To maintain generality all data are taken to be real numbers--real
+and imaginary parts of complex 
+data (e.g., impedances) are treated as separate observations.
+Complex data are in fact common in frequency
+domain EM inverse problems,
+but we want to allow also for data which are more 
+naturally treated as real numbers, e.g., for DC resistivity
+data (which are intrinsically real)
+or for apparent resistivity and phase which might not
+both be available or equally useful for inversion.
+While generality suggests representation
+of all data as real numbers, it is still worth keeping track of the
+cases where pairs of components do in fact correspond
+to a single complex number.  This is because
+certain efficiencies are possible in sensitivity calculations
+when complex arithmetic is used.  In particular,
+the expression (\ref{e.SensAdjtApp}) for the transposed Jacobian 
+yields a complex matrix.  The real (imaginary) part of this
+complex Jacobian is the derivative of the real (imaginary)
+part of the data vector with respect to the model parameters.
+Sensitivities for real and imaginary parts of the
+complex data can be computed simultaneously, 
+at the cost of a single adjoint solution.  
+To allow for this, we need to distinguish between when data
+are actually complex, as opposed to intrinsically real.  This is
+done through the {\it dataType} dictionary.  An essential
+attribute of every {\em dataType} is thus a binary variable
+({\it iscomplex}) which is true if the data of this type are
+complex, with pairs of real adjacent 
+components to be treated as a single complex number.
+It is also useful to keep track, through another binary variable
+({\it calcQ}) of whether or not data functionals for this
+data type have any dependence on the model parameters,
+so that the corresponding rows of $\QQ$ in 
+(\ref{e.SensModel}) are non-zero.
+
+The basic building block for data space objects is
+a derived data type {\bf dvec\_t}, which we denote generically
+as $\dvec$, as in our general mathematical discussion of Section 2.
+Each $\dvec$ stores multi-component data of a single {\it dataType}
+for one {\it transmitter}, but for multiple {\it receivers}.
+The receivers are kept track of through a list
+of indices into the receiver dictionary.
+This list, together with the {\it transmitter} and {\it dataType}
+indices are stored as fields in the {\bf dvec\_t} structure.
+Because all data in $\dd$ correspond to the same transmitter,
+predicted data for all components
+can be computed from the same forward solution.
+Furthermore, all data stored in a single $\dvec$
+are of the same {\it dataType}, and hence consist of the same number
+of components, in the same order.
+For 3D MT a typical $\dvec$ would contain all impedance
+tensor components for all sites, at a fixed frequency.  In 
+the 2D MT case, a $\dvec$ object consists of
+TE or TM mode complex impedance data for all sites at one frequency.
+
+The full data vector for all transmitters
+is essentially an array of component $\dvec$
+objects, which is stored in a compound derived data type 
+{\bf dvecMTX\_t}.  To distinguish this from the
+component {\bf dvec\_t} objects, we denote the
+generic multi-transmitter data vector $\dvecMTX$.
+Objects of this type may mix {\bf dvec\_t}
+objects of different {\it dataTypes}
+with different numbers of components or receivers.  
+For instance in the 2D MT case some 
+elements in the $\dvecMTX$ array may be for TE, and some TM.
+More generally, a completely different data type
+such as DC resistivity (or even some sort of seismic
+or potential field data) could in principal 
+be included in the array $\dvecMTX$.
+The structure of the complete data vector, with
+data of a fixed type and transmitter grouped together
+is intended to simplify coding of inverse algorithms which require
+solution of multiple forward problems (possibly of very different
+sorts) for data subsets, as is common in EM inversion.
+Note that there may be multiple {\bf dvec\_t} objects for one transmitter
+(corresponding to different {\em dataTypes}).
+However all components of all of these $\dvec$ can be computed from the same 
+forward solution, and it is useful to keep track
+of which elements of the multi-transmitter
+$\dvecMTX$ array correspond to each fixed
+{\em transmitter}.  This information is also stored in the
+{\em transmitter} dictionary.
+
+In addition to defining the basic derived data types 
+this module contains routines for
+creating, zeroing, copying, reading, writing, and deallocating 
+data space objects.  Routines are also
+provided for basic algebraic operations
+including addition of two data vectors, multiplication of a data
+vector by a scalar, and forming linear combinations of data vectors.
+Routines for data vector dot products, and for normalization
+by error bars are also included.  
+Effectively two sets of routines are supported: for
+{\bf dvec\_t} and the compound {\bf dvecMTX\_t} objects,
+with the latter constructed from the former in the obvious way.
+
+\subsection{ModelParameter}
+
+Model parameters ($\mm$) sit at the opposite end of the inversion
+from the data $\dd$, outputs opposed to inputs.  
+Although both sorts of objects
+are manipulated directly by Level I inversion routines,
+our implementation of model parameter
+objects in the modular system is quite different.
+In contrast to the data space, where the basic objects
+have a fixed specific form with public attributes
+that are referenced by Level I inversion routines,
+we treat model parameters as a purely abstract data type,
+with all attributes private to the defining module,
+There is no reference to the specific structure of a
+model parameter instance
+by routines in other modules.  
+These objects can only be manipulated indirectly
+by calling routines within the ModelParameter module.
+Because external reference to internal
+attributes of the {\bf ModelParam\_t} data type are not allowed,
+we can guarantee that the rest of the inversion system
+is independent of any implementation specific details.
+Thus the system should work with any model parameter
+module which provides definition of the {\bf ModelParam\_t} data type,
+together with the methods necessary to manipulate these
+objects in the inversion modules.
+This approach minimizes
+interaction of the model parameterization with the rest
+of the modular system, and in this way simplifies
+and streamlines modification of this critical part of the inversion.
+
+The price of keeping all {\bf modelParam\_t} attributes private
+is that all procedures which actually modify or access
+internal attributes of these data objects
+must be merged into a single module.
+Furthermore, for any instance of the module
+all routines referenced externally must have the same names
+and interfaces, as well as the same abstract functionality.
+Our initial model parameter implementations
+for both 2D and 3D MT problems
+are very simple, and classical:
+conductivity or log conductivity is defined independently on 
+each of the cells in the numerical grid.
+For the 3D case we have also implemented (as an option
+within the same basic module) parameterization in terms
+of blocks on a different (generally coarser) grid
+than that used for the discretization required of the
+numerical solver.
+Again, these very specific simple implementations of
+this module provide a template for alternative parameter
+representations.
+
+There are essentially three subgroups of routines in the
+ModelParameter module.  The first group consists of
+the usual routines for creation, deallocation, I/O and copying,
+plus routines for linear algebra and dot products.
+These are largely self explanatory, and
+follow the same naming and interface conventions used
+for data vectors, and other basic objects required for the inversion.
+Note that the vector space routines are heavily
+used by the actual inversion algorithms.
+The second group consists of mappings between the model
+parameter and the primary or auxiliary fields
+(represented by objects defined
+in module EMfield, discussed below).
+These mappings including $\pi(\mm)$,
+the linearization $\partial\pi/\partial\mm$,
+and the adjoint $[\partial\pi/\partial\mm]^T$.
+Note that $\partial\pi/\partial\mm$ is
+a matrix which represents a linear operator mapping from
+model parameter objects to EMfield objects. 
+Specific forms for these matrices are given for the 3D and 2D MT
+examples discussed in section 2 by the second bracketed terms
+in (\ref{e.PPlog}) and (\ref{e.PPTMlog}).
+An example of the adjoint,
+which is a linear mapping from EMfield objects to model parameter vectors,
+is given by the first bracketed expression in (\ref{e.PPTMlogAdj}).
+These linear mappings (not construction of the
+matrix which represents them) are implemented in this module,
+which must thus use the EMfield module, described below.
+The mapping routines are in turn used by many of the other modules
+including forward modeling, field component interpolation, 
+and multiplication by the matrices $\PP$ and $\QQ$.
+We have found it useful to implement
+also a functional form of the model parameter mapping, which returns
+an individual component $\pi_k(\mm)$, i.e., the conductivity or resistivity
+of a specific edge or face component in the primary or auxiliary grid.
+
+The final group of routines in the modelParameter module implement
+the model covariance, which may also be used
+to impose {\it a priori} constraints.  
+In our initial test applications we have used simple
+smoothing covariances, implemented as in
+Siripunvaraporn and Egbert (2000) in the 2D case, and 
+Siripunvaraporn et al. (2005) in the 3D case.
+Essentially two routines are needed: one to initialize
+the covariance parameters (which are stored in a data structure
+that is private to this module) and one to apply the symmetric covariance
+operators $\Cm^{1/2}$ and $\Cm$ to a model parameter $\mm$.
+
+\subsection{Numerical Discretization Modules}
+
+This grouping, implemented in three modules,
+defines the basic EMfield objects, 
+the grid they are defined on, and routines for
+interpolation and evaluation of field components.
+Module EMfield defines the basic data types used to
+represent objects in the spaces of primary and auxiliary 
+EM fields ${\cal S}_P$ and ${\cal S}_A$.
+These objects
+are the building blocks for the abstract encapsulated
+EM solution and right hand side objects ($\ee$ and $\bb$) defined
+in module EMsoln, as discussed below.  
+Note that in contrast to the specific data type names for objects
+such as $\dd$ and $\mm$ (and some others discussed below),
+no naming convention is enforced for EMfield data objects (and
+we thus do not use boldface type, or append \_t as we will
+when referring to names for the required data types).
+
+The basic EMfield objects clearly depend on the underlying numerical grid,
+which we find useful to define in a separate module.
+For the 2D and 3D MT examples based on finite difference modeling
+the required grid data structure is quite simple.
+The rectangular grid is completely characterized by 
+the number and spacing of grid nodes, although we have
+also found it useful to allow for storage of various other
+precomputed grid variables, such as the 
+coordinates of nodes and cell centers.  
+A much more complicated data structure would be required to
+specify a non-structured grid for a finite element modeling approach.
+The essential requirement from the perspective
+of the modular system is that there be a single data structure
+that provides a
+self contained complete description of the grid.
+A pointer to this structure is included in most of the basic data objects
+(model parameters, EM solutions) that depend on the grid for context.
+Public routines to create and deallocate the grid data type
+are essentially all that is required in this module,
+although additional functionality may be useful for
+more complex grid structures.
+
+In the 3D MT case the basic EMfield object is a discrete representation
+of a three component complex vector field on a staggered grid.
+In our implementation these are stored
+as three separate three dimensional arrays, encapsulated in a single
+derived data type, together with a 
+pointer to the underlying basic grid object,
+and a tag to indicate if the vector field is defined
+on the primary (edges) or auxiliary (faces) grid. 
+Several variants on these basic staggered grid EM vector field
+objects are also supported.  First, it has proven useful to allow
+also for scalar fields, in this case naturally defined on the cell
+centers (dual to faces), or the cell nodes (dual to edges),
+and also to allow for real as well as complex versions 
+of both scalar and vector fields.   
+For example, complex scalars are used to represent electric potentials;
+a real vector can be used to represent electrical conductivity
+defined on cell edges--e.g, $\sigma(\mm)$ in (\ref{e.elecEM}).
+Second, we support a sparse vector representation for elements
+of ${\cal S}_P$ and ${\cal S}_A$.
+These objects are useful for
+representing measurement functionals, and also could be
+used to represent a localized source.  For all of the variants of
+the basic vector fields there are routines for creation, deallocation,
+linear algebra, and vector space operations, including for combinations
+of types (e.g., dot products of sparse and full vectors
+are used for evaluation of field component functionals,
+as in (\ref{e.Lj}) or (\ref{e.LZ})).
+Finally note that we also support a specialized data structure to
+store data for boundary conditions--i.e., the tangential components of
+the electric field on the boundaries for 3D MT.
+
+For the 2D MT case the situation is similar, though somewhat simpler.  
+Since the forward problems for TE and TM mode can be reduced to
+scalar form (i.e., involving only a single component of the field),
+no vector field objects are required, only scalar fields defined
+on a 2D rectangular grid.  As for the 3D case
+we allow for sparse as well as full representations
+of the EM fields, with a similar set of methods.
+
+The third component of the numerical discretization group
+is provided in module EMeval, which implements the 
+interpolation functionals used
+to evaluate electric and magnetic fields at an arbitrary point within
+the model domain.
+These interpolation functionals,
+represented by the sparse columns of the matrix $\Lambda$
+in (\ref{e.LL}), are the
+basic building blocks for the non-linear data functionals
+$\psi_j$ (e.g., impedances), as well as the corresponding linearizations.
+Routines in this module only create the sparse vectors $\lambda$
+(columns of $\Lambda$),
+which are then used by routines in higher level modules
+to apply the measurement operators or to set up the forcing for
+the sensitivity calculation (\ref{e.SensAdjtApp}).
+The interpolation functionals of course depend critically on
+details of the numerical grid, while the application
+of the measurement operator (e.g., to compute a predicted
+impedance from the interpolated electric
+and magnetic field components) does not.
+Thus, if a different numerical
+discretization were applied, such as
+finite elements with a non-structured grid, 
+the interpolation routines in EMeval would have to be modified, but
+not the higher level data functional routines.
+Conversely, to add new data types without modifying the numerical
+discretization, there is no need to revisit
+the interpolation aspects of the problem dealt with in EMeval.
+
+In addition to basic field component interpolation
+routines for the primary and auxiliary grids
+(columns of $\Lambda_A$ and $\tilde\Lambda_A$),
+EMeval implements the auxiliary field transformation
+operator denoted by $\TT$ in (\ref{e.Lambda}).
+$\TT$ and $\tilde\Lambda_A$ are then combined
+to compute the sparse vectors required for
+evaluation of auxiliary field components directly from the primary
+EM solution field--i.e., the columns of $\Lambda_A$. 
+
+If data functionals depend explicitly on the model parameter,
+as for the 2D TM mode,
+module EMeval should also contain routines for computing the sparse
+vectors corresponding to rows of $\BB$, as defined implicitly in
+(\ref{e.QQ}).  These are sparse vectors in the space 
+(${\cal S}_P$ or ${\cal S}_A$) where the conductivity or resistivity
+is defined on the grid by the mapping $\pi(m)$.  We have found it
+convenient to implement this as a separate routine, distinct
+from those used for computing the basic field interpolation functionals.
+
+\subsection{Forward Solver}
+
+Although not the focus of our discussions,
+the forward solver is the core of the inversion, and
+there are some essential issues which deserve mention
+in the context of the modular system.
+
+The solver is quite different for the two examples considered.
+For the 3D MT case, we have written the forward solver from scratch,
+making extensive use of the EMfield and Grid modules.
+The 3D solution algorithm is essentially identical
+to that described in Siripunvaraporn et al. (2002). 
+The quasi-static frequency domain Maxwell equations are reduced to a second
+order vector diffusion equation in the electric fields (\ref{e.IndE}),
+and these equations are solved iteratively using
+a quasi-minimum residual (QMR) scheme, with
+a level-1 incomplete LU decomposition for pre-conditioning.
+As in Smith (1996) and Siripunvaraporn et al. (2002)
+a divergence correction is applied periodically.
+In our implementation the 3D forward modeling code itself
+is quite modular.  For example, the QMR solver, and the ILU-1
+preconditioner can be easily replaced by alternative
+iterative solvers, or pre-conditioners, respectively.
+
+To be useful as a core solver for the modular inversion
+system, several conditions must be met.  First, the solver
+should be general, in the sense that the solution can be
+computed correctly for arbitrary sources and boundary conditions.
+For the usual MT forward problem there no source terms, except
+on the boundaries, but to compute sensitivities one must
+be able also to solve the forward problem for arbitrary sources.
+Second, capability to solve the transposed system 
+(as in (\ref{e.SensAdjtApp})) is required.  As discussed in section 2,
+with appropriate scaling to account for non-uniform grid spacing,
+solution of the forward and transposed problems can be
+accomplished by the same basic code.  However, there are some
+subtle issues, as discussed in the context of a 3D spherical
+EM solver by Kelbert et al. (2008).  Finally, the solver should
+have a clean interface.  For example, our forward solver driver
+module has public routines which can be called to initialize
+the solver and modify PDE coefficients (which depend on
+the model parameter, and the frequency), and to actually solve
+the forward or transposed equations for a particular 
+set of sources and boundary conditions.  Additional public routines
+are provided to set solver control parameters (convergence criteria,
+schedules for divergence corrections, etc.) or to retrieve solver
+diagnostics.
+
+In contrast to the 3D MT solver, which we coded to meet the specific
+requirements of the modular system, for the 2D MT case we
+adopted, with minimal modification, the existing 2D MT forward modeling 
+code from the REBOCC inversion
+of Siripunvaraporn and Egbert (2000).
+This 2D code was written in Fortan77, which does not
+allow dynamic allocation of memory--array sizes for a particular
+problem have to be set at compile time.
+We wrapped this code with Fortran95
+routines to provide a cleaner, more clearly defined interface,
+and allow to dynamic memory allocation.
+Routines in separate TE and TM mode interface modules
+are called by other components of the modular inversion
+system to initialize and solve the 2D equations.
+These interface routines in turn make calls to the
+original REBOCC forward modeling subroutines,
+which do all of the actual numerical computations.
+The TE and TM mode interface modules contain,
+as private data, all coefficient and temporary work arrays
+(allocated on initialization)
+needed for solution of the corresponding equations.
+A simple LU factorization (with pivoting) is used for equation solution,
+so after forming and factoring the system of equations,
+solutions for a number of right hand sides can be computed.
+
+\subsection{Interface Modules}
+
+The four Level II modules in the second row of Figure 3 provide an
+interface between implementation specific details
+of the numerical discretization scheme
+and the generic inversion modules in the top row.
+
+\vspace{6pt}
+\noindent
+{\em Module SolnRHS:}  The two basic data types that must be defined 
+at the interface level for use by the inversion
+modules are {\bf EMsoln\_t} and {\bf EMrhs\_t} (Table \ref{t.DataTypes}).
+These data types, which are defined in module SolnRHS, correspond
+to $\ee$ and $\bb$ in the mathematical development of section 2.
+In addition, we define a data type {\bf EMsparse\_t}, as a sparse vector
+representation of the {\bf EMsoln\_t} type,
+and a data type {\bf EMsolnMTX\_t} to store a series of $\ee$
+objects for multiple transmitters.  Generic instances of these
+data types are denoted here by $\bf l$ and $\vec\ee$, respectively.  
+Note that because variables of all of these types are declared in,
+and manipulated, by the Level I inversion routines, these specific
+type names must be used by any specific implementation of SolnRHS--in
+particular both the 2D and 3D MT examples
+use these same type names for data objects with very different
+internal structure.
+Also note that more basic objects used to represent
+solutions to the EM equations and related objects
+were defined in the lower level numerical discretization module EMfield.
+The generic data types {\bf EMsoln\_t}, {\bf EMrhs\_t}, 
+and {\bf EMsparse\_t} provide wrappers for these
+more primitive objects, in order to hide application specific data
+type names and attributes from the generic Level I inversion modules.  
+Type {\bf EMsolnMTX\_t}, in turn, is derived from {\bf EMsoln\_t},
+just as {\bf dvecMTX\_t} is derived from {\bf dvec\_t}.
+
+All of the basic methods, including creation, destruction,
+I/O, copying, and basic linear algebra operations for $\ee$, $\bb$,
+$\bf l$ and $\vec\ee$ objects are defined in module SolnRHS.  
+As with the basic data type definitions, 
+these methods are built out of the corresponding
+methods for the lower level objects defined in module EMfield.
+These routines, which are used extensively in the
+Level I modules,  again provide an interface that hides 
+application specific details from the generic inversion system.
+
+For the 3D MT case {\bf EMsoln\_t}, {\bf EMsparse\_t}
+and {\bf EMrhs\_t} objects must contain complex
+vector field solutions for two independent source polarizations.  
+This is essential, since the basic data type for
+3D MT, the impedance tensor, requires solutions for both
+source polarizations to allow evaluation of the corresponding data
+functionals.  Thus $\ee$ in the abstract description of the inverse
+problem given in section 2 actually refers to the pair of solutions.
+Similarly $\bb$, the abstract representation of the right hand 
+side forcing, refers to the boundary data for a pair of
+independent source polarizations,
+sparse vectors ($bf l$ used to implement data functionals)
+require components for the two source polarizations, 
+and all of the expressions for sensitivities
+or gradients of the penalty functional must involve both source
+polarizations in a consistent fashion.  
+For the 3D MT problem
+there is thus a clear distinction between
+objects that represent a single vector field (an EM solution
+for a single source polarization)
+and the full two component solution to the 3D MT forward problem.  
+
+For 2D MT there might appear to be little reason 
+to distinguish between the SolnRHS objects, 
+and the corresponding lower level EMfield objects.
+In this case $\ee$ represents just a single complex scalar field,
+with data structure essentially identical
+to that already defined in the lower
+level EMfield module discussed above.
+One might wonder if for at least the 2D MT problem it might
+be possible to dispense with the two distinct levels
+of EM solution type objects and methods.  
+For several reasons this is probably not a good idea. 
+Even in the 2D case the {\bf EMsoln} object 
+is intrinsically more complex than what is desirable
+at the lowest levels of the modular system.
+For example, it turns out to be useful to include pointers to the
+grid and an index into the transmitter dictionary, 
+and any other information (e.g., TE or TM mode)
+needed to define the sources used to generate the solution.
+Keeping all of this information attached to the generic
+{\bf EMsoln} data object greatly simplifies subroutine interfaces
+in the Level I routines, and hides many bookkeeping details
+from the inversion algorithm.
+
+At the same time it
+is useful to have basic objects which can define scalar (2D) or vector
+(3D) fields on the grid defined at a low level in the module
+hierarchy. These basic objects 
+are in fact useful for many purposes, and in most of these cases
+the extra information outlined above is not even meaningful.
+It is thus simplest to maintain two levels of definition
+of EM field solution (and related) objects--a lower level one of relatively
+simple form for the general numerical solution approach,
+and a higher level SolnRHS module which wraps 
+EMfield objects and methods into application specific
+instances with generic names and interfaces.
+
+\vspace{6pt}
+\noindent
+{\em Module DataFunc:} This module defines 
+and implements the data functionals needed for a specific application.
+There are two key public procedures in this module
+with names and interfaces given in Table
+\ref{t.LevelII}.
+The first, {\bf NonLinDataFunc}, 
+evaluates the non-linear data functional $\psi_j(\ee,\mm)$, e.g.
+computing the complex impedance elements from the
+EM solution $\ee$ (and possibly the model parameter
+$\mm$) in the 2D and 3D MT inverse problems.  
+The second, {\bf MakeL},
+creates the linearized data functionals, the rows ${\bf l}_j$ of $\LL$
+associated with an individual transmitter-receiver pair.
+The linearized data functional are returned as sparse vectors,
+which can then be used to evaluate the linearized data functional
+or to force the adjoint system, e.g., for computation of the
+penalty functional gradient as in (\ref{e.Grad}).
+For both routines
+all components of multivariate data (e.g., all impedance
+tensor elements) are handled together with a single call.
+
+A third routine that is natural to include in this module,
+which we will refer to as {\bf MakeQtilde}, constructs the corresponding
+rows of $\tilde\QQ$, as defined in (\ref{e.QQ}).
+This routine is not directly referred to by level I inversion
+routines, and so the routine name and interface do not have to conform
+to a specific form.  The inputs of {\bf MakeQtilde} are identical to
+{\bf MakeL}.  The output is a sparse vector representation of
+a basic EM field object,
+i.e., an element of the image space of the discrete conductivity 
+or resistivity mapping $\pi$, ${\cal S}_P$ or ${\cal S}_A$.
+This sparse vector is combined with the linearized model parameter
+mapping $\partial\pi/\partial\mm$ to implement multiplication by
+$\QQ$ or $\QQ^T$; see module PQmult for further details.
+
+Module DataFunc also contains the {\it dataType}, {\it transmitter}
+and {\it receiver} dictionaries,
+as well as procedures for dictionary initialization.
+The receiver index associated with each multivariate observation
+is used to retrieve any needed meta-data from the dictionary.
+In the context of 2D and 3D MT, the receiver meta-data is
+essentially just the site coordinates, 2 or 3  real numbers.
+Other types of data may require additional parameters.
+For example, network MT data
+with very long dipoles (e.g., Siripunvaraporn et al., 2004)
+would require specification of both ends of each
+electric dipole.  Similarly,
+inter-station horizontal magnetic field transfer functions
+would require two site locations, one for the local and one
+for the normal reference site.
+It is possible to have more than one receiver dictionary
+within the DataFunc module.   In this case the {\it dataType} dictionary 
+would have to include information about which receiver dictionary to use
+for each specific $\dvec$ object.  For example, for joint inversion of
+standard and network MT, one
+dictionary could be used for MT site locations, and
+a separate one for the two locations required to
+fully describe the long dipoles.  
+Neither the specific nature of the meta-data,
+nor how it is organized within this module,
+is referenced by Level I inversion modules.
+
+In general all of the dictionaries are required to control
+data functional calculations; indices for {\em dataType}
+and {\em receiver} dictionaries are input arguments to these
+routines; a unique {\em transmitter} is associated
+with the input $\ee$ object, and the corresponding index
+is a component of the {\bf EMsoln\_t} data type.
+For example, in the 2D MT case we encode
+mode (TE or TM) in the {\it transmitter} dictionary.  Case statements
+within routines of this module are used to select calls to appropriate
+evaluation functionals, which are different for the two modes.
+Other data type distinctions (e.g., apparent resistivity and
+phase vs. impedance) would be encoded in the {\em dataType}
+and would require additional case statements.
+Adding new types of data can be accomplished with
+modifications to this module alone: the new data types must
+be encoded in the type dictionary, and code must be added
+to {\bf NonLinDataFunc} and {\bf LinDataFunc} for the new cases.
+The {\em receiver} index is of course used to generate
+evaluation functionals for specific site locations.
+
+\vspace{6pt}
+\noindent
+{\em Module EMsolver:}  This module
+provides a uniform interface between the application specific forward
+modeling routines, and the generic Level I inversion routines.
+The key public routines in this module must again have names and
+interfaces consistent with the conventions of Table \ref{t.LevelII}.
+However internal functioning of these routines will be application
+dependent, as our two examples nicely illustrate.  In the 3D MT case
+$\ee$ (the output of {\bf FwdSolve} and {\bf GenSolve}) consists of
+solutions for two source polarizations.  These require two separate
+calls to the lower level solver routines with different
+input boundary conditions or forcing.  In the 2D case,
+only a single solution is required, but now there are two possibilities:
+either a TE or a TM solver must be called, 
+depending on the input {\it transmitter} index.
+Thus, routines for different applications may
+have significant differences internally 
+(a loop over polarizations for  the 3D MT implementation 
+vs. a case statement for the 2D case), 
+but EMsolver routine names, interfaces, and abstract external
+functionality (e.g., ``compute $\ee$ for transmitter $iTx$'')
+must always be the same.
+
+The key public routines in this module include initialization,
+deallocation and clean up, and two separate solver routines, 
+{\bf FwdSolve} and {\bf GenSolve}.  The second of these implements
+the general solver, allowing arbitrary forcing and boundary conditions,
+and solutions for both the usual forward problem and 
+its transpose, or adjoint.  The first solves only
+the forward problem, and does not require (or allow) explicit
+specification of the forcing, which is computed 
+internally, with reference to the transmitter dictionary.
+Clearly the first routine can be coded to call the second, after RHS
+initialization.
+
+Initialization ({\bf InitSolver}) is kept explicitly separate from
+actual solution to enable more efficient computational strategies.
+For example, in our 2D MT implementation we use a direct matrix LU
+decomposition approach, so multiple forward solutions can be computed
+by back-substitution once factorization is complete.  The initialization
+routine is thus coded to keep track of the previous solver call, and only
+reinitialize and factor the coefficient matrix if necessary.  
+In the 3D case, repetition of operator
+setup steps can also be minimized by keeping track of attributes
+(frequency, conductivity parameter) used 
+for the previous solution.  The responsibility for
+these efficiencies lies with the initialization
+routine.  Higher level routines that require solutions 
+of the governing PDE always call the initialization
+routine first.  The cleanup routine {\bf ExitSover}
+is only called when it is
+desired to deallocate all operator arrays and 
+return solver module data to the
+state it had before the first call to {\bf InitSolver}.
+
+\vspace{6pt}
+\noindent
+{\it Module PQmult:}  This module implements multiplication by the 
+matrices $\PP$, $\PP^T$, $\QQ$, and $\QQ^T$.
+There are four essential routines listed in Table
+\ref{t.LevelII}, whose names and functions are self explanatory.  
+Multiplication of a model parameter object ($\delta\mm$)
+by $\PP$ or $\QQ$  can be divided into distinct steps 
+(see \ref{e.PP} and \ref{e.QQ}).
+In both cases the modelParameter routine which multiplies
+by $\partial\pi/\partial\mm$ is first applied to produce an
+EMfield object $[\partial\pi/\partial\mm]\delta\mm$.
+For {\bf Pmult} a problem specific operator
+is then applied, with the results returned as
+an {\bf EMsoln\_t} object.
+For example in the 3D MT case, the result of the first step
+is conductivity averaged onto cell edges.
+This is then multiplied point-wise
+by $i\omega \mu \ee_{0,k}$, where
+$\ee_{0,k}, k = 1,2$ are background EM solutions for the two
+polarizations.  The result is a pair of 
+EMfield edge objects, which together constitute
+the output {\bf EMsoln\_t} object, which provides
+the forcing for $\Ss$ in (\ref{e.SensModel}).
+For {\bf Qmult} the second step is to call {\bf MakeQtilde}
+(see Module DataFunc) 
+to form the rows of $\tilde\QQ$ corresponding to the input
+{\bf dvec\_t} object $\dd$, and
+then compute the inner product of these sparse vectors and
+$[\partial\pi/\partial\mm]\delta\mm$,
+resulting in $\delta \dd = \QQ\delta\mm$.
+
+Multiplication by $\PP^T$ and $\QQ^T$
+reverses these steps. For the $\PP^T$ computation 
+the input is an {\bf EMsoln\_t} object.
+Again taking the 3D MT case as a specific example,
+the input $\ee$, which encapsulates
+two separate lower level EMfield objects $(\ee_1, \ee_2)$,
+is used in the first step is to form the EMfield object
+$i\omega\mu({\bf diag}[\ee_{0,1}]\ee_1+{\bf diag}[\ee_{0,2}]\ee_2)$.
+The second step is then to apply the adjoint model parameter mapping
+$[\partial\sigma/\partial\mm]^T$ to this.
+The real and imaginary parts of the result are objects
+of type {\bf ModelParam\_t}.
+When operations such as $\JJ^T$ are applied in the context of, for
+example, a NLCG inversion scheme, 
+multiplication by $\PP^T$ is the final step in the computation
+if the penalty functional gradient 
+(see (\ref{e.Grad}), (\ref{e.SensAdjtApp})),
+and only the real output is required.  
+When the full sensitivity matrix
+for complex data (e.g., impedance) 
+is to be calculated the real and imaginary
+output components, respectively,
+provide sensitivities for real and imaginary parts of the data,
+and both should be stored.
+For multiplication by $\QQ^T$ the input is a {\bf dvec\_t} object $\dd$.
+The output of the first step 
+is an EMfield object, constructed as the sum
+of the appropriate rows of $\tilde\QQ$
+multiplied by the corresponding
+components of $\dd$.  
+The second step is the same as for {\bf PmultT},
+multiplication by $[  \partial\pi/\partial\mm ]$.
+In fact, for the simple field component interpolation
+we have implemented for the 3D MT problem 
+(tri-linear splines) the observation functionals
+do not depend on the model parameter and $\QQ \equiv 0$
+(but see discussion in the Appendix).  In this case
+{\bf Qmult} and {\bf QmultT} are dummy routines,
+although they still are referenced in the generic Level I routines,
+and hence need to be defined.
+
+In the 2D MT case multiplication by $\PP$ is somewhat different for the
+TE and TM polarizations, so {\bf Pmult} and {\bf PmultT}
+must have code for both cases.  
+The appropriate case is determined internally from the mode of
+the background {\bf EMsoln\_t} object $\ee_0$, 
+an attribute of these objects in the MT 2D case.
+The TE case is essentially like the 3D MT case discussed
+above, except the EMsoln involves only a single polarization.
+The TM case is somewhat more complicated.   
+As (\ref{e.PPTMlog}) shows, discrete 2D gradient and
+divergence operators are required.  In our implementation, we include
+simple routines for these operations within this module.  
+As the routines are only referenced internally,
+they can be private to this module.
+$\QQ$ is non-zero only for the TM mode case.
+
+A fifth routine in this module is listed in Table \ref{t.LevelII}:
+{\bf QaddT}.  This routine is a variant on {\bf QmultT} and
+is useful for full Jacobian computations.
+This routine computes the rows of $\QQ$
+corresponding to one $\dd$, and adds this to the
+corresponding rows of the Jacobian, represented
+as an array of {\bf ModelParam\_t} objects ($\vec \mm$
+in Table \ref{t.LevelII}).
+
+NOTE:  I have assumed now that PQmult uses the dataSpace module
+i.e., it knows about {\bf dvec\_t} objects.
+At least at first blush this is a bit inelegant ...
+or at least it messes up the relatively neat dependencies
+of Figure 1 (as they were).   However, 
+it is more efficient, and in some ways cleaner!
+And, in fact the Level II interface routines have to
+implicitly know all about the dataSpace structure ... the
+dictionaries are defined (in a specific instance) in Level II.
+So it is a bit artificial to go to any trouble to hide dataSpace
+from Level II routines.
+
+\subsection{Level I: Jacobian Modules}
+
+\vspace{6pt}
+\noindent
+{\it Module MeasComb:}  This module 
+merges all of the single receiver data functionals
+(generated by routines in module DataFunc) for one $\dd$
+(i.e., all data for a fixed {\it transmitter/dataType}).
+There are three essential public routines 
+(Table \ref{t.LevelI}).  The first,
+{\bf DataMeas} computes  $\dd = \Psi(\ee,\mm)$.
+The second, {\bf LinDataMeas}, is the linearized counterpart, returning
+the perturbation in the data for small perturbation in $\mm$ and $\ee$,
+i.e., in the notation of 
+(\ref{e.LL_QQ}) $\delta \dd = \LL\delta\ee$.
+Note that the additional component $\QQ\delta\mm$ associated with 
+direct dependence of the data functional on the model parameters
+is computed by {\bf Qmult}.
+The third, {\bf LinDataComb},
+implements the adjoint of the second, returning $\bb = \LL^T \dd$.
+
+In the linearized and adjoint
+cases routines in module DataFunc are called
+to set up sparse vector representations
+of the data functionals (rows of $\LL$).
+{\bf LinDataMeas} then forms the dot
+products and assembles the {\bf dvec\_t} object $\dd = \LL\ee$.
+Similarly, {\bf LinDataComb}
+adds up the component sparse vectors in the
+computation of the forcing for the adjoint system $\LL^T\dd$.
+Routines in this module manage issues 
+related to pairing of real and imaginary parts 
+when data are complex.
+For the forward calculations ({\bf DataMeas} 
+and {\bf LinDataMeas}) the
+calls to linearized and nonlinear data functionals (implemented in the
+application specific DataFunc module) result in complex values.
+Routines in this module convert these for 
+storage as pairs of reals in the {\bf dvec\_t} object.
+In the adjoint case ({\bf LinDataComb}), real and imaginary parts,
+which are stored separately in the input $\dd$
+are combined into complex coefficients to construct 
+the proper complex forcing $\LL^T \dd$
+for the adjoint equation.  
+
+\vspace{6pt}
+\noindent
+{\it Module SensMatrix:}  This module 
+puts all of the pieces ($\LL$, $\Ss^{-1}$, $\PP$,
+$\QQ$) together to implement Jacobian calculations.  In
+contrast to all previously discussed modules, SensMatrix deals
+with multiple {\em transmitter/dataType} objects,
+i.e., $\vec\dd$ instead of $\dd$.  The key public routines
+are summarized in Table \ref{t.LevelI}.  {\bf Jmult}
+multiplies $\mm$ by the Jacobian $\JJ$, to produce
+the array of {\bf dvec\_t} objects $\dvecMTX$.
+{\bf JmultT} implements the transpose of this operation, multiplying
+$\dvecMTX$ by $\JJ^T$ to produce 
+a {\bf modelParam\_t} object $\mm$.
+There is also a routine ({\bf FwdPred}) that implements the full forward
+problem, looping over transmitters to solve all component
+problems and returning the full vector of predicted data
+for a given model parameter ($\dvecMTX = \FF(\mm)$).
+Note that this routine can optionally return $\vec\ee$,
+the array of EM solutions objects computed for all unique transmitters.
+These can then be passed, as optional inputs, to routines
+{\bf Jmult} and {\bf JmultT}.  This makes it possible to use
+the forward solutions, calculated, for example, for evaluation of 
+data misfit, for subsequent sensitivity calculations, e.g., needed
+to evaluate the gradient of the penalty functional.
+Note that in general there may be more elements of $\vec\dd$
+than there are unique transmitters (and hence elements of $\vec\ee$).
+Routines in this module keep track 
+(through the {\em transmitter} dictionary)
+of the correspondence between $\vec\dd$ elements and transmitters
+to optimize efficiency.
+
+Finally, there is a routine ({\bf CalcJ}) which computes the full
+sensitivity matrix $\JJ$, again looping over all transmitters.
+Note that the sensitivity matrix is returned as an array
+of model parameter objects, each corresponding to the full
+sensitivity for a single real data point.  The computations
+are done using the adjoint form (\ref{e.SensAdjtApp}),
+taking advantage of redundancy associated with complex
+data where possible.  For both {\bf Jmult} and {\bf CalcJ}
+$\dvecMTX$ must be input to provide a template
+for the output data vector.  This template is used
+to provide the metadata needed to define data functionals;
+in the case {\bf Jmult} $\vec\dd$ is also used to return the
+computed data values.
+
+For parallelization over frequencies
+(probably a reasonable strategy for EM inversion
+with modest numbers of processors) it appears that it will
+be useful to have single transmitter versions of these four
+routines.  These would have as input a {\bf dvec\_t} object
+instead of a {\bf dvecMTX\_t} object, but would otherwise
+be the same.
+
+Finally, we have implemented some other variants (e.g., JmultMTX)
+which take an array of model parameters (one for each
+transmitter) as inputs.  The intended use of these is
+beyond the scope of this document,  and they will in
+any event probably be made obsolete by the 
+single transmitter versions needed for parallelization.
+
+\subsection{Inversion Modules}
+
+So far there is a single inversion module that has
+been minimally debugged.  This implements a non-linear
+conjugate gradients scheme, and I am not prepared to
+say anything about this, as I didn't do this part,
+and have not had time to even look too closely at it.
