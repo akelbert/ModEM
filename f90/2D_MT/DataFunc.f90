@@ -28,7 +28,7 @@ module datafunc
 
   use math_constants
   use utilities
-  use interpeb        !  basic interpolation routines for 2D TE and TM
+  use emfieldinterp     !  basic interpolation routines for 2D TE and TM
                         !    solution grids; allow computation of both E and B
                         !    at an arbitrary point in either grid
   use modelparameter, only:	rhoC => ModelParamToOneCell	!  model parameterization

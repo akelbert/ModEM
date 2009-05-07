@@ -3,7 +3,7 @@ module NLCG
 !use math_constants
 !use utilities
 use sensmatrix
-   ! inherits meascomb,  dataspace, dataFunc, solnrhs,
+   ! inherits datasens,  dataspace, dataFunc, solnrhs,
    !            modelspace, soln2d
 
 implicit none

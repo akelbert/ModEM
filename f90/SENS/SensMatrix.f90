@@ -2,7 +2,7 @@ module sensMatrix
 
 use math_constants
 use utilities
-use meascomb	 !!!!  inherits : dataspace, dataFunc, solnrhs
+use datasens	 !!!!  inherits : dataspace, dataFunc, solnrhs
 use modelsens  !!!  inherits : modelspace, soln2d
 use emsolver
 

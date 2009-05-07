@@ -1,6 +1,6 @@
 
 ! *****************************************************************************
-module interpEB
+module EMfieldInterp
   ! Generic interpolation functionals for both electric and magnetic
   ! fields to an arbitrary point within the model domain,
   ! including routines for TE electric field, and TM magnetic field
@@ -586,4 +586,4 @@ Contains
     call deall_sparsevecc(Qj)
 
   end subroutine EfromBSetUp_TM
-end module interpEB
+end module EMfieldInterp

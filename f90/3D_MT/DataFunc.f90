@@ -21,7 +21,7 @@ module dataFunc
   !  This module is specific to 3D MT; similar modules will need to be written
   !     to implement data functionals for other problems
 
-  use interpeb
+  use emfieldinterp
   use solnrhs
   use math_constants
 

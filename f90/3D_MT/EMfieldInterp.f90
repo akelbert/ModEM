@@ -1,5 +1,5 @@
 ! *****************************************************************************
-module InterpEB
+module EMfieldInterp
   ! Generic data functionals for interpolation of electric and magnetic
   ! fields to an arbitrary point within the model domain for 3D staggered
   ! grid finite difference solutions
@@ -509,4 +509,4 @@ Contains
 
   end subroutine BfromESetUp
 
-end module InterpEB
+end module EMfieldInterp

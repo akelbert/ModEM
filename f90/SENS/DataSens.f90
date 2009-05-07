@@ -1,4 +1,4 @@
-module MeasComb
+module DataSens
 !  higher level module that calls routines in dataFunc2D to
 !   --> evaluate non-linear and linear data functionals for all sites
 !       in a dataVec object
@@ -316,4 +316,4 @@ Contains
 
 !****************************************************************************
 
-end module MeasComb
+end module DataSens

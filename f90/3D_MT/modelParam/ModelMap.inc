@@ -14,7 +14,7 @@
 !         see below; this is called QtoModelParam here.)
 !       Note that the functionality is always needed, but names can be
 !        flexible ... these routines are called by the interpolation
-!        routines in InterpEB* (for the latter two only), by the forward
+!        routines in EMfieldInterp* (for the latter two only), by the forward
 !        modeling codes (the non-linear mapping only), and by ModelSens
 !        (the linearized mappings and adjoint) and thus names/interfaces
 !        need to be kept consistent with what is used in these routines.
