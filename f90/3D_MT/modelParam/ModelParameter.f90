@@ -97,7 +97,7 @@ Contains
 !  routines which define mappings between the "natural" representation
 !  of conductivity/resistivity on the model grid and the formal
 !  model parameter structure
-   include "CondMap.inc"
+   include "ModelMap.inc"
 
 !  The included file must contain subroutines create_CmSqrt, deall_CmSqrt, multBy...
    include "modelCov/RecursiveAR.inc"

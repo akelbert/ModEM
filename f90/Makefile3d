@@ -77,7 +77,7 @@ $(OBJDIR)/sg_vector.o:FIELDS/FiniteDiff3D/sg_vector.f90 $(OBJDIR)/math_constants
 $(OBJDIR)/sg_sparse_vector.o:FIELDS/FiniteDiff3D/sg_sparse_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o $(OBJDIR)/sg_vector.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_sparse_vector.f90 -o $(OBJDIR)/sg_sparse_vector.o
 
-$(OBJDIR)/ModelParameter.o:3D_MT/modelParam/ModelParameter.f90 $(OBJDIR)/GridDef.o $(OBJDIR)/file_units.o $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o 3D_MT/modelParam/modelCov/RecursiveAR.hd 3D_MT/modelParam/CondMap.inc 3D_MT/modelParam/modelCov/RecursiveAR.inc 3D_MT/modelParam/modelParamIO/Binary.inc 3D_MT/modelParam/modelParamIO/Mackie.inc 3D_MT/modelParam/modelParamIO/WS.inc
+$(OBJDIR)/ModelParameter.o:3D_MT/modelParam/ModelParameter.f90 $(OBJDIR)/GridDef.o $(OBJDIR)/file_units.o $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o 3D_MT/modelParam/modelCov/RecursiveAR.hd 3D_MT/modelParam/ModelMap.inc 3D_MT/modelParam/modelCov/RecursiveAR.inc 3D_MT/modelParam/modelParamIO/Binary.inc 3D_MT/modelParam/modelParamIO/Mackie.inc 3D_MT/modelParam/modelParamIO/WS.inc
 	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/modelParam/ModelParameter.f90 -o $(OBJDIR)/ModelParameter.o
 
 $(OBJDIR)/sg_boundary.o:FIELDS/FiniteDiff3D/sg_boundary.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o $(OBJDIR)/sg_vector.o 

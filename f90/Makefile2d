@@ -71,7 +71,7 @@ $(OBJDIR)/GridDef.o:2D_MT/GridDef.f90 $(OBJDIR)/math_constants.o
 $(OBJDIR)/EMfield.o:2D_MT/EMfield.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/GridDef.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/EMfield.f90 -o $(OBJDIR)/EMfield.o
 
-$(OBJDIR)/ModelParameter.o:2D_MT/modelParam/ModelParameter.f90 $(OBJDIR)/file_units.o $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/EMfield.o 2D_MT/modelParam/modelCov/Diffusion.hd 2D_MT/modelParam/CondMap.inc 2D_MT/modelParam/modelCov/Diffusion.inc 2D_MT/modelParam/modelParamIO/Binary.inc 2D_MT/modelParam/modelParamIO/Mackie.inc
+$(OBJDIR)/ModelParameter.o:2D_MT/modelParam/ModelParameter.f90 $(OBJDIR)/file_units.o $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/EMfield.o 2D_MT/modelParam/modelCov/Diffusion.hd 2D_MT/modelParam/ModelMap.inc 2D_MT/modelParam/modelCov/Diffusion.inc 2D_MT/modelParam/modelParamIO/Binary.inc 2D_MT/modelParam/modelParamIO/Mackie.inc
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/modelParam/ModelParameter.f90 -o $(OBJDIR)/ModelParameter.o
 
 $(OBJDIR)/SolnRHS.o:2D_MT/SolnRHS.f90 $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o 

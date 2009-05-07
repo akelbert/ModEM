@@ -87,7 +87,7 @@ Contains
 ! *****************************************************************************
 !  conductivity mappings and adjoints for 2D MT modeling and inversion code
 !  routines that are public
-   include "CondMap.inc"
+   include "ModelMap.inc"
 
 !  The included file must contain subroutines create_CmSqrt, deall_CmSqrt, multBy...
    include "modelCov/Diffusion.inc"
