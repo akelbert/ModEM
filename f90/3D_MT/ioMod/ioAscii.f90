@@ -36,6 +36,9 @@ module ioAscii
   use dataspace
   use datafunc ! for data types
   use emsolver, only: EMsolnMTX_t
+  use transmitters
+  use receivers
+  use datatypes
 
   implicit none
 

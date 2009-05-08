@@ -18,6 +18,8 @@ module ModelSens
    use utilities
    use datafunc 	!!!! inherit: soln2d modelparameter
    use dataspace
+   use transmitters
+   use datatypes
 
    implicit none
 

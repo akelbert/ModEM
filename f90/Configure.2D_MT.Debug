@@ -8,4 +8,4 @@ if [ -e $1 ]; then
 fi
 perl fmkmf.pl -f90 pgf95 -opt '-g -Mprof=lines -Mbounds' \
 -l '-L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines' -o './objs/2D_MT/Debug' \
--p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod Mod2DMT.f90 > $1
+-p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/DICT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod Mod2DMT.f90 > $1

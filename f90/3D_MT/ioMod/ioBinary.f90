@@ -36,6 +36,9 @@ module ioBinary
   use dataspace
   use datafunc
   use emsolver, only: EMsolnMTX
+  use transmitters
+  use receivers
+  use datatypes
 
   implicit none
 

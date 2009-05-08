@@ -15,6 +15,8 @@ module ModelSens
    use utilities
    use datafunc
    use dataspace
+   use transmitters
+   use datatypes
 
    implicit none
 

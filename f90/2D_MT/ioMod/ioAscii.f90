@@ -16,6 +16,9 @@ module ioAscii
    use dataspace
    use emsolver
    use utilities
+   use transmitters
+   use receivers
+   use datatypes
    implicit none
 
    !  routines that are public

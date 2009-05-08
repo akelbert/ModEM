@@ -36,116 +36,18 @@ module datafunc
 					!  for TM mode data
 					!  functionals
   use solnrhs
+  use transmitters
+  use receivers
+  use datatypes
 
   implicit none
 
-  public			:: RXdictSetup, deall_RXdict
   !   Names of these routines must be as here, as these are called by
   !    top-level inversion routines
   public			:: nonLinDataFunc, linDataFunc
 
-  type :: MTrx
-     ! x gives location of EM measurements
-     !  multiple receiver dictionaries can be defined, and
-     !   different dictionaries can be used for different data types
-     !  Additonal elements of MTrx data type can be added to
-     !   accomodate additional data types
-     real(kind=prec)			::  x(2)
-  end type MTrx
-
-  ! receiver dictionary for 2D MT data will be an array of
-  !  type MTrx (one element of the array for each site)
-  !  Two components of MTrx%x are position along the profile,
-  !     and vertical position (generally on the surface)
-  !  Note that the receiver dictionary is only used inside the
-  !    data functional module
-  type (MTrx), pointer, save, private, dimension(:) :: rxDict
-
-  type :: dataType
-
-     !  stores information about the "data type"
-     !   The following two attributes must be defined for all
-     !    data types; these are accessed and used by the top-level
-     !    inversion routines.
-     logical                    :: isComplex = .false.
-     logical                    :: calcQ = .false.
-     !    Other attributes might be different (different number,
-     !        different names, types, etc.) for  different applications.
-     ! character(2)                :: mode = ''! = 'TE' or 'TM'
-     character(80)               :: name = ''
-     !  could add rxDictNumber to keep track of reciever dictionary
-     !  number used for this dataType (only 1 receiver dictionary now,
-     !   so this is omitted)
-
-  end type dataType
-
-  ! data type dictionary must be public; some attributes are referenced
-  !   by top-level inversion routines
-  type (dataType), pointer, save, public, dimension(:) :: typeDict
-
-  ! add data types here ... this all needs work!
-  integer, parameter    :: TE_Impedance = 1
-  integer, parameter    :: TM_Impedance = 2
 
 Contains
-
-! **************************************************************************
-  ! Initializes and sets up receiver dictionary
-  ! Now the reciever dictionary only contains the location of the point obs
-  subroutine RXdictSetUp(nSites,siteLocations)
-    !  siteLocatins(2,nSites) is array of measurement locations (x,z)
-    !   corresponding to grid  (normally z = 0 for flat Earth surface)
-
-    integer, intent(in)	 		:: nSites
-    real(kind=prec), intent(in)	:: siteLocations(2,nSites)
-
-    !  local variables
-    integer                             :: i
-
-    allocate(rxDict(nSites))
-    do i = 1,nSites
-       rxDict(i)%x = siteLocations(:,i)
-    enddo
-
-  end subroutine RXdictSetUp
-
-  ! **************************************************************************
-  ! Cleans up and deletes receiver dictionary at end of program execution
-  subroutine deall_RXdict()
-
-	integer     :: istat
-
-    if (associated(rxDict)) then
-       deallocate(rxDict,STAT=istat)
-    end if
-
-  end subroutine deall_RXdict
-
-!**************************************************************************
-! Initializes and sets up data type dictionary
-  subroutine TypeDictSetup()
-
-     allocate(typeDict(2))
-     typeDict(TE_Impedance)%name = 'TE Impedance'
-     typeDict(TE_Impedance)%isComplex = .true.
-     typeDict(TE_Impedance)%calcQ     = .false.
-     typeDict(TM_Impedance)%name = 'TM Impedance'
-     typeDict(TM_Impedance)%isComplex = .true.
-     typeDict(TM_Impedance)%calcQ     = .true.
-
-  end subroutine TypeDictSetUp
-
-! **************************************************************************
-! Cleans up and deletes type dictionary at end of program execution
-  subroutine deall_typeDict()
-
-	integer     :: istat
-
-    if (associated(typeDict)) then
-       deallocate(typeDict,STAT=istat)
-    end if
-
-  end subroutine deall_typeDict
 
 !******************************************************************************
   subroutine nonLinDataFunc(ef,Sigma,iDT,iRX,Z)
