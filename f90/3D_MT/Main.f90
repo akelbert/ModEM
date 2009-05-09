@@ -36,8 +36,8 @@ module Main
   character(15), pointer, dimension(:), save        :: compids
   character(80), save                               :: data_units
 
-  ! grid geometry data structure
-  type(grid_t), target, save	:: grid
+  ! this is used to set up the numerical grid in SensMatrix
+  type(grid_t), save	        :: grid
 
   ! impedance data structure
   type(dataVecMTX_t), save		:: allData
@@ -90,9 +90,6 @@ Contains
 
        ! Finish setting up the grid (if that is not done in the read subroutine)
        call setup_grid(grid)
-
-       !  set grid for higher level solver routines
-       call set_SolnRHS_grid(grid)
 
        !  set solver control (currently using defaults)
        solverParams%UseDefaults= .true.

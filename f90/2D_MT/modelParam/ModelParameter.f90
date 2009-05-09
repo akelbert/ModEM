@@ -350,10 +350,10 @@ Contains
   !  the attributes are private (in F2003, can declare everything private
   !  while grid and allocated attributes could be public)
 
-  subroutine getGrid_modelParam(mIn,grid)
+  subroutine getGrid_modelParam(grid,mIn)
 
-    type (modelParam_t), intent(in)     :: mIn
     type (grid_t), intent(out)          :: grid
+    type (modelParam_t), intent(in)     :: mIn
 
     if (.not. mIn%allocated) then
        call warning('model vector not allocated on call to getGrid_modelParam')

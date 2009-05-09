@@ -3,10 +3,9 @@ module solnrhs
 !   plus basic methods, linear algebra, dot products
 !
 ! Defines: EMsoln, EMsparse, EMrhs
-! Uses: EMfield, ModelParameter
+! Uses: EMfield
 
 use emfield
-use modelparameter
 
 implicit none
 
@@ -23,9 +22,8 @@ implicit none
     character*2				:: mode = ''
     real(kind=prec)		:: omega = R_ZERO
     real(kind=prec)		:: period = R_ZERO
-    type(modelParam_t), pointer		:: sigma
-    integer 				:: tx = 0
     type(grid_t), pointer		:: grid
+    integer 				:: tx = 0
   end type EMsoln_t
 
   type :: EMsparse_t

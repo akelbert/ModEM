@@ -24,6 +24,9 @@ program Mod3DMT
 
      call initGlobalData(cUserDef)
 
+     ! set the grid for the numerical computations
+     call setGrid(grid)
+
 	 ! Start the (portable) clock
 	 call date_and_time(values=tarray)
      stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)

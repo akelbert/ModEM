@@ -8,7 +8,11 @@ use emsolver
 
 implicit none
 
-public 	:: calcSensMatrix, Jmult, JmultT, fwdPred
+public 	:: calcSensMatrix, Jmult, JmultT, fwdPred, setGrid
+
+! numerical discretization used to compute the EM solution
+!  (may be different from the grid stored in model parameter)
+type(grid_t), target, save, private     :: grid
 
 Contains
 
@@ -77,7 +81,7 @@ Contains
       iTx = d%d(j)%tx
 
       !  manage any necessary initilization for this transmitter
-      call initSolver(iTx,sigma0,e0,e,comb)
+      call initSolver(iTx,sigma0,grid,e0,e,comb)
 
       !  solve forward problem; result is stored in e0
       call fwdSolve(iTx,e0)
@@ -204,7 +208,7 @@ Contains
       iTx = d%d(j)%tx
 
       !  manage any necessary initilization for this transmitter
-      call initSolver(iTx,sigma0,e0,e,comb)
+      call initSolver(iTx,sigma0,grid,e0,e,comb)
 
       if(savedSolns) then
          !e0 = eAll%solns(j)
@@ -295,7 +299,7 @@ Contains
 
 
       !  manage any necessary initilization for this transmitter
-      call initSolver(iTx,sigma0,e0,e,comb)
+      call initSolver(iTx,sigma0,grid,e0,e,comb)
       if(j.eq.1) then
         call copy_ModelParam(sigmaTemp,sigma0)
 	    call zero_ModelParam(sigmaTemp)
@@ -388,7 +392,7 @@ Contains
    type(EMsolnMTX_t), intent(inout), optional	:: eAll
 
    ! local variables
-   type(EMsoln_t)				:: e0
+   type(EMsoln_t)		:: e0
    integer				:: iTx,i,j
 
    if(.not.d%allocated) then
@@ -397,8 +401,8 @@ Contains
 
    if(present(eAll)) then
       if(.not. eAll%allocated) then
-         !call errStop('eAll has to be allocated on input to fwdPred')
-         call create_EMsolnMTX(d,eAll)
+         ! on allocation, eAll must have a pointer to the numerical grid
+         call create_EMsolnMTX(grid,d,eAll)
       else if(d%nTx .ne. eAll%nTx) then
          call errStop('dimensions of eAll and d do not agree in fwdPred')
       endif
@@ -414,7 +418,7 @@ Contains
       iTx = d%d(j)%tx
 
       !  do any necessary initialization for transmitter iTx
-      call initSolver(iTx,sigma,e0)
+      call initSolver(iTx,sigma,grid,e0)
 
       ! compute forward solution
       call fwdSolve(iTx,e0)
@@ -441,6 +445,18 @@ Contains
    call exitSolver(e0)
 
    end subroutine fwdPred
+
    !**********************************************************************
+   subroutine setGrid(newgrid)
+
+   !  Use to set and/or update the numerical grid, that is then used
+   !   all computations in this module;
+   !   This is not a pointer target.
+
+   type(grid_t), intent(in)     :: newgrid
+
+   grid = newgrid
+
+   end subroutine setGrid
 
 end module sensMatrix

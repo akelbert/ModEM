@@ -131,14 +131,12 @@ Contains
    call CmSqrtMult(mHat,m)
    call linComb_modelParam(ONE,m,ONE,m0,m)
 
-   !  create data structure to save solutions for all transmitters
-   ! call create_EMSolnMTX(d,eAll)
-
    ! initialize dHat
    dHat = d
 
    !  compute predicted data for current model parameter m
    !   also sets up forward solutions for all transmitters in eAll
+   !   (which is created on the fly if it doesn't exist)
    call fwdPred(m,dHat,eAll)
 
 !	call write_Z_ascii(fidWrite,cfile,nPer,periods,modes, &

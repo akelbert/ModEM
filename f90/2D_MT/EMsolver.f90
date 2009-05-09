@@ -60,17 +60,10 @@ public fwdSolve, sensSolve
 ! create/deallocate EMsoln
 public create_EMsolnMTX, deall_EMsolnMTX
 
-  !  SolnRHS_grid is used to define grid parameters for DataFunc and
-  !    EMsolver modules.  Make a copy of the numerical
-  !   grid geometry parameters in this module at the start of
-  !   the inversion.
-
-type(grid_t), target, save, private     :: SolnRHS_grid
-
 Contains
 
    !**********************************************************************
-   subroutine initSolver(iTx,sigma,e0,e,comb)
+   subroutine initSolver(iTx,sigma,grid,e0,e,comb)
    !   Initializes forward solver for
    !    transmitter iTx: in this instance TE or TM mode solvers
    !    for the appropriate frequency depending on mode
@@ -92,6 +85,7 @@ Contains
 
    integer, intent(in)				:: iTx
    type(modelParam_t),intent(in), target		:: sigma
+   type(grid_t), intent(in), target         :: grid
    !  following structures are initialized/created in this routine
    !	solution vector for forward problem
    type(EMsoln_t), intent(inout)			:: e0
@@ -103,7 +97,7 @@ Contains
    !  local variables
    integer					:: IER
    real(kind=prec)			:: period
-   character*2          			:: mode
+   character*2          	:: mode
    logical					:: initForSens
 
    initForSens = present(comb)
@@ -136,12 +130,12 @@ Contains
       ! initialize coefficient matrix (frequency indpendent part)
       select case(mode)
          case('TE')
-            call FWD2DSetupTE(SolnRHS_grid,sigma,IER)
+            call FWD2DSetupTE(grid,sigma,IER)
             if(IER.lt.0) then
               call errStop('initializing for TE mode in initSolver')
             endif
          case('TM')
-            call FWD2DSetupTM(SolnRHS_grid,sigma,IER)
+            call FWD2DSetupTM(grid,sigma,IER)
             if(IER.lt.0) then
               call errStop('initializing for TM mode in initSolver')
             endif
@@ -153,18 +147,18 @@ Contains
       b0%nonzero_source = .false.
       b0%nonzero_bc = .true.
       b0%adj = 'FWD'
-      call create_EMrhs(SolnRHS_grid,mode,b0)
+      call create_EMrhs(grid,mode,b0)
 
       !  allocate for background solution
-      call create_EMsoln(SolnRHS_grid,mode,e0)
+      call create_EMsoln(grid,mode,e0)
 
       if(initForSens) then
          !  allocate for sensitivity solution, RHS
-         call create_EMsoln(solnRHS_grid,mode,e)
+         call create_EMsoln(grid,mode,e)
          comb%nonzero_source = .true.
          comb%nonzero_bc = .false.
          comb%adj = ''
-         call create_EMrhs(SolnRHS_grid,mode,comb)
+         call create_EMrhs(grid,mode,comb)
       endif
    endif
 
@@ -299,9 +293,10 @@ Contains
    end subroutine sensSolve
 
 !**********************************************************************
-   subroutine create_EMsolnMTX(d,eAll)
+   subroutine create_EMsolnMTX(grid,d,eAll)
 
-      type(dataVecMTX_t),intent(in)          :: d
+      type(grid_t), target, intent(in)     :: grid
+      type(dataVecMTX_t),intent(in)        :: d
       type(EMsolnMTX_t), intent(inout)     :: eAll
 
       !  local variables
@@ -315,7 +310,7 @@ Contains
       eAll%allocated = .true.
       do j = 1,d%nTx
          mode = txDict(d%d(j)%tx)%mode
-         call create_EMsoln(SolnRHS_grid,mode,eAll%solns(j))
+         call create_EMsoln(grid,mode,eAll%solns(j))
       enddo
 
    end subroutine create_EMsolnMTX
@@ -336,25 +331,5 @@ Contains
       eAll%allocated = .false.
 
    end subroutine deall_EMsolnMTX
-
-!**********************************************************************
-    subroutine set_SolnRHS_grid(grid)
-!    Call this routine to set basic grid geometry parameters
-!       before using any other routines in this module (most depend
-!       on saved SolnRHS_grid to define grid geometry)
-
-       type (grid_t), intent(in)     :: grid
-
-       SolnRHS_grid = grid
-
-    end subroutine set_SolnRHS_grid
-
-!**********************************************************************
-    subroutine delete_SolnRHS_grid
-!    Call this routine when SolnRHS_grid is no longer needed
-
-       call deall_grid(SolnRHS_grid)
-
-    end subroutine delete_SolnRHS_grid
 
 end module emsolver

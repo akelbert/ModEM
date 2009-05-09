@@ -31,8 +31,8 @@ module Main
   character(2), pointer, dimension(:), save    		:: modes
   character(80), save                               :: data_units
 
-  ! grid geometry data structure
-  type(grid_t), target, save	:: grid
+  ! this is used to set up the numerical grid in SensMatrix
+  type(grid_t), save	        :: grid
 
   ! impedance data structure
   type(dataVecMTX_t), save		:: allData
@@ -87,8 +87,9 @@ Contains
        !   these stay fixed for all forward modeling with this grid
        call setWSparams(grid%Ny,grid%Nz,grid%Nza)
 
-       !  set grid for higher level solver routines
-       call set_SolnRHS_grid(grid)
+       ! Finish setting up the grid (if that is not done in the read subroutine)
+       call setup_grid(grid)
+
 	else
 	  call warning('No input model parametrization')
 	end if

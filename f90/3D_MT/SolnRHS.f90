@@ -4,11 +4,10 @@ module solnrhs
 !   3D MT version
 !
 ! Defines: EMsoln, EMsparse, EMrhs
-! Uses: EMfield, ModelParameter
+! Uses: EMfield
 
 use math_constants
 use utilities
-use modelparameter
 use sg_vector
 use sg_boundary
 use sg_sparse_vector
@@ -36,8 +35,7 @@ implicit none
     real(kind=prec)	:: period = R_ZERO
     integer 			:: tx = 0
 
-    !! sigma, grid are pointers to the model parameter and grid used
-    type(modelParam_t), pointer	:: sigma
+    !! grid is a pointer to numerical discretization stored in SensMatrix
     type(grid_t), pointer	:: grid
 
 		!! allocated when the EMsoln was created but not yet deallocated

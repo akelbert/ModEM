@@ -119,8 +119,6 @@ Contains
    dhat = d
    b = d
 
-   !  create data structure to save solutions for all transmitters
-   call create_EMSolnMTX(d,eAll)
 
    call setIterControl(PCGiter)
 
@@ -128,6 +126,7 @@ Contains
    do
       !  compute predicted data for current model parameter m
       !   also sets up forward solutions for all transmitters in eAll
+      !   (which is created on the fly if it doesn't exist)
       Call fwdPred(m,res,eAll)
 
       ! compute residual: res = d-dHat
