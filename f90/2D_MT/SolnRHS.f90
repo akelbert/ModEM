@@ -9,6 +9,7 @@ use emfield
 
 implicit none
 
+
  type :: EMsoln_t
     !!   Generic solution type, same name must be used to allow
     !!   use of higher level inversion modules on different problems.
@@ -18,13 +19,21 @@ implicit none
     !!   the basic solution object
     type(cvector)			:: vec
 
-    !!  Mode (TE or TM)
-    character*2				:: mode = ''
-    real(kind=prec)		:: omega = R_ZERO
-    real(kind=prec)		:: period = R_ZERO
+    !!  Mode (TE or TM) and omega/period are stored in the transmitter
+    !!  dictionary. We avoid multiple potential problems by not duplicating
+    !!  this information in EM solution (even when we have it available).
+    !!  Then, if we need access to mode or frequency, we refer to the dictionary.
     type(grid_t), pointer		:: grid
     integer 				:: tx = 0
+    logical                 :: allocated = .false.
   end type EMsoln_t
+
+  type :: EMsolnMTX_t
+    !! Generic solution type for storing solutions from multiple transmitters
+    integer			:: nTx = 0
+    type(EMsoln_t), pointer		:: solns(:)
+    logical			:: allocated = .false.
+  end type EMsolnMTX_t
 
   type :: EMsparse_t
     !!   Generic solution type, same name must be used to allow
@@ -35,15 +44,15 @@ implicit none
 
   type :: EMrhs_t
      !!   right hand side for solving both TE and TM mode equations,
-     !!   forward or adjoint problems
+     !!   forward or adjoint problems (mode & omega stored in txDict)
      character*3			:: adj = ''
-     character*2			:: mode = ''
      logical           			:: nonzero_source = .false.
      logical				:: nonzero_bc = .false.
      logical				:: allocated = .false.
      type(cvector)			:: source
      complex(kind=prec), pointer, dimension(:)	:: bc
      type(grid_t), pointer		:: grid
+     integer                :: tx = 0
   end type EMrhs_t
 
 contains
@@ -52,11 +61,11 @@ contains
 !           Basic EMsoln methods
 !**********************************************************************
 
-     subroutine create_EMsoln(grid,mode,e)
+     subroutine create_EMsoln(grid,iTx,mode,e)
 
-     !  does not set mode, transmitter, pointer to conductivity ????
        implicit none
        type(grid_t), intent(in), target	:: grid
+       integer, intent(in)              :: iTx
        character(2), intent(in)         :: mode
        type (EMsoln_t), intent(inout)	:: e
 
@@ -72,8 +81,9 @@ contains
        endif
 
        call create_cvector(grid,gridType,e%vec)
-       e%mode = mode
+       e%tx = iTx
        e%grid => grid
+       e%allocated = .true.
 
      end subroutine create_EMsoln
 
@@ -86,6 +96,7 @@ contains
        if(associated(e%grid)) then
            nullify(e%grid)
        endif
+       e%allocated = .false.
 
      end subroutine deall_EMsoln
 
@@ -99,11 +110,9 @@ contains
        !  should have some error checking for eIn ...
        call copy_cvector(eOut%vec,eIn%vec)
 
-       eOut%mode = eIn%mode
-       eOut%omega = eIn%omega
-       eOut%period = eIn%period
        eOut%tx = eIn%tx
        eOut%grid => eIn%grid
+       eOut%allocated = eIn%allocated
 
      end subroutine copy_EMsoln
 
@@ -127,6 +136,44 @@ contains
        e%vec%v = C_ZERO
 
      end subroutine zero_EMsoln
+
+
+!**********************************************************************
+!           Basic EMsolnMTX methods
+!**********************************************************************
+
+   subroutine create_EMsolnMTX(nTx,eAll)
+
+      integer, intent(in)               :: nTx
+      type(EMsolnMTX_t), intent(inout)  :: eAll
+
+      ! local variables
+      integer      :: istat
+
+      call deall_EMsolnMTX(eAll)
+
+      eAll%nTx = nTx
+      allocate(eAll%solns(nTx), STAT=istat)
+      eAll%allocated = .true.
+
+   end subroutine create_EMsolnMTX
+
+   !**********************************************************************
+   subroutine deall_EMsolnMTX(eAll)
+
+      type(EMsolnMTX_t), intent(inout)     :: eAll
+
+      !  local variables
+      integer                           :: j, istat
+
+	  do j = 1,eAll%nTx
+	  	call deall_EMsoln(eAll%solns(j))
+	  end do
+
+      if (associated(eAll%solns)) deallocate(eAll%solns, STAT=istat)
+      eAll%allocated = .false.
+
+   end subroutine deall_EMsolnMTX
 
 !**********************************************************************
 !           Basic EMsparse methods
@@ -194,9 +241,10 @@ contains
 !**********************************************************************
      !  allocates and initializes arrays for the "rhs" structure
      !   set pointer to grid + mode/source fields of rhs before calling
-     subroutine create_EMrhs(grid,mode,b)
+     subroutine create_EMrhs(grid,iTx,mode,b)
 
        type(grid_t), intent(in),target	:: grid
+       integer, intent(in)              :: iTx
        character(2), intent(in)         :: mode
        type (EMrhs_t), intent(inout)   	:: b
 
@@ -230,7 +278,7 @@ contains
            call create_cvector(grid,gridType,b%source)
        endif
 
-       b%mode = mode
+       b%tx = iTx
        b%grid => grid
        b%allocated = .true.
 

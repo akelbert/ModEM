@@ -29,19 +29,25 @@ implicit none
     integer			:: nPol = 2
     type(cvector), dimension(2)  	:: pol
 
-    !! omega, period, tx are information about the source used to compute
-    !!   the solution
-    real(kind=prec)	:: omega = R_ZERO
-    real(kind=prec)	:: period = R_ZERO
+    !! tx points to information in the transmitter dictionary about the source
+    !!   used to compute the solution, e.g. omega/period;
+    !!   do not duplicate it here to avoid potential problems
     integer 			:: tx = 0
 
     !! grid is a pointer to numerical discretization stored in SensMatrix
     type(grid_t), pointer	:: grid
 
-		!! allocated when the EMsoln was created but not yet deallocated
+    !! allocated when the EMsoln was created but not yet deallocated
     logical			:: allocated = .false.
 
   end type EMsoln_t
+
+  type :: EMsolnMTX_t
+    !! Generic solution type for storing solutions from multiple transmitters
+    integer			:: nTx = 0
+    type(EMsoln_t), pointer		:: solns(:)
+    logical			:: allocated = .false.
+  end type EMsolnMTX_t
 
   type :: EMsparse_t
     !!   Generic solution type, same name must be used to allow
@@ -67,6 +73,7 @@ implicit none
      type (sparsevecc) 		:: sSparse
      type (cboundary) 		:: bc
      type(grid_t), pointer	:: grid
+     integer                :: tx = 0
   end type RHS_t
 
   type :: EMrhs_t
@@ -84,12 +91,12 @@ contains
 !           Basic EMsoln methods
 !**********************************************************************
 
-     subroutine create_EMsoln(grid,e)
+     subroutine create_EMsoln(grid,iTx,e)
 
      !  3DMT  version:  NO gridType needed
-     !  does not set transmitter or pointer to conductivity
        implicit none
-       type(grid_t), intent(in), target	:: grid
+       type(grid_t), intent(in), target	    :: grid
+       integer, intent(in)                  :: iTx
        type (EMsoln_t), intent(inout)		:: e
 
        ! local variables
@@ -104,9 +111,10 @@ contains
        do k = 1,e%nPol
           call create_cvector(grid,e%pol(k),EDGE)
        enddo
+       e%tx = iTx
        e%grid => grid
 
-			 e%allocated = .true.
+	   e%allocated = .true.
 
      end subroutine create_EMsoln
 
@@ -145,10 +153,9 @@ contains
           call copy_cvector(eOut%pol(k),eIn%pol(k))
        enddo
 
-       eOut%omega = eIn%omega
-       eOut%period = eIn%period
        eOut%tx = eIn%tx
        eOut%grid => eIn%grid
+       eOut%allocated = eIn%allocated
 
      end subroutine copy_EMsoln
 
@@ -166,6 +173,43 @@ contains
        enddo
 
      end subroutine zero_EMsoln
+
+
+!**********************************************************************
+!           Basic EMsolnMTX methods
+!**********************************************************************
+
+   subroutine create_EMsolnMTX(nTx,eAll)
+
+      integer, intent(in)               :: nTx
+      type(EMsolnMTX_t), intent(inout)  :: eAll
+
+      !  local variables
+      integer                           :: istat
+
+      eAll%nTx = nTx
+      allocate(eAll%solns(nTx), STAT=istat)
+      eAll%allocated = .true.
+
+   end subroutine create_EMsolnMTX
+
+   !**********************************************************************
+   subroutine deall_EMsolnMTX(eAll)
+
+      type(EMsolnMTX_t), intent(inout)     :: eAll
+
+      !  local variables
+      integer                           :: j, istat
+
+	  do j = 1,eAll%nTx
+	  	call deall_EMsoln(eAll%solns(j))
+	  end do
+
+      if (associated(eAll%solns)) deallocate(eAll%solns, STAT=istat)
+      eAll%allocated = .false.
+
+   end subroutine deall_EMsolnMTX
+
 
 !**********************************************************************
 !           Basic EMsparse methods
@@ -223,7 +267,7 @@ contains
      !   set pointer to grid before calling
      !   NO gridType needed for 3DMT
 
-     subroutine create_RHS(grid,b)
+     subroutine create_RHS(grid,iTx,b)
      !   3D version  ...
      !     does not create sparse vectors if sparsesource = .true.
      !       (this would in any event require knowing number of
@@ -231,6 +275,7 @@ contains
 		 ! NOTE: Does not do anything if b%allocated is .true.
 
        type(grid_t), intent(in),target	:: grid
+       integer, intent(in)              :: iTx
        type (RHS_t), intent(inout)   	:: b
 
 			 if (b%allocated) then
@@ -257,6 +302,7 @@ contains
           endif
        endif
 
+       b%tx = iTx
        b%grid => grid
 
      end subroutine create_RHS
@@ -316,13 +362,14 @@ contains
      !   set pointer to grid before calling
      !   NO gridType needed for 3DMT
 
-     subroutine create_EMrhs(grid,b)
+     subroutine create_EMrhs(grid,iTx,b)
      !   3D version  ...
      !     does not create sparse vectors if sparsesource = .true.
      !       (this would in any event require knowing number of
      !         non-zero coefficients to allow for)
 
        type(grid_t), intent(in),target	:: grid
+       integer, intent(in)              :: iTx
        type (EMrhs_t), intent(inout)   	:: b
 
        integer				:: k
@@ -333,7 +380,7 @@ contains
        endif
 
        do k = 1,b%nPol
-          call create_RHS(grid,b%b(k))
+          call create_RHS(grid,iTx,b%b(k))
        enddo
 
        b%allocated = .true.

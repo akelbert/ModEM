@@ -138,7 +138,7 @@ Contains
               call sensSolve(iTx,TRN,comb,e)
 
               ! multiply by P^T (and add Q^T if appropriate)
-              if(typeDict(iDT)%isComplex) then
+              if(dVec%isComplex) then
                  ii = ii + 2
                  call PmultT(e0,sigma0,e,dsigma(ii-1),dsigma(ii))
                  if(calcQ) then
@@ -401,8 +401,7 @@ Contains
 
    if(present(eAll)) then
       if(.not. eAll%allocated) then
-         ! on allocation, eAll must have a pointer to the numerical grid
-         call create_EMsolnMTX(grid,d,eAll)
+         call create_EMsolnMTX(d%nTx,eAll)
       else if(d%nTx .ne. eAll%nTx) then
          call errStop('dimensions of eAll and d do not agree in fwdPred')
       endif

@@ -173,7 +173,6 @@ Contains
    !  is normally referred to as \tilde{m} = C_m^{-1/2}(m - m_0),
    !  and the gradient is computed with respect to \tilde{m}.
    !  Before calling this routine, the forward solver must be run:
-   !  call create_EMsolnMTX(d,eAll)
    !  call CmSqrtMult(mHat,m)
    !  call linComb_modelParam(ONE,m,ONE,m0,m)
    !  call fwdPred(m,dHat,eAll)

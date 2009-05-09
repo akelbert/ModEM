@@ -832,6 +832,7 @@ Contains
       !   local variables
       integer           :: j,k,nMode = 2, ios
       character (len=20) 		:: version = '',ModeNames(2)
+      real (kind=prec)   :: omega
 
       ModeNames(1) = 'Ey'
       ModeNames(2) = 'Ex'
@@ -841,7 +842,8 @@ Contains
 
       do j = 1,eAll%nTx
          do k = 1,2
-           call EfileWrite(fid,eAll%solns(j)%omega, j,  &
+           omega = txDict(eAll%solns(j)%tx)%omega
+           call EfileWrite(fid, omega, j,  &
              k, ModeNames(k), eAll%solns(j)%pol(k))
          enddo
       enddo

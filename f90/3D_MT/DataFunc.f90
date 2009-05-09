@@ -72,7 +72,7 @@ Contains
   logical			:: ComputeHz
 
   !  probably should dependence on omega into BinterpSetup, as in 2D!
-  omega = ef%omega
+  omega = txDict(ef%tx)%omega
   x = rxDict(iRX)%x
   ComputeHz = (typeDict(iDT)%tfType.EQ.Impedance_Plus_Hz)
 
@@ -180,7 +180,7 @@ Contains
   type(sparsevecC)		:: Lex,Ley,Lbx,Lby,Lbz
   logical			:: ComputeHz
 
-  omega = e0%omega
+  omega = txDict(e0%tx)%omega
   x = rxDict(iRX)%x
 
   !  set up which components are needed,  ... and ! evaluate

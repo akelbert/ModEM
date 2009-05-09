@@ -76,7 +76,7 @@ Contains
      call errStop('dSigma required as input to linDataMeas for this data type')
   endif
   ncomp = d%ncomp
-  if(typeDict(iDT)%isComplex) then
+  if(d%isComplex) then
      !  data are complex; one sensitivity calculation can be
      !   used for both real and imaginary parts
      if(mod(ncomp,2).ne.0) then
@@ -103,14 +103,14 @@ Contains
      call linDataFunc(e0,Sigma0,iDT,d%rx(iSite),Lz,Qz)
      if((iSite .eq. 1).and.calcQ) then
         call copy_ModelParam(sigmaQreal,Sigma0)
-        if(typeDict(iDT)%isComplex) then
+        if(d%isComplex) then
            call copy_ModelParam(sigmaQimag,Sigma0)
         endif
      endif
      iComp = 1
      do iFunc  = 1, nFunc
         Z = dotProd_EMsparseEMsoln(Lz(iFunc),ef,Conj_Case)
-        if(typeDict(iDT)%isComplex) then
+        if(d%isComplex) then
            d%value(iComp,iSite) = real(Z)
            iComp = iComp + 1
            d%value(iComp,iSite) = imag(Z)
@@ -142,7 +142,7 @@ Contains
      if(calcQ) then
         call deall_EMSparse(Qz(iFunc))
         call deall_modelParam(sigmaQreal)
-        if(typeDict(iDT)%isComplex) then
+        if(d%isComplex) then
            call deall_modelParam(sigmaQimag)
         endif
      endif
@@ -200,7 +200,7 @@ Contains
   !  calcQ is true when data functional coefficients depend on
   !   model parameters
   nComp = d%nComp
-  if(typeDict(iDT)%isComplex) then
+  if(d%isComplex) then
      !  data are complex; one sensitivity calculation can be
      !   used for both real and imaginary parts
      if(mod(ncomp,2).ne.0) then
@@ -223,7 +223,7 @@ Contains
      call linDataFunc(e0,Sigma0,iDT,d%rx(iSite),Lz,Qz)
      iComp = 1
      do iFunc  = 1, nFunc
-        if(typeDict(iDT)%isComplex) then
+        if(d%isComplex) then
            !  move real data in dataVec into complex conjugate of TF (impedance)
            !  multiply this by data kernel for complex impedance ...
            !      (take real part in parameter space)
@@ -275,7 +275,7 @@ Contains
 
   iDT = d%dataType
   ncomp = d%ncomp
-  if(typeDict(iDT)%isComplex) then
+  if(d%isComplex) then
      !  data are complex; one sensitivity calculation can be
      !   used for both real and imaginary parts
      if(mod(ncomp,2).ne.0) then
@@ -296,7 +296,7 @@ Contains
      !  Loop over components
      iComp = 0
      do iFunc  = 1, nFunc
-        if(typeDict(iDT)%isComplex) then
+        if(d%isComplex) then
            iComp = iComp + 1
            d%value(iComp,iSite) = real(Z(iFunc))
            iComp = iComp + 1

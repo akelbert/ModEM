@@ -28,18 +28,6 @@ type(EMrhs_t), save, private		:: b0
 !    (to minimize reinitialization ... not clear this is needed!)
 character*2, save, public		:: currentMode = '  '
 
-! new type to store multiple EM solutions, one for each transmitter
-!  NOTE: creation routine for this data type cannot be at the level
-!   of the solnrhs module, since this depends on txDict (not available
-!    for the lower level routine).  Might as well also leave the
-!    type definition here, since you can't use the type until instances
-!    can be created!
-type :: EMsolnMTX_t
-  !  derived data type for storing solutions from multiple transmitters
-  integer			:: nTx = 0
-  type(EMsoln_t), pointer		:: solns(:)
-  logical			:: allocated = .false.
-end type EMsolnMTX_t
 
 !  initialization routines (call Fwd version if no sensitivities are
 !     are calculated).  Note that these routines are set up to
@@ -57,8 +45,6 @@ public exitSolver
 ! solver routines
 public fwdSolve, sensSolve
 
-! create/deallocate EMsoln
-public create_EMsolnMTX, deall_EMsolnMTX
 
 Contains
 
@@ -147,18 +133,18 @@ Contains
       b0%nonzero_source = .false.
       b0%nonzero_bc = .true.
       b0%adj = 'FWD'
-      call create_EMrhs(grid,mode,b0)
+      call create_EMrhs(grid,iTx,mode,b0)
 
       !  allocate for background solution
-      call create_EMsoln(grid,mode,e0)
+      call create_EMsoln(grid,iTx,mode,e0)
 
       if(initForSens) then
          !  allocate for sensitivity solution, RHS
-         call create_EMsoln(grid,mode,e)
+         call create_EMsoln(grid,iTx,mode,e)
          comb%nonzero_source = .true.
          comb%nonzero_bc = .false.
          comb%adj = ''
-         call create_EMrhs(grid,mode,comb)
+         call create_EMrhs(grid,iTx,mode,comb)
       endif
    endif
 
@@ -251,12 +237,9 @@ Contains
          endif
       case default
    end select
-   !  set transmitter index for this solution
-   !          (sigma is set at initialization)
+
+   ! update pointer to the transmitter in EMsoln
    e0%tx = iTx
-   e0%mode = mode
-   e0%period = period
-   e0%omega = omega
 
    end subroutine fwdSolve
 
@@ -289,47 +272,10 @@ Contains
           call errStop('solving TM mode equation in sensSolve')
        endif
    endif
+
+   ! update pointer to the transmitter in EMsoln
    e%tx = iTx
+
    end subroutine sensSolve
-
-!**********************************************************************
-   subroutine create_EMsolnMTX(grid,d,eAll)
-
-      type(grid_t), target, intent(in)     :: grid
-      type(dataVecMTX_t),intent(in)        :: d
-      type(EMsolnMTX_t), intent(inout)     :: eAll
-
-      !  local variables
-      integer                           :: j
-      character(2)                      :: mode
-
-      call deall_EMsolnMTX(eAll)
-
-      eAll%nTx = d%nTx
-      allocate(eAll%solns(d%nTx))
-      eAll%allocated = .true.
-      do j = 1,d%nTx
-         mode = txDict(d%d(j)%tx)%mode
-         call create_EMsoln(grid,mode,eAll%solns(j))
-      enddo
-
-   end subroutine create_EMsolnMTX
-
-   !**********************************************************************
-   subroutine deall_EMsolnMTX(eAll)
-
-      type(EMsolnMTX_t), intent(inout)     :: eAll
-
-      !  local variables
-      integer                           :: j
-
-	  do j = 1,eAll%nTx
-	  	call deall_EMsoln(eAll%solns(j))
-	  end do
-
-      if (associated(eAll%solns)) deallocate(eAll%solns)
-      eAll%allocated = .false.
-
-   end subroutine deall_EMsolnMTX
 
 end module emsolver

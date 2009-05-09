@@ -82,8 +82,8 @@ Contains
   character*80			:: msg
 
   !  get mode, frequency for transmitter used to compute solution ef
-  mode = ef%mode
-  omega =  ef%omega
+  mode = txDict(ef%tx)%mode
+  omega =  txDict(ef%tx)%omega
   ! get location from reciever dictionary
   x = rxDict(iRX)%x
 
@@ -153,8 +153,8 @@ Contains
   logical				:: Conj_case = .false.
 
   !  get mode, frequency for transmitter used to compute solution ef
-  mode = e0%mode
-  omega =  e0%omega
+  mode = txDict(e0%tx)%mode
+  omega =  txDict(e0%tx)%omega
   ! get location from reciever dictionary
   x = rxDict(iRX)%x
 

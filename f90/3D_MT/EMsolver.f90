@@ -24,19 +24,6 @@ implicit none
 !   rhs data structures for solving forward, sensitivity probs
 type(RHS_t), save, private		:: b0
 
-! new type to store multiple EM solutions, one for each transmitter
-!  NOTE: creation routine for this data type cannot be at the level
-!   of the solnrhs module, since this depends on txDict (not available
-!    for the lower level routine).  Might as well also leave the
-!    type definition here, since you can't use the type until instances
-!    can be created!
-type :: EMsolnMTX_t
-  !  derived data type for storing solutions from multiple transmitters
-  integer			:: nTx = 0
-  type(EMsoln_t), pointer		:: solns(:)
-  logical			:: allocated = .false.
-end type EMsolnMTX_t
-
 !  initialization routines (call Fwd version if no sensitivities are
 !     are calculated).  Note that these routines are set up to
 !    automatically manage memory and to figure out which initialization
@@ -51,7 +38,7 @@ public initSolver
 public exitSolver
 
 ! solver routines
-public fwdSolve, sensSolve, create_EMsolnMTX
+public fwdSolve, sensSolve
 
 logical, save, private		:: modelDataInitialized = .false.
 !  logical, save, private		:: sigmaNotCurrent = .true.
@@ -99,14 +86,14 @@ Contains
    b0%nonzero_bc = .true.
    b0%adj = 'FWD'
    b0%sparse_Source = .false.
-   call create_RHS(grid,b0)
+   call create_RHS(grid,iTx,b0)
 
    !  allocate for background solution
-   call create_EMsoln(grid,e0)
+   call create_EMsoln(grid,iTx,e0)
 
    if(initForSens) then
       !  allocate for sensitivity solution, RHS
-      call create_EMsoln(grid,e)
+      call create_EMsoln(grid,iTx,e)
       do k = 1,comb%nPol
 
         comb%b(k)%nonzero_source = .true.
@@ -115,7 +102,7 @@ Contains
         comb%b(k)%sparse_Source = .false.
         comb%b(k)%adj = ''
       enddo
-      call create_EMrhs(grid,comb)
+      call create_EMrhs(grid,iTx,comb)
    endif
 
    if(.NOT.modelDataInitialized) then
@@ -207,11 +194,9 @@ Contains
 				' problem for freq ',omega/(2*PI),' & mode # ',imode
       call FWDsolve3D(b0,omega,e0%pol(imode))
    enddo
-   !  set transmitter index for this solution
-   !          (sigma is set at initialization)
+
+   ! update pointer to the transmitter in EMsoln
    e0%tx = iTx
-   e0%period = period
-   e0%omega = omega
 
    end subroutine fwdSolve
 
@@ -244,49 +229,10 @@ Contains
       call FWDsolve3d(comb%b(imode),omega,e%pol(imode))
    enddo
 
+   ! update pointer to the transmitter in EMsoln
    e%tx = iTx
-	 e%period = period
-	 e%omega = omega
 
    end subroutine sensSolve
-
-!**********************************************************************
-   subroutine create_EMsolnMTX(grid,d,eAll)
-
-      type(grid_t), target, intent(in)     :: grid
-      type(dataVecMTX_t),intent(in)        :: d
-      type(EMsolnMTX_t), intent(inout)     :: eAll
-
-      !  local variables
-      integer                           :: j
-      character*80                      :: gridType
-
-      eAll%nTx = d%nTx
-      allocate(eAll%solns(d%nTx))
-      eAll%allocated = .true.
-      do j = 1,d%nTx
-         call create_EMsoln(grid,eAll%solns(j))
-      enddo
-
-   end subroutine create_EMsolnMTX
-
-   !**********************************************************************
-   subroutine deall_EMsolnMTX(eAll)
-
-      type(EMsolnMTX_t), intent(inout)     :: eAll
-
-      !  local variables
-      integer                           :: j
-      character*80                      :: gridType
-
-	  do j = 1,eAll%nTx
-	  	call deall_EMsoln(eAll%solns(j))
-	  end do
-
-      if (associated(eAll%solns)) deallocate(eAll%solns)
-      eAll%allocated = .false.
-
-   end subroutine deall_EMsolnMTX
 
 
 end module emsolver

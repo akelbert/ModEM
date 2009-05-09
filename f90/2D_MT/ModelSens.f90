@@ -165,9 +165,9 @@ module ModelSens
    character*80                 	    :: gridType
    type(cvector)                 	    :: Jy,Jz,CJy,CJz
 
-   if(e0%mode.eq.'TE') then
+   if(txDict(e0%tx)%mode.eq.'TE') then
 
-	   i_omega_mu = cmplx(0.,ISIGN*MU_0*e0%omega,kind=prec)
+	   i_omega_mu = cmplx(0.,ISIGN*MU_0*txDict(e0%tx)%omega,kind=prec)
 	   e%source%v = C_ZERO
 	   call dModelParamToNode(dsigma,e%source,sigma0)
 
@@ -223,14 +223,14 @@ module ModelSens
    type(modelParam_t), intent(inout)               :: dsigmaReal
    type(modelParam_t), intent(inout),optional      :: dsigmaImag
    !  local variables
-   complex(kind=prec)			:: i_omega_mu
+   complex(kind=prec)			        :: i_omega_mu
    character*80					        :: gridType
    type(cvector)					    :: Jy,Jz,CJy,CJz
    type(cvector)					    :: temp
 
-   if(e0%mode.eq.'TE') then
+   if(txDict(e0%tx)%mode.eq.'TE') then
 
-	   i_omega_mu = cmplx(0.,ISIGN*MU_0*e0%omega,kind=prec)
+	   i_omega_mu = cmplx(0.,ISIGN*MU_0*txDict(e0%tx)%omega,kind=prec)
 
 	   call create_cvector(e0%vec%grid,e0%vec%gridType,temp)
 	   ! multiply backward solution by i_omega_mu * e0
@@ -297,7 +297,7 @@ module ModelSens
    character*80                 	    :: gridType
    type(cvector)                 	    :: Jy,Jz,CJy,CJz
 
-   if(e0%mode.eq.'TE') then
+   if(txDict(e0%tx)%mode.eq.'TE') then
 
        call zero_dataVec(d)
 
@@ -347,7 +347,7 @@ module ModelSens
    character*80					        :: gridType
    type(cvector)					    :: Jy,Jz,CJy,CJz
 
-   if(e0%mode.eq.'TE') then
+   if(txDict(e0%tx)%mode.eq.'TE') then
 
        dsigmaReal = sigma0
        call zero_modelParam(dsigmaReal)

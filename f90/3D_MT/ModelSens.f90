@@ -44,7 +44,7 @@ module ModelSens
    type(rvector)			        :: temp
    integer				            :: k
 
-   minus_i_omega_mu = cmplx(0.,-ISIGN*MU_0*e0%omega,kind=prec)
+   minus_i_omega_mu = cmplx(0.,-ISIGN*MU_0*txDict(e0%tx)%omega,kind=prec)
    call create_rvector(e0%grid,temp,EDGE)
 
    ! map dsigma to edges, storing in array temp
@@ -81,7 +81,7 @@ module ModelSens
    type(rvector)				:: temp
    integer					:: k
 
-   minus_i_omega_mu = cmplx(0.,-ISIGN*MU_0*e0%omega,kind=prec)
+   minus_i_omega_mu = cmplx(0.,-ISIGN*MU_0*txDict(e0%tx)%omega,kind=prec)
    call create_rvector(e0%grid,temp,EDGE)
    call create_cvector(e0%grid,Ctemp(1),EDGE)
    call create_cvector(e0%grid,Ctemp(2),EDGE)
