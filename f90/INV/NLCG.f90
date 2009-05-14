@@ -129,7 +129,7 @@ Contains
 
    ! compute the smoothed model parameter vector
    call CmSqrtMult(mHat,m)
-   call linComb_modelParam(ONE,m,ONE,m0,m)
+   call linComb(ONE,m,ONE,m0,m)
 
    ! initialize dHat
    dHat = d
@@ -144,14 +144,14 @@ Contains
 
 
    ! compute residual: res = d-dHat
-   call linComb_dataVecMTX(ONE,d,MinusONE,dHat,res)
+   call linComb(ONE,d,MinusONE,dHat,res)
 
    ! normalize residuals, compute sum of squares
    call CdInvMult(res,Nres)
    SS = dotProd(res,Nres)
 
    ! compute the model norm
-   mNorm = dotProd_modelParam(mHat,mHat)
+   mNorm = dotProd(mHat,mHat)
 
    ! penalty functional = sum of squares + scaled model norm
    F = SS + (lambda * mNorm)
@@ -174,7 +174,7 @@ Contains
    !  and the gradient is computed with respect to \tilde{m}.
    !  Before calling this routine, the forward solver must be run:
    !  call CmSqrtMult(mHat,m)
-   !  call linComb_modelParam(ONE,m,ONE,m0,m)
+   !  call linComb(ONE,m,ONE,m0,m)
    !  call fwdPred(m,dHat,eAll)
 
    real(kind=prec), intent(in)  :: lambda
@@ -193,10 +193,10 @@ Contains
 
    ! compute the smoothed model parameter vector
    call CmSqrtMult(mHat,m)
-   call linComb_modelParam(ONE,m,ONE,m0,m)
+   call linComb(ONE,m,ONE,m0,m)
 
    ! compute residual: res = d-dHat
-   call linComb_dataVecMTX(ONE,d,MinusONE,dHat,res)
+   call linComb(ONE,d,MinusONE,dHat,res)
 
    ! loop over transmitters:
    !do j = 1,res%nTx
@@ -210,7 +210,7 @@ Contains
    call CmSqrtMult(JTd,CmJTd)
    ! multiply by 2 (to be consistent with the formula)
    ! and add the gradient of the model norm
-   call linComb_modelParam(MinusTWO,CmJTd,TWO*lambda,mHat,grad)
+   call linComb(MinusTWO,CmJTd,TWO*lambda,mHat,grad)
 
    end subroutine gradient
 
@@ -226,13 +226,13 @@ Contains
 	 type(modelParam_t)          :: dSS
 
    ! compute the model norm
-   mNorm = dotProd_modelParam(mHat,mHat)
+   mNorm = dotProd(mHat,mHat)
 
    ! sum of squares = penalty functional - scaled model norm
    SS = F - (lambda * mNorm)
 
 	 ! subtract the model norm derivative from the gradient of the penalty functional
-   call linComb_modelParam(ONE,grad,MinusTWO*lambda,mHat,dSS)
+   call linComb(ONE,grad,MinusTWO*lambda,mHat,dSS)
 
 	 ! update the damping parameter lambda
 	 lambda = iterControl%k * lambda
@@ -241,7 +241,7 @@ Contains
    F = SS + (lambda * mNorm)
 
 	 ! add the model norm derivative to the gradient of the penalty functional
-   call linComb_modelParam(ONE,dSS,TWO*lambda,mHat,grad)
+   call linComb(ONE,dSS,TWO*lambda,mHat,grad)
 
    end subroutine update_damping_parameter
 
@@ -293,7 +293,7 @@ Contains
 
 	! apply the operator Cm^(1/2) here
 	! m_out = m_in
-	call multBy_CmSqrt(m_in, m_out)
+	m_out = multBy_CmSqrt(m_in)
 
    end subroutine CmSqrtMult
 
@@ -356,8 +356,7 @@ Contains
 
    ! starting from the prior hardcoded by setting mHat = 0 and m = m0
    m = m0
-   mHat = m0
-   call zero_modelParam(mHat)
+   mHat = zero_modelParam(m0)
 
 
    !  compute the penalty functional and predicted data
@@ -372,7 +371,7 @@ Contains
    call write_modelParam(grad,trim(gradFile))
 
    ! update the initial value of alpha if necessary
-   gnorm = sqrt(dotProd_modelParam(grad,grad))
+   gnorm = sqrt(dotProd(grad,grad))
    if (alpha * gnorm > startdm) then
       	alpha = startdm / gnorm
  		! write(*,'(a39,f9.6)') 'The initial value of alpha updated to ',alpha
@@ -381,7 +380,7 @@ Contains
    ! initialize CG: g = - grad; h = g
    nCG = 0
    iter = 0
-   call linComb_modelParam(MinusONE,grad,R_ZERO,grad,g)
+   call linComb(MinusONE,grad,R_ZERO,grad,g)
    h = g
 
    do
@@ -395,7 +394,7 @@ Contains
 	  ! save the values of the functional and the directional derivative
 		rmsPrev = rms
 	  valuePrev = value
-	  grad_dot_h = dotProd_modelParam(grad,h)
+	  grad_dot_h = dotProd(grad,h)
 
 	  ! at the end of line search, set mHat to the new value
 	  ! mHat = mHat + alpha*h  and evaluate gradient at new mHat
@@ -410,7 +409,7 @@ Contains
 	  end select
 		nfunc = nfunc + nLS
 	  gPrev = g
-	  call linComb_modelParam(MinusONE,grad,R_ZERO,grad,g)
+	  call linComb(MinusONE,grad,R_ZERO,grad,g)
 
 	  ! compute the starting step for the next line search
 	  alpha = 2*(value - valuePrev)/grad_dot_h
@@ -422,7 +421,7 @@ Contains
 
       ! write out the intermediate model solution
       call CmSqrtMult(mHat,m_minus_m0)
-   	  call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
+   	  call linComb(ONE,m_minus_m0,ONE,m0,m)
    	  write(iterChar,'(i3.3)') iter
    	  modelFile = trim(iterControl%modelFile)//'_NLCG_'//iterChar//'.cpr'
       call write_modelParam(m,trim(modelFile))
@@ -431,13 +430,13 @@ Contains
 	  if (abs(rmsPrev - rms) < iterControl%fdiffTol) then
 	  	! update lambda, penalty functional and gradient
       call update_damping_parameter(lambda,mHat,value,grad)
-			call linComb_modelParam(MinusONE,grad,R_ZERO,grad,g)
+			call linComb(MinusONE,grad,R_ZERO,grad,g)
 			! check that lambda is still at a reasonable value
 			if (lambda < iterControl%lambdaTol) then
 				write(*,'(a55)') 'Unable to get out of a local minimum. Exiting...'
 				! multiply by C^{1/2} and add m_0
                 call CmSqrtMult(mHat,m_minus_m0)
-                call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
+                call linComb(ONE,m_minus_m0,ONE,m0,m)
                 !d = dHat
 				return
 			end if
@@ -449,10 +448,10 @@ Contains
 	  	cycle
 	  end if
 
-	  g_dot_g = dotProd_modelParam(g,g)
-	  g_dot_gPrev = dotProd_modelParam(g,gPrev)
-	  gPrev_dot_gPrev = dotProd_modelParam(gPrev,gPrev)
-	  g_dot_h = dotProd_modelParam(g,h)
+	  g_dot_g = dotProd(g,g)
+	  g_dot_gPrev = dotProd(g,gPrev)
+	  gPrev_dot_gPrev = dotProd(gPrev,gPrev)
+	  g_dot_h = dotProd(g,h)
 
 	  ! Polak-Ribiere variant
 	  beta = ( g_dot_g - g_dot_gPrev )/gPrev_dot_gPrev
@@ -463,7 +462,7 @@ Contains
 		! g_{i+1}.dot.(g_{i+1}+beta*h_i) > 0 must hold. Alternatively, books
 		! say we can take beta > 0 (didn't work as well)
 	  if ((g_dot_g + beta*g_dot_h > 0).and.(nCG < iterControl%nCGmax)) then
-      	call linComb_modelParam(ONE,g,beta,h,h)
+      	call linComb(ONE,g,beta,h,h)
       	nCG = nCG + 1
 	  else
    	    ! restart
@@ -476,7 +475,7 @@ Contains
 
    ! multiply by C^{1/2} and add m_0
    call CmSqrtMult(mHat,m_minus_m0)
-   call linComb_modelParam(ONE,m_minus_m0,ONE,m0,m)
+   call linComb(ONE,m_minus_m0,ONE,m0,m)
    !d = dHat
    write(*,'(a25,i5,a25,i5)') 'NLCG iterations:',iter,' function evaluations:',nfunc
 
@@ -570,11 +569,11 @@ Contains
    starting_guess = .false.
 
    ! rescale the search direction
-   !h_dot_h = dotProd_modelParam(h,h)
+   !h_dot_h = dotProd(h,h)
    !h = scMult_modelParam(ONE/sqrt(h_dot_h),h)
 
    ! g_0 is the directional derivative f'(0) = (df/dm).dot.h
-   g_0 = dotProd_modelParam(grad,h)
+   g_0 = dotProd(grad,h)
 
    ! alpha_1 is the initial step size, which will in future be set in NLCG
    !alpha_1 = ONE/maxNorm_modelParam(h)
@@ -589,7 +588,7 @@ Contains
    end if
 
    !  compute the trial parameter mHat_1
-   call linComb_modelParam(ONE,mHat_0,alpha_1,h,mHat_1)
+   call linComb(ONE,mHat_0,alpha_1,h,mHat_1)
 
    !  compute the penalty functional and predicted data at mHat_1
    call func(lambda,d,m0,mHat_1,f_1,dHat_1,eAll_1,rms_1)
@@ -621,7 +620,7 @@ Contains
   !  if ((alpha_i - alpha < eps).or.(alpha < k*alpha_i)) then
   !  	alpha = alpha_i/TWO ! reset alpha to ensure progress
   !  end if
-    call linComb_modelParam(ONE,mHat_0,alpha,h,mHat)
+    call linComb(ONE,mHat_0,alpha,h,mHat)
     call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
     call printf('QUADLS',lambda,alpha,f,rms)
     niter = niter + 1
@@ -650,7 +649,7 @@ Contains
 
    ! compute gradient of the full penalty functional and exit
     if (relaxation) then
-   		call linComb_modelParam(ONE,mHat_0,gamma*alpha,h,mHat)
+   		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
     	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
    		call printf('RELAX',lambda,gamma*alpha,f,rms)
    	end if
@@ -738,11 +737,11 @@ Contains
    starting_guess = .false.
 
    ! rescale the search direction
-   !h_dot_h = dotProd_modelParam(h,h)
+   !h_dot_h = dotProd(h,h)
    !h = scMult_modelParam(ONE/sqrt(h_dot_h),h)
 
    ! g_0 is the directional derivative f'(0) = (df/dm).dot.h
-   g_0 = dotProd_modelParam(grad,h)
+   g_0 = dotProd(grad,h)
 
    ! alpha_1 is the initial step size, which will in future be set in NLCG
    alpha_1 = alpha
@@ -756,7 +755,7 @@ Contains
    end if
 
    ! compute the trial mHat, f, dHat, eAll, rms
-   call linComb_modelParam(ONE,mHat_0,alpha_1,h,mHat_1)
+   call linComb(ONE,mHat_0,alpha_1,h,mHat_1)
    call func(lambda,d,m0,mHat_1,f_1,dHat_1,eAll_1,rms_1)
    call printf('STARTLS',lambda,alpha,f_1,rms_1)
    niter = niter + 1
@@ -781,7 +780,7 @@ Contains
    	f = f_1
     ! compute the gradient and exit
     if (relaxation) then
-   		call linComb_modelParam(ONE,mHat_0,gamma*alpha,h,mHat)
+   		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
     	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
    		call printf('RELAX',lambda,gamma*alpha,f,rms)
    	end if
@@ -792,7 +791,7 @@ Contains
 
    ! otherwise compute the functional at the minimizer of the quadratic
    alpha = - b/(TWO*a)
-   call linComb_modelParam(ONE,mHat_0,alpha,h,mHat)
+   call linComb(ONE,mHat_0,alpha,h,mHat)
    call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
    call printf('QUADLS',lambda,alpha,f,rms)
    niter = niter + 1
@@ -810,7 +809,7 @@ Contains
     end if
     ! compute the gradient and exit
     if (relaxation) then
-   		call linComb_modelParam(ONE,mHat_0,gamma*alpha,h,mHat)
+   		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
     	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
    		call printf('RELAX',lambda,gamma*alpha,f,rms)
    	end if
@@ -839,7 +838,7 @@ Contains
   !  	alpha = alpha_j/TWO ! reset alpha to ensure progress
   !  end if
 	! compute the penalty functional
-    call linComb_modelParam(ONE,mHat_0,alpha,h,mHat)
+    call linComb(ONE,mHat_0,alpha,h,mHat)
     call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
     call printf('CUBICLS',lambda,alpha,f,rms)
     niter = niter + 1
@@ -870,7 +869,7 @@ Contains
 
    ! compute gradient of the full penalty functional and exit
     if (relaxation) then
-   		call linComb_modelParam(ONE,mHat_0,gamma*alpha,h,mHat)
+   		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
     	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
    		call printf('RELAX',lambda,gamma*alpha,f,rms)
    	end if

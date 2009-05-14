@@ -3,6 +3,13 @@ module GridDef
 
    use math_constants
 
+   ! Don't forget to overload the '=' sign: depending on the compiler, might
+   ! run into trouble with the default assignment, since that sometimes doesn't
+   ! copy allocatable or pointer arrays
+   INTERFACE ASSIGNMENT (=)
+     MODULE PROCEDURE copy_grid
+   END INTERFACE
+
    ! Possible grid types, on which cvector is defined. Viewing the grid
    ! as 2D, NODES and EDGES correspond to the corners and the edges of
    ! all square grid elements, and CELLS corresponds to the centers of
@@ -25,7 +32,7 @@ module GridDef
       real (kind=prec), pointer, dimension(:) :: yCenter,zCenter
    end type grid_t
 
-   public         :: create_grid, deall_grid, setup_grid
+   public         :: create_grid, deall_grid, setup_grid, copy_grid
 
    Contains
 
@@ -112,5 +119,32 @@ module GridDef
            grid%zCenter(iz) = (grid%zNode(iz)+grid%zNode(iz+1))/2.;
         enddo
      end subroutine setup_grid
+
+     !************************************************************************
+     subroutine copy_grid(gridOut,gridIn)
+       !  overloads the '=' sign
+       !
+       implicit none
+       type (grid_t), intent(in)		:: gridIn
+       type (grid_t), intent(out)		:: gridOut
+       integer		        			:: Nz,Ny,Nza
+
+       Ny = gridIn%Ny
+       Nz = gridIn%Nz
+       Nza = gridIn%Nza
+
+       call deall_grid(gridOut)
+       call create_grid(Ny,Nz,Nza,gridOut)
+
+       gridOut%Dy = gridIn%Dy
+       gridOut%Dz = gridIn%Dz
+       gridOut%Dely = gridIn%Dely
+       gridOut%Delz = gridIn%Delz
+       gridOut%yNode = gridIn%yNode
+       gridOut%zNode = gridIn%zNode
+       gridOut%yCenter = gridIn%yCenter
+       gridOut%zCenter = gridIn%zCenter
+
+     end subroutine copy_grid
 
 end module GridDef

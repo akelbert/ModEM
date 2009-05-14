@@ -57,8 +57,8 @@ Contains
 
   subroutine initModel(grid,param,resist)
 
-    type (grid_t), intent(in)					:: grid
-    type (modelParam_t), intent(inout)				:: param
+    type (grid_t), intent(in)						:: grid
+    type (modelParam_t), intent(in)					:: param
 	!type (rscalar), intent(out)					:: resist
 	real(8), dimension(:,:,:), intent(inout)		:: resist !(nx,ny,nz)
 	integer											:: i,j,k,l,istat
@@ -70,11 +70,6 @@ Contains
 
 	! First initialize resistivity in air and possibly crust, if given
 	call initResist(grid,param%crust,resist)
-
-	! Test to make sure no grid is defined outside the layered region
-	if (grid%r(grid%nz+1) < param%L(param%nL)%lbound) then
-	  param%L(param%nL)%lbound = grid%r(grid%nz+1)
-	end if
 
 	do k=grid%nzCrust+1,grid%nz
 

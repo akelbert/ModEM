@@ -102,9 +102,9 @@ Contains
      !    for each of nFunc functionals
      call linDataFunc(e0,Sigma0,iDT,d%rx(iSite),Lz,Qz)
      if((iSite .eq. 1).and.calcQ) then
-        call copy_ModelParam(sigmaQreal,Sigma0)
+        sigmaQreal = zero_modelParam(Sigma0)
         if(d%isComplex) then
-           call copy_ModelParam(sigmaQimag,Sigma0)
+           sigmaQimag = zero_modelParam(Sigma0)
         endif
      endif
      iComp = 1
@@ -116,8 +116,8 @@ Contains
            d%value(iComp,iSite) = imag(Z)
            iComp = iComp + 1
            if(calcQ) then
-              call zero_ModelParam(sigmaQreal)
-              call zero_ModelParam(sigmaQimag)
+              sigmaQreal = zero_modelParam(sigmaQreal)
+              sigmaQimag = zero_modelParam(sigmaQimag)
               call QaddT(C_ONE,Qz(iFunc),Sigma0,sigmaQreal,sigmaQimag)
               d%value(iComp-2,iSite) = d%value(iComp-2,iSite) &
 	      		+ dotProd_modelParam(sigmaQreal,dSigma)
@@ -128,7 +128,7 @@ Contains
            d%value(iComp,iSite) = real(Z)
            iComp = iComp + 1
            if(calcQ) then
-              call zero_ModelParam(sigmaQreal)
+              sigmaQreal = zero_modelParam(sigmaQreal)
               call QaddT(C_ONE,Qz(iFunc),Sigma0,sigmaQreal)
               d%value(iComp-1,iSite) = d%value(iComp-1,iSite) +  &
 			dotProd_modelParam(sigmaQreal,dSigma)

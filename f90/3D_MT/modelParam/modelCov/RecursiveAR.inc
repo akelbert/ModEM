@@ -5,7 +5,7 @@
 !----------------------------------------------------------------------!
 
 ! *******************************************************************
-  subroutine multBy_CmSqrt(m,mhat)
+  function multBy_CmSqrt(m) result (mhat)
 
    ! Multiplies by the square root of the model covariance,
    ! which is viewed as a smoothing operator. Intended
@@ -15,7 +15,7 @@
    ! it has to be initialized by calling create_CmSqrt(m).
 
     type (modelParam_t), intent(in)     :: m
-    type (modelParam_t), intent(out)    :: mhat
+    type (modelParam_t)				    :: mhat
 
     if (.not. CmSqrt%allocated) then
     	call create_CmSqrt(m)
@@ -25,7 +25,7 @@
 
     call RecursiveAR(m%cellCond%v, mhat%cellCond%v, CmSqrt%N)
 
-  end subroutine multBy_CmSqrt
+  end function multBy_CmSqrt
 
 ! *******************************************************************
   subroutine create_CmSqrt(m,cfile)

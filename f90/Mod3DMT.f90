@@ -86,7 +86,7 @@ program Mod3DMT
 
      case (TEST_COV)
         write(*,*) 'Multiplying input model parameter by covariance ...'
-        call multBy_CmSqrt(sigma0,sigma1)
+        sigma1 = multBy_CmSqrt(sigma0)
         call write_modelParam(sigma1,cUserDef%wFile_Model)
 
      case default

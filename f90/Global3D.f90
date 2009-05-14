@@ -3,6 +3,9 @@ program earth
 
   use main
   use output
+  use sensmatrix
+  use nlcg
+
   use global ! for symmetry testing only
 
   ! testing

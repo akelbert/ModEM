@@ -13,7 +13,7 @@
 !-------------------------------------------------------------------!
 
 ! *******************************************************************
-  subroutine multBy_CmSqrt(m1,m2)
+  function multBy_CmSqrt(m1) result (m2)
 
    ! Multiplies by the square root of the model covariance,
    ! which is viewed as a smoothing operator. Intended
@@ -23,7 +23,7 @@
    ! it has to be initialized by calling create_CmSqrt(m).
 
     type (modelParam_t), intent(in)     :: m1
-    type (modelParam_t), intent(out)    :: m2
+    type (modelParam_t)				    :: m2
 
     if (.not. CmSqrt%allocated) then
     	call create_CmSqrt(m1)
@@ -32,7 +32,7 @@
     m2 = m1
     call solveDiff(CmSqrt,m2)
 
-  end subroutine multBy_CmSqrt
+  end function multBy_CmSqrt
 
 ! *******************************************************************
   subroutine create_CmSqrt(m,cfile)

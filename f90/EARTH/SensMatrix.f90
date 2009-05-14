@@ -2,12 +2,14 @@ module sensMatrix
 
 use griddef
 use data_vectors
-use global, only: cUserDef, fwdCtrls, outFiles, obsList, TFList, freqList, slices
 use dataFunc
+use modelmap
 use jacobian
 use output
 use initFields
 use dataMisfit
+use dataspace
+use solnrhs
 
 implicit none
 
@@ -15,7 +17,8 @@ public 	:: calcSensMatrix, Jmult, JmultT, fwdPred, setGrid
 
 ! numerical discretization used to compute the EM solution
 !  (may be different from the grid stored in model parameter)
-type(grid_t), target, save, private     :: grid
+! currently this is inherited from global
+! type(grid_t), target, save, private     :: grid
 
 ! utility variables necessary to time the computations;
 !  including a public variable rtime that stores total run time
@@ -93,6 +96,7 @@ Contains
    type(modelParam_t), intent(Out)  	:: dsigma
    type(EMsolnMTX_t), intent(in), optional	:: eAll
 
+   dsigma = zero_modelParam(sigma0)
 
 
    end subroutine JmultT
@@ -124,7 +128,7 @@ Contains
 	integer									:: istat,i,j,k
     type (cvector)							:: Hj,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero,dR
 	type (rvector)							:: dE_real
-	type (rscalar)							:: drho
+	type (rscalar)							:: rho
 	type (sparsevecc)						:: Hb
 	type (functional_t)						:: dataType
 	type (transmitter_t)					:: freq
@@ -152,10 +156,9 @@ Contains
     nfreq = freqList%n
     nfunc = TFList%n
     nobs  = obsList%n
-	allocate(dat%v(nfreq,nfunc,nobs),dat%n(nfreq,nfunc),STAT=istat)
-	allocate(psi%v(nfreq,nfunc,nobs),psi%n(nfreq,nfunc),STAT=istat)
-	dat%v = d%v
-	dat%n = d%n
+
+    dat = d
+    psi = zero(d)
 
     ! Allocate the resistivity vector
 	call create_rscalar(grid,rho,CENTER)
@@ -208,10 +211,9 @@ Contains
 
 	end do
 
-    d%v = psi%v
-    d%n = psi%n
+	d = psi
 
-	deall_rscalar(rho)
+	call deall_rscalar(rho)
 
    end subroutine fwdPred
 

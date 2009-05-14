@@ -64,8 +64,7 @@ Contains
       do j = 1,nTot
          ! this makes a copy of model param, of the same type
          !   as sigma0, then zeros it.
-         call copy_ModelParam(dsigma(j),sigma0)
-         call zero_ModelParam(dsigma(j))
+         dsigma(j) = zero_modelParam(sigma0)
       enddo
    endif
 
@@ -288,8 +287,7 @@ Contains
       endif
    endif
 
-   call copy_ModelParam(dsigma,sigma0)
-   call zero_ModelParam(dsigma)
+   dsigma = zero_modelParam(sigma0)
 
    ! loop over transmitters
    do j = 1,d%nTx
@@ -301,8 +299,7 @@ Contains
       !  manage any necessary initilization for this transmitter
       call initSolver(iTx,sigma0,grid,e0,e,comb)
       if(j.eq.1) then
-        call copy_ModelParam(sigmaTemp,sigma0)
-	    call zero_ModelParam(sigmaTemp)
+        sigmaTemp = zero_modelParam(sigma0)
       endif
 
       if(savedSolns) then
@@ -327,10 +324,9 @@ Contains
                !  first transmitter for which Q must be calculated:
                !   ==> allocate and zero Qcomb (use copy so that paramtype
                !         is set correctly)
-               call copy_ModelParam(Qcomb,sigmaTemp)
                !  NOTE: linDataComb ADDS to Qcomb, not overwrites
                !   ==> only zero Qcomb for first transmitter requiring Q
-               call zero_ModelParam(Qcomb)
+               Qcomb = zero_modelParam(sigmaTemp)
                !  set flags indicating that Q is now non-zero
                calcSomeQ = .true.
                firstQ = .false.

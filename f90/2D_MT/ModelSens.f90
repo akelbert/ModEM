@@ -349,12 +349,10 @@ module ModelSens
 
    if(txDict(e0%tx)%mode.eq.'TE') then
 
-       dsigmaReal = sigma0
-       call zero_modelParam(dsigmaReal)
+       dsigmaReal = zero_modelParam(sigma0)
 
 	   if(present(dsigmaImag)) then
-          dsigmaImag = sigma0
-          call zero_modelParam(dsigmaImag)
+          dsigmaImag = zero_modelParam(sigma0)
 	   endif
 
    else

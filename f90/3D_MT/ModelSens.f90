@@ -135,12 +135,10 @@ module ModelSens
    type(modelParam_t), intent(inout)               :: dsigmaReal
    type(modelParam_t), intent(inout),optional      :: dsigmaImag
 
-   dsigmaReal = sigma0
-   call zero_modelParam(dsigmaReal)
+   dsigmaReal = zero_modelParam(sigma0)
 
    if(present(dsigmaImag)) then
-      dsigmaImag = sigma0
-      call zero_modelParam(dsigmaImag)
+      dsigmaImag = zero_modelParam(sigma0)
    endif
 
   end subroutine QmultT
@@ -172,13 +170,11 @@ module ModelSens
    !  local variables
    type (modelParam_t)    :: csQReal, csQImag
 
-   csQReal = sigma0
-   call zero_modelParam(csQReal)
+   csQReal = zero_modelParam(sigma0)
    call linComb_modelParam(ONE,dsigmaReal,ONE,csQReal,dsigmaReal)
 
    if(present(dSigmaImag)) then
-      csQImag = sigma0
-      call zero_modelParam(csQImag)
+      csQImag = zero_modelParam(sigma0)
       call linComb_modelParam(ONE,dsigmaImag,ONE,csQImag,dsigmaImag)
    endif
 

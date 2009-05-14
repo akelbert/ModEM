@@ -42,16 +42,22 @@ module model_operators
      MODULE PROCEDURE dotProd_modelParam_f
      MODULE PROCEDURE dotProdVec_modelParam_f
   END INTERFACE
+
+  INTERFACE linComb
+     MODULE PROCEDURE linComb_modelParam
+  END INTERFACE
   ! * EOP
 
   public			:: create_modelParam, deall_modelParam, setup_modelParam, copy_modelParam
-  public			:: fillParam_modelParam, fillParamValues_modelParam, verify_modelParam, verifyLayers_modelParam
-  public			:: zero_modelParam, getParamValues_modelParam, print_modelParam
+  public			:: fillParam_modelParam, fillParamValues_modelParam
+  public			:: verify_modelParam, verifyLayers_modelParam, adjustLayers_modelParam
+  public			:: zero_modelParam, getParamValues_modelParam
   public			:: setLayer_modelParam, setCoeffValue_modelParam, setCrust_modelParam
   public            :: getCoeffValue_modelParam, getCoeff_modelParam, getCoeffArray_modelParam
   public			:: add_modelParam_f, subtract_modelParam_f, linComb_modelParam
   public			:: mult_modelParam_f, dotProd_modelParam_f, dotProdVec_modelParam_f
   public			:: scMult_modelParam_f, scDiv_modelParam_f
+  public			:: print_modelParam, write_modelParam
   public			:: smoothV_modelParam, smoothH_modelParam
   public			:: multBy_CmSqrt, multBy_Cm
 
@@ -185,6 +191,31 @@ Contains
 	return
 
   end function verifyLayers_modelParam
+
+
+  ! *************************************************************************
+  ! * Adjust the layer boundaries in the model parameter to match the grid
+  ! * (for now, only used to make sure parametrization covers all of the grid
+  ! * vertically, to the core-mantle boundary)
+  ! * BOP
+  subroutine adjustLayers_modelParam(P,r)
+
+    implicit none
+    type (modelParam_t), intent(inout)              :: P
+    real(8), dimension(:), intent(in)               :: r
+    ! * EOP
+    integer											:: n
+    real(8)											:: CMB ! core-mantle boundary
+
+    n = size(r)
+    CMB = r(n)
+
+    ! Test to make sure no grid is defined outside the layered region
+	if (CMB < P%L(P%nL)%lbound) then
+	  P%L(P%nL)%lbound = CMB
+	end if
+
+  end subroutine adjustLayers_modelParam
 
 
   ! **********************************************************************
@@ -1184,5 +1215,23 @@ Contains
 
   end subroutine print_modelParam
 
+
+  ! **********************************************************************
+  ! * This essential subroutine doesn't exist yet!!!
+  ! * We have never had to write out the model parameter (spherical harmonic
+  ! * coefficients) since that was always done by an external inverse program.
+  ! * Need to implement this soon!!!
+  ! * For now, make this a wrapper of print_modelParam.
+  ! * BOP
+  subroutine write_modelParam(P,cfile)
+
+    implicit none
+    type (modelParam_t), intent(in)         :: P
+	character(*), intent(in)				:: cfile
+    ! * EOP
+
+	call print_modelParam(P,3)
+
+  end subroutine write_modelParam
 
 end module model_operators

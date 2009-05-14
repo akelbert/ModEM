@@ -270,7 +270,8 @@ Contains
     type (dataVecMTX_t), intent(in)		:: d1, d2
     real (kind=prec)		            :: r
     ! local variables
-    integer				                :: j
+    integer				                :: nTx, nDt, nRx
+    integer				                :: i, j, k
     real (kind=prec)					:: d1real, d1imag, d2real, d2imag
 
     ! check to see if inputs (d1, d2) are allocated
@@ -338,7 +339,7 @@ Contains
     do i = 1, nTx
     	do j = 1, nDt
     		do k = 1, nRx
-        		if (d%v(i,j,k)%resp%err <= TOL6 * d%v(i,j,k)%resp%value) then
+        		if (abs(d%v(i,j,k)%resp%err) <= TOL6 * abs(d%v(i,j,k)%resp%value)) then
            			call errStop('data error bars too small in normalize_dataVec')
         		endif
         		d%v(i,j,k)%resp%value = d%v(i,j,k)%resp%value/(d%v(i,j,k)%resp%err**nn)

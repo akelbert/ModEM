@@ -52,12 +52,16 @@ interface assignment (=)
    MODULE PROCEDURE copy_modelParam
 end interface
 
-interface operator (.dot.)
+interface operator (*)
+   MODULE PROCEDURE scMult_modelParam
+end interface
+
+interface dotProd
    MODULE PROCEDURE dotProd_modelParam
 end interface
 
-interface operator (*)
-   MODULE PROCEDURE scMult_modelParam
+interface linComb
+   MODULE PROCEDURE linComb_modelParam
 end interface
 
 !  I/O interfaces
@@ -203,15 +207,17 @@ Contains
    end function maxNorm_modelParam
 
 !**********************************************************************
-   subroutine zero_modelParam(m)
+   function zero_modelParam(m1) result (m2)
 
      !  zeros a model space object
 
-     type(modelParam_t), intent(inout)	:: m
+     type(modelParam_t), intent(in)		:: m1
+     type(modelParam_t)					:: m2
 
-     m%v = R_ZERO
+     m2 = m1
+     m2%v = R_ZERO
 
-   end subroutine zero_modelParam
+   end function zero_modelParam
 
 !**********************************************************************
    subroutine linComb_modelParam(a1,m1,a2,m2,m)

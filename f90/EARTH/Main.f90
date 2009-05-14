@@ -15,6 +15,7 @@ module main
   use field_vectors
   use data_vectors
   use sg_scalar
+  use dataspace
   implicit none
 
 
@@ -68,6 +69,9 @@ Contains
 	! Initialize thin shell conductance in the model parameter
 	call setCrust_modelParam(crust,p_input)
 	!--------------------------------------------------------------------------
+	! Adjust the layer boundaries to match the grid
+	call adjustLayers_modelParam(p_input,grid%r)
+	!--------------------------------------------------------------------------
 	! Check whether base parametrization exists
 	inquire(FILE=cUserDef%fn_param0,EXIST=exists)
 	!--------------------------------------------------------------------------
@@ -76,6 +80,8 @@ Contains
 	    call initModelParam(cUserDef,p0_input,p0=.TRUE.)
 	    ! Initialize thin shell conductance in the model parameter
 	    call setCrust_modelParam(crust,p0_input)
+		! Adjust the layer boundaries to match the grid
+		call adjustLayers_modelParam(p0_input,grid%r)
 		! NOTE: regularization information is taken from the prior model!!!
 		if (.not.verify_modelParam(p_input,p0_input)) then
 			write(0,*) 'Warning: Using the layer structure from the prior model'
@@ -175,20 +181,16 @@ Contains
 	! If this information is required, initialize data functionals
 	if (cUserDef%calculate == 'original') then
 	else
-	  allocate(dat%v(nfreq,nfunc,nobs),dat%n(nfreq,nfunc),STAT=istat)
-	  dat%ntx = nfreq; dat%allocated = .true.
-	  allocate(psi%v(nfreq,nfunc,nobs),psi%n(nfreq,nfunc),STAT=istat)
-	  psi%ntx = nfreq; psi%allocated = .true.
-	  allocate(res%v(nfreq,nfunc,nobs),res%n(nfreq,nfunc),STAT=istat)
-	  res%ntx = nfreq; res%allocated = .true.
+	  call create_dataVecMTX(nfreq,nfunc,nobs,dat)
+	  call create_dataVecMTX(nfreq,nfunc,nobs,psi)
+	  call create_dataVecMTX(nfreq,nfunc,nobs,res)
 	  allocate(ndat(nfreq,nfunc),STAT=istat)
 	  allocate(misfitValue(nfunc))
 	  call initData(cUserDef,dat,obsList,freqList,TFList)
 	  call initMisfit(misfitType,TFList,freqList,dat,misfit)
 	  if (cUserDef%calculate /= 'responses') then
 		allocate(dmisfitValue(nfunc,ncoeff))
-		allocate(wres%v(nfreq,nfunc,nobs),wres%n(nfreq,nfunc),STAT=istat)  ! weighted residuals
-		wres%ntx = nfreq; wres%allocated = .true.
+		call create_dataVecMTX(nfreq,nfunc,nobs,wres) ! weighted residuals
 		allocate(misfit%dRda(nfreq,nfunc,ncoeff),STAT=istat)
 		call create_rscalar(grid,sens%drho_real,CENTER)
 		call create_rscalar(grid,sens%drho_imag,CENTER)
@@ -210,7 +212,7 @@ Contains
 	! future. Currently, use this patch instead. x,y,z stored in module griddef
 	nx = grid%nx; ny = grid%ny; nz = grid%nz
 	nzEarth = grid%nzEarth; nzAir = grid%nzAir
-	allocate(x(nx),y(ny+1),z(nz+1))
+	allocate(x(nx),y(ny+1),z(nz+1),STAT=istat)
 	x = grid%x; y = grid%y; z = grid%z
 
 	return
@@ -244,10 +246,10 @@ Contains
 	deallocate(sens%da,STAT=istat)
 	call deall_rscalar(sens%drho_real)
 	call deall_rscalar(sens%drho_imag)
-	deallocate(dat%v,dat%n,STAT=istat)
-	deallocate(psi%v,psi%n,STAT=istat)
-	deallocate(res%v,res%n,STAT=istat)
-	deallocate(wres%v,wres%n,STAT=istat)
+	call deall_dataVecMTX(dat)
+	call deall_dataVecMTX(psi)
+	call deall_dataVecMTX(res)
+	call deall_dataVecMTX(wres)
 
 	if (allocated(misfitValue)) then
 	  deallocate(misfitValue)

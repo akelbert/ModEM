@@ -148,8 +148,7 @@ Contains
        else
           call create_CmSqrt(sigma0)
        end if
-       sigma1 = sigma0
-       call zero_modelParam(sigma1)
+       sigma1 = zero_modelParam(sigma0)
 
     end select
 
