@@ -32,10 +32,10 @@ Contains
 
   subroutine outputCellResp(freq,fname,H)
 
-	type (transmitter), intent(in)					:: freq
+	type (transmitter_t), intent(in)					:: freq
 	character(len=*), intent(in)					:: fname
 	type (cvector), intent(in)						:: H
-	type (data_value), dimension(:,:), allocatable :: C_ijk,D_ijk	
+	type (dataValue_t), dimension(:,:), allocatable :: C_ijk,D_ijk	
 	integer											:: istat,i,j
 
 	! compute and output C and D responses at cells
@@ -101,7 +101,7 @@ Contains
   ! * to an output file
   subroutine outputResponsesAtCells(freq,fn_response,Resp)
 
-	type (transmitter), intent(in)					:: freq
+	type (transmitter_t), intent(in)					:: freq
 	character(len=*), intent(in)					:: fn_response
 	complex(8), dimension(:,:), intent(in)			:: Resp
 	integer											:: ios,i,j,k
@@ -139,7 +139,7 @@ Contains
 
   subroutine output_res(res,ifreq,ifunc,iobs)
 
-	type (data_value), dimension(:,:,:), intent(in)	:: res
+	type (dataValue_t), dimension(:,:,:), intent(in)	:: res
 	integer, intent(in)									:: ifreq,ifunc,iobs
 
   	write(*,'(a40,4i3,5g15.7)') &

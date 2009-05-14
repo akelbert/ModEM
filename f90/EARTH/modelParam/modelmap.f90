@@ -22,7 +22,7 @@ Contains
   subroutine initResist(grid,crust,resist)
 
     type (grid_t), intent(in)					:: grid
-	type (shell_info), intent(in)					:: crust
+	type (modelShell_t), intent(in)					:: crust
 	real(8), dimension(:,:,:), intent(out)			:: resist !(nx,ny,nz)
 	real(8)											:: crust_depth
 	integer											:: i,j,k
@@ -37,16 +37,16 @@ Contains
 
 	do i=1,grid%nx
 	  do j=1,grid%ny
-		do k=grid%nzAir+1,grid%nzCrust
+		do k=grid%nzAir+1,grid%nzCrust ! if no crust, nzCrust == nzAir
 		  if(crust%cond(i,j) <= R_ZERO) then
 			write(0, *) 'Error: (initResist) negative or infinite resistivity at',i,j,k
-			stop		
+			stop
 		  end if
 		  resist(i,j,k) = crust_depth/crust%cond(i,j)
 		end do
 	  end do
 	end do
-	
+
 
   end subroutine initResist	! initResist
 
@@ -54,25 +54,28 @@ Contains
   ! ***************************************************************************
   ! * initModel is the routine that generates the 3-D resistivity map on the
   ! * grid using the information stored in the grid and the parametrization
-    
+
   subroutine initModel(grid,param,resist)
 
     type (grid_t), intent(in)					:: grid
-    type (param_info), intent(inout)				:: param 
+    type (modelParam_t), intent(inout)				:: param
 	!type (rscalar), intent(out)					:: resist
 	real(8), dimension(:,:,:), intent(inout)		:: resist !(nx,ny,nz)
 	integer											:: i,j,k,l,istat
 	integer											:: iL,ip
 	real(8)											:: value,coeff
-	type (layer_info), pointer						:: this_layer
-	type (func_info)								:: func
-	type (point_info)								:: point
+	type (modelLayer_t), pointer						:: this_layer
+	type (modelFunc_t)								:: func
+	type (modelPoint_t)								:: point
+
+	! First initialize resistivity in air and possibly crust, if given
+	call initResist(grid,param%crust,resist)
 
 	! Test to make sure no grid is defined outside the layered region
 	if (grid%r(grid%nz+1) < param%L(param%nL)%lbound) then
 	  param%L(param%nL)%lbound = grid%r(grid%nz+1)
 	end if
-	
+
 	do k=grid%nzCrust+1,grid%nz
 
 	  ! Find current layer by locating the upper boundary of a cell
@@ -95,7 +98,7 @@ Contains
 		  ! Sum up the coeffs * F_at_point in the given layer
 		  value = 0.0d0
 		  do ip=1,param%nF
-			
+
 			coeff = param%c(iL,ip)%value
 			func = param%F(ip)
 			if(coeff /= 0.0d0) then
@@ -107,7 +110,7 @@ Contains
 		  if (this_layer%if_log) then
 			resist(i,j,k) = exp(log(10.0d0)*value)
 		  else
-			resist(i,j,k) = value		
+			resist(i,j,k) = value
 		  end if
 
 		  if (resist(i,j,k) <= 0.0d0) then
@@ -119,7 +122,7 @@ Contains
 	  end do
 	end do
 
-		  
+
   end subroutine initModel	! initModel
 
 

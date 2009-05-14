@@ -14,7 +14,7 @@ module datadef
   ! integer										:: nobs
   ! integer										:: nfreq
   ! integer										:: nfunc
-  ! type (data_value), dimension(nfreq,nobs)	:: dat
+  ! type (dataValue_t), dimension(nfreq,nobs)	:: dat
   ! type (Obs_List)								:: obsList
   ! type (Freq_List)							:: freqList
   ! type (TF_List)								:: funcList
@@ -30,11 +30,11 @@ module datadef
 
 
   ! ***************************************************************************
-  ! * type sensitivity contains the full information about the data sensitivities
+  ! * type sensitivity_t contains the full information about the data sensitivities
   ! * with respect to the original model parameters and to
   ! * each cell resistivity for all frequencies
   ! * used in the Jacobian calculations only
-  type :: sensitivity
+  type :: sensitivity_t
 
 	complex(8), pointer, dimension(:,:,:,:)	:: da  !(nfreq,nfunc,nobs,nvar)
 	real(8), pointer, dimension(:,:,:,:)	:: da_real  !(nfreq,nfunc,nobs,nvar)
@@ -44,15 +44,15 @@ module datadef
 	!real(8), pointer, dimension(:,:,:)		:: drho_real  !(nx,ny,nz) - single freq, all func
 	!real(8), pointer, dimension(:,:,:)		:: drho_imag  !(nx,ny,nz) - single freq, all func
 
-  end type sensitivity
+  end type sensitivity_t
 
 
   ! ***************************************************************************
-  ! * type data_misfit contains the full information about the misfit and its'
+  ! * type misfit_t contains the full information about the misfit and its'
   ! * partial derivatives with respect to the original model parameters and to
   ! * each cell resistivity for all frequencies
   ! * used in the Jacobian and derivative calculations
-  type :: data_misfit
+  type :: misfit_t
 
 	character(80)							:: name
 	real(8)                   :: damping
@@ -62,7 +62,7 @@ module datadef
 	real(8), pointer, dimension(:,:,:)	    :: dRda	  !(nfreq,nfunc,ncoeff)
 	!real(8), pointer, dimension(:,:,:,:)	:: dRda	  !(nfreq,nfunc,nlayer,nparam)
 
-  end type data_misfit
+  end type misfit_t
 
 
   ! ***************************************************************************
@@ -70,16 +70,16 @@ module datadef
   type :: TF_List
 
 	integer										:: n
-	type (functional), pointer, dimension(:)	:: info	!nfunc
+	type (functional_t), pointer, dimension(:)	:: info	!nfunc
 
   end type TF_List
 
 
   ! ***************************************************************************
-  ! * type functional contains the definitions of a data functional used in
+  ! * type functional_t contains the definitions of a data functional used in
   ! * the expression for the penalty functional; we will further specify the rules
   ! * by which they are computed, perhaps by pointing at a function
-  type :: functional
+  type :: functional_t
 
 	! Here specify rules used to compute this data functional
 	character(80)						    :: name
@@ -89,38 +89,38 @@ module datadef
 	! The weight of this data type in the calculation of misfit
 	real(8)									:: w
 
-  end type functional
+  end type functional_t
 
   ! ***************************************************************************
-  ! * type response contains the full information about a single response at a
+  ! * type response_t contains the full information about a single response at a
   ! * single frequency and observatory: value, error, anything else
-  type :: response
+  type :: response_t
 
 	complex(8)								:: value
 	real(8)									:: err
 	logical									:: exists
 
-  end type response
+  end type response_t
 
 
   ! ***************************************************************************
-  ! * type data_value contains the definition of a single data functionals used
+  ! * type dataValue_t contains the definition of a single data functionals used
   ! * in the expression for the penalty functional; they are specified for a
   ! * particular type of response and a frequency + observatory pair
-  type :: data_value
+  type :: dataValue_t
 
-	type (transmitter), pointer			    :: freq
-	type (receiver),	pointer			    :: obs
-	type (functional),	pointer				:: func
-	type (response)							:: resp
+	type (transmitter_t), pointer			    :: freq
+	type (receiver_t),	pointer			        :: obs
+	type (functional_t),	pointer				:: func
+	type (response_t)							:: resp
 	! For the more general case, define dimension(freq%nMode,dataType%nComp)
-	! type (response), pointer, dimension(:,:) :: resp
+	! type (response_t), pointer, dimension(:,:) :: resp
 
-  end type data_value
+  end type dataValue_t
 
 
   ! ***************************************************************************
-  ! * type data_array contains the 3-D array of all data functionals we define;
+  ! * type dataVecMTX_t contains the 3-D array of all data functionals we define;
   ! * it should be considered an ordered three-dimensional list of data
   ! * For some observatories data "do not exist" - either because they were
   ! * not physically present in the input data file, or since the observatory
@@ -130,12 +130,15 @@ module datadef
   ! * The variable n is the number of "existing" data values for a given freq.
   ! * and functional type. It can also be computed by count(v(i,j,:)%resp%exists);
   ! * however, it is handy to have these values at hand.
-  type :: data_array
+  type :: dataVecMTX_t
 
-	type (data_value), pointer, dimension(:,:,:)  :: v	!nfreq,nfunc,nobs
+	type (dataValue_t), pointer, dimension(:,:,:) :: v	!nfreq,nfunc,nobs
 	integer, pointer, dimension(:,:)			  :: n	!nfreq,nfunc
+	! Total number of frequencies stored in this data vector
+	integer                                       :: ntx
+	logical                                       :: allocated
 
-  end type data_array
+  end type dataVecMTX_t
 
 
   ! ***************************************************************************
@@ -150,12 +153,12 @@ module datadef
 
   ! ***************************************************************************
   ! * full solution information for a single 'slice' at a fixed radius (in km)
-  type :: solution
+  type :: solution_t
 
-	type (receiver), pointer, dimension(:,:)	:: o
+	type (receiver_t), pointer, dimension(:,:)	:: o
 	complex(8), pointer, dimension(:,:)			:: x,y,z	!nx,ny
 
-  end type solution
+  end type solution_t
 
 
   ! ***************************************************************************
@@ -163,19 +166,19 @@ module datadef
   type :: Obs_List
 
 	integer										:: n
-	type (receiver), pointer, dimension(:)		:: info	!nobs
+	type (receiver_t), pointer, dimension(:)		:: info	!nobs
 
   end type Obs_List
 
 
   ! ***************************************************************************
-  ! * type receiver contains the information about a single observatory; we
+  ! * type receiver_t contains the information about a single observatory; we
   ! * define as many of them as there are observatories (nobs)
   ! * This definition of the receiver has the limitation that it is assumed to
   ! * be located on an ij-plane. It can be extended to being located at any
   ! * point in the domain, if required, by modifying the LocateReceiver code,
   ! * and making the ComputeInterpWeights a 3-D interpolation routine.
-  type :: receiver
+  type :: receiver_t
 
 	! observatory code that usually has three letters, but may have more
 	character(80)							:: code
@@ -202,7 +205,7 @@ module datadef
 	! indicator located is set to TRUE once the above values are computed
 	logical									:: located=.FALSE.
 
-  end type receiver
+  end type receiver_t
 
 
   ! ***************************************************************************
@@ -210,18 +213,18 @@ module datadef
   type :: Freq_List
 
 	integer										:: n
-	type (transmitter), pointer, dimension(:)	:: info	!nfreq
+	type (transmitter_t), pointer, dimension(:)	:: info	!nfreq
 
   end type Freq_List
 
 
   ! ***************************************************************************
-  ! * type transmitter contains the information about the frequencies; and also
+  ! * type transmitter_t contains the information about the frequencies; and also
   ! * the info on data functionals required to calculate for each frequency
-  type :: transmitter
+  type :: transmitter_t
 
 	! the code may be needed to indicate frequency number in the full data set
-        character(80)							        :: code
+    character(80)							:: code
 	! frequency value
 	real(8)		  							:: value
 	! period in days used for input/output only
@@ -231,7 +234,7 @@ module datadef
     ! nMode is number of "modes" for transmitter (e.g., 2 for MT)
 	integer									:: nMode
 
-  end type transmitter
+  end type transmitter_t
 
 
 end module datadef

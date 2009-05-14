@@ -199,12 +199,13 @@ Contains
 
     type (input_info), intent(in)					:: cUserDef
     type (grid_t) , intent(in)					:: mygrid
-    type (shell_info) , intent(out)					:: mycrust
+    type (modelShell_t) , intent(out)					:: mycrust
     integer				                            :: ios,istat,i
 
 
 	inquire(FILE=cUserDef%fn_shell,EXIST=exists)
 	if(.not.exists) then
+	  mycrust%allocated = .false.
 	  return
 	end if
 
@@ -220,6 +221,7 @@ Contains
 
 	close(ioShell)
 
+	mycrust%allocated = .true.
 	return
 
   end subroutine initCrust	! initCrust
@@ -420,11 +422,11 @@ Contains
   ! * functional
   subroutine initMisfit(misfitType,TFList,freqList,dat,misfit)
 
-	type (misfit_def), intent(in)					:: misfitType
-	type (data_array), intent(in)						:: dat
+	type (misfitDef_t), intent(in)						:: misfitType
+	type (dataVecMTX_t), intent(in)						:: dat
 	type (Freq_List), intent(in)						:: freqList
 	type (TF_List), intent(in)							:: TFList
-	type (data_misfit), intent(out)						:: misfit
+	type (misfit_t), intent(out)						:: misfit
 	!integer, dimension(:,:), intent(out)				:: ndat
 	integer												:: ifunc,ifreq,iobs
 	integer												:: istat
@@ -462,7 +464,7 @@ Contains
 
 	implicit none
 	type (input_info), intent(in)					:: cUserDef
-	type (misfit_def), intent(out)					:: misfitType
+	type (misfitDef_t), intent(out)					:: misfitType
 
 	misfitType%name = 'Mean Squared'  ! Default data functional
 
@@ -478,12 +480,14 @@ Contains
 
 	implicit none
     type (input_info), intent(in)							:: cUserDef
-	type (data_array), intent(out)							:: mydat
+	type (dataVecMTX_t), intent(out)							:: mydat
 	type (Obs_List), target, intent(inout)					:: myobs
 	type (Freq_List), target, intent(inout)					:: myfreq
 	type (TF_List), target, intent(in)						:: myfunc
 	real(8)                         :: theta
 	integer													:: i,j,k
+
+    mydat%nTx = myfreq%n
 
 	do j=1,myfunc%n
 
@@ -559,7 +563,7 @@ Contains
 
 	implicit none
 	character(*), intent(in)					:: fname
-	type (data_value), dimension(:,:), intent(inout)		:: mydat
+	type (dataValue_t), dimension(:,:), intent(inout)		:: mydat
 	type (Obs_List), target, intent(inout)				:: myobs
 	type (Freq_List), target, intent(inout)				:: myfreq
     integer				                                :: ifreq,iobs,count
@@ -706,7 +710,7 @@ Contains
 
 	implicit none
     type (input_info), intent(in)							:: cUserDef
-	type (data_value), dimension(:,:), intent(out)			:: mydatC
+	type (dataValue_t), dimension(:,:), intent(out)			:: mydatC
 	type (Obs_List), target, intent(inout)					:: myobs
 	type (Freq_List), target, intent(inout)					:: myfreq
     integer				                                    :: ifreq,iobs,num
@@ -718,7 +722,7 @@ Contains
 	real(8)													:: lon,lat
 	real(8)													:: creal,cimag,cerr
 
-	! Initialize logicals if_C (if_D, if_J) in data types (transmitter) and (receiver)
+	! Initialize logicals if_C (if_D, if_J) in data types (transmitter_t) and (receiver_t)
 	!do i = 1, myfreq%n
 	!  do j = 1, myobs%n
 	!	allocate(myobs%info(j)%if_C(i),STAT=istat)
@@ -804,7 +808,7 @@ Contains
 
 	close(ioDat)
 
-	! Update logicals if_C (if_D, if_J) in data types (transmitter) and (receiver)
+	! Update logicals if_C (if_D, if_J) in data types (transmitter_t) and (receiver_t)
 	do i = 1, myfreq%n
 	  do j = 1, myobs%n
 		if (mydatC(i,j)%resp%exists) then
@@ -832,7 +836,7 @@ Contains
 
 	implicit none
     type (input_info), intent(in)							:: cUserDef
-	type (data_value), dimension(:,:), intent(out)			:: mydatD
+	type (dataValue_t), dimension(:,:), intent(out)			:: mydatD
 	type (Obs_List), target, intent(inout)					:: myobs
 	type (Freq_List), target, intent(inout)					:: myfreq
     integer				                                    :: ifreq,iobs,num
@@ -844,7 +848,7 @@ Contains
 	real(8)													:: lon,lat
 	real(8)													:: dreal,dimag,derr
 
-	! Initialize logicals if_C (if_D, if_J) in data types (transmitter) and (receiver)
+	! Initialize logicals if_C (if_D, if_J) in data types (transmitter_t) and (receiver_t)
 	!do i = 1, myfreq%n
 	!  do j = 1, myobs%n
 	!	allocate(myobs%info(j)%if_D(i),STAT=istat)
@@ -930,7 +934,7 @@ Contains
 
 	close(ioDat)
 
-	! Update logicals if_C (if_D, if_J) in data types (transmitter) and (receiver)
+	! Update logicals if_C (if_D, if_J) in data types (transmitter_t) and (receiver_t)
 	do i = 1, myfreq%n
 	  do j = 1, myobs%n
 		if (mydatD(i,j)%resp%exists) then
@@ -950,8 +954,8 @@ Contains
 
 
   ! ***************************************************************************
-  ! * initParamY reads the parametrization info to store in the derived data
-  ! * type variables (coeff_info, layer_info) in the special case when the
+  ! * initModelParam reads the parametrization info to store in the derived data
+  ! * type variables (modelCoeff_t, modelLayer_t) in the special case when the
   ! * parametrization is in terms of spherical harmonics of various degree/order
   ! * per layer, each of the parameters being either variable (keyword 'range') or
   ! * constant (keyword 'const'). We keep this information internally in such
@@ -965,12 +969,12 @@ Contains
   ! * solver to operate. This is provided for the inversion, which will share
   ! * the same input format for now.
 
-  subroutine initParamY(cUserDef,myparam,p0)
+  subroutine initModelParam(cUserDef,myparam,p0)
 
 	use model_operators
 
     type (input_info), intent(in)					:: cUserDef
-    type (param_info), intent(inout)					:: myparam
+    type (modelParam_t), intent(inout)					:: myparam
 	logical, intent(in), optional		:: p0
     integer								:: ilayer,i,j,k,n,l,m
 	integer								:: nF,nL
@@ -1002,7 +1006,7 @@ Contains
     read(ioPrm,'(a8,a80)') string,prmname
 
 	if (index(prmname,'harmonic')==0) then
-       write(0, *) 'Error: (initParamY) not a spherical harmonic parametrization'
+       write(0, *) 'Error: (initModelParam) not a spherical harmonic parametrization'
        stop
 	else
 	  i = index(prmname,'layers')
@@ -1013,7 +1017,7 @@ Contains
 	end if
 
 
-	call CreateParamY(myparam,nL,degree)
+	call create_modelParam(myparam,nL,degree)
 
     !write(6,'(a50,i3)') 'Number of layers in script: ',myparam%nL
 
@@ -1060,7 +1064,7 @@ Contains
        end if
 	   lowerb = EARTH_R - depth
 
-	   call SetLayerY(myparam,n,upperb,lowerb,alpha,beta,if_log)
+	   call setLayer_modelParam(myparam,n,upperb,lowerb,alpha,beta,if_log)
 
        sum0=sum0+sum
        sum=0
@@ -1076,10 +1080,10 @@ Contains
 		  else if (if_var_char == 'const') then
 			if_fixed = .TRUE.
 		  else
-			write(0, *) 'Error: (initParamY) wrong character constant for ',n,l,m
+			write(0, *) 'Error: (initModelParam) wrong character constant for ',n,l,m
 			stop
 		  end if
-		  call SetCoeffValueY(myparam,n,l,m,v,min,max,if_fixed)
+		  call setCoeffValue_modelParam(myparam,n,l,m,v,min,max,if_fixed)
 		  !print *,'Values: ',l,m,v,min,max,if_fixed
        end do
 
@@ -1093,7 +1097,7 @@ Contains
 
     return
 
-  end subroutine initParamY	! initParamY
+  end subroutine initModelParam	! initModelParam
 
 
   ! ***************************************************************************
@@ -1104,7 +1108,7 @@ Contains
 
 	implicit none
 	type (input_info), intent(in)						:: cUserDef
-	type (relaxation), intent(out)						:: fwdCtrls
+	type (fwdCtrl_t), intent(out)						:: fwdCtrls
 
 	  open(ioCtrl,file=cUserDef%fn_ctrl,form='formatted',status='old')
 

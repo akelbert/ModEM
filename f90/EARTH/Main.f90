@@ -42,8 +42,9 @@ Contains
 	integer										:: i,ios=0,istat=0
 	character(100)								:: label
 	real(8),dimension(:),intent(in),optional	:: da
-	type (param_info)							:: p_delta
-	type (coeff_info)							:: coeff
+	type (modelParam_t)							:: p_delta
+	type (modelCoeff_t)							:: coeff
+	type (modelShell_t)                         :: crust
 
 	!--------------------------------------------------------------------------
 	! Initialize the math/physics constants defined in module basics
@@ -62,50 +63,52 @@ Contains
 	call initCrust(cUserDef,grid,crust)
 	!--------------------------------------------------------------------------
 	! Read main parametrization
-	call initParamY(cUserDef,p_input)
+	call initModelParam(cUserDef,p_input)
+	!--------------------------------------------------------------------------
+	! Initialize thin shell conductance in the model parameter
+	call setCrust_modelParam(crust,p_input)
 	!--------------------------------------------------------------------------
 	! Check whether base parametrization exists
 	inquire(FILE=cUserDef%fn_param0,EXIST=exists)
 	!--------------------------------------------------------------------------
 	! If exists, read it; else create a skeleton from main parametrization
 	if (exists) then
-	  call initParamY(cUserDef,p0_input,p0=.TRUE.)
+	    call initModelParam(cUserDef,p0_input,p0=.TRUE.)
+	    ! Initialize thin shell conductance in the model parameter
+	    call setCrust_modelParam(crust,p0_input)
 		! NOTE: regularization information is taken from the prior model!!!
-		if (.not.VerifyParamY(p_input,p0_input)) then
+		if (.not.verify_modelParam(p_input,p0_input)) then
 			write(0,*) 'Warning: Using the layer structure from the prior model'
 			p_input%L = p0_input%L
-			if (.not.VerifyParamY(p_input,p0_input)) then
+			if (.not.verify_modelParam(p_input,p0_input)) then
 				write(0,*) 'Warning: Base parametrization incompatible with main model'
 				stop
 			end if
 		end if
 	else
 	  write(0,*) 'Warning: No base parametrization found; zero model will be used'
-	  p0_input = CreateEmptyParamY(p_input)
+	  p0_input = zero_modelParam(p_input)
 	end if
 	!--------------------------------------------------------------------------
 	! Compute the correction (only needed if run for a test perturbation)
 	if (present(da)) then
-	  p_delta = CreateEmptyParamY(p_input)
-	  call FillParamValuesY(p_delta,da)
+	  p_delta = zero_modelParam(p_input)
+	  call fillParamValues_modelParam(p_delta,da)
 	  p_input = p_input + p_delta
-	  call DeleteParamY(p_delta)
+	  call deall_modelParam(p_delta)
 	  !param%p(:)%value = param%p(:)%value + da(:)
 	end if
 	!--------------------------------------------------------------------------
 	! 'Smooth' the parametrization by applying inverted regularization operator
-	param = SmoothSqrtParamY(p_input)
+	param = multBy_CmSqrt(p_input)
 	!--------------------------------------------------------------------------
 	! Compute parametrization to use (for model norm we will still use p_input)
 	param = param + p0_input
 	!--------------------------------------------------------------------------
 	! Allocate the resistivity vector
-	allocate(rho(grid%nx,grid%ny,grid%nz))
+	allocate(rho(grid%nx,grid%ny,grid%nz),STAT=istat)
 	!--------------------------------------------------------------------------
-	! Initialize model information in air and possibly crust, if given
-	call initResist(grid,crust,rho)
-	!--------------------------------------------------------------------------
-	! Compute model information everywhere else in the domain
+	! Compute model information everywhere in the domain, including air & crust
 	call initModel(grid,param,rho)
 	!--------------------------------------------------------------------------
 	! Read the information about the frequencies
@@ -159,9 +162,9 @@ Contains
 
 	!--------------------------------------------------------------------------
 	! Helpful output
-	call PrintParamInfoY(p0_input,output_level-1,"Prior model m_0 = ")
-	call PrintParamInfoY(p_input,output_level-1,"Input model \hat{m} = ")
-	call PrintParamInfoY(param,output_level,"Final model m = ")
+	call print_modelParam(p0_input,output_level-1,"Prior model m_0 = ")
+	call print_modelParam(p_input,output_level-1,"Input model \hat{m} = ")
+	call print_modelParam(param,output_level,"Final model m = ")
 	!--------------------------------------------------------------------------
 
 	! If this information is required, initialize data functionals
@@ -173,8 +176,11 @@ Contains
 	if (cUserDef%calculate == 'original') then
 	else
 	  allocate(dat%v(nfreq,nfunc,nobs),dat%n(nfreq,nfunc),STAT=istat)
+	  dat%ntx = nfreq; dat%allocated = .true.
 	  allocate(psi%v(nfreq,nfunc,nobs),psi%n(nfreq,nfunc),STAT=istat)
+	  psi%ntx = nfreq; psi%allocated = .true.
 	  allocate(res%v(nfreq,nfunc,nobs),res%n(nfreq,nfunc),STAT=istat)
+	  res%ntx = nfreq; res%allocated = .true.
 	  allocate(ndat(nfreq,nfunc),STAT=istat)
 	  allocate(misfitValue(nfunc))
 	  call initData(cUserDef,dat,obsList,freqList,TFList)
@@ -182,6 +188,7 @@ Contains
 	  if (cUserDef%calculate /= 'responses') then
 		allocate(dmisfitValue(nfunc,ncoeff))
 		allocate(wres%v(nfreq,nfunc,nobs),wres%n(nfreq,nfunc),STAT=istat)  ! weighted residuals
+		wres%ntx = nfreq; wres%allocated = .true.
 		allocate(misfit%dRda(nfreq,nfunc,ncoeff),STAT=istat)
 		call create_rscalar(grid,sens%drho_real,CENTER)
 		call create_rscalar(grid,sens%drho_imag,CENTER)
@@ -218,11 +225,11 @@ Contains
 	integer	:: istat
 
 	! Deallocate global variables that have been allocated by InitGlobalData()
-	call DeleteParamY(param)
-	call DeleteParamY(p_input)
-	call DeleteParamY(p0_input)
-	call DeleteParamY(p_smooth)
-	call DeleteParamY(p_diff)
+	call deall_modelParam(param)
+	call deall_modelParam(p_input)
+	call deall_modelParam(p0_input)
+	call deall_modelParam(p_smooth)
+	call deall_modelParam(p_diff)
 	deallocate(x,y,z,STAT=istat)
 	deallocate(grid%x,grid%y,grid%z,STAT=istat)
 	deallocate(grid%ph,grid%th,grid%r,STAT=istat)

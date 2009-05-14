@@ -19,13 +19,13 @@ Contains
   ! * and at grid nodes on the surface. The latter is very easy to compute.
   ! * Use e.g. C(H%x(i,j,nzAir+1),H%y(i,j,nzAir+1),H%z(i,j,nzAir+1),grid%th(j)).
   ! * For responses at locations other than the observatory, construct an
-  ! * observatory type (receiver) at the required location and call this routine.
+  ! * observatory type (receiver_t) at the required location and call this routine.
   ! * Interpolation is automatic through LocateReceiver->ComputeInterpWeights.
 
   function dataResp(func,obs,H) result(Resp)
 
 	complex(8), external							:: func
-	type (receiver), intent(inout)					:: obs
+	type (receiver_t), intent(inout)					:: obs
 	type (cvector), intent(in)						:: H
 	complex(8)										:: Resp
 
@@ -73,7 +73,7 @@ Contains
 	integer, intent(in)								:: i,j,k
 	type (cvector), intent(in)						:: H
 	complex(8)										:: Resp
-	type (receiver)									:: obs
+	type (receiver_t)									:: obs
 	real(8)											:: rad,lon,colat
 	character(80)									:: name
 
@@ -124,7 +124,7 @@ Contains
 
 	real(8), intent(in)								:: rad
 	type (cvector), intent(in)						:: H
-	type (solution), intent(out)					:: Hij
+	type (solution_t), intent(out)					:: Hij
 	real(8)											:: lon,colat
 	character(80)									:: name
 	integer											:: i,j,istat

@@ -74,7 +74,7 @@ Contains
   subroutine ComputeInterpWeights(grid,obs)
 
 	type (grid_t) , intent(in)					:: grid
-	type (receiver)	 , intent(inout)				:: obs
+	type (receiver_t)	 , intent(inout)				:: obs
 	type (sparsevecc)								:: Lx,Ly,Lz
 	integer											:: i,j,k,index
 	real(8)											:: p1,p2,q1,q2
@@ -175,7 +175,7 @@ Contains
 
   subroutine CreateReceiver(o,rad,lon,colat,name)
 
-	type (receiver), intent(out)	:: o
+	type (receiver_t), intent(out)	:: o
 	real(8), intent(in)				:: rad,lon,colat
 	character(80), intent(in)		:: name
 
@@ -248,7 +248,7 @@ Contains
   subroutine LocateReceiver(grid,o)
 
 	type (grid_t), intent(in)	:: grid
-	type (receiver), intent(inout)	:: o
+	type (receiver_t), intent(inout)	:: o
 	integer							:: i,j,k
 	real(8)							:: ph,th,r
 	real(8)							:: p_crn,q_crn ! corner as origin

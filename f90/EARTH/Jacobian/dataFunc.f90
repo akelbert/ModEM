@@ -30,7 +30,7 @@ Contains
   subroutine operatorG(dvec,H,outE)
 
 	! uses: funcList, obsList, freqList, grid
-	type (data_value), dimension(:), intent(inout)		:: dvec	! residuals
+	type (dataValue_t), dimension(:), intent(inout)		:: dvec	! residuals
 	type (cvector), intent(in)							:: H
 	type (cvector), intent(out)							:: outE
 	type (sparsevecc)									:: g_sparse
@@ -71,7 +71,7 @@ Contains
   subroutine operatorGt(inE,H,dvec)
 
 	! uses: funcList, obsList, freqList, grid
-	type (data_value), dimension(:), intent(inout)		:: dvec	! residuals
+	type (dataValue_t), dimension(:), intent(inout)		:: dvec	! residuals
 	type (cvector), intent(in)							:: H
 	type (cvector), intent(in)							:: inE
 	type (sparsevecc)									:: g_sparse
@@ -109,8 +109,8 @@ Contains
   subroutine compute_g(dataType,obs,H,g_sparse)
 
 	! uses: grid
-	type (functional), intent(in)					:: dataType
-	type (receiver), intent(inout)					:: obs
+	type (functional_t), intent(in)					:: dataType
+	type (receiver_t), intent(inout)					:: obs
 	type (cvector), intent(in)						:: H
 	type (sparsevecc)								:: Lx,Ly,Lz
 	complex(8)										:: Hx,Hy,Hz

@@ -15,49 +15,54 @@ module model_operators
   ! * BOP
   ! equal to
   interface assignment (=)
-     MODULE PROCEDURE CopyParamY
-	 MODULE PROCEDURE FillParamY
+     MODULE PROCEDURE copy_modelParam
+	 MODULE PROCEDURE fillParam_modelParam
   end interface
 
   INTERFACE OPERATOR (+)
-     MODULE PROCEDURE AddParamY_f
+     MODULE PROCEDURE add_modelParam_f
   END INTERFACE
 
   INTERFACE OPERATOR (-)
-     MODULE PROCEDURE SubParamY_f
+     MODULE PROCEDURE subtract_modelParam_f
   END INTERFACE
 
   ! multiplication
   INTERFACE OPERATOR (*)
-     MODULE PROCEDURE MultParamY_f
-     MODULE PROCEDURE ScMultParamY_f
+     MODULE PROCEDURE mult_modelParam_f
+     MODULE PROCEDURE scMult_modelParam_f
   END INTERFACE
 
   ! division
   INTERFACE OPERATOR (/)
-     MODULE PROCEDURE ScDivParamY_f
+     MODULE PROCEDURE scDiv_modelParam_f
+  END INTERFACE
+
+  INTERFACE dotProd
+     MODULE PROCEDURE dotProd_modelParam_f
+     MODULE PROCEDURE dotProdVec_modelParam_f
   END INTERFACE
   ! * EOP
 
-  public			:: CreateParamY, DeleteParamY, SetUpParamY, CopyParamY
-  public			:: FillParamY, FillParamValuesY, VerifyParamY, VerifyLayersY
-  public			:: CreateEmptyParamY, GetParamValuesY, PrintParamInfoY
-  public			:: SetLayerY, SetCoeffValueY, GetCoeffValueY, GetCoeffY
-	public      :: GetCoeffArrayY
-  public			:: AddParamY_f, SubParamY_f, LinCombParamY
-  public			:: MultParamY_f, DotProdParamY_f, DotProdVecParamY_f
-  public			:: ScMultParamY_f, ScDivParamY_f
-  public			:: SmoothVParamY, SmoothHParamY
-  public			:: SmoothSqrtParamY, SmoothParamY
+  public			:: create_modelParam, deall_modelParam, setup_modelParam, copy_modelParam
+  public			:: fillParam_modelParam, fillParamValues_modelParam, verify_modelParam, verifyLayers_modelParam
+  public			:: zero_modelParam, getParamValues_modelParam, print_modelParam
+  public			:: setLayer_modelParam, setCoeffValue_modelParam, setCrust_modelParam
+  public            :: getCoeffValue_modelParam, getCoeff_modelParam, getCoeffArray_modelParam
+  public			:: add_modelParam_f, subtract_modelParam_f, linComb_modelParam
+  public			:: mult_modelParam_f, dotProd_modelParam_f, dotProdVec_modelParam_f
+  public			:: scMult_modelParam_f, scDiv_modelParam_f
+  public			:: smoothV_modelParam, smoothH_modelParam
+  public			:: multBy_CmSqrt, multBy_Cm
 
 Contains
 
   ! **********************************************************************
   ! * BOP
-  subroutine DeleteParamY(P)
+  subroutine deall_modelParam(P)
 
     implicit none
-    type (param_info), intent(inout)               :: P
+    type (modelParam_t), intent(inout)               :: P
     ! * EOP
 
     integer                                        :: status
@@ -66,6 +71,8 @@ Contains
 	  deallocate(P%F,STAT=status)
 	  deallocate(P%L,STAT=status)
 	  deallocate(P%c,STAT=status)
+	  deallocate(P%crust%cond, STAT=status)
+	  P%crust%allocated = .false.
     end if
 
 	P%nF = 0
@@ -73,18 +80,18 @@ Contains
 	P%nc = 0
 	P%allocated = .FALSE.
 
-  end subroutine DeleteParamY
+  end subroutine deall_modelParam
 
 
   ! **********************************************************************
 	! * Test whether two parametrizations have the same basic definitions
 	! * Returns 1 if parametrizations are compatible, zero otherwise
   ! * BOP
-  function VerifyParamY(P2,P1) result (status)
+  function verify_modelParam(P2,P1) result (status)
 
     implicit none
-    type (param_info), intent(in)                  :: P1
-    type (param_info), intent(in)                  :: P2
+    type (modelParam_t), intent(in)                  :: P1
+    type (modelParam_t), intent(in)                  :: P2
 		logical                                       :: status
     ! * EOP
 
@@ -93,99 +100,99 @@ Contains
 	status = .FALSE.
 
 	if(.not.(P1%allocated.and.P2%allocated)) then
-		write(0,*) 'Error: (VerifyParamY) parametrization not allocated yet'
+		write(0,*) 'Error: (verify_modelParam) parametrization not allocated yet'
 		return
 	end if
 
 	! compare functional construction
 	if (P1%nL /= P2%nL) then
-		write(0,*) 'Error: (VerifyParamY) the two models have a different number of layers'
+		write(0,*) 'Error: (verify_modelParam) the two models have a different number of layers'
 		return
 	end if
 
 	! compare layer construction
 	if (P1%nF /= P2%nF) then
-		write(0,*) 'Error: (VerifyParamY) the two models have a different number of functionals'
+		write(0,*) 'Error: (verify_modelParam) the two models have a different number of functionals'
 		return
 	end if
 
 	! compare parameter construction
 	if (P1%nc /= P2%nc) then
-		write(0,*) 'Error: (VerifyParamY) the two models have a different number of coefficients'
+		write(0,*) 'Error: (verify_modelParam) the two models have a different number of coefficients'
 		return
 	end if
 
 	do j = 1,P1%nL
-		status = VerifyLayersY(P1%L(j),P2%L(j))
+		status = verifyLayers_modelParam(P1%L(j),P2%L(j))
 		if (status .eqv. .FALSE.) then
-			write(0,*) 'Error: (VerifyParamY) incompatible layer ',j
+			write(0,*) 'Error: (verify_modelParam) incompatible layer ',j
 			return
 		end if
 	end do
 
-  end function VerifyParamY
+  end function verify_modelParam
 
 
   ! **********************************************************************
 	! * Test whether two layer structures have the same basic definitions
 	! * Returns 1 if layers are identical, zero otherwise
   ! * BOP
-  function VerifyLayersY(L1,L2) result (status)
+  function verifyLayers_modelParam(L1,L2) result (status)
 
     implicit none
-    type (layer_info), intent(in)      :: L1,L2
+    type (modelLayer_t), intent(in)      :: L1,L2
     logical                            :: status
     ! * EOP
 
 	status = .FALSE.
 
 	if (L1%if_log .neqv. L2%if_log) then
-		write(0,*) 'Error: (VerifyLayerY) layers have different structure'
+		write(0,*) 'Error: (verifyLayers) layers have different structure'
 		return
 	end if
 
 	if (clean(L1%depth)  /= clean(L2%depth)) then
-		write(0,*) 'Error: (VerifyLayerY) layers have different depths'
+		write(0,*) 'Error: (verifyLayers) layers have different depths'
 		return
 	end if
 
 	if (clean(L1%width)  /= clean(L2%width)) then
-		write(0,*) 'Error: (VerifyLayerY) layers have different widths'
+		write(0,*) 'Error: (verifyLayers) layers have different widths'
 		return
 	end if
 
 	if (clean(L1%lbound) /= clean(L2%lbound)) then
-		write(0,*) 'Error: (VerifyLayerY) layers have different lower bounds'
+		write(0,*) 'Error: (verifyLayers) layers have different lower bounds'
 		return
 	end if
 
 	if (clean(L1%ubound) /= clean(L2%ubound)) then
-		write(0,*) 'Error: (VerifyLayerY) layers have different upper bounds'
+		write(0,*) 'Error: (verifyLayers) layers have different upper bounds'
 		return
 	end if
 
 	if (clean(L1%alpha)  /= clean(L2%alpha)) then
-		write(0,*) 'Error: (VerifyLayerY) layers have different horizontal regularization'
+		write(0,*) 'Error: (verifyLayers) layers have different horizontal regularization'
 		return
 	end if
 
 	if (clean(L1%beta)   /= clean(L2%beta)) then
-		write(0,*) 'Error: (VerifyLayerY) layers have different vertical regularization'
+		write(0,*) 'Error: (verifyLayers) layers have different vertical regularization'
 		return
 	end if
 
 	status = .TRUE.
 	return
 
-  end function VerifyLayersY
+  end function verifyLayers_modelParam
 
 
   ! **********************************************************************
   ! * BOP
-  subroutine CreateParamY(P,nL,degree)
+  subroutine create_modelParam(P,nL,degree)
 
     implicit none
-    type (param_info), intent(inout)               :: P
+    type (modelParam_t), intent(inout)               :: P
     integer, intent(in)                            :: nL,degree
     ! * EOP
 
@@ -194,7 +201,7 @@ Contains
     integer                                        :: l,m,i,j,nV
 
     if (P%allocated) then
-       call DeleteParamY(P)
+       call deall_modelParam(P)
     end if
 
     ! create spherical harmonic functionals
@@ -275,54 +282,54 @@ Contains
 	P%nc = 0
 	P%allocated = .TRUE.
 
-  end subroutine CreateParamY
+  end subroutine create_modelParam
 
 
   ! **********************************************************************
   ! * Can be used to create a new zero-valued parametrization from another
   ! * parametrization that have been already initialized
   ! * BOP
-  subroutine SetUpParamY(P,L,F)
+  subroutine setup_modelParam(P,L,F)
 
     implicit none
-    type (param_info), intent(inout)               :: P
-	type (layer_info), dimension(:), intent(in)    :: L
-	type (func_info), dimension(:), intent(in)	   :: F
+    type (modelParam_t), intent(inout)               :: P
+	type (modelLayer_t), dimension(:), intent(in)    :: L
+	type (modelFunc_t), dimension(:), intent(in)	   :: F
     ! * EOP
 
 	if (P%allocated) then
-	  call DeleteParamY(P)
+	  call deall_modelParam(P)
 	end if
 
-	call CreateParamY(P,size(L),maxval(F%l))
+	call create_modelParam(P,size(L),maxval(F%l))
 
 	if (P%nF /= size(F)) then
-	   write(0,*) 'Error: (SetUpParamY) spherical harmonics initialization incorrect'
-	   call DeleteParamY(P)
+	   write(0,*) 'Error: (setup_modelParam) spherical harmonics initialization incorrect'
+	   call deall_modelParam(P)
 	   stop
 	end if
 
 	P%L = L
 	P%F = F
 
-  end subroutine SetUpParamY
+  end subroutine setup_modelParam
 
 
   ! **********************************************************************
 	! * Insert new coefficients into an existing parametrization structure.
 	! * Only replaces
   ! * BOP
-  subroutine FillParamY(P,c)
+  subroutine fillParam_modelParam(P,c)
 
     implicit none
-    type (param_info), intent(inout)               :: P
-	type (coeff_info), dimension(:), intent(in)    :: c
+    type (modelParam_t), intent(inout)               :: P
+	type (modelCoeff_t), dimension(:), intent(in)    :: c
     ! * EOP
 
 	integer										   :: i,j,iL,iV
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (FillParamY) parametrization not allocated yet'
+	   write(0,*) 'Error: (fillParam_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
@@ -330,10 +337,10 @@ Contains
 	  iL = c(i)%L%num
 	  iV = c(i)%F%num
 	  if (P%c(iL,iV)%code /= c(i)%code) then
-		write (0,*) 'Error: (FillParamY) parametrization setup error'
+		write (0,*) 'Error: (fillParam_modelParam) parametrization setup error'
 		stop
 	  else if(.not.P%c(iL,iV)%exists) then
-			write (0,*) 'Warning: (FillParamY) unable to replace coefficient - exists=.FALSE.'
+			write (0,*) 'Warning: (fillParam_modelParam) unable to replace coefficient - exists=.FALSE.'
 		  cycle
 		end if
 	  P%c(iL,iV) = c(i)
@@ -342,27 +349,27 @@ Contains
 	P%nc = count(P%c%exists)
 
 
-  end subroutine FillParamY
+  end subroutine fillParam_modelParam
 
 
   ! **********************************************************************
   ! * BOP
-  subroutine FillParamValuesY(P,v)
+  subroutine fillParamValues_modelParam(P,v)
 
     implicit none
-    type (param_info), intent(inout)               :: P
+    type (modelParam_t), intent(inout)               :: P
     real(8), dimension(:), intent(in)			   :: v
     ! * EOP
 
 	integer										   :: i,j,k
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (FillParamValuesY) parametrization not allocated yet'
+	   write(0,*) 'Error: (fillParamValues_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
 	if(count(P%c%exists) /= size(v)) then
-	   write(0,*) 'Error: (FillParamValuesY) wrong number of input coefficients'
+	   write(0,*) 'Error: (fillParamValues_modelParam) wrong number of input coefficients'
 	   return
 	end if
 
@@ -377,22 +384,22 @@ Contains
 	  end do
 	end do
 
-  end subroutine FillParamValuesY
+  end subroutine fillParamValues_modelParam
 
 
   ! **********************************************************************
   ! * BOP
-  subroutine GetParamValuesY(P,v)
+  subroutine getParamValues_modelParam(P,v)
 
     implicit none
-    type (param_info), intent(in)				   :: P
+    type (modelParam_t), intent(in)				   :: P
     real(8), dimension(:), intent(out)			   :: v
     ! * EOP
 
 	integer										   :: i,j,k
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (GetParamValuesY) parametrization not allocated yet'
+	   write(0,*) 'Error: (getParamValues_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
@@ -406,7 +413,7 @@ Contains
 
 
 	if(count(P%c%exists) /= size(v)) then
-	   write(0,*) 'Error: (GetParamValuesY) wrong number of input coefficients: ',size(v)
+	   write(0,*) 'Error: (getParamValues_modelParam) wrong number of input coefficients: ',size(v)
 	   return
 	end if
 
@@ -421,15 +428,15 @@ Contains
 	  end do
 	end do
 
-  end subroutine GetParamValuesY
+  end subroutine getParamValues_modelParam
 
 
   ! **********************************************************************
   ! * BOP
-  subroutine SetLayerY(P,iL,upperb,lowerb,alpha,beta,if_log)
+  subroutine setLayer_modelParam(P,iL,upperb,lowerb,alpha,beta,if_log)
 
     implicit none
-    type (param_info), intent(inout)               :: P
+    type (modelParam_t), intent(inout)               :: P
 	integer, intent(in)							   :: iL
     real(8), intent(in)							   :: upperb,lowerb
     real(8), intent(in)							   :: alpha,beta
@@ -440,14 +447,14 @@ Contains
     integer                                        :: status
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (SetLayerY) parametrization not allocated yet'
+	   write(0,*) 'Error: (setLayer_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
     depth = EARTH_R - lowerb
 	width  = upperb - lowerb
 	if (width <= R_ZERO) then
-	  write(0, *) 'Error: (SetLayerY) incorrect depth of layer ',iL
+	  write(0, *) 'Error: (setLayer_modelParam) incorrect depth of layer ',iL
 	  stop
 	end if
 
@@ -460,15 +467,15 @@ Contains
 	P%L(iL)%if_log = if_log
 
 
-  end subroutine SetLayerY
+  end subroutine setLayer_modelParam
 
 
   ! **********************************************************************
   ! * BOP
-  subroutine SetCoeffValueY(P,iL,l,m,v,min,max,frozen)
+  subroutine setCoeffValue_modelParam(P,iL,l,m,v,min,max,frozen)
 
     implicit none
-    type (param_info), intent(inout)               :: P
+    type (modelParam_t), intent(inout)               :: P
 	integer, intent(in)							   :: iL,l,m
     real(8), intent(in)							   :: v,min,max
 	logical, intent(in)							   :: frozen
@@ -477,17 +484,17 @@ Contains
 	integer										   :: iV
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (SetCoeffValueY) parametrization not allocated yet'
+	   write(0,*) 'Error: (setCoeffValue_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
 	iV = iY(l,m)
 	if (P%c(iL,iV)%exists) then
-	  write (0,*) 'Warning: (SetCoeffValueY) coefficient ',iL,iV,' already exists, overwrite...'
+	  write (0,*) 'Warning: (setCoeffValue_modelParam) coefficient ',iL,iV,' already exists, overwrite...'
 	end if
 
 	if ((P%c(iL,iV)%F%l /= l).or.(P%c(iL,iV)%F%m /= m)) then
-	  write (0,*) 'Error: (SetCoeffValueY) major error in parametrization setup'
+	  write (0,*) 'Error: (setCoeffValue_modelParam) major error in parametrization setup'
 	  stop
 	end if
 
@@ -500,15 +507,15 @@ Contains
 
 	P%c(iL,iV)%exists = .TRUE.
 
-  end subroutine SetCoeffValueY
+  end subroutine setCoeffValue_modelParam
 
 
   ! **********************************************************************
   ! * BOP
-  subroutine GetCoeffValueY(P,iL,l,m,v,min,max,frozen)
+  subroutine getCoeffValue_modelParam(P,iL,l,m,v,min,max,frozen)
 
     implicit none
-    type (param_info), intent(in)				   :: P
+    type (modelParam_t), intent(in)				   :: P
 	integer, intent(in)							   :: iL,l,m
     real(8), intent(out)						   :: v,min,max
 	logical, intent(out)						   :: frozen
@@ -517,13 +524,13 @@ Contains
 	integer										   :: iV
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (GetCoeffValueY) parametrization not allocated yet'
+	   write(0,*) 'Error: (getCoeffValue_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
 	iV = iY(l,m)
 	if (.not.P%c(iL,iV)%exists) then
-	  write (0,*) 'Error: (GetCoeffValueY) required coefficient does not exist'
+	  write (0,*) 'Error: (getCoeffValue_modelParam) required coefficient does not exist'
 	  return
 	end if
 
@@ -532,23 +539,23 @@ Contains
 	max = P%c(iL,iV)%max
 	frozen = P%c(iL,iV)%frozen
 
-  end subroutine GetCoeffValueY
+  end subroutine getCoeffValue_modelParam
 
 
   ! **********************************************************************
   ! * BOP
-  function GetCoeffY(P,n) result (c)
+  function getCoeff_modelParam(P,n) result (c)
 
     implicit none
-    type (param_info), intent(in)				   :: P
+    type (modelParam_t), intent(in)				   :: P
 	integer, intent(in)							   :: n
-	type (coeff_info)							   :: c
+	type (modelCoeff_t)							   :: c
     ! * EOP
 
 	integer										   :: i,j,k
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (GetCoeffY) parametrization not allocated yet'
+	   write(0,*) 'Error: (getCoeff_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
@@ -566,26 +573,26 @@ Contains
 
 	c=P%c(j,i)
 
-  end function GetCoeffY
+  end function getCoeff_modelParam
 
   ! **********************************************************************
   ! * BOP
-  subroutine GetCoeffArrayY(P,c)
+  subroutine getCoeffArray_modelParam(P,c)
 
     implicit none
-    type (param_info), intent(in)				   :: P
-	type (coeff_info), dimension(:), intent(out)   :: c
+    type (modelParam_t), intent(in)				   :: P
+	type (modelCoeff_t), dimension(:), intent(out)   :: c
     ! * EOP
 
 	integer										   :: i,j,k
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (GetCoeffY) parametrization not allocated yet'
+	   write(0,*) 'Error: (getCoeff_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
 	if(size(c) /= P%nc) then
-	   write(0,*) 'Error: (GetCoeffY) coefficient array is of a wrong size'
+	   write(0,*) 'Error: (getCoeff_modelParam) coefficient array is of a wrong size'
 	   return
 	end if
 
@@ -600,22 +607,23 @@ Contains
 	  end do
 	end do search
 
-  end subroutine GetCoeffArrayY
+  end subroutine getCoeffArray_modelParam
 
   ! **********************************************************************
   ! * BOP
-  subroutine CopyParamY(P2,P1)
+  subroutine copy_modelParam(P2,P1)
 
     implicit none
-    type (param_info), intent(in)                  :: P1
-    type (param_info), intent(inout)               :: P2
+    type (modelParam_t), intent(in)                  :: P1
+    type (modelParam_t), intent(inout)               :: P2
     ! * EOP
 
     integer                                        :: status
 	integer										   :: i,j
+	integer                                        :: nx,ny
 
 	if (P2%allocated) then
-	  call DeleteParamY(P2)
+	  call deall_modelParam(P2)
 	end if
 
 	! copy functional construction
@@ -633,6 +641,20 @@ Contains
 	allocate(P2%c(P2%nL,P2%nF),STAT=status)
 	P2%c = P1%c
 
+	! copy crust, if exists
+	if (P1%crust%allocated) then
+		if (associated(P2%crust%cond)) then
+	   		deallocate(P2%crust%cond,STAT=status)
+		end if
+		nx = size(P1%crust%cond,1)
+		ny = size(P1%crust%cond,2)
+		allocate(P2%crust%cond(nx,ny),STAT=status)
+		P2%crust%cond = P1%crust%cond
+		P2%crust%allocated = .true.
+	else
+		P2%crust%allocated = .false.
+	end if
+
 	do j=1,P2%nL
 	  do i=1,P2%nF
 		P2%c(j,i)%L => P2%L(j)
@@ -642,55 +664,55 @@ Contains
 
 	P2%allocated = P1%allocated
 
-  end subroutine CopyParamY
+  end subroutine copy_modelParam
 
 
   ! **********************************************************************
   ! * Use this function when a zero-valued copy of an existing structure
   ! * is needed
   ! * BOP
-  function CreateEmptyParamY(P1) result(P)
+  function zero_modelParam(P1) result(P)
 
     implicit none
-    type (param_info), intent(in)		:: P1
-    type (param_info)					:: P
+    type (modelParam_t), intent(in)		:: P1
+    type (modelParam_t)					:: P
     ! * EOP
 
     if(.not.(P1%allocated)) then
-	   write(0,*) 'Error: (CreateEmptyParamY) parametrization not allocated yet'
+	   write(0,*) 'Error: (zero_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
 	P%allocated = .FALSE.
 
 	! Create an identical structure to P1
-	call CopyParamY(P,P1)
+	call copy_modelParam(P,P1)
 
 	! Set all values to zero
 	P%c%value = R_ZERO
 
-  end function CreateEmptyParamY
+  end function zero_modelParam
 
 
   ! **********************************************************************
   ! * We can add or subtract values with exists==.FALSE. (they equal zero)
   ! * BOP
-  function AddParamY_f(P1,P2) result(P)
+  function add_modelParam_f(P1,P2) result(P)
 
     implicit none
-    type (param_info), intent(in)		:: P1
-    type (param_info), intent(in)		:: P2
-    type (param_info)					:: P
+    type (modelParam_t), intent(in)		:: P1
+    type (modelParam_t), intent(in)		:: P2
+    type (modelParam_t)					:: P
     ! * EOP
 
     integer					:: i,j
 
-		if (.not.VerifyParamY(P1,P2)) then
+		if (.not.verify_modelParam(P1,P2)) then
 	   write(0,*) 'Error: (AddParamY) parametrization structures incompatible'
 	   return
 		end if
 
-	P = CreateEmptyParamY(P1)
+	P = zero_modelParam(P1)
 
 	do j=1,P%nL
 	  do i=1,P%nF
@@ -703,28 +725,28 @@ Contains
 	  end do
 	end do
 
-  end function AddParamY_f
+  end function add_modelParam_f
 
 
   ! **********************************************************************
   ! * We can add or subtract values with exists==.FALSE. (they equal zero)
   ! * BOP
-  function SubParamY_f(P1,P2) result(P)
+  function subtract_modelParam_f(P1,P2) result(P)
 
     implicit none
-    type (param_info), intent(in)		:: P1
-    type (param_info), intent(in)		:: P2
-    type (param_info)					:: P
+    type (modelParam_t), intent(in)		:: P1
+    type (modelParam_t), intent(in)		:: P2
+    type (modelParam_t)					:: P
     ! * EOP
 
     integer					:: i,j
 
-		if (.not.VerifyParamY(P1,P2)) then
+		if (.not.verify_modelParam(P1,P2)) then
 	   write(0,*) 'Error: (SubParamY) parametrization structures incompatible'
 	   return
 		end if
 
-	P = CreateEmptyParamY(P1)
+	P = zero_modelParam(P1)
 
 	do j=1,P%nL
 	  do i=1,P%nF
@@ -737,29 +759,29 @@ Contains
 	  end do
 	end do
 
-  end function SubParamY_f
+  end function subtract_modelParam_f
 
 
   ! **********************************************************************
   ! * We can multiply values with exists==.FALSE. (they equal zero)
   ! * BOP
-  function MultParamY_f(P1,P2) result(P)
+  function mult_modelParam_f(P1,P2) result(P)
 
     implicit none
-    type (param_info), intent(in)		:: P1
-    type (param_info), intent(in)		:: P2
-    type (param_info)					:: P
+    type (modelParam_t), intent(in)		:: P1
+    type (modelParam_t), intent(in)		:: P2
+    type (modelParam_t)					:: P
     ! * EOP
 
     integer					:: i,j
 
-		if (.not.VerifyParamY(P1,P2)) then
+		if (.not.verify_modelParam(P1,P2)) then
 	   write(0,*) 'Error: (MultParamY) parametrization structures incompatible'
 	   return
 		end if
 
     if(.not.P%allocated) then
-	  P = CreateEmptyParamY(P1)
+	  P = zero_modelParam(P1)
 	end if
 
 	do j=1,P%nL
@@ -773,23 +795,23 @@ Contains
 	  end do
 	end do
 
-  end function MultParamY_f
+  end function mult_modelParam_f
 
   ! **********************************************************************
   ! * We can multiply values with exists==.FALSE. (they equal zero)
   ! * BOP
-  function DotProdParamY_f(P1,P2) result(r)
+  function dotProd_modelParam_f(P1,P2) result(r)
 
     implicit none
-    type (param_info), intent(in)		:: P1
-    type (param_info), intent(in)		:: P2
+    type (modelParam_t), intent(in)		:: P1
+    type (modelParam_t), intent(in)		:: P2
     real(8)								:: r
     ! * EOP
 
     integer					:: i,j
 
-		if (.not.VerifyParamY(P1,P2)) then
-	   write(0,*) 'Error: (DotProdParamY) parametrization structures incompatible'
+		if (.not.verify_modelParam(P1,P2)) then
+	   write(0,*) 'Error: (dotProd_modelParam_f) parametrization structures incompatible'
 	   return
 	end if
 
@@ -802,22 +824,22 @@ Contains
 			r = r + P1%c(j,i)%value * P2%c(j,i)%value
 		  end if
 	    else
-		 write(0,*) 'Error: (DotProdParamY) parametrization not set up correctly'
+		 write(0,*) 'Error: (dotProd_modelParam_f) parametrization not set up correctly'
 	     stop
 	    end if
 	  end do
 	end do
 
-  end function DotProdParamY_f
+  end function dotProd_modelParam_f
 
 
   ! **********************************************************************
   ! * If we multiply by a vector we only use values with exists==.TRUE.
   ! * BOP
-  function DotProdVecParamY_f(v,P2) result(r)
+  function dotProdVec_modelParam_f(v,P2) result(r)
 
     implicit none
-    type (param_info), intent(in)		:: P2
+    type (modelParam_t), intent(in)		:: P2
     real(8), dimension(:), intent(in)	:: v
     real(8)								:: r
     ! * EOP
@@ -825,12 +847,12 @@ Contains
     integer					:: i,j,k
 
     if(.not.P2%allocated) then
-	   write(0,*) 'Error: (DotProdVecParamY) parametrization not allocated yet'
+	   write(0,*) 'Error: (dotProdVec_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
 	if(count(P2%c%exists) /= size(v)) then
-	   write(0,*) 'Error: (DocProdVecParamY) wrong number of input coefficients'
+	   write(0,*) 'Error: (dotProdVec_modelParam) wrong number of input coefficients'
 	   return
 	end if
 
@@ -851,109 +873,109 @@ Contains
 	  end do
 	end do
 
-  end function DotProdVecParamY_f
+  end function dotProdVec_modelParam_f
 
   ! **********************************************************************
   ! * BOP
-  function ScMultParamY_f(v,P1) result(P)
+  function scMult_modelParam_f(v,P1) result(P)
 
     implicit none
-    type (param_info), intent(in)		:: P1
+    type (modelParam_t), intent(in)		:: P1
     real(8), intent(in)					:: v
-    type (param_info)					:: P
+    type (modelParam_t)					:: P
     ! * EOP
 
     if(.not.P1%allocated) then
-	   write(0,*) 'Error: (ScMultParamY) parametrization not allocated yet'
+	   write(0,*) 'Error: (scMult_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
     if(.not.P%allocated) then
-	  P = CreateEmptyParamY(P1)
+	  P = zero_modelParam(P1)
 	end if
 
 	P%c%value = v * P1%c%value
 
 
-  end function ScMultParamY_f
+  end function scMult_modelParam_f
 
   ! **********************************************************************
   ! * BOP
-  function ScDivParamY_f(P1,v) result(P)
+  function scDiv_modelParam_f(P1,v) result(P)
 
     implicit none
-    type (param_info), intent(in)		:: P1
+    type (modelParam_t), intent(in)		:: P1
     real(8), intent(in)					:: v
-    type (param_info)					:: P
+    type (modelParam_t)					:: P
     ! * EOP
 
     if(.not.P1%allocated) then
-	   write(0,*) 'Error: (ScDivParamY) parametrization not allocated yet'
+	   write(0,*) 'Error: (scDiv_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
     if(.not.P%allocated) then
-	  P = CreateEmptyParamY(P1)
+	  P = zero_modelParam(P1)
 	end if
 
 	if(v==R_ZERO) then
-	   write(0,*) 'Error: (ScDivParamY) division by zero'
+	   write(0,*) 'Error: (scDiv_modelParam) division by zero'
 	   return
 	end if
 
 	P%c%value = P1%c%value / v
 
 
-  end function ScDivParamY_f
+  end function scDiv_modelParam_f
 
   ! **********************************************************************
   ! * We can add or subtract values with exists==.FALSE. (they equal zero)
   ! * BOP
-  subroutine LinCombParamY(r1,P1,r2,P2,P)
+  subroutine linComb_modelParam(r1,P1,r2,P2,P)
 
     implicit none
-    type (param_info), intent(in)				   :: P1
-    type (param_info), intent(in)				   :: P2
+    type (modelParam_t), intent(in)				   :: P1
+    type (modelParam_t), intent(in)				   :: P2
     real(8), intent(in)							   :: r1
     real(8), intent(in)							   :: r2
-    type (param_info), intent(out)                 :: P
+    type (modelParam_t), intent(out)                 :: P
     ! * EOP
 
 	integer										   :: i,j
 
-		if (.not.VerifyParamY(P1,P2)) then
-	   write(0,*) 'Error: (LinCombParamY) parametrization structures incompatible'
+		if (.not.verify_modelParam(P1,P2)) then
+	   write(0,*) 'Error: (linComb_modelParam) parametrization structures incompatible'
 	   return
 	end if
 
-	P = CreateEmptyParamY(P1)
+	P = zero_modelParam(P1)
 
 	do j=1,P%nL
 	  do i=1,P%nF
 	    if((P1%c(j,i)%F%l==P2%c(j,i)%F%l).and.(P1%c(j,i)%F%m==P2%c(j,i)%F%m)) then
 		 P%c(j,i)%value = r1 * P1%c(j,i)%value + r2 * P2%c(j,i)%value
 	    else
-		 write(0,*) 'Error: (LinCombParamY) parametrization not set up correctly'
+		 write(0,*) 'Error: (linComb_modelParam) parametrization not set up correctly'
 	     stop
 	    end if
 	  end do
 	end do
 
-  end subroutine LinCombParamY
+  end subroutine linComb_modelParam
 
 
   ! **********************************************************************
   ! * BOP
-  subroutine SmoothHParamY(P)
+  subroutine smoothH_modelParam(P)
 
     implicit none
-    type (param_info), intent(inout)               :: P
+    type (modelParam_t), intent(inout)               :: P
     ! * EOP
 
 	integer										   :: i,j
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (SmoothHParamY) parametrization not allocated yet'
+	   write(0,*) 'Error: (smoothH_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
@@ -963,24 +985,24 @@ Contains
 	  end do
 	end do
 
-  end subroutine SmoothHParamY
+  end subroutine smoothH_modelParam
 
 
   ! **********************************************************************
   ! * Values with exists==.FALSE. have been initialized to zero and have
   ! * a smoothing effect: neighbouring parameters will have a smaller value
   ! * BOP
-  subroutine SmoothVParamY(P)
+  subroutine smoothV_modelParam(P)
 
     implicit none
-    type (param_info), intent(inout)               :: P
+    type (modelParam_t), intent(inout)               :: P
     ! * EOP
 
 	integer										   :: i,j
 	real(8),dimension(P%nL,P%nF)				   :: v,v_prev,v_next
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (SmoothVParamY) parametrization not allocated yet'
+	   write(0,*) 'Error: (smoothV_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
@@ -1013,73 +1035,110 @@ Contains
 	P%c%value = v_prev + v + v_next
 
 
-  end subroutine SmoothVParamY
+  end subroutine smoothV_modelParam
 
 
   ! **********************************************************************
   ! * Preconditioning operator C_p^{1/2}
   ! * BOP
-  function SmoothSqrtParamY(P1) result (P)
+  function multBy_CmSqrt(P1) result (P)
 
     implicit none
-    type (param_info), intent(in)				   :: P1
-    type (param_info)							   :: P
+    type (modelParam_t), intent(in)				   :: P1
+    type (modelParam_t)							   :: P
     ! * EOP
 
     if(.not.P1%allocated) then
-	   write(0,*) 'Error: (SmoothSqrtParamY) parametrization not allocated yet'
+	   write(0,*) 'Error: (multBy_CmSqrt) parametrization not allocated yet'
 	   return
 	end if
 
 	P = P1
 
 	! make the smoothing operator symmetric
-	call SmoothVParamY(P)
-	call SmoothHParamY(P)
-	call SmoothVParamY(P)
+	call smoothV_modelParam(P)
+	call smoothH_modelParam(P)
+	call smoothV_modelParam(P)
 
-  end function SmoothSqrtParamY
+  end function multBy_CmSqrt
 
 
   ! **********************************************************************
   ! * Preconditioning operator C_p
   ! * BOP
-  function SmoothParamY(P1) result (P)
+  function multBy_Cm(P1) result (P)
 
     implicit none
-    type (param_info), intent(in)				   :: P1
-    type (param_info)							   :: P2
-    type (param_info)							   :: P
+    type (modelParam_t), intent(in)				   :: P1
+    type (modelParam_t)							   :: P2
+    type (modelParam_t)							   :: P
     ! * EOP
 
     if(.not.P1%allocated) then
-	   write(0,*) 'Error: (SmoothParamY) parametrization not allocated yet'
+	   write(0,*) 'Error: (multBy_Cm) parametrization not allocated yet'
 	   return
 	end if
 
 	! apply operator C_p^{1/2} twice
-	P2 = SmoothSqrtParamY(P1)
-	P  = SmoothSqrtParamY(P2)
+	P2 = multBy_CmSqrt(P1)
+	P  = multBy_CmSqrt(P2)
 
 
-  end function SmoothParamY
-
+  end function multBy_Cm
 
   ! **********************************************************************
   ! * BOP
-  subroutine PrintParamInfoY(P,verbose,comment)
+  subroutine setCrust_modelParam(crust,P)
 
-    implicit none
-    type (param_info), intent(in)               :: P
-		integer, intent(in)                   :: verbose
-		character(*),intent(in),optional			:: comment
+    type (modelShell_t), intent(in)          :: crust
+    type (modelParam_t), intent(inout)       :: P
     ! * EOP
-
-	type (coeff_info)						:: coeff
-	integer										   :: i,j
+    integer                                  :: nx,ny,status
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (PrintParamInfoY) parametrization not allocated yet'
+	   write(0,*) 'Error: (setCrust_modelParam) parametrization not allocated yet'
+	   return
+	end if
+
+	if(.not.crust%allocated) then
+	   ! crust not allocated intentionally; do nothing
+	   P%crust%allocated = .false.
+	   return
+	end if
+
+	if(.not. associated(crust%cond)) then
+	   write(0,*) 'Error: (setCrust_modelParam) crust not allocated yet'
+	   return
+	end if
+
+	if(associated(P%crust%cond)) then
+	   deallocate(P%crust%cond, STAT=status)
+	end if
+
+    nx = size(crust%cond,1)
+    ny = size(crust%cond,2)
+	allocate(P%crust%cond(nx,ny), STAT=status)
+
+    P%crust%cond = crust%cond
+    P%crust%allocated = .true.
+
+  end subroutine setCrust_modelParam
+
+  ! **********************************************************************
+  ! * BOP
+  subroutine print_modelParam(P,verbose,comment)
+
+    implicit none
+    type (modelParam_t), intent(in)         :: P
+	integer, intent(in)                   	:: verbose
+	character(*),intent(in),optional		:: comment
+    ! * EOP
+
+	type (modelCoeff_t)						:: coeff
+	integer									:: i,j
+
+    if(.not.P%allocated) then
+	   write(0,*) 'Error: (print_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
@@ -1089,41 +1148,41 @@ Contains
 	end if
 
 	if (verbose>0) then
-  write(0,'(a50,i3)') 'Number of layers in script: ',P%nL
-	do j=1,P%nL
-    write(0,'(a46,i2,a2,i3)') 'Number of coefficients in layer ',j,': ',count(.not.P%c(j,:)%frozen)
-	end do
-  write(0,'(a50,i3)') 'Number of variable parameters in script: ',count(.not.P%c%frozen)
-	write(0,*)
+  		write(0,'(a50,i3)') 'Number of layers in script: ',P%nL
+		do j=1,P%nL
+    		write(0,'(a46,i2,a2,i3)') 'Number of coefficients in layer ',j,': ',count(.not.P%c(j,:)%frozen)
+		end do
+  		write(0,'(a50,i3)') 'Number of variable parameters in script: ',count(.not.P%c%frozen)
+		write(0,*)
 	end if
 
 	do j=1,P%nL
-    write(0,'(a46,i2,a2,g15.7)') 'Degree and order zero coefficient in layer ',j,': ',P%c(j,1)%value
-	end do
+    	write(0,'(a46,i2,a2,g15.7)') 'Degree and order zero coefficient in layer ',j,': ',P%c(j,1)%value
+		end do
 	write(0,*)
 
 	if (verbose>0) then
-	do j=1,P%nL
-    write(0,'(a46,i2,a2,g10.5)') 'Horizontal regularization in layer ',j,': ',P%L(j)%alpha
-	end do
-	write(0,*)
+		do j=1,P%nL
+    		write(0,'(a46,i2,a2,g10.5)') 'Horizontal regularization in layer ',j,': ',P%L(j)%alpha
+		end do
+		write(0,*)
 	end if
 
 	if (verbose>0) then
-	do j=1,P%nL
-    write(0,'(a46,i2,a2,g10.5)') 'Vertical regularization in layer ',j,': ',P%L(j)%beta
-	end do
-	write(0,*)
+		do j=1,P%nL
+    		write(0,'(a46,i2,a2,g10.5)') 'Vertical regularization in layer ',j,': ',P%L(j)%beta
+		end do
+		write(0,*)
 	end if
 
 	if (verbose>3) then
-	do i=1,P%nc
-	  coeff=GetCoeffY(P,i)
-	  write (0,'(2i8,g17.9)') coeff%L%num,coeff%F%num,coeff%value
-	end do
+		do i=1,P%nc
+	  		coeff=getCoeff_modelParam(P,i)
+	  		write (0,'(2i8,g17.9)') coeff%L%num,coeff%F%num,coeff%value
+		end do
 	end if
 
-  end subroutine PrintParamInfoY
+  end subroutine print_modelParam
 
 
 end module model_operators

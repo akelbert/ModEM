@@ -21,7 +21,7 @@ module global
   type (TF_List), save								:: TFList
 
   ! ***************************************************************************
-  ! * user-defined list of radii in meters at which we output the solution 
+  ! * user-defined list of radii in meters at which we output the solution
   type (Rad_List), save								:: slices
 
   ! ***************************************************************************
@@ -34,16 +34,17 @@ module global
 
   ! ***************************************************************************
   ! * shell: Contains the information about thin-shell conductance
-  type (shell_info), save								:: crust
+  ! - now part of the model parameter
+  !type (modelShell_t), save							:: crust
 
   ! ***************************************************************************
   ! * param: Contains the information about the user-specified parametrization
-  type (param_info), save								:: p_input
-  type (param_info), save								:: p0_input
-  type (param_info), save								:: p_smooth
-  type (param_info), save								:: p_diff
-  type (param_info), save								:: param
-  type (param_info), save								:: param0
+  type (modelParam_t), save								:: p_input
+  type (modelParam_t), save								:: p0_input
+  type (modelParam_t), save								:: p_smooth
+  type (modelParam_t), save								:: p_diff
+  type (modelParam_t), save								:: param
+  type (modelParam_t), save								:: param0
 
   ! ***************************************************************************
   ! * cUserDef: Vital character-based information specified by the user
@@ -51,15 +52,15 @@ module global
   ! * fwdCtrls: User-specified information about the forward solver relaxations
   type (input_info), save								:: cUserDef
   type (output_info),save							:: outFiles
-  type (relaxation),save								:: fwdCtrls
+  type (fwdCtrl_t),save								:: fwdCtrls
 
 
   ! ***************************************************************************
   ! * misfitType: preconditioning and regularisation parameters
-  type (misfit_def)								:: misfitType
+  type (misfitDef_t)								:: misfitType
 
   ! ***************************************************************************
-  ! * some common integers are stored here to simplify the code 
+  ! * some common integers are stored here to simplify the code
   !integer										:: nfreq,ifreq
   !integer               						:: nobs, iobs
   !integer										:: nfunc, ifunc
@@ -77,7 +78,7 @@ module global
   ! nobs = total number of observatories in the analysis
   !		  (compare to $m_\omega$ = total number of observations for freq. omega)
   ! 3*np1 = number of vector components on cell edges (|E|)
-  ! nx*ny*nz = number of scalar values at cell centers (|G|) 
+  ! nx*ny*nz = number of scalar values at cell centers (|G|)
   ! nfreq = number of frequency loops
 
 end module global

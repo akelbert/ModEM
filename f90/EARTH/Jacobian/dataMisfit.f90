@@ -19,12 +19,13 @@ Contains
 
 	!uses: TFList,obsList
 
-	type (transmitter), intent(in)			:: freq
-	type (data_array), intent(in)			:: dat	
-	type (data_array), intent(out)			:: psi
+	type (transmitter_t), intent(in)			:: freq
+	type (dataVecMTX_t), intent(in)			:: dat
+	type (dataVecMTX_t), intent(out)			:: psi
 	type (cvector), intent(in)				:: H
 	integer									:: i,j,k
 
+    psi%nTx = dat%nTx
 	psi%n = dat%n
 
 	i = freq%i
@@ -65,14 +66,14 @@ Contains
 
 
   ! ***************************************************************************
-  ! * calcResiduals is the subroutine to compute the data residuals from the 
-  ! * data and the corresponding responses obtained by first computing the fields. 
+  ! * calcResiduals is the subroutine to compute the data residuals from the
+  ! * data and the corresponding responses obtained by first computing the fields.
 
   subroutine calcResiduals(freq,dat,psi,res,weighted)
 
-	type (transmitter), intent(in)				:: freq
-	type (data_array), intent(in)				:: dat,psi
-	type (data_array), intent(out)				:: res
+	type (transmitter_t), intent(in)				:: freq
+	type (dataVecMTX_t), intent(in)				:: dat,psi
+	type (dataVecMTX_t), intent(out)				:: res
 	logical, intent(in), optional				:: weighted
 	integer										:: i,j,k
 	complex(8)									:: value
@@ -90,17 +91,17 @@ Contains
 		! The residual exists if both the data entry and the response make sense
 		if (dat%v(i,j,k)%resp%exists.and.psi%v(i,j,k)%resp%exists) then
 		  res%v(i,j,k)%resp%exists = .TRUE.
-		  res%v(i,j,k)%resp%value = psi%v(i,j,k)%resp%value - dat%v(i,j,k)%resp%value													
+		  res%v(i,j,k)%resp%value = psi%v(i,j,k)%resp%value - dat%v(i,j,k)%resp%value
 		  res%v(i,j,k)%resp%err = dat%v(i,j,k)%resp%err
 		else
-		  res%v(i,j,k)%resp%exists = .FALSE.		  
+		  res%v(i,j,k)%resp%exists = .FALSE.
 		  res%v(i,j,k)%resp%value = C_ZERO
 		  res%v(i,j,k)%resp%err = LARGE_REAL
 		end if
 
 	  end do
 	  ! Count the number of existing residuals
-	  res%n(i,j) = count(res%v(i,j,:)%resp%exists)	  
+	  res%n(i,j) = count(res%v(i,j,:)%resp%exists)
 	end do
 
 	! If instead weighted responses are required, divide by error squared
@@ -125,14 +126,14 @@ Contains
 
   subroutine calcMisfit(freq,res,misfit,name)
 
-	type (transmitter), intent(in)				:: freq
-	type (data_misfit), intent(inout)			:: misfit
-	type (data_array), intent(in)				:: res
+	type (transmitter_t), intent(in)				:: freq
+	type (misfit_t), intent(inout)			:: misfit
+	type (dataVecMTX_t), intent(in)				:: res
 	character(80), intent(in)					:: name
 	real(8)										:: rval,ival,error
 	integer										:: i,j,k
-	
-	i = freq%i	
+
+	i = freq%i
 
 	!call OutputResiduals(freq,res,TFList,obsList)
 	do j=1,TFList%n
@@ -168,17 +169,17 @@ Contains
   ! * misfitSumUp
 
   subroutine misfitSumUp(res,misfit,misfitValue,dmisfitValue)
-  
+
 	! this is temporary: output to files will be moved to output.f90
 	use iotypes
 	use iospec
 	! uses: TFList,p_input,param
-	type (data_misfit), intent(inout)			  :: misfit
-	type (data_array), intent(in)				  :: res
-	type (param_info)							  :: dparam,weighted_norm
+	type (misfit_t), intent(inout)			  :: misfit
+	type (dataVecMTX_t), intent(in)				  :: res
+	type (modelParam_t)							  :: dparam,weighted_norm
   	real(8), dimension(:), intent(out)			  :: misfitValue  !nfunc
 	real(8), dimension(:,:), intent(out),optional :: dmisfitValue !nfunc,ncoeff
-	type (coeff_info), dimension(param%nc)		  :: norm,grad,point
+	type (modelCoeff_t), dimension(param%nc)	  :: norm,grad,point
 	character(80)                    :: comment
 	real(8)										  :: v1,v2
 	integer										  :: j,l
@@ -192,7 +193,7 @@ Contains
 	end do
 
 	v1=dot_product(misfit%weight,misfitValue)
-	v2=DotProdParamY_f(p_input,p_input)
+	v2=dotProd_modelParam_f(p_input,p_input)
 	v2=v2*misfit%damping
 
 	write(0,*) 'Weighted model norm = ',v2
@@ -230,16 +231,16 @@ Contains
 	  do l=1,param%nc
 		dmisfitValue(j,l) = sum(misfit%dRda(:,j,l))/(2*sum(misfit%ndat(:,j)))
 	  end do
-	  call FillParamValuesY(dparam,dmisfitValue(j,:))
-		call PrintParamInfoY(dparam,output_level,trim(comment))
-		call GetCoeffArrayY(dparam,grad)
+	  call fillParamValues_modelParam(dparam,dmisfitValue(j,:))
+		call print_modelParam(dparam,output_level,trim(comment))
+		call getCoeffArray_modelParam(dparam,grad)
 !	  do l=1,param%nc
-!		grad(l)=GetCoeffY(dparam,l)
+!		grad(l)=getCoeff_modelParam(dparam,l)
 !		if (output_level>1) then
 !		  write (0,'(2i8,g17.9)') grad(l)%L%num,grad(l)%F%num,grad(l)%value
 !	        end if
 !	  end do
-	  
+
 	end do
 
 	!if (output_level>1) then
@@ -247,36 +248,36 @@ Contains
 	!end if
 
 	!do l=1,param%nc
-	!  norm(l)=GetCoeffY(p_input,l)
+	!  norm(l)=getCoeff_modelParam(p_input,l)
 	!  if (output_level>1) then
 	!    write (0,'(2i8,g17.9)') norm(l)%L%num,norm(l)%F%num,2.0d0*misfit%damping*norm(l)%value
 	!  end if
-	!end do			  
-	call GetCoeffArrayY(p_input,norm)
+	!end do
+	call getCoeffArray_modelParam(p_input,norm)
 	weighted_norm = 2.0d0 * misfit%damping * p_input
-	call PrintParamInfoY(weighted_norm,output_level,"Weighted model norm derivative = ")
-	
+	call print_modelParam(weighted_norm,output_level,"Weighted model norm derivative = ")
+
 	! Compute total gradient including model norm term
 	do l=1,param%nc
 	  grad(l)%value=dot_product(misfit%weight,dmisfitValue(:,l))
-	end do			  
+	end do
 	!dparam = dparam + weighted_norm
 
 	norm%value = 2.0d0 * misfit%damping * norm%value
 	grad%value = grad%value + norm%value
-	call FillParamY(dparam,grad)
+	call fillParam_modelParam(dparam,grad)
 
 
-	call PrintParamInfoY(dparam,output_level,"Total derivative = ")
+	call print_modelParam(dparam,output_level,"Total derivative = ")
 !	do l=1,param%nc
 !	  write (0,'(2i8,g17.9)') grad(l)%L%num,grad(l)%F%num,grad(l)%value
-!	end do			  
+!	end do
 
 	do j=1,TFList%n
 	  dmisfitValue(j,:) = misfit%weight(j)*dmisfitValue(j,:)+norm%value
 	end do
 
-	call GetCoeffArrayY(p_input,point)
+	call getCoeffArray_modelParam(p_input,point)
 
 	!---------------------------------------------------------------------------
 	! Important output to file; this will be a separate subroutine in output.f90

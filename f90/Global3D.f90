@@ -460,6 +460,8 @@ end program earth
 	use initFields
 	use dataMisfit
 	use boundaries	!for testing
+	!use sensmatrix
+	!use solnrhs
 	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -469,12 +471,18 @@ end program earth
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
+	!type (EMsolnMTX_t)                      :: H
     type (cvector)							:: H,B,F
 	type (sparsevecc)						:: Hb
-	type (functional)						:: dataType
-	type (transmitter)						:: freq
+	type (functional_t)						:: dataType
+	type (transmitter_t)					:: freq
 	integer									:: ifreq
 	logical									:: adjoint
+
+    ! Call the forward solver for all frequencies
+    ! psi = dat
+    ! call setGrid(grid)
+    ! call fwdPred(param,psi,H)
 
 	! Start the (portable) clock
 	call date_and_time(values=tarray)
@@ -583,9 +591,9 @@ end program earth
 	type (rvector)							:: dE_real
 	type (rscalar)							:: drho
 	type (sparsevecc)						:: Hb
-	type (functional)						:: dataType
-	type (transmitter)						:: freq
-	type (param_info)						:: dmisfit,dmisfit2
+	type (functional_t)						:: dataType
+	type (transmitter_t)					:: freq
+	type (modelParam_t)						:: dmisfit,dmisfit2
 	integer									:: ifreq,ifunc
 	logical									:: adjoint,delta
 	character(1)							:: cfunc
@@ -694,12 +702,12 @@ end program earth
 		call operatorPt(drho,dmisfit)
 
 		dmisfit%c%value = -2.0d0 * dmisfit%c%value
-		!dmisfit = ScMultParamY_f(-2.0d0,dmisfit)
+		!dmisfit = Scmult_modelParam_f(-2.0d0,dmisfit)
 		!dmisfit = -2. * dmisfit
 
-	    	dmisfit = SmoothSqrtParamY(dmisfit)
+	    	dmisfit = multBy_CmSqrt(dmisfit)
 
-		call GetParamValuesY(dmisfit,misfit%dRda(ifreq,ifunc,:))
+		call getParamValues_modelParam(dmisfit,misfit%dRda(ifreq,ifunc,:))
 
 	  end do
 
@@ -773,9 +781,9 @@ end program earth
 	type (sparsevecc)						:: bv_H,bv_dH,Hb
 	type (rvector)							:: dE_real,dE_imag
 	type (sparsevecc)						:: g_sparse
-	type (functional)						:: dataType
-	type (transmitter)						:: freq
-	type (param_info)						:: rsens,isens
+	type (functional_t)						:: dataType
+	type (transmitter_t)					:: freq
+	type (modelParam_t)						:: rsens,isens
 	integer									:: ifreq,ifunc,iobs,ilayer
 	logical									:: adjoint,delta
 	real(8),dimension(ncoeff)				:: da
@@ -868,11 +876,11 @@ end program earth
 		  call operatorPt(sens%drho_real,rsens)
 		  call operatorPt(sens%drho_imag,isens)
 
-		  rsens = SmoothSqrtParamY(rsens)
-		  isens = SmoothSqrtParamY(isens)
+		  rsens = multBy_CmSqrt(rsens)
+		  isens = multBy_CmSqrt(isens)
 
-		  call GetParamValuesY(rsens,sens%da_real(ifreq,ifunc,iobs,:))
-		  call GetParamValuesY(isens,sens%da_imag(ifreq,ifunc,iobs,:))
+		  call getParamValues_modelParam(rsens,sens%da_real(ifreq,ifunc,iobs,:))
+		  call getParamValues_modelParam(isens,sens%da_imag(ifreq,ifunc,iobs,:))
 
 
 		  ! account for the fact that this is $\pd{\bar{\psi}^j_\omega}{\a}$
@@ -933,9 +941,9 @@ end program earth
 	type (rvector)							:: dE_real
 	type (rscalar)							:: drho
 	type (sparsevecc)						:: Hb
-	type (functional)						:: dataType
-	type (transmitter)						:: freq
-	type (coeff_info)						:: coeff
+	type (functional_t)						:: dataType
+	type (transmitter_t)					:: freq
+	type (modelCoeff_t)						:: coeff
 	integer									:: ifreq,ifunc,index
 	logical									:: adjoint,delta
 	character(1)							:: cfunc
@@ -995,7 +1003,7 @@ end program earth
 
 		do index = 1,param%nc
 
-		  coeff = GetCoeffY(param,index)
+		  coeff = getCoeff_modelParam(param,index)
 
 		  if (coeff%frozen) then
 			cycle
@@ -1087,9 +1095,9 @@ end program earth
 	type (cvector)							:: e1,e2
 	type (rscalar)							:: drho,drho1,drho2
 	type (sparsevecc)						:: g_sparse
-	type (functional)						:: dataType
-	type (transmitter)						:: freq
-	type (param_info)						:: dparam
+	type (functional_t)						:: dataType
+	type (transmitter_t)					:: freq
+	type (modelParam_t)						:: dparam
   	logical									:: adjoint,delta
 	integer									:: ifreq,ifunc
 	integer, dimension(3)					:: k
@@ -1122,7 +1130,7 @@ end program earth
 	dparam = param
 	call operatorPt(drho1,dparam)
 	!value2 = dot_product(param%p%value,dparam%p%value)
-	value2 = DotProdParamY_f(param,dparam)
+	value2 = dotProd_modelParam_f(param,dparam)
 	print *, "Value 2 = ",value2
 	!stop
 	do i= grid%nx,grid%nx

@@ -60,7 +60,7 @@ Contains
 	real(8), intent(in)						  :: omega
 	real(8)									  :: om
 	real(8), dimension(:,:,:), intent(in)	  :: rho
-	type (relaxation), intent(in)			  :: fwdCtrls
+	type (fwdCtrl_t), intent(in)			  :: fwdCtrls
 	integer, intent(inout)					  :: errflag
 	logical, intent(inout), optional		  :: adj
 	logical, intent(inout), optional		  :: sens
@@ -923,15 +923,15 @@ Contains
 
 	use global	! uses grid,param,rho
 
-    type (param_info), intent(inout)				:: da
+    type (modelParam_t), intent(inout)				:: da
 	integer, intent(in)								:: n
 	type (rscalar)									:: dm !(nx,ny,nz)
 	integer											:: i,j,k,l,istat
 	real(8)											:: value
-	type (layer_info), pointer						:: this_layer
-	type (point_info)								:: point
-	type (func_info)								:: func
-	type (coeff_info)								:: coeff
+	type (modelLayer_t), pointer						:: this_layer
+	type (modelPoint_t)								:: point
+	type (modelFunc_t)								:: func
+	type (modelCoeff_t)								:: coeff
 
 	! Test to make sure no grid is defined outside the layered region
 	if (grid%r(grid%nz+1) < param%L(param%nL)%lbound) then
@@ -941,11 +941,13 @@ Contains
 	! Create a zero-valued output in G
 	call create_rscalar(grid,dm,CENTER)
 
-	coeff = GetCoeffY(da,n)
+	coeff = getCoeff_modelParam(da,n)
 
 	if (coeff%frozen) then
 	  return
 	end if
+
+	this_layer => coeff%L
 
 	! Resistivity is constant at air layers, hence derivative is zero
 	forall (i=1:grid%nx, j=1:grid%ny, k=1:grid%nzCrust)
@@ -1003,15 +1005,15 @@ Contains
 
 	use global	! uses grid,param,rho
 
-    type (param_info), intent(in)					:: da
+    type (modelParam_t), intent(in)					:: da
 	type (rscalar), intent(out)						:: dm !(nx,ny,nz)
 	!real(8), dimension(:,:,:), intent(inout)		:: dm !(nx,ny,nz)
 	integer											:: i,j,k,l,istat
 	integer											:: iL,ip
 	real(8)											:: value,coeff
-	type (layer_info), pointer						:: this_layer
-	type (point_info)								:: point
-	type (func_info)								:: func
+	type (modelLayer_t), pointer						:: this_layer
+	type (modelPoint_t)								:: point
+	type (modelFunc_t)								:: func
 
 	! Test to make sure no grid is defined outside the layered region
 	if (grid%r(grid%nz+1) < param%L(param%nL)%lbound) then
@@ -1098,15 +1100,15 @@ Contains
 	use global
     implicit none
 	type (rscalar), intent(in)						:: dm !(nx,ny,nz)
-    type (param_info), intent(out)					:: da
+    type (modelParam_t), intent(out)					:: da
 	!real(8),dimension(:,:,:),intent(in)				 :: dm  !(nx,ny,nz)
 	!real(8),dimension(:),intent(out)				 :: da  !ncoeff
 	integer											 :: i,j,k,l
 	integer											 :: iL,ip
 	real(8)											 :: tau ! single entry of matrix P^t
-	type (point_info)								 :: point
-	type (func_info)								 :: func
-	type (layer_info)								 :: this_layer
+	type (modelPoint_t)								 :: point
+	type (modelFunc_t)								 :: func
+	type (modelLayer_t)								 :: this_layer
 
 !	if(size(dm) /= grid%nx * grid%ny * grid%nz) then
 !		write(0, *) 'Error: (operatorPt) input vector should be defined at every grid cell'
@@ -1123,7 +1125,7 @@ Contains
 !		stop
 !	end if
 
-	da = CreateEmptyParamY(param)
+	da = zero_modelParam(param)
 
 	do iL = 1,param%nL
 

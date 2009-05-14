@@ -29,12 +29,12 @@ Contains
   subroutine outputSolution(freq,H,slices,grid,cUserDef,rho,extension)
 
 	type (input_info), intent(in)			  :: cUserDef
-	type (transmitter), intent(in)			  :: freq
+	type (transmitter_t), intent(in)			  :: freq
 	type (Rad_List), intent(in)				  :: slices
 	type (grid_t), intent(in)			  :: grid
 	type (cvector), intent(in)				  :: H
-	type (solution)							  :: Hij
-	type (receiver)							  :: obs
+	type (solution_t)							  :: Hij
+	type (receiver_t)							  :: obs
 	real(8), dimension(:,:,:), intent(in)	  :: rho	!(nx,ny,nz)
 	complex(8)								  :: Hx,Hy,Hz
 	integer									  :: i,j,k,n,ios
@@ -94,9 +94,9 @@ Contains
 
   subroutine outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
 
-	type (transmitter), intent(in)					:: freq
-	type (data_array), intent(in)					:: psi
-	type (data_array), intent(in), optional		    :: dat
+	type (transmitter_t), intent(in)					:: freq
+	type (dataVecMTX_t), intent(in)					:: psi
+	type (dataVecMTX_t), intent(in), optional		    :: dat
 	type (TF_List), intent(in)						:: TFList
 	type (Obs_List), intent(in)						:: obsList
 	type (Freq_List), intent(in)					:: freqList
@@ -205,8 +205,8 @@ Contains
   subroutine outputMisfit(param,misfit,misfitValue,cUserDef)
 
 	type (input_info), intent(in)			  :: cUserDef
-	type (data_misfit), intent(in)			  :: misfit
-	type (param_info), intent(in)			  :: param
+	type (misfit_t), intent(in)			  :: misfit
+	type (modelParam_t), intent(in)			  :: param
 	real(8),dimension(:),intent(in)			  :: misfitValue
     character(80)                             :: fn_misfit
 
@@ -228,8 +228,8 @@ Contains
   subroutine outputDerivative(param,misfit,dmisfitValue,cUserDef)
 
 	type (input_info), intent(in)			  :: cUserDef
-	type (data_misfit), intent(in)			  :: misfit
-	type (param_info), intent(in)			  :: param
+	type (misfit_t), intent(in)			  :: misfit
+	type (modelParam_t), intent(in)			  :: param
 	real(8),dimension(:,:),intent(in)		  :: dmisfitValue
 	integer									  :: i,j,l
     character(80)                             :: fn_misfit
@@ -255,8 +255,8 @@ Contains
 
   subroutine outputResiduals(freq,res,TFList,obsList,outFiles)
 
-	type (transmitter), intent(in)					:: freq
-	type (data_array), intent(in)					:: res
+	type (transmitter_t), intent(in)					:: freq
+	type (dataVecMTX_t), intent(in)					:: res
 	type (TF_List), intent(in)						:: TFList
 	type (Obs_List), intent(in)						:: obsList
 	type (output_info), intent(in)					:: outFiles
@@ -301,8 +301,8 @@ Contains
 
   subroutine outputSens(misfitInfo,param,freqList,TFList)
 
-	type (misfit_info),dimension(:,:),intent(in)	  :: misfitInfo
-	type (param_info), intent(in)			  :: param
+	type (misfitInfo_t),dimension(:,:),intent(in)	  :: misfitInfo
+	type (modelParam_t), intent(in)			  :: param
 	type (Freq_List), intent(in)			  :: freqList
 	type (TF_List), intent(in)				  :: TFList
 	integer									  :: ifreq,ifunc,ilayer,icoeff,ivar
@@ -345,15 +345,15 @@ Contains
 
     use model_operators
 
-	type (transmitter), intent(in)					:: freq
-        type (sensitivity), intent(in)                                  :: sens
-	type (data_array), intent(in)					:: psi
-	type (param_info), intent(in), optional		    :: param
+	type (transmitter_t), intent(in)					:: freq
+        type (sensitivity_t), intent(in)                                  :: sens
+	type (dataVecMTX_t), intent(in)					:: psi
+	type (modelParam_t), intent(in), optional		    :: param
 	type (TF_List), intent(in)						:: TFList
 	type (Obs_List), intent(in)						:: obsList
 	type (Freq_List), intent(in)					:: freqList
 	!type (output_info), intent(in)					:: outFiles
-	type (coeff_info)								:: coeff
+	type (modelCoeff_t)								:: coeff
 	type (input_info), intent(in)			  :: cUserDef
 	character(3)							  :: ichar
 	character(10)							  :: echar
@@ -396,7 +396,7 @@ Contains
               cycle
             end if
             do l=1,param%nc
-               	coeff = GetCoeffY(param,l)
+               	coeff = getCoeff_modelParam(param,l)
 
                 if (coeff%frozen) then
                    cycle

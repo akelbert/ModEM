@@ -10,8 +10,8 @@ module data_vectors
   ! ***************************************************************************
   ! * storing data and transfer functions, dim(nfreq,nfunc,nobs)
   ! * Keep in mind that in general nobs(ifreq) <= nobs; use logical indicators. 
-  !type (data_value), allocatable, dimension(:,:,:)	:: dat,psi,res,wres
-  type (data_array), save				:: dat,psi,res,wres
+  !type (dataValue_t), allocatable, dimension(:,:,:)	:: dat,psi,res,wres
+  type (dataVecMTX_t), save				:: dat,psi,res,wres
 
   ! ***************************************************************************
   ! * storing data misfit for each freq and func, dim(nfreq,nfunc)
@@ -21,10 +21,10 @@ module data_vectors
   !real(8), allocatable, dimension(:), save		:: weight
   real(8), allocatable, dimension(:), save		:: misfitValue
   real(8), allocatable, dimension(:,:), save		:: dmisfitValue
-  type (data_misfit),save				:: misfit
+  type (misfit_t),save				:: misfit
   
-  type (sensitivity),save				:: sens
+  type (sensitivity_t),save				:: sens
 
-  !type (misfit_info),dimension(:,:),allocatable,save   :: misfitInfo ! (nfreq,nfunc)
+  !type (misfitInfo_t),dimension(:,:),allocatable,save   :: misfitInfo ! (nfreq,nfunc)
 
 end module data_vectors

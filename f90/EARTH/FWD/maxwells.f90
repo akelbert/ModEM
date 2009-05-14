@@ -4,7 +4,7 @@ module maxwells
   ! numerically the integral form of the quasi-static approximation to Maxwell's
   ! equations on the given grid
 
-  use modeldef, only: relaxation
+  use modeldef, only: fwdCtrl_t
   use grid_orig
   use field_vectors ! contains global vectors for divergence correction
   use math_constants
@@ -52,7 +52,7 @@ Contains
 	complex(8),dimension(np2),intent(in)	 :: yvec
 	real(8), intent(in)						 :: omega
 	real(8), dimension(:,:,:), intent(in)	 :: resist
-	type (relaxation), intent(in)			 :: ctrls
+	type (fwdCtrl_t), intent(in)			 :: ctrls
 	integer, intent(out)					 :: exitflg
   !---------------------------------------------------------
   ! Local variables
