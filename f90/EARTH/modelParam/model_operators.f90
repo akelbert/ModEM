@@ -702,7 +702,7 @@ Contains
   ! * Use this function when a zero-valued copy of an existing structure
   ! * is needed
   ! * BOP
-  function zero_modelParam(P1) result(P)
+  function zero_modelParam(P1) result (P)
 
     implicit none
     type (modelParam_t), intent(in)		:: P1
@@ -961,17 +961,27 @@ Contains
 
   ! **********************************************************************
   ! * We can add or subtract values with exists==.FALSE. (they equal zero)
+  ! * Just to be safe, introduce a temporary variable for computations.
+  ! * Otherwise, causes a bug in PGI compiler, when called to overwrite
+  ! * P1 or P2 with the output P.
   ! * BOP
   subroutine linComb_modelParam(r1,P1,r2,P2,P)
+
+     !  forms the linear combination of model parameters
+     !    P = r1*P1 + r2*P2
+     !  where r1 and r2 are real constants and P1 and P2
+     !   are model parameters
+     !   output P may overwrite P1 or P2
 
     implicit none
     type (modelParam_t), intent(in)				   :: P1
     type (modelParam_t), intent(in)				   :: P2
     real(8), intent(in)							   :: r1
     real(8), intent(in)							   :: r2
-    type (modelParam_t), intent(out)                 :: P
+    type (modelParam_t), intent(out)               :: P
     ! * EOP
 
+	type (modelParam_t)							   :: Ptemp
 	integer										   :: i,j
 
 		if (.not.verify_modelParam(P1,P2)) then
@@ -979,18 +989,20 @@ Contains
 	   return
 	end if
 
-	P = zero_modelParam(P1)
+	Ptemp = zero_modelParam(P1)
 
-	do j=1,P%nL
-	  do i=1,P%nF
+	do j=1,Ptemp%nL
+	  do i=1,Ptemp%nF
 	    if((P1%c(j,i)%F%l==P2%c(j,i)%F%l).and.(P1%c(j,i)%F%m==P2%c(j,i)%F%m)) then
-		 P%c(j,i)%value = r1 * P1%c(j,i)%value + r2 * P2%c(j,i)%value
+		 Ptemp%c(j,i)%value = r1 * P1%c(j,i)%value + r2 * P2%c(j,i)%value
 	    else
 		 write(0,*) 'Error: (linComb_modelParam) parametrization not set up correctly'
 	     stop
 	    end if
 	  end do
 	end do
+
+	P = Ptemp
 
   end subroutine linComb_modelParam
 

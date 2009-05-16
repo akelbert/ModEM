@@ -53,6 +53,12 @@ program earth
 
   select case ( cUserDef%calculate )
 
+  case ('inverse')
+
+	print *,'Running NLCG inversion.'
+
+	call calc_inverse(runtime)
+
   case ('original')
 
 	print *,'Calculating responses using the original forward solver.'
@@ -298,6 +304,31 @@ program earth
 end program earth
 
 
+  ! ***************************************************************************
+  ! * calc_inverse runs the NLCG inversion to produce an inverse model
+
+  subroutine calc_inverse(rtime)
+
+  	use global
+  	use nlcg
+
+	real, intent(inout)						:: rtime  ! run time
+	real									:: stime, etime ! start and end times
+    integer, dimension(8)					:: tarray ! utility variable
+    type (modelParam_t)                     :: invparam ! inverse model
+
+	! Start the (portable) clock
+	call date_and_time(values=tarray)
+	stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+
+  	call NLCGsolver(dat,cUserDef%damping,param,invparam,cUserDef%step_size)
+
+	call date_and_time(values=tarray)
+	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+	rtime = etime - stime
+
+  end subroutine calc_inverse
+
 
   ! ***************************************************************************
   ! * calc_original is a subroutine to calculate specified responses only for
@@ -463,8 +494,7 @@ end program earth
 	use initFields
 	use dataMisfit
 	use boundaries	!for testing
-	!use sensmatrix
-	!use solnrhs
+	use sensmatrix
 	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -474,60 +504,27 @@ end program earth
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
-	!type (EMsolnMTX_t)                      :: H
-    type (cvector)							:: H,B,F
-	type (sparsevecc)						:: Hb
-	type (functional_t)						:: dataType
+	type (EMsolnMTX_t)                      :: H
+    !type (cvector)							:: H,B,F
+	!type (sparsevecc)						:: Hb
+	!type (functional_t)						:: dataType
 	type (transmitter_t)					:: freq
 	integer									:: ifreq
-	logical									:: adjoint
-
-    ! Call the forward solver for all frequencies
-    ! psi = dat
-    ! call setGrid(grid)
-    ! call fwdPred(param,psi,H)
+	!logical									:: adjoint
 
 	! Start the (portable) clock
 	call date_and_time(values=tarray)
+	stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
-	call initialize_fields(H,B)
-
+    ! Call the forward solver for all frequencies
+    psi = dat
+    call fwdPred(param,psi,H)
 
 	do ifreq=1,freqList%n
-
-	  stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
 	  freq = freqList%info(ifreq)
 
 	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
-
-	  write(6,*) 'Solving 3D forward problem for freq ',ifreq,freq%value
-
-
-	  ! solve A <h> = <b> for vector <h>
-	  !call createBC(Hb,grid)
-	  !!Hb%c = C_ZERO
-  	  !call insertBC(Hb,B)
-	  F = B
-	  adjoint = .FALSE.
-  	  !call create_cvector(grid,F,EDGE)	!test
-	  !i=3;j=12;k=grid%nzAir+8 !test
-	  !F%x(:,j,k) = C_ONE !test
-	  call operatorM(H,F,omega,rho,grid,fwdCtrls,errflag,adjoint)
-  	  !call create_cvector(grid,H,EDGE)	!test
-	  !H%x = C_ONE
-	  !H%y = C_ONE
-	  !H%z = C_ONE
-
-	  call outputSolution(freq,H,slices,grid,cUserDef,rho,'h')
-
-	  ! compute and output fields; C and D responses at cells
-	  !call outputH('jacobian',H,grid)
-	  !call outputCellResp('jacobian',H)
-
-	  ! compute and output C and D responses at observatories
-	  call calcResponses(freq,H,dat,psi)
-	  call outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
 
 	  call calcResiduals(freq,dat,psi,res)
 
@@ -536,12 +533,6 @@ end program earth
 	  call calcMisfit(freq,res,misfit,misfit%name)
 
 	!call OutputResiduals(freq,res,TFList,obsList)
-
-	  call date_and_time(values=tarray)
-	  etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	  ftime = etime - stime
-	  print *,'Time taken (secs) ',ftime
-	  rtime = rtime + ftime
 
 	end do
 
@@ -561,6 +552,10 @@ end program earth
 	!call outputMisfit(param,misfit,misfitValue,cUserDef)
 
 	continue
+	call date_and_time(values=tarray)
+	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+	rtime = etime - stime
+
 
   end subroutine calc_responses	! calc_responses
 
@@ -581,6 +576,7 @@ end program earth
 	use initFields
 	use dataFunc
 	use dataMisfit
+	use sensmatrix
 	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -590,11 +586,12 @@ end program earth
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
-    type (cvector)							:: H,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero,dR
-	type (rvector)							:: dE_real
-	type (rscalar)							:: drho
-	type (sparsevecc)						:: Hb
-	type (functional_t)						:: dataType
+	type (EMsolnMTX_t)                      :: H
+    !type (cvector)							:: H,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero,dR
+	!type (rvector)							:: dE_real
+	!type (rscalar)							:: drho
+	!type (sparsevecc)						:: Hb
+	!type (functional_t)						:: dataType
 	type (transmitter_t)					:: freq
 	type (modelParam_t)						:: dmisfit,dmisfit2
 	integer									:: ifreq,ifunc
@@ -604,127 +601,53 @@ end program earth
 
 	! Start the (portable) clock
 	call date_and_time(values=tarray)
+	stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
-	call initialize_fields(H,B)
-
-	call create_rscalar(grid,drho,CENTER)
+    ! Call the forward solver for all frequencies
+    psi = dat
+    call fwdPred(param,psi,H)
 
 	do ifreq=1,freqList%n
-
-	  stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
 	  freq = freqList%info(ifreq)
 
 	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
-	  write(6,*) 'Solving 3D forward problem for freq ',ifreq,freq%value
-
-	  ! solve A <h> = <b> for vector <h>
-	  adjoint=.FALSE.
-	  call operatorM(H,B,omega,rho,grid,fwdCtrls,errflag,adjoint)
-	  !call create_cvector(grid,H,EDGE)
-	  !H%x = C_ONE
-	  !H%y = C_ONE
-	  !H%z = C_ONE
-
-	  ! compute and output fields & C and D responses at cells
-	  call outputSolution(freq,H,slices,grid,cUserDef,rho,'h')
-
-	  ! compute and output C and D responses at observatories
-	  call calcResponses(freq,H,dat,psi)
-	  call outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
-
-	  ! compute and output C and D residuals
 	  call calcResiduals(freq,dat,psi,res)
-	  !call outputResiduals(freq,res,TFList,obsList,outFiles)
+	  !call OutputResiduals(freq,res,TFList,obsList)
 
-	  ! if computing different kinds of misfits, be consistent;
+	  ! If computing different kinds of misfits, be consistent;
 	  ! write different kinds into different data structures
 	  call calcMisfit(freq,res,misfit,misfit%name)
 
 	  ! compute the weighted residuals and start the derivative computations
 	  call calcResiduals(freq,dat,psi,wres,weighted=.TRUE.)
 
-	  do ifunc=1,nfunc
-
-		print *
-		print *, 'Starting the derivative computations for ',&
-				  trim(TFList%info(ifunc)%name), ' responses...'
-
-		! $G_\omega r_\omega$
-  		call operatorG(wres%v(ifreq,ifunc,:),H,F)
-
-		! $M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
-		adjoint = .TRUE.
-		delta = .TRUE.
-		! Forcing term F should not contain any non-zero boundary values
-		call operatorM(dH,F,omega,rho,grid,fwdCtrls,errflag,adjoint,delta)
-		!call create_cvector(grid,dH,EDGE)
-		!dH%x = C_ONE
-		!dH%y = C_ONE
-		!dH%z = C_ONE
-		! call outputSolution(freq,dH,slices,grid,cUserDef,rho,'dh')
-
-		! Pre-divide the interior components of dH by elementary areas
-		call operatorD_Si_divide(dH,grid)
-
-		! $C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
-		call createBC(Hb,grid)
-		call insertBC(Hb,dH)
-		call operatorC(dH,dE,grid)
-
-		!	cfunc = trim(TFList%info(ifunc)%name)
-		!	fn_err = trim(outFiles%fn_err)//trim(cfunc)
-		!	call initFileWrite(fn_err,ioERR)
-		!	do i= 1,grid%nx
-		!	  do j =1,grid%ny
-		!		do k =1,grid%nz
-		!		  if (dreal(dE%y(i,j,k)) > 1.0) then
-		!			write(ioERR,*) i,j,k, dreal(dH%y(i,j,k)), dreal(dE%y(i,j,k))
-		!		  end if
-		!		end do
-		!	  end do
-		!	end do
-		!	close(ioERR)
-
-		! $\bar{\e} = C \bar{\h}$
-		Hconj = conjg(H)
-		call operatorD_l_mult(Hconj,grid)
-		call operatorC(Hconj,Econj,grid)
-
-		! $D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
-		dE = Econj * dE
-
-		! $\Re( D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega ) )$
-		dE_real = real(dE)
-
-		! $L^T \delta{R}$
-		call operatorLt(drho%v,dE_real,grid)
-
-		! $P^T L^T \delta{R}$
-		call operatorPt(drho,dmisfit)
-
-		dmisfit%c%value = -2.0d0 * dmisfit%c%value
-		!dmisfit = Scmult_modelParam_f(-2.0d0,dmisfit)
-		!dmisfit = -2. * dmisfit
-
-	    	dmisfit = multBy_CmSqrt(dmisfit)
-
-		call getParamValues_modelParam(dmisfit,misfit%dRda(ifreq,ifunc,:))
-
-	  end do
-
-	  call date_and_time(values=tarray)
-	  etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	  ftime = etime - stime
-	  print *,'Time taken (secs) ',ftime
-	  print *
-	  rtime = rtime + ftime
-
 	end do
 
+	! Call multiplication by J^T
+	call JmultT(param,wres,dmisfit,H)
+
+	dmisfit%c%value = -2.0d0 * dmisfit%c%value
+	!dmisfit = Scmult_modelParam_f(-2.0d0,dmisfit)
+	!dmisfit = -2. * dmisfit
+
+	dmisfit = multBy_CmSqrt(dmisfit)
+
+	! We can no longer store misfit%dRda - misfit derivative for each frequency,
+	! functional and model parameter. They are now summed up internally in JmultT.
+	! We might want to add this functionality back!!!
+!	do ifreq=1,freqList%n
+!	  do ifunc=1,nfunc
+!
+!		call getParamValues_modelParam(dmisfit,misfit%dRda(ifreq,ifunc,:))
+!
+!	  end do
+!	end do
+
 	! Output the summary and exit
-	call misfitSumUp(res,misfit,misfitValue,dmisfitValue)
+	!call misfitSumUp(res,misfit,misfitValue,dmisfitValue)
+	call misfitSumUp(res,misfit,misfitValue)
 
 	if (output_level>0) then
 	write(0,*)
@@ -749,7 +672,9 @@ end program earth
 
 	continue
 
-	call deall_rscalar(drho)
+	call date_and_time(values=tarray)
+	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+	rtime = etime - stime
 
   end subroutine calc_derivative  ! calc_derivative
 

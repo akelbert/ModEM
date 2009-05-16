@@ -30,7 +30,7 @@ Contains
   subroutine operatorG(dvec,H,outE)
 
 	! uses: funcList, obsList, freqList, grid
-	type (dataValue_t), dimension(:), intent(inout)		:: dvec	! residuals
+	type (dataValue_t), dimension(:), intent(in)		:: dvec	! residuals
 	type (cvector), intent(in)							:: H
 	type (cvector), intent(out)							:: outE
 	type (sparsevecc)									:: g_sparse
@@ -110,7 +110,7 @@ Contains
 
 	! uses: grid
 	type (functional_t), intent(in)					:: dataType
-	type (receiver_t), intent(inout)					:: obs
+	type (receiver_t), intent(in)					:: obs
 	type (cvector), intent(in)						:: H
 	type (sparsevecc)								:: Lx,Ly,Lz
 	complex(8)										:: Hx,Hy,Hz
@@ -120,7 +120,9 @@ Contains
 	real(8)											:: EARTH_R
 
 	if (.not.obs%located) then
-	  call LocateReceiver(grid,obs)
+	  write(0,*) 'Error: Observatory ',trim(obs%code),' not yet located in compute_g'
+	  stop
+	  !call LocateReceiver(grid,obs)
 	end if
 
 	if (.not.obs%defined) then

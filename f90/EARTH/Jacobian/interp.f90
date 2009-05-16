@@ -264,8 +264,9 @@ Contains
 	if (.not.o%defined) then
 	  !write(0,*) 'Error: (LocateReceiver) receiver ',trim(o%code),' not defined'
 	  return
-	else if (o%located) then
-	  return
+	! we might want to update the weights when the grid is updated
+	!else if (o%located) then
+	  !return
 	end if
 
 	nx = grid%nx

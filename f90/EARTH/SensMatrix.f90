@@ -8,6 +8,7 @@ use jacobian
 use output
 use initFields
 use dataMisfit
+use boundaries
 use dataspace
 use solnrhs
 
@@ -21,8 +22,8 @@ public 	:: calcSensMatrix, Jmult, JmultT, fwdPred, setGrid
 ! type(grid_t), target, save, private     :: grid
 
 ! utility variables necessary to time the computations;
-!  including a public variable rtime that stores total run time
-real, save, public						:: rtime  ! run time
+!  including a private variable rtime that stores total run time
+real, save, private						:: rtime  ! run time
 real, save, private						:: ftime  ! run time per frequency
 real, save, private						:: stime, etime ! start and end times
 integer, dimension(8), private			:: tarray ! utility variable
@@ -71,7 +72,7 @@ Contains
    end subroutine Jmult
 
    !**********************************************************************
-   subroutine JmultT(sigma0,d,dsigma,eAll)
+   subroutine JmultT(m0,d,dm,H)
 
    !  Transpose of Jmult mujltiplied by data vector d; output is a
    !      single conductivity parameter in dsigma
@@ -88,16 +89,150 @@ Contains
    !  "pointers" to dictionary entries are attached to multi-transmitter
    !   data vector d
 
-   type(modelParam_t), intent(in)	:: sigma0
+   type(modelParam_t), intent(in)	:: m0
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
    type(dataVecMTX_t), intent(in)		:: d
    !   dsigma is the output conductivity parameter
-   type(modelParam_t), intent(Out)  	:: dsigma
-   type(EMsolnMTX_t), intent(in), optional	:: eAll
+   type(modelParam_t), intent(out)  	:: dm
+   type(EMsolnMTX_t), intent(in), optional	:: H
 
-   dsigma = zero_modelParam(sigma0)
+    integer	                                :: errflag	! internal error flag
+	real(8)									:: omega  ! variable angular frequency
+	integer									:: istat,i,j,k
+    type (cvector)							:: Hj,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero,dR
+	type (rvector)							:: dE_real
+	type (rscalar)							:: rho,drho
+	type (sparsevecc)						:: Hb
+	type (functional_t)						:: dataType
+	type (transmitter_t)					:: freq
+	type (modelParam_t)						:: dmisfit,dmisfit2
+	integer									:: ifreq,ifunc
+	logical									:: adjoint,delta
+	character(1)							:: cfunc
+	character(80)							:: fn_err
+	logical		:: savedSolns
 
+	savedSolns = present(H)
+	if(savedSolns) then
+		if(d%nTx .ne. H%nTx) then
+			call errStop('dimensions of H and d do not agree in JmultT')
+		endif
+	endif
+
+	dm = zero_modelParam(m0)
+
+	! Temporary model parameter
+	dmisfit = zero_modelParam(m0)
+
+    ! Allocate the resistivity vectors
+	call create_rscalar(grid,rho,CENTER)
+	call create_rscalar(grid,drho,CENTER)
+
+	! Compute model information everywhere else in the domain
+	call initModel(grid,m0,rho%v)
+
+	! Start the (portable) clock
+	call date_and_time(values=tarray)
+
+	do ifreq=1,freqList%n
+
+	  stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+
+	  freq = freqList%info(ifreq)
+
+	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
+
+	  if(savedSolns) then
+		Hj = H%solns(ifreq)
+	  else
+		call initialize_fields(Hj,B)
+
+	  	write(6,*) 'Solving 3D forward problem for freq ',ifreq,freq%value
+
+	  	! solve A <h> = <b> for vector <h>
+	  	adjoint=.FALSE.
+	  	call operatorM(Hj,B,omega,rho%v,grid,fwdCtrls,errflag,adjoint)
+
+	  	! compute and output fields & C and D responses at cells
+	  	call outputSolution(freq,Hj,slices,grid,cUserDef,rho%v,'h')
+	  end if
+
+	  do ifunc=1,nfunc
+
+		write(6,*)
+		write(6,*) 'Multiplying by J^T for ',&
+				  trim(TFList%info(ifunc)%name), ' responses...',ifreq,freq%value
+
+		! $G_\omega r_\omega$
+  		call operatorG(d%v(ifreq,ifunc,:),Hj,F)
+
+		! $M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
+		adjoint = .TRUE.
+		delta = .TRUE.
+		! Forcing term F should not contain any non-zero boundary values
+		call operatorM(dH,F,omega,rho%v,grid,fwdCtrls,errflag,adjoint,delta)
+		!call create_cvector(grid,dH,EDGE)
+		!dH%x = C_ONE
+		!dH%y = C_ONE
+		!dH%z = C_ONE
+		! call outputSolution(freq,dH,slices,grid,cUserDef,rho,'dh')
+
+		! Pre-divide the interior components of dH by elementary areas
+		call operatorD_Si_divide(dH,grid)
+
+		! $C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
+		call createBC(Hb,grid)
+		call insertBC(Hb,dH)
+		call operatorC(dH,dE,grid)
+
+		!	cfunc = trim(TFList%info(ifunc)%name)
+		!	fn_err = trim(outFiles%fn_err)//trim(cfunc)
+		!	call initFileWrite(fn_err,ioERR)
+		!	do i= 1,grid%nx
+		!	  do j =1,grid%ny
+		!		do k =1,grid%nz
+		!		  if (dreal(dE%y(i,j,k)) > 1.0) then
+		!			write(ioERR,*) i,j,k, dreal(dH%y(i,j,k)), dreal(dE%y(i,j,k))
+		!		  end if
+		!		end do
+		!	  end do
+		!	end do
+		!	close(ioERR)
+
+		! $\bar{\e} = C \bar{\h}$
+		Hconj = conjg(Hj)
+		call operatorD_l_mult(Hconj,grid)
+		call operatorC(Hconj,Econj,grid)
+
+		! $D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
+		dE = Econj * dE
+
+		! $\Re( D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega ) )$
+		dE_real = real(dE)
+
+		! $L^T \delta{R}$
+		call operatorLt(drho%v,dE_real,grid)
+
+		! $P^T L^T \delta{R}$
+		call operatorPt(drho,dmisfit)
+
+		! add to the total model parametrization
+		dm = dm + dmisfit
+
+	  end do
+
+	  call date_and_time(values=tarray)
+	  etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+	  ftime = etime - stime
+	  print *,'Time taken (secs) ',ftime
+	  print *
+	  rtime = rtime + ftime
+
+	end do
+
+	call deall_rscalar(rho)
+	call deall_rscalar(drho)
 
    end subroutine JmultT
 
@@ -229,6 +364,9 @@ Contains
    integer                      :: istat
 
     grid = newgrid
+
+    ! Update the interpolation weights of observatories to the new list
+    call initObsList(grid,obsList)
 
    	! Too complicated to rewrite input to all subroutines that use x,y,z,nx,ny,nz
 	! in terms of the grid variable, but that would be the way to do it in the

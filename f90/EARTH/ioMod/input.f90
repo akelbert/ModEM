@@ -78,6 +78,8 @@ Contains
 
     close(ioStartup)
 
+	cUserDef%step_size = 1.0d0
+
   end subroutine readStartFile  ! readStartFile
 
 

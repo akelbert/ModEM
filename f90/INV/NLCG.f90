@@ -187,13 +187,14 @@ Contains
 
    !  local variables
    type(dataVecMTX_t)    :: res
-   type(modelParam_t) :: m,JTd,CmJTd
+   type(modelParam_t) :: m,m1,JTd,CmJTd
 
    ! integer :: j, Ny, NzEarth
 
    ! compute the smoothed model parameter vector
-   call CmSqrtMult(mHat,m)
-   call linComb(ONE,m,ONE,m0,m)
+   call CmSqrtMult(mHat,m1)
+   ! make sure that your linComb function allows overwriting input with output
+   call linComb(ONE,m1,ONE,m0,m)
 
    ! compute residual: res = d-dHat
    call linComb(ONE,d,MinusONE,dHat,res)
@@ -231,11 +232,11 @@ Contains
    ! sum of squares = penalty functional - scaled model norm
    SS = F - (lambda * mNorm)
 
-	 ! subtract the model norm derivative from the gradient of the penalty functional
+   ! subtract the model norm derivative from the gradient of the penalty functional
    call linComb(ONE,grad,MinusTWO*lambda,mHat,dSS)
 
-	 ! update the damping parameter lambda
-	 lambda = iterControl%k * lambda
+   ! update the damping parameter lambda
+   lambda = iterControl%k * lambda
 
    ! penalty functional = sum of squares + scaled model norm
    F = SS + (lambda * mNorm)
@@ -372,9 +373,11 @@ Contains
 
    ! update the initial value of alpha if necessary
    gnorm = sqrt(dotProd(grad,grad))
-   if (alpha * gnorm > startdm) then
-      	alpha = startdm / gnorm
- 		! write(*,'(a39,f9.6)') 'The initial value of alpha updated to ',alpha
+   if (gnorm < TOL6) then
+      call errStop('Problem with your gradient computations: first gradient is zero')
+   else if (alpha * gnorm > startdm) then
+      alpha = startdm / gnorm
+      ! write(*,'(a39,f9.6)') 'The initial value of alpha updated to ',alpha
    end if
 
    ! initialize CG: g = - grad; h = g
@@ -595,11 +598,11 @@ Contains
    call printf('STARTLS',lambda,alpha,f_1,rms_1)
    niter = niter + 1
 
-	 if (f_1 - f_0 >= LARGE_REAL) then
-		print *, 'Try a smaller starting value of alpha.'
-		print *, 'Exiting...'
-		stop
-	 end if
+   if (f_1 - f_0 >= LARGE_REAL) then
+      print *, 'Try a smaller starting value of alpha.'
+      print *, 'Exiting...'
+      stop
+   end if
 
    f_i = f_1
    alpha_i = alpha_1
@@ -851,6 +854,11 @@ Contains
     f_i = f_j
     alpha_j = alpha
     f_j = f
+    ! check that the function still decreases to avoid infinite loops in case of a bug
+    if (abs(f_j - f_i) < TOL8) then
+    	print *, 'Warning: exiting cubic search since the function no longer decreases!'
+    	exit
+    end if
    end do fit_cubic
 
    if (f_1 < f) then

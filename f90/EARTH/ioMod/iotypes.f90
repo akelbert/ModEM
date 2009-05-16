@@ -16,19 +16,20 @@ module iotypes
 	character(80)				:: fn_grid	! grid information
 	character(80)				:: fn_shell	! GM thin shell conductance values
 	character(80)				:: fn_period  ! periods or frequencies
-	character(80)				:: fn_coords  ! observatory coordinates file	
-	character(80)				:: fn_func  ! information about data functionals		
+	character(80)				:: fn_coords  ! observatory coordinates file
+	character(80)				:: fn_func  ! information about data functionals
 	character(80)				:: fn_ctrl	! forward solver control
 	character(80)				:: fn_slices  ! grid radii at which we output the data
 	character(80)				:: fn_precond	! preconditioning parameters
 	character(80)				:: fn_param0	! base model parametrization
 	character(80)				:: fn_param	! information about the parametrization
-	character(80)				:: fn_cdata	! name of 1st data and observatory file	
-	character(80)				:: fn_ddata	! name of 2nd data and observatory file	
-	character(80)				:: fn_misfit  ! output file for data misfit	
-	character(80)				:: fn_gradient	! output file for derivative	
+	character(80)				:: fn_cdata	! name of 1st data and observatory file
+	character(80)				:: fn_ddata	! name of 2nd data and observatory file
+	character(80)				:: fn_misfit  ! output file for data misfit
+	character(80)				:: fn_gradient	! output file for derivative
 	character(80)				:: fn_point	! output file for point parametrization
-	real(8)             :: damping ! the value of damping parameter mu
+	real(8)             		:: damping ! the value of damping parameter mu
+	real(8)             		:: step_size ! initial step size parameter for inversion
 
   end type input_info ! input_info
 
