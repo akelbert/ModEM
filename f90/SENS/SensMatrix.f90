@@ -1,23 +1,91 @@
 module sensMatrix
 
-use math_constants
-use utilities
-use datasens	 !!!!  inherits : dataspace, dataFunc, solnrhs
-use modelsens  !!!  inherits : modelspace, soln2d
-use emsolver
+  use math_constants
+  use utilities
+  use datasens	 !!!!  inherits : dataspace, dataFunc, solnrhs
+  use modelsens  !!!  inherits : modelspace, soln2d
+  use emsolver
 
-implicit none
+  implicit none
 
-public 	:: calcSensMatrix, Jmult, JmultT, fwdPred, setGrid
+  public 	:: calcSensMatrix, Jmult, JmultT, fwdPred, setGrid
 
-! numerical discretization used to compute the EM solution
-!  (may be different from the grid stored in model parameter)
-type(grid_t), target, save, private     :: grid
+  ! numerical discretization used to compute the EM solution
+  !  (may be different from the grid stored in model parameter)
+  type (grid_t), target, save, private     :: grid
+
+  !***********************************************************************
+  ! Data type definitions for the full sensitivity matrix; a cross between
+  ! a data vector and a model parameter to store the full matrix J = df/dm
+  ! or the gradient of the data misfit, component-wise, i.e. (J^T)_i r_i.
+  ! In this case, one column of J^T is a model parameter, so that J^T acts
+  ! on a single data residual to produce the misfit gradient for that data
+  ! point with respect to the model parameter; these can be summed up to
+  ! obtain the full gradient. Can be useful as another measure of sensitivity.
+  ! These matrices will be huge. We don't create them unless they are needed.
+
+  ! basic data sensitivity vector for a single transmitter & data type
+  type :: sensVector_t
+
+      ! nComp is number of EM components observed (e.g., 2 (3) for
+      ! MT (with verticl field TFs)) times 2 to allow for real/imag;
+      ! has to match the data type index dt
+      integer 		:: nComp = 0
+
+      ! nSite is number of sites where these components are observed
+      integer		:: nSite = 0
+
+      ! sensitivities stored as model parameters; dimensions (nComp,nSite)
+      type (modelParam_t), pointer, dimension(:,:) :: dm
+
+      ! rx(nSite) is the array of indices into receiver dictionary
+      integer, pointer, dimension(:) :: rx
+
+      ! tx is index into transmitter dictionary
+      integer		:: tx = 0
+
+      ! dt is index into data type dictionary
+      integer		:: dataType = 0
+
+      logical		:: allocated = .false.
+
+  end type sensVector_t
+
+
+  ! collection of sensVector objects for all data types, single transmitter
+  type :: sensMatrixTX_t
+      ! the number of dataVecs (generally the number of data types) associated
+      ! with this transmitter (note: not the total number of data types)
+      integer       :: ndt = 0
+
+      ! array of sensVector's, usually one for each data type (dimension ndt)
+      type (sensVector_t), pointer, dimension(:)   :: v
+
+      ! tx is the index into transmitter dictionary
+      integer       :: tx = 0
+
+      logical       :: allocated = .false.
+
+  end type sensMatrixTX_t
+
+
+  ! collection of sensVector objects for all transmitters
+  type :: sensMatrix_t
+      ! ntx is number of transmitters, number of frequencies for MT
+      integer		:: ntx = 0
+
+      ! d is array of dataVec's for each transmitter (dimension nTX)
+      type (sensMatrixTX_t), pointer, dimension(:)	:: sens
+
+      logical		:: allocated = .false.
+
+  end type sensMatrix_t
+
 
 Contains
 
-   !**********************************************************************
-   subroutine calcSensMatrix(d,sigma0,dsigma)
+  !**********************************************************************
+  subroutine calcSensMatrix(d,sigma0,dsigma)
    !  Calculate sensitivity matrix for data in d
    !  Approaching a generic form that will work for any problem;
    !   Documentation not edited.  Code not debugged!
@@ -160,10 +228,10 @@ Contains
 
    call exitSolver(e0,e,comb)
 
-   end subroutine calcSensMatrix
+  end subroutine calcSensMatrix
 
-   !**********************************************************************
-   subroutine Jmult(dsigma,sigma0,d,eAll)
+  !**********************************************************************
+  subroutine Jmult(dsigma,sigma0,d,eAll)
 
    !  Calculate product of sensitivity matrix and a model parameter
    !    for all transmitters in a datavector (i.e., multiple dataVec objects)
@@ -242,10 +310,10 @@ Contains
    !  clean up
    call exitSolver(e0,e,comb)
 
-   end subroutine Jmult
+  end subroutine Jmult
 
-   !**********************************************************************
-   subroutine JmultT(sigma0,d,dsigma,eAll)
+  !**********************************************************************
+  subroutine JmultT(sigma0,d,dsigma,eAll)
 
    !  Transpose of Jmult mujltiplied by data vector d; output is a
    !      single conductivity parameter in dsigma
@@ -363,11 +431,11 @@ Contains
    call exitSolver(e0,e,comb)
    call deall_modelParam(sigmaTemp)
 
-   end subroutine JmultT
+  end subroutine JmultT
 
 
-   !**********************************************************************
-   subroutine fwdPred(sigma,d,eAll)
+  !**********************************************************************
+  subroutine fwdPred(sigma,d,eAll)
 
    !  Calculate predicted data for dataVecMTX object d
    !    and for conductivity parameter sigma
@@ -439,10 +507,10 @@ Contains
    ! deallocate and clean up
    call exitSolver(e0)
 
-   end subroutine fwdPred
+  end subroutine fwdPred
 
-   !**********************************************************************
-   subroutine setGrid(newgrid)
+  !**********************************************************************
+  subroutine setGrid(newgrid)
 
    !  Use to set and/or update the numerical grid, that is then used
    !   all computations in this module;
@@ -452,6 +520,6 @@ Contains
 
    grid = newgrid
 
-   end subroutine setGrid
+  end subroutine setGrid
 
 end module sensMatrix
