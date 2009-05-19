@@ -482,7 +482,7 @@ Contains
 
 	implicit none
     type (input_info), intent(in)							:: cUserDef
-	type (dataVecMTX_t), intent(out)							:: mydat
+	type (dataVecMTX_t), intent(inout)						:: mydat
 	type (Obs_List), target, intent(inout)					:: myobs
 	type (Freq_List), target, intent(inout)					:: myfreq
 	type (TF_List), target, intent(in)						:: myfunc

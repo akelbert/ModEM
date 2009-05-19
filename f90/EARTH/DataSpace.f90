@@ -210,7 +210,8 @@ Contains
 
     ! create the output vector that is consistent with inputs
     if(dOut%allocated) then
-       call deall_dataVecMTX(dOut)
+       call errStop('output structure cannot be allocated before calling linComb_dataVecMTX')
+       !call deall_dataVecMTX(dOut)
     end if
 
 	dOut = zero_dataVecMTX(d1)

@@ -1,32 +1,44 @@
 module sensMatrix
 
-use griddef
-use data_vectors
-use dataFunc
-use modelmap
-use jacobian
-use output
-use initFields
-use dataMisfit
-use boundaries
-use dataspace
-use solnrhs
+  use griddef
+  use data_vectors
+  use dataFunc
+  use modelmap
+  use jacobian
+  use output
+  use initFields
+  use dataMisfit
+  use boundaries
+  use dataspace
+  use solnrhs
 
-implicit none
+  implicit none
 
-public 	:: calcSensMatrix, Jmult, JmultT, fwdPred, setGrid
+  public 	:: calcSensMatrix, Jmult, JmultT, fwdPred, setGrid
 
-! numerical discretization used to compute the EM solution
-!  (may be different from the grid stored in model parameter)
-! currently this is inherited from global
-! type(grid_t), target, save, private     :: grid
+  ! numerical discretization used to compute the EM solution
+  !  (may be different from the grid stored in model parameter)
+  ! currently this is inherited from global
+  ! type(grid_t), target, save, private     :: grid
 
-! utility variables necessary to time the computations;
-!  including a private variable rtime that stores total run time
-real, save, private						:: rtime  ! run time
-real, save, private						:: ftime  ! run time per frequency
-real, save, private						:: stime, etime ! start and end times
-integer, dimension(8), private			:: tarray ! utility variable
+  ! utility variables necessary to time the computations;
+  !  including a private variable rtime that stores total run time
+  real, save, private						:: rtime  ! run time
+  real, save, private						:: ftime  ! run time per frequency
+  real, save, private						:: stime, etime ! start and end times
+  integer, dimension(8), private			:: tarray ! utility variable
+
+  ! ***************************************************************************
+  ! * type sensMatrix_t stores the full sensitivity matrix or the
+  ! * partial derivatives with respect to the original model parameters
+  ! * for all frequencies and all data functionals
+
+  type :: sensMatrix_t
+
+	type(modelParam_t), pointer, dimension(:,:)	 :: dm	  !(nfreq,nfunc)
+	logical                                      :: allocated=.false.
+
+  end type sensMatrix_t
 
 Contains
 
@@ -72,7 +84,7 @@ Contains
    end subroutine Jmult
 
    !**********************************************************************
-   subroutine JmultT(m0,d,dm,H)
+   subroutine JmultT(m0,d,dm,H,dR)
 
    !  Transpose of Jmult mujltiplied by data vector d; output is a
    !      single conductivity parameter in dsigma
@@ -96,11 +108,12 @@ Contains
    !   dsigma is the output conductivity parameter
    type(modelParam_t), intent(out)  	:: dm
    type(EMsolnMTX_t), intent(in), optional	:: H
+   type(sensMatrix_t), intent(inout), optional :: dR
 
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
-    type (cvector)							:: Hj,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero,dR
+    type (cvector)							:: Hj,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero
 	type (rvector)							:: dE_real
 	type (rscalar)							:: rho,drho
 	type (sparsevecc)						:: Hb
@@ -120,6 +133,12 @@ Contains
 		endif
 	endif
 
+	if (present(dR)) then
+		if (.not. dR%allocated) then
+			allocate(dR%dm(nfreq,nfunc),STAT=istat)
+		endif
+	endif
+
 	dm = zero_modelParam(m0)
 
 	! Temporary model parameter
@@ -135,7 +154,7 @@ Contains
 	! Start the (portable) clock
 	call date_and_time(values=tarray)
 
-	do ifreq=1,freqList%n
+	do ifreq=1,nfreq
 
 	  stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
@@ -158,6 +177,8 @@ Contains
 	  	call outputSolution(freq,Hj,slices,grid,cUserDef,rho%v,'h')
 	  end if
 
+	  !print *, 'Model initialized',H%solns(ifreq)%allocated,Hj%allocated
+
 	  do ifunc=1,nfunc
 
 		write(6,*)
@@ -166,6 +187,9 @@ Contains
 
 		! $G_\omega r_\omega$
   		call operatorG(d%v(ifreq,ifunc,:),Hj,F)
+
+		!print *, 'operator G successful',Hj%x
+
 
 		! $M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
 		adjoint = .TRUE.
@@ -219,6 +243,11 @@ Contains
 
 		! add to the total model parametrization
 		dm = dm + dmisfit
+
+		! save the misfit derivatives if required
+		if (present(dR)) then
+			dR%dm(ifreq,ifunc) = dmisfit
+		end if
 
 	  end do
 

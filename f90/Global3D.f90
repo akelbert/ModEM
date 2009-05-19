@@ -579,6 +579,7 @@ end program earth
 	use sensmatrix
 	implicit none
 
+	type (sensMatrix_t)					    :: dR
 	real, intent(inout)						:: rtime  ! run time
 	real									:: ftime  ! run time per frequency
 	real									:: stime, etime ! start and end times
@@ -626,7 +627,7 @@ end program earth
 	end do
 
 	! Call multiplication by J^T
-	call JmultT(param,wres,dmisfit,H)
+	call JmultT(param,wres,dmisfit,H,dR)
 
 	dmisfit%c%value = -2.0d0 * dmisfit%c%value
 	!dmisfit = Scmult_modelParam_f(-2.0d0,dmisfit)
@@ -637,17 +638,17 @@ end program earth
 	! We can no longer store misfit%dRda - misfit derivative for each frequency,
 	! functional and model parameter. They are now summed up internally in JmultT.
 	! We might want to add this functionality back!!!
-!	do ifreq=1,freqList%n
-!	  do ifunc=1,nfunc
-!
-!		call getParamValues_modelParam(dmisfit,misfit%dRda(ifreq,ifunc,:))
-!
-!	  end do
-!	end do
+	do ifreq=1,freqList%n
+	  do ifunc=1,nfunc
+
+		call getParamValues_modelParam(dR%dm(ifreq,ifunc),misfit%dRda(ifreq,ifunc,:))
+
+	  end do
+	end do
 
 	! Output the summary and exit
-	!call misfitSumUp(res,misfit,misfitValue,dmisfitValue)
-	call misfitSumUp(res,misfit,misfitValue)
+	call misfitSumUp(res,misfit,misfitValue,dmisfitValue)
+	!call misfitSumUp(res,misfit,misfitValue)
 
 	if (output_level>0) then
 	write(0,*)

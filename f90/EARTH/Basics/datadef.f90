@@ -136,7 +136,7 @@ module datadef
 	integer, pointer, dimension(:,:)			  :: n	!nfreq,nfunc
 	! Total number of frequencies stored in this data vector
 	integer                                       :: ntx
-	logical                                       :: allocated
+	logical                                       :: allocated=.FALSE.
 
   end type dataVecMTX_t
 

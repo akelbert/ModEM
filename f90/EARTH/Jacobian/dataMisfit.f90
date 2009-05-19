@@ -19,9 +19,9 @@ Contains
 
 	!uses: TFList,obsList
 
-	type (transmitter_t), intent(in)			:: freq
+	type (transmitter_t), intent(in)		:: freq
 	type (dataVecMTX_t), intent(in)			:: dat
-	type (dataVecMTX_t), intent(out)			:: psi
+	type (dataVecMTX_t), intent(inout)		:: psi
 	type (cvector), intent(in)				:: H
 	integer									:: i,j,k
 
@@ -71,9 +71,9 @@ Contains
 
   subroutine calcResiduals(freq,dat,psi,res,weighted)
 
-	type (transmitter_t), intent(in)				:: freq
+	type (transmitter_t), intent(in)			:: freq
 	type (dataVecMTX_t), intent(in)				:: dat,psi
-	type (dataVecMTX_t), intent(out)				:: res
+	type (dataVecMTX_t), intent(inout)			:: res
 	logical, intent(in), optional				:: weighted
 	integer										:: i,j,k
 	complex(8)									:: value

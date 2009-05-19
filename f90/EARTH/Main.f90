@@ -200,7 +200,6 @@ Contains
 	  end if
 	end if
 
-
     ! Output the frequencies
     write(0,*) 'nfreq =',nfreq
     do i=1,nfreq

@@ -26,7 +26,7 @@ Contains
   ! * the original boundary values, but rather sets them to zero.
   ! * If Hx/Hy/Hz have not had the 'save' attribute, the boundary information in
   ! * them is soon lost. To avoid this problem we apply a patch by saving the
-  ! * upper and lower boundary fields in bvH. 
+  ! * upper and lower boundary fields in bvH.
   ! * Then Hx/Hy/Hz vectors should be identical to their initialized values after
   ! * the following two-line transformation:
   !	* call copyd1_d3_b(nx,ny,nz,Hx,Hy,Hz,hvec,x,y,z)
@@ -38,14 +38,14 @@ Contains
 	complex(8), dimension(:), intent(inout)	:: hvec,bvec
 	type (sparsevecc), intent(out)			:: bvH
 	integer									:: istat
-	
+
 	!allocate(Hx(np1),Hy(np1),Hz(np1),STAT=istat)
 
 	! Initialise the H field at the outer boundary, then make it
 	! depend linearly on radius throughout the computational domain
 	! such that all field components are zero at the CMB. The P10
 	! source at the boundary has been modified to the more accurate
-	! initialization by Ikuko Fujii allowing for the ringcurrent. 
+	! initialization by Ikuko Fujii allowing for the ringcurrent.
 	call set_initial_p10(nx,ny,nz,x,y,z,Hx,Hy,Hz,np1)
 	! call set_initial_ringcurrent(nx,ny,nz,x,y,z,Hx,Hy,Hz,np1)
 	call initBoundaryValues(bvH,Hx,Hy,Hz,grid)
@@ -79,7 +79,7 @@ Contains
 
 	!use field_vectors
 
-	type (cvector), intent(inout)			:: H,F
+	type (cvector), intent(out)				:: H,F
 	type (sparsevecc)						:: Hb
 	complex(8), dimension(:), allocatable	:: hvec
 	!complex(8), dimension(:), allocatable   :: Hx,Hy,Hz
@@ -93,7 +93,7 @@ Contains
 	!     depend linearly with radius throughout the computational domain
 	!     such that all field components are zero at the CMB. The P10
 	!		source at the boundary has been modified to the more accurate
-	!		initialization by Ikuko Fujii allowing for the ringcurrent. 
+	!		initialization by Ikuko Fujii allowing for the ringcurrent.
 	call set_initial_p10(nx,ny,nz,x,y,z,Hx,Hy,Hz,np1)
 	! NB --- This is now done in InitGlobalArrays
 	! call set_initial_ringcurrent(nx,ny,nz,x,y,z,hx,hy,hz,np1)
@@ -109,7 +109,7 @@ Contains
 
 	!deallocate(hx,hy,hz)
 	deallocate(hvec)
-  
+
   end subroutine initialize_fields
 
 
