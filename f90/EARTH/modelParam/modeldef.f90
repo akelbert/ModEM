@@ -140,7 +140,7 @@ module modeldef
 	  ! the near-surface shell is also part of model parameter
 	  type (modelShell_t)                                 :: crust
 
-	  logical											  :: allocated
+	  logical											  :: allocated=.FALSE.
 
   end type modelParam_t	! modelParam_t
 

@@ -43,7 +43,7 @@ Contains
 	integer										:: i,ios=0,istat=0
 	character(100)								:: label
 	real(8),dimension(:),intent(in),optional	:: da
-	type (modelParam_t)							:: p_delta
+	type (modelParam_t)							:: p_delta, p_smooth
 	type (modelCoeff_t)							:: coeff
 	type (modelShell_t)                         :: crust
 
@@ -106,10 +106,10 @@ Contains
 	end if
 	!--------------------------------------------------------------------------
 	! 'Smooth' the parametrization by applying inverted regularization operator
-	param = multBy_CmSqrt(p_input)
+	p_smooth = multBy_CmSqrt(p_input)
 	!--------------------------------------------------------------------------
 	! Compute parametrization to use (for model norm we will still use p_input)
-	param = param + p0_input
+	param = p_smooth + p0_input
 	!--------------------------------------------------------------------------
 	! Allocate the resistivity vector
 	allocate(rho(grid%nx,grid%ny,grid%nz),STAT=istat)

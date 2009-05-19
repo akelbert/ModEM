@@ -710,8 +710,11 @@ Contains
     ! * EOP
 
     if(.not.(P1%allocated)) then
-	   write(0,*) 'Error: (zero_modelParam) parametrization not allocated yet'
-	   return
+		write(0,*) 'Error: (zero_modelParam) input parametrization not allocated yet'
+		return
+	else if (P%allocated) then
+		write(0,*) 'Error: (zero_modelParam) output structure cannot be allocated before calling'
+		return
 	end if
 
 	P%allocated = .FALSE.
@@ -738,10 +741,13 @@ Contains
 
     integer					:: i,j
 
-		if (.not.verify_modelParam(P1,P2)) then
-	   write(0,*) 'Error: (AddParamY) parametrization structures incompatible'
-	   return
-		end if
+	if (.not.verify_modelParam(P1,P2)) then
+		write(0,*) 'Error: (add_modelParam) parametrization structures incompatible'
+		return
+	else if (P%allocated) then
+		write(0,*) 'Error: (add_modelParam) output structure cannot be allocated before calling'
+		return
+	end if
 
 	P = zero_modelParam(P1)
 
@@ -750,7 +756,7 @@ Contains
 	    if((P1%c(j,i)%F%l==P2%c(j,i)%F%l).and.(P1%c(j,i)%F%m==P2%c(j,i)%F%m)) then
 		  P%c(j,i)%value = P1%c(j,i)%value + P2%c(j,i)%value
 	    else
-	     write(0,*) 'Error: (AddParamY) parametrization not set up correctly'
+	     write(0,*) 'Error: (add_modelParam) parametrization not set up correctly'
 	     stop
 	    end if
 	  end do
@@ -772,10 +778,13 @@ Contains
 
     integer					:: i,j
 
-		if (.not.verify_modelParam(P1,P2)) then
-	   write(0,*) 'Error: (SubParamY) parametrization structures incompatible'
-	   return
-		end if
+	if (.not.verify_modelParam(P1,P2)) then
+		write(0,*) 'Error: (subtract_modelParam) parametrization structures incompatible'
+		return
+	else if (P%allocated) then
+		write(0,*) 'Error: (subtract_modelParam) output structure cannot be allocated before calling'
+		return
+	end if
 
 	P = zero_modelParam(P1)
 
@@ -784,7 +793,7 @@ Contains
 	    if((P1%c(j,i)%F%l==P2%c(j,i)%F%l).and.(P1%c(j,i)%F%m==P2%c(j,i)%F%m)) then
 		  P%c(j,i)%value = P1%c(j,i)%value - P2%c(j,i)%value
 	    else
-	     write(0,*) 'Error: (AddParamY) parametrization not set up correctly'
+	     write(0,*) 'Error: (subtract_modelParam) parametrization not set up correctly'
 	     stop
 	    end if
 	  end do
@@ -806,21 +815,22 @@ Contains
 
     integer					:: i,j
 
-		if (.not.verify_modelParam(P1,P2)) then
-	   write(0,*) 'Error: (MultParamY) parametrization structures incompatible'
-	   return
-		end if
-
-    if(.not.P%allocated) then
-	  P = zero_modelParam(P1)
+	if (.not.verify_modelParam(P1,P2)) then
+		write(0,*) 'Error: (mult_modelParam) parametrization structures incompatible'
+		return
+	else if (P%allocated) then
+		write(0,*) 'Error: (mult_modelParam) output parametrization cannot be allocated before calling'
+		return
 	end if
+
+	P = zero_modelParam(P1)
 
 	do j=1,P%nL
 	  do i=1,P%nF
 	    if((P1%c(j,i)%F%l==P2%c(j,i)%F%l).and.(P1%c(j,i)%F%m==P2%c(j,i)%F%m)) then
 		  P%c(j,i)%value = P1%c(j,i)%value * P2%c(j,i)%value
 	    else
-		 write(0,*) 'Error: (MultParamY) parametrization not set up correctly'
+		 write(0,*) 'Error: (mult_modelParam) parametrization not set up correctly'
 	     stop
 	    end if
 	  end do
@@ -841,9 +851,9 @@ Contains
 
     integer					:: i,j
 
-		if (.not.verify_modelParam(P1,P2)) then
-	   write(0,*) 'Error: (dotProd_modelParam_f) parametrization structures incompatible'
-	   return
+	if (.not.verify_modelParam(P1,P2)) then
+		write(0,*) 'Error: (dotProd_modelParam_f) parametrization structures incompatible'
+		return
 	end if
 
     r = R_ZERO
@@ -917,13 +927,14 @@ Contains
     ! * EOP
 
     if(.not.P1%allocated) then
-	   write(0,*) 'Error: (scMult_modelParam) parametrization not allocated yet'
-	   return
+		write(0,*) 'Error: (scMult_modelParam) parametrization not allocated yet'
+		return
+	else if (P%allocated) then
+		write(0,*) 'Error: (scMult_modelParam) output structure cannot be allocated before calling'
+		return
 	end if
 
-    if(.not.P%allocated) then
-	  P = zero_modelParam(P1)
-	end if
+	P = zero_modelParam(P1)
 
 	P%c%value = v * P1%c%value
 
@@ -941,13 +952,14 @@ Contains
     ! * EOP
 
     if(.not.P1%allocated) then
-	   write(0,*) 'Error: (scDiv_modelParam) parametrization not allocated yet'
-	   return
+		write(0,*) 'Error: (scDiv_modelParam) parametrization not allocated yet'
+		return
+	else if (P%allocated) then
+		write(0,*) 'Error: (scDiv_modelParam) output structure cannot be allocated before calling'
+		return
 	end if
 
-    if(.not.P%allocated) then
-	  P = zero_modelParam(P1)
-	end if
+	P = zero_modelParam(P1)
 
 	if(v==R_ZERO) then
 	   write(0,*) 'Error: (scDiv_modelParam) division by zero'
@@ -961,9 +973,17 @@ Contains
 
   ! **********************************************************************
   ! * We can add or subtract values with exists==.FALSE. (they equal zero)
-  ! * Just to be safe, introduce a temporary variable for computations.
-  ! * Otherwise, causes a bug in PGI compiler, when called to overwrite
-  ! * P1 or P2 with the output P.
+  ! * New rules of the game (HIGHLY RECOMMENDED):
+  ! * demand that the output isn't allocated when we call this and similar
+  ! * routines. This prevents overwriting an input with a call such as
+  ! * m1 = a1*m1 + a2*m2.
+  ! * Calls like this cause errors that are extremely hard to debug.
+  ! * The reason is that all function arguments are passed by reference
+  ! * in Fortran. Setting P = zero(P1) set P1 to zero too, if these are
+  ! * the same variable in the calling subroutine.
+  ! * This can be avoided by creating temporary variables (inefficient)
+  ! * or by copying the variable instead of setting it to zero;
+  ! * but the only truly safe practice is the disallow allocated outputs.
   ! * BOP
   subroutine linComb_modelParam(r1,P1,r2,P2,P)
 
@@ -971,7 +991,7 @@ Contains
      !    P = r1*P1 + r2*P2
      !  where r1 and r2 are real constants and P1 and P2
      !   are model parameters
-     !   output P may overwrite P1 or P2
+     !   output P may NOT overwrite P1 or P2
 
     implicit none
     type (modelParam_t), intent(in)				   :: P1
@@ -981,28 +1001,28 @@ Contains
     type (modelParam_t), intent(out)               :: P
     ! * EOP
 
-	type (modelParam_t)							   :: Ptemp
 	integer										   :: i,j
 
-		if (.not.verify_modelParam(P1,P2)) then
-	   write(0,*) 'Error: (linComb_modelParam) parametrization structures incompatible'
-	   return
+	if (.not.verify_modelParam(P1,P2)) then
+		write(0,*) 'Error: (linComb_modelParam) parametrization structures incompatible'
+		return
+	else if (P%allocated) then
+		write(0,*) 'Error: (linComb_modelParam) output structure cannot be allocated before calling'
+		return
 	end if
 
-	Ptemp = zero_modelParam(P1)
+	P = zero_modelParam(P1)
 
-	do j=1,Ptemp%nL
-	  do i=1,Ptemp%nF
+	do j=1,P%nL
+	  do i=1,P%nF
 	    if((P1%c(j,i)%F%l==P2%c(j,i)%F%l).and.(P1%c(j,i)%F%m==P2%c(j,i)%F%m)) then
-		 Ptemp%c(j,i)%value = r1 * P1%c(j,i)%value + r2 * P2%c(j,i)%value
+		 P%c(j,i)%value = r1 * P1%c(j,i)%value + r2 * P2%c(j,i)%value
 	    else
 		 write(0,*) 'Error: (linComb_modelParam) parametrization not set up correctly'
 	     stop
 	    end if
 	  end do
 	end do
-
-	P = Ptemp
 
   end subroutine linComb_modelParam
 
@@ -1092,8 +1112,11 @@ Contains
     ! * EOP
 
     if(.not.P1%allocated) then
-	   write(0,*) 'Error: (multBy_CmSqrt) parametrization not allocated yet'
-	   return
+		write(0,*) 'Error: (multBy_CmSqrt) parametrization not allocated yet'
+		return
+	else if (P%allocated) then
+		write(0,*) 'Error: (multBy_CmSqrt) output structure cannot be allocated before calling'
+		return
 	end if
 
 	P = P1
@@ -1118,8 +1141,11 @@ Contains
     ! * EOP
 
     if(.not.P1%allocated) then
-	   write(0,*) 'Error: (multBy_Cm) parametrization not allocated yet'
-	   return
+		write(0,*) 'Error: (multBy_Cm) parametrization not allocated yet'
+		return
+	else if (P%allocated) then
+		write(0,*) 'Error: (multBy_Cm) output structure cannot be allocated before calling'
+		return
 	end if
 
 	! apply operator C_p^{1/2} twice
