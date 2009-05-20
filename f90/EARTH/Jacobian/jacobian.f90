@@ -1015,6 +1015,9 @@ Contains
 	type (modelPoint_t)								:: point
 	type (modelFunc_t)								:: func
 
+	! Create the output resistivity model on the grid
+	call create_rscalar(grid,dm,CENTER)
+
 	! Test to make sure no grid is defined outside the layered region
 	if (grid%r(grid%nz+1) < param%L(param%nL)%lbound) then
 	  param%L(param%nL)%lbound = grid%r(grid%nz+1)

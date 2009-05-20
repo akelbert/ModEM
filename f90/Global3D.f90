@@ -87,8 +87,8 @@ program earth
 
 	print *,'Perform the symmetry test and exit.'
 
-	call calc_symmetry(runtime)
-	!call calc_symmetric_operators(runtime)
+	!call calc_symmetry(runtime)
+	call calc_symmetric_operators(runtime)
 
   case ('test_derivative')
 
@@ -1049,6 +1049,7 @@ end program earth
 	mask = .TRUE.
 
 	! Symmetry test for operators P (initModel) and Pt
+	print *, 'Symmetry test for operators P (initModel) and Pt'
 	call create_rscalar(grid,drho1,CENTER)
 	call create_rscalar(grid,drho2,CENTER)
 	drho1%v = ONE
@@ -1076,6 +1077,7 @@ end program earth
 
 
 	! Symmetry test for operators C and Ct
+	print *, 'Symmetry test for operators C and Ct'
 	call create_cvector(grid,f1,FACE)
 	call random_number(random_x)
 	call random_number(random_y)
@@ -1111,6 +1113,7 @@ end program earth
 
 
 	! Symmetry test for operators G and Gt
+	print *, 'Symmetry test for operators G and Gt'
 	call create_cvector(grid,H,EDGE)
 	H%x = (2.0,1.0)
 	H%y = (0.5,3.0)
@@ -1129,9 +1132,10 @@ end program earth
 	print *, "Value 2 = ",value2
 
 
-	stop
+	!stop
 
 	! Symmetry test for operators L and Lt
+	print *, 'Symmetry test for operators L and Lt'
 	call create_rvector(grid,r1,FACE)
 	r1%x = 2.0
 	r1%y = 3.5
@@ -1166,9 +1170,11 @@ end program earth
 	print *, "Value 2 = ",value0
 
 
-	stop
+	!stop
 
 	! Symmetry test for operators M  and M*
+
+	print *, 'Symmetry test for operators M  and M*'
 
 	call initialize_fields(H,B)
 

@@ -714,7 +714,7 @@ Contains
 		return
 	else if (P%allocated) then
 		write(0,*) 'Error: (zero_modelParam) output structure cannot be allocated before calling'
-		return
+		continue
 	end if
 
 	P%allocated = .FALSE.
@@ -746,7 +746,7 @@ Contains
 		return
 	else if (P%allocated) then
 		write(0,*) 'Error: (add_modelParam) output structure cannot be allocated before calling'
-		return
+		continue
 	end if
 
 	P = zero_modelParam(P1)
@@ -783,7 +783,7 @@ Contains
 		return
 	else if (P%allocated) then
 		write(0,*) 'Error: (subtract_modelParam) output structure cannot be allocated before calling'
-		return
+		continue
 	end if
 
 	P = zero_modelParam(P1)
@@ -931,7 +931,7 @@ Contains
 		return
 	else if (P%allocated) then
 		write(0,*) 'Error: (scMult_modelParam) output structure cannot be allocated before calling'
-		return
+		continue
 	end if
 
 	P = zero_modelParam(P1)
@@ -956,7 +956,7 @@ Contains
 		return
 	else if (P%allocated) then
 		write(0,*) 'Error: (scDiv_modelParam) output structure cannot be allocated before calling'
-		return
+		continue
 	end if
 
 	P = zero_modelParam(P1)
@@ -1008,7 +1008,7 @@ Contains
 		return
 	else if (P%allocated) then
 		write(0,*) 'Error: (linComb_modelParam) output structure cannot be allocated before calling'
-		return
+		continue
 	end if
 
 	P = zero_modelParam(P1)
@@ -1116,7 +1116,7 @@ Contains
 		return
 	else if (P%allocated) then
 		write(0,*) 'Error: (multBy_CmSqrt) output structure cannot be allocated before calling'
-		return
+		continue
 	end if
 
 	P = P1
@@ -1145,7 +1145,7 @@ Contains
 		return
 	else if (P%allocated) then
 		write(0,*) 'Error: (multBy_Cm) output structure cannot be allocated before calling'
-		return
+		continue
 	end if
 
 	! apply operator C_p^{1/2} twice
