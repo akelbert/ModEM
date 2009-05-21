@@ -129,6 +129,8 @@ Contains
 
    ! compute the smoothed model parameter vector
    call CmSqrtMult(mHat,m)
+
+   ! overwriting input with output
    call linComb(ONE,m,ONE,m0,m)
 
    ! initialize dHat
@@ -142,6 +144,8 @@ Contains
 !	call write_Z_ascii(fidWrite,cfile,nPer,periods,modes, &
 !			nSites,sites,allData)
 
+   ! initialize res
+   res = zero(d)
 
    ! compute residual: res = d-dHat
    call linComb(ONE,d,MinusONE,dHat,res)
@@ -187,14 +191,18 @@ Contains
 
    !  local variables
    type(dataVecMTX_t)    :: res
-   type(modelParam_t) :: m,m1,JTd,CmJTd
+   type(modelParam_t) :: m,JTd,CmJTd
 
    ! integer :: j, Ny, NzEarth
 
    ! compute the smoothed model parameter vector
-   call CmSqrtMult(mHat,m1)
-   ! make sure that your linComb function allows overwriting input with output
-   call linComb(ONE,m1,ONE,m0,m)
+   call CmSqrtMult(mHat,m)
+
+   ! overwriting the input with output
+   call linComb(ONE,m,ONE,m0,m)
+
+   ! initialize res
+   res = zero(d)
 
    ! compute residual: res = d-dHat
    call linComb(ONE,d,MinusONE,dHat,res)
@@ -209,6 +217,10 @@ Contains
    call CdInvMult(res)
    call JmultT(m,res,JTd,eAll)
    call CmSqrtMult(JTd,CmJTd)
+
+   ! initialize grad
+   grad = zero(m)
+
    ! multiply by 2 (to be consistent with the formula)
    ! and add the gradient of the model norm
    call linComb(MinusTWO,CmJTd,TWO*lambda,mHat,grad)
@@ -231,6 +243,9 @@ Contains
 
    ! sum of squares = penalty functional - scaled model norm
    SS = F - (lambda * mNorm)
+
+   ! initialize
+   dSS = zero(mHat)
 
    ! subtract the model norm derivative from the gradient of the penalty functional
    call linComb(ONE,grad,MinusTWO*lambda,mHat,dSS)
@@ -359,7 +374,6 @@ Contains
    m = m0
    mHat = zero_modelParam(m0)
 
-
    !  compute the penalty functional and predicted data
    call func(lambda,d,m0,mHat,value,dHat,eAll,rms)
    call printf('START',lambda,alpha,value,rms)
@@ -383,6 +397,7 @@ Contains
    ! initialize CG: g = - grad; h = g
    nCG = 0
    iter = 0
+   g = zero_modelParam(grad)
    call linComb(MinusONE,grad,R_ZERO,grad,g)
    h = g
 
@@ -590,6 +605,8 @@ Contains
       relaxation = .false.
    end if
 
+   ! initialize
+   mHat_1 = zero_modelParam(mHat_0)
    !  compute the trial parameter mHat_1
    call linComb(ONE,mHat_0,alpha_1,h,mHat_1)
 
@@ -758,6 +775,7 @@ Contains
    end if
 
    ! compute the trial mHat, f, dHat, eAll, rms
+   mHat_1 = zero_modelParam(mHat_0)
    call linComb(ONE,mHat_0,alpha_1,h,mHat_1)
    call func(lambda,d,m0,mHat_1,f_1,dHat_1,eAll_1,rms_1)
    call printf('STARTLS',lambda,alpha,f_1,rms_1)

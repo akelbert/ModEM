@@ -97,7 +97,7 @@ program earth
 	! this includes 'frozen' variables, but we're just testing
 	allocate(da(param%nc))
 	call random_number(da)
-	da = da * 0.05
+	da = da * 0.005
 
     open(unit=50,file='da.dat',status='unknown')
 	write(50,*) 'da = ',da
@@ -599,6 +599,8 @@ end program earth
 	logical									:: adjoint,delta
 	character(1)							:: cfunc
 	character(80)							:: fn_err
+	real(8)									:: SS, RMS
+	integer									:: Ndata
 
 	! Start the (portable) clock
 	call date_and_time(values=tarray)
@@ -614,21 +616,36 @@ end program earth
 
 	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
+	  ! res = psi-dat (note: multiply by +2 to obtain derivative)
 	  call calcResiduals(freq,dat,psi,res)
 	  !call OutputResiduals(freq,res,TFList,obsList)
 
 	  ! If computing different kinds of misfits, be consistent;
 	  ! write different kinds into different data structures
-	  call calcMisfit(freq,res,misfit,misfit%name)
+	  !call calcMisfit(freq,res,misfit,misfit%name)
 
 	  ! compute the weighted residuals and start the derivative computations
 	  call calcResiduals(freq,dat,psi,wres,weighted=.TRUE.)
 
 	end do
 
+!	! initialize res
+!	res = zero(psi)
+!	! compute residual: res = dat-psi
+!	call linComb(ONE,dat,MinusONE,psi,res)
+!	! normalize residuals, compute sum of squares
+!	wres = res
+!	call normalizeData(wres,2)
+!	SS = dotProd(res,wres)
+!	Ndata = countData(res)
+!	RMS = sqrt(SS/Ndata)
+!	print *, 'Total RMS squared misfit for ',Ndata,' data values = ',RMS**2
+
 	! Call multiplication by J^T
 	call JmultT(param,wres,dmisfit,H,dR)
 
+	! Note: this is an error; since res=psi-dat, should be +2.0d0, but there is
+	! probably another error in the inverse solution to counter that!
 	dmisfit%c%value = -2.0d0 * dmisfit%c%value
 	!dmisfit = Scmult_modelParam_f(-2.0d0,dmisfit)
 	!dmisfit = -2. * dmisfit
@@ -641,9 +658,22 @@ end program earth
 	do ifreq=1,freqList%n
 	  do ifunc=1,nfunc
 
+	    dR%dm(ifreq,ifunc)%c%value = -2.0d0 * dR%dm(ifreq,ifunc)%c%value
+	    dR%dm(ifreq,ifunc) = multBy_CmSqrt(dR%dm(ifreq,ifunc))
+
 		call getParamValues_modelParam(dR%dm(ifreq,ifunc),misfit%dRda(ifreq,ifunc,:))
 
 	  end do
+	end do
+
+	do ifreq=1,freqList%n
+
+	  freq = freqList%info(ifreq)
+
+	  ! If computing different kinds of misfits, be consistent;
+	  ! write different kinds into different data structures
+	  call calcMisfit(freq,res,misfit,misfit%name)
+
 	end do
 
 	! Output the summary and exit
@@ -1238,6 +1268,8 @@ end program earth
 	  ftime = etime - stime
 	  print *,'Time taken (secs) ',ftime
 	  rtime = rtime + ftime
+
+	  print *, 'The fwd and adj results should be complex conjugates of each other...'
 
 	  print *, 'Solution g_2^* Mfwd^{-1} g_1: ',value(1,2)
 	  print *, 'Solution g_1^* Madj^{-1} g_2: ',value(2,1)

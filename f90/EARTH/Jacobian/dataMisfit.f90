@@ -253,8 +253,9 @@ Contains
 	!    write (0,'(2i8,g17.9)') norm(l)%L%num,norm(l)%F%num,2.0d0*misfit%damping*norm(l)%value
 	!  end if
 	!end do
+	weighted_norm = zero(p_input)
 	call getCoeffArray_modelParam(p_input,norm)
-	weighted_norm = 2.0d0 * misfit%damping * p_input
+	call scMult_modelParam(TWO*misfit%damping,p_input,weighted_norm)
 	call print_modelParam(weighted_norm,output_level,"Weighted model norm derivative = ")
 
 	! Compute total gradient including model norm term

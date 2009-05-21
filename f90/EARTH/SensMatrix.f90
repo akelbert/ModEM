@@ -242,7 +242,7 @@ Contains
 		call operatorPt(drho,dmisfit)
 
 		! add to the total model parametrization
-		dm = dm + dmisfit
+		call linComb(ONE,dm,ONE,dmisfit,dm)
 
 		! save the misfit derivatives if required
 		if (present(dR)) then

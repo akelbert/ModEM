@@ -19,24 +19,28 @@ module model_operators
 	 MODULE PROCEDURE fillParam_modelParam
   end interface
 
-  INTERFACE OPERATOR (+)
-     MODULE PROCEDURE add_modelParam_f
-  END INTERFACE
+  interface zero
+     MODULE PROCEDURE zero_modelParam
+  end interface
 
-  INTERFACE OPERATOR (-)
-     MODULE PROCEDURE subtract_modelParam_f
-  END INTERFACE
-
-  ! multiplication
-  INTERFACE OPERATOR (*)
-     MODULE PROCEDURE mult_modelParam_f
-     MODULE PROCEDURE scMult_modelParam_f
-  END INTERFACE
-
-  ! division
-  INTERFACE OPERATOR (/)
-     MODULE PROCEDURE scDiv_modelParam_f
-  END INTERFACE
+!  INTERFACE OPERATOR (+)
+!     MODULE PROCEDURE add_modelParam_f
+!  END INTERFACE
+!
+!  INTERFACE OPERATOR (-)
+!     MODULE PROCEDURE subtract_modelParam_f
+!  END INTERFACE
+!
+!  ! multiplication
+!  INTERFACE OPERATOR (*)
+!     MODULE PROCEDURE mult_modelParam_f
+!     MODULE PROCEDURE scMult_modelParam_f
+!  END INTERFACE
+!
+!  ! division
+!  INTERFACE OPERATOR (/)
+!     MODULE PROCEDURE scDiv_modelParam_f
+!  END INTERFACE
 
   INTERFACE dotProd
      MODULE PROCEDURE dotProd_modelParam_f
@@ -46,17 +50,22 @@ module model_operators
   INTERFACE linComb
      MODULE PROCEDURE linComb_modelParam
   END INTERFACE
+
+  INTERFACE compare
+     MODULE PROCEDURE compare_modelParam_f
+     MODULE PROCEDURE compareLayers_modelParam_f
+  END INTERFACE
   ! * EOP
 
   public			:: create_modelParam, deall_modelParam, setup_modelParam, copy_modelParam
   public			:: fillParam_modelParam, fillParamValues_modelParam
-  public			:: verify_modelParam, verifyLayers_modelParam, adjustLayers_modelParam
+  public			:: compare_modelParam_f, compareLayers_modelParam_f, adjustLayers_modelParam
   public			:: zero_modelParam, getParamValues_modelParam
   public			:: setLayer_modelParam, setCoeffValue_modelParam, setCrust_modelParam
   public            :: getCoeffValue_modelParam, getCoeff_modelParam, getCoeffArray_modelParam
   public			:: add_modelParam_f, subtract_modelParam_f, linComb_modelParam
   public			:: mult_modelParam_f, dotProd_modelParam_f, dotProdVec_modelParam_f
-  public			:: scMult_modelParam_f, scDiv_modelParam_f
+  public			:: scMult_modelParam, scDiv_modelParam_f
   public			:: print_modelParam, write_modelParam
   public			:: smoothV_modelParam, smoothH_modelParam
   public			:: multBy_CmSqrt, multBy_Cm
@@ -90,60 +99,60 @@ Contains
 
 
   ! **********************************************************************
-	! * Test whether two parametrizations have the same basic definitions
-	! * Returns 1 if parametrizations are compatible, zero otherwise
+  ! * Test whether two parametrizations have the same basic definitions
+  ! * Returns 1 if parametrizations are compatible, zero otherwise
   ! * BOP
-  function verify_modelParam(P2,P1) result (status)
+  function compare_modelParam_f(P2,P1) result (status)
 
     implicit none
     type (modelParam_t), intent(in)                  :: P1
     type (modelParam_t), intent(in)                  :: P2
-		logical                                       :: status
+	logical                                       :: status
     ! * EOP
 
-		integer                                        :: j
+	integer                                        :: j
 
 	status = .FALSE.
 
-	if(.not.(P1%allocated.and.P2%allocated)) then
-		write(0,*) 'Error: (verify_modelParam) parametrization not allocated yet'
+	if(.not.(P1%allocated .and. P2%allocated)) then
+		call warning('(compare_modelParam) parametrization not allocated yet')
 		return
 	end if
 
 	! compare functional construction
 	if (P1%nL /= P2%nL) then
-		write(0,*) 'Error: (verify_modelParam) the two models have a different number of layers'
+		call warning('(compare_modelParam) the two models have a different number of layers')
 		return
 	end if
 
 	! compare layer construction
 	if (P1%nF /= P2%nF) then
-		write(0,*) 'Error: (verify_modelParam) the two models have a different number of functionals'
+		call warning('(compare_modelParam) the two models have a different number of functionals')
 		return
 	end if
 
 	! compare parameter construction
 	if (P1%nc /= P2%nc) then
-		write(0,*) 'Error: (verify_modelParam) the two models have a different number of coefficients'
+		call warning('(compare_modelParam) the two models have a different number of coefficients')
 		return
 	end if
 
 	do j = 1,P1%nL
-		status = verifyLayers_modelParam(P1%L(j),P2%L(j))
+		status = compareLayers_modelParam_f(P1%L(j),P2%L(j))
 		if (status .eqv. .FALSE.) then
-			write(0,*) 'Error: (verify_modelParam) incompatible layer ',j
+			write(0,*) '(compare_modelParam) incompatible layer',j
 			return
 		end if
 	end do
 
-  end function verify_modelParam
+  end function compare_modelParam_f
 
 
   ! **********************************************************************
-	! * Test whether two layer structures have the same basic definitions
-	! * Returns 1 if layers are identical, zero otherwise
+  ! * Test whether two layer structures have the same basic definitions
+  ! * Returns 1 if layers are identical, zero otherwise
   ! * BOP
-  function verifyLayers_modelParam(L1,L2) result (status)
+  function compareLayers_modelParam_f(L1,L2) result (status)
 
     implicit none
     type (modelLayer_t), intent(in)      :: L1,L2
@@ -153,44 +162,44 @@ Contains
 	status = .FALSE.
 
 	if (L1%if_log .neqv. L2%if_log) then
-		write(0,*) 'Error: (verifyLayers) layers have different structure'
+		call warning('(compareLayers) layers have different structure')
 		return
 	end if
 
 	if (clean(L1%depth)  /= clean(L2%depth)) then
-		write(0,*) 'Error: (verifyLayers) layers have different depths'
+		call warning('(compareLayers) layers have different depths')
 		return
 	end if
 
 	if (clean(L1%width)  /= clean(L2%width)) then
-		write(0,*) 'Error: (verifyLayers) layers have different widths'
+		call warning('(compareLayers) layers have different widths')
 		return
 	end if
 
 	if (clean(L1%lbound) /= clean(L2%lbound)) then
-		write(0,*) 'Error: (verifyLayers) layers have different lower bounds'
+		call warning('(compareLayers) layers have different lower bounds')
 		return
 	end if
 
 	if (clean(L1%ubound) /= clean(L2%ubound)) then
-		write(0,*) 'Error: (verifyLayers) layers have different upper bounds'
+		call warning('(compareLayers) layers have different upper bounds')
 		return
 	end if
 
 	if (clean(L1%alpha)  /= clean(L2%alpha)) then
-		write(0,*) 'Error: (verifyLayers) layers have different horizontal regularization'
+		call warning('(compareLayers) layers have different horizontal regularization')
 		return
 	end if
 
 	if (clean(L1%beta)   /= clean(L2%beta)) then
-		write(0,*) 'Error: (verifyLayers) layers have different vertical regularization'
+		call warning('(compareLayers) layers have different vertical regularization')
 		return
 	end if
 
 	status = .TRUE.
 	return
 
-  end function verifyLayers_modelParam
+  end function compareLayers_modelParam_f
 
 
   ! *************************************************************************
@@ -335,9 +344,8 @@ Contains
 	call create_modelParam(P,size(L),maxval(F%l))
 
 	if (P%nF /= size(F)) then
-	   write(0,*) 'Error: (setup_modelParam) spherical harmonics initialization incorrect'
 	   call deall_modelParam(P)
-	   stop
+	   call errStop('(setup_modelParam) spherical harmonics initialization incorrect')
 	end if
 
 	P%L = L
@@ -360,20 +368,18 @@ Contains
 	integer										   :: i,j,iL,iV
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (fillParam_modelParam) parametrization not allocated yet'
-	   return
+       call errStop('(fillParam_modelParam) parametrization not allocated yet')
 	end if
 
 	do i=1,size(c)
 	  iL = c(i)%L%num
 	  iV = c(i)%F%num
 	  if (P%c(iL,iV)%code /= c(i)%code) then
-		write (0,*) 'Error: (fillParam_modelParam) parametrization setup error'
-		stop
+        call errStop('(fillParam_modelParam) parametrization setup error')
 	  else if(.not.P%c(iL,iV)%exists) then
-			write (0,*) 'Warning: (fillParam_modelParam) unable to replace coefficient - exists=.FALSE.'
-		  cycle
-		end if
+        call warning('(fillParam_modelParam) unable to replace coefficient - exists=.FALSE.')
+		cycle
+	  end if
 	  P%c(iL,iV) = c(i)
 	end do
 
@@ -395,11 +401,13 @@ Contains
 	integer										   :: i,j,k
 
     if(.not.P%allocated) then
+       call errStop('')
 	   write(0,*) 'Error: (fillParamValues_modelParam) parametrization not allocated yet'
 	   return
 	end if
 
 	if(count(P%c%exists) /= size(v)) then
+       call errStop('')
 	   write(0,*) 'Error: (fillParamValues_modelParam) wrong number of input coefficients'
 	   return
 	end if
@@ -430,8 +438,7 @@ Contains
 	integer										   :: i,j,k
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (getParamValues_modelParam) parametrization not allocated yet'
-	   return
+       call errStop('(getParamValues_modelParam) parametrization not allocated yet')
 	end if
 
 	!do j=1,P%nL
@@ -444,8 +451,8 @@ Contains
 
 
 	if(count(P%c%exists) /= size(v)) then
-	   write(0,*) 'Error: (getParamValues_modelParam) wrong number of input coefficients: ',size(v)
-	   return
+       write(0,*) '(getParamValues_modelParam) wrong number of input coefficients: ',size(v)
+       stop
 	end if
 
 	k=0
@@ -478,15 +485,14 @@ Contains
     integer                                        :: status
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (setLayer_modelParam) parametrization not allocated yet'
-	   return
+       call errStop('(setLayer_modelParam) parametrization not allocated yet')
 	end if
 
     depth = EARTH_R - lowerb
 	width  = upperb - lowerb
 	if (width <= R_ZERO) then
-	  write(0, *) 'Error: (setLayer_modelParam) incorrect depth of layer ',iL
-	  stop
+       write(0,*) '(setLayer_modelParam) incorrect depth of layer ',iL
+       stop
 	end if
 
 	P%L(iL)%depth  = depth
@@ -515,18 +521,16 @@ Contains
 	integer										   :: iV
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (setCoeffValue_modelParam) parametrization not allocated yet'
-	   return
+       call errStop('(setCoeffValue_modelParam) parametrization not allocated yet')
 	end if
 
 	iV = iY(l,m)
 	if (P%c(iL,iV)%exists) then
-	  write (0,*) 'Warning: (setCoeffValue_modelParam) coefficient ',iL,iV,' already exists, overwrite...'
+       write(0,*) '(setCoeffValue_modelParam) coefficient ',iL,iV,' already exists, overwrite...'
 	end if
 
 	if ((P%c(iL,iV)%F%l /= l).or.(P%c(iL,iV)%F%m /= m)) then
-	  write (0,*) 'Error: (setCoeffValue_modelParam) major error in parametrization setup'
-	  stop
+       call errStop('(setCoeffValue_modelParam) major error in parametrization setup')
 	end if
 
 	P%c(iL,iV)%value = v
@@ -555,14 +559,12 @@ Contains
 	integer										   :: iV
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (getCoeffValue_modelParam) parametrization not allocated yet'
-	   return
+       call errStop('(getCoeffValue_modelParam) parametrization not allocated yet')
 	end if
 
 	iV = iY(l,m)
 	if (.not.P%c(iL,iV)%exists) then
-	  write (0,*) 'Error: (getCoeffValue_modelParam) required coefficient does not exist'
-	  return
+	   call warning('(getCoeffValue_modelParam) required coefficient does not exist')
 	end if
 
 	v = P%c(iL,iV)%value
@@ -586,8 +588,7 @@ Contains
 	integer										   :: i,j,k
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (getCoeff_modelParam) parametrization not allocated yet'
-	   return
+       call errStop('(getCoeff_modelParam) parametrization not allocated yet')
 	end if
 
 	k=0
@@ -618,13 +619,11 @@ Contains
 	integer										   :: i,j,k
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (getCoeff_modelParam) parametrization not allocated yet'
-	   return
+       call errStop('(getCoeffArray_modelParam) parametrization not allocated yet')
 	end if
 
 	if(size(c) /= P%nc) then
-	   write(0,*) 'Error: (getCoeff_modelParam) coefficient array is of a wrong size'
-	   return
+	   call errStop('(getCoeffArray_modelParam) coefficient array is of a wrong size')
 	end if
 
 
@@ -651,10 +650,13 @@ Contains
 
     integer                                        :: status
 	integer										   :: i,j
-	integer                                        :: nx,ny
+	integer                                        :: nx1,ny1,nx2,ny2
 
+    ! if output is allocated and of different size, reallocate
 	if (P2%allocated) then
-	  call deall_modelParam(P2)
+	  if (.not. compare(P2,P1)) then
+	    call deall_modelParam(P2)
+	  end if
 	end if
 
 	! copy functional construction
@@ -674,12 +676,18 @@ Contains
 
 	! copy crust, if exists
 	if (P1%crust%allocated) then
+		nx1 = size(P1%crust%cond,1)
+		ny1 = size(P1%crust%cond,2)
 		if (associated(P2%crust%cond)) then
-	   		deallocate(P2%crust%cond,STAT=status)
+			nx2 = size(P1%crust%cond,1)
+			ny2 = size(P1%crust%cond,2)
+			if ((nx1 .ne. nx2) .or. (ny1 .ne. ny2)) then
+	   			deallocate(P2%crust%cond,STAT=status)
+	   			allocate(P2%crust%cond(nx1,ny1),STAT=status)
+	   		end if
+	   	else
+	   		allocate(P2%crust%cond(nx1,ny1),STAT=status)
 		end if
-		nx = size(P1%crust%cond,1)
-		ny = size(P1%crust%cond,2)
-		allocate(P2%crust%cond(nx,ny),STAT=status)
 		P2%crust%cond = P1%crust%cond
 		P2%crust%allocated = .true.
 	else
@@ -701,6 +709,8 @@ Contains
   ! **********************************************************************
   ! * Use this function when a zero-valued copy of an existing structure
   ! * is needed
+  ! *
+  ! * output cannot overwrite input, i.e. m = zero(m) illegal
   ! * BOP
   function zero_modelParam(P1) result (P)
 
@@ -710,17 +720,11 @@ Contains
     ! * EOP
 
     if(.not.(P1%allocated)) then
-		write(0,*) 'Error: (zero_modelParam) input parametrization not allocated yet'
-		return
-	else if (P%allocated) then
-		write(0,*) 'Error: (zero_modelParam) output structure cannot be allocated before calling'
-		continue
+    	call errStop('(zero_modelParam) input parametrization not allocated yet')
 	end if
 
-	P%allocated = .FALSE.
-
 	! Create an identical structure to P1
-	call copy_modelParam(P,P1)
+	P = P1
 
 	! Set all values to zero
 	P%c%value = R_ZERO
@@ -741,23 +745,20 @@ Contains
 
     integer					:: i,j
 
-	if (.not.verify_modelParam(P1,P2)) then
-		write(0,*) 'Error: (add_modelParam) parametrization structures incompatible'
-		return
-	else if (P%allocated) then
-		write(0,*) 'Error: (add_modelParam) output structure cannot be allocated before calling'
-		continue
+	if (.not. compare(P1,P2)) then
+		call errStop('(add_modelParam) input parametrization structures incompatible')
+	else if (.not. P%allocated) then
+		call errStop('(add_modelParam) output structure has to be allocated before calling')
+	else if (.not. compare(P1,P)) then
+		call errStop('(add_modelParam) output parametrization is incompatible')
 	end if
-
-	P = zero_modelParam(P1)
 
 	do j=1,P%nL
 	  do i=1,P%nF
 	    if((P1%c(j,i)%F%l==P2%c(j,i)%F%l).and.(P1%c(j,i)%F%m==P2%c(j,i)%F%m)) then
 		  P%c(j,i)%value = P1%c(j,i)%value + P2%c(j,i)%value
 	    else
-	     write(0,*) 'Error: (add_modelParam) parametrization not set up correctly'
-	     stop
+	      call errStop('(add_modelParam) parametrization not set up correctly')
 	    end if
 	  end do
 	end do
@@ -778,23 +779,20 @@ Contains
 
     integer					:: i,j
 
-	if (.not.verify_modelParam(P1,P2)) then
-		write(0,*) 'Error: (subtract_modelParam) parametrization structures incompatible'
-		return
-	else if (P%allocated) then
-		write(0,*) 'Error: (subtract_modelParam) output structure cannot be allocated before calling'
-		continue
+	if (.not. compare(P1,P2)) then
+		call errStop('(subtract_modelParam) input parametrization structures incompatible')
+	else if (.not. P%allocated) then
+		call errStop('(subtract_modelParam) output structure has to be allocated before calling')
+	else if (.not. compare(P1,P)) then
+		call errStop('(subtract_modelParam) output parametrization is incompatible')
 	end if
-
-	P = zero_modelParam(P1)
 
 	do j=1,P%nL
 	  do i=1,P%nF
 	    if((P1%c(j,i)%F%l==P2%c(j,i)%F%l).and.(P1%c(j,i)%F%m==P2%c(j,i)%F%m)) then
 		  P%c(j,i)%value = P1%c(j,i)%value - P2%c(j,i)%value
 	    else
-	     write(0,*) 'Error: (subtract_modelParam) parametrization not set up correctly'
-	     stop
+	      call errStop('(subtract_modelParam) parametrization not set up correctly')
 	    end if
 	  end do
 	end do
@@ -815,23 +813,20 @@ Contains
 
     integer					:: i,j
 
-	if (.not.verify_modelParam(P1,P2)) then
-		write(0,*) 'Error: (mult_modelParam) parametrization structures incompatible'
-		return
-	else if (P%allocated) then
-		write(0,*) 'Error: (mult_modelParam) output parametrization cannot be allocated before calling'
-		return
+	if (.not. compare(P1,P2)) then
+		call errStop('(mult_modelParam) input parametrization structures incompatible')
+	else if (.not. P%allocated) then
+		call errStop('(mult_modelParam) output structure has to be allocated before calling')
+	else if (.not. compare(P1,P)) then
+		call errStop('(mult_modelParam) output parametrization is incompatible')
 	end if
-
-	P = zero_modelParam(P1)
 
 	do j=1,P%nL
 	  do i=1,P%nF
 	    if((P1%c(j,i)%F%l==P2%c(j,i)%F%l).and.(P1%c(j,i)%F%m==P2%c(j,i)%F%m)) then
 		  P%c(j,i)%value = P1%c(j,i)%value * P2%c(j,i)%value
 	    else
-		 write(0,*) 'Error: (mult_modelParam) parametrization not set up correctly'
-	     stop
+	      call errStop('(mult_modelParam) parametrization not set up correctly')
 	    end if
 	  end do
 	end do
@@ -851,9 +846,8 @@ Contains
 
     integer					:: i,j
 
-	if (.not.verify_modelParam(P1,P2)) then
-		write(0,*) 'Error: (dotProd_modelParam_f) parametrization structures incompatible'
-		return
+	if (.not. compare(P1,P2)) then
+		call errStop('(dotProd_modelParam) parametrization structures incompatible')
 	end if
 
     r = R_ZERO
@@ -865,8 +859,7 @@ Contains
 			r = r + P1%c(j,i)%value * P2%c(j,i)%value
 		  end if
 	    else
-		 write(0,*) 'Error: (dotProd_modelParam_f) parametrization not set up correctly'
-	     stop
+	      call errStop('(dotProd_modelParam) parametrization not set up correctly')
 	    end if
 	  end do
 	end do
@@ -888,13 +881,11 @@ Contains
     integer					:: i,j,k
 
     if(.not.P2%allocated) then
-	   write(0,*) 'Error: (dotProdVec_modelParam) parametrization not allocated yet'
-	   return
+    	call errStop('(dotProdVec_modelParam) parametrization not allocated yet')
 	end if
 
 	if(count(P2%c%exists) /= size(v)) then
-	   write(0,*) 'Error: (dotProdVec_modelParam) wrong number of input coefficients'
-	   return
+		call errStop('(dotProdVec_modelParam) wrong number of input coefficients')
 	end if
 
     r = R_ZERO
@@ -918,28 +909,26 @@ Contains
 
   ! **********************************************************************
   ! * BOP
-  function scMult_modelParam_f(v,P1) result(P)
+  subroutine scMult_modelParam(v,P1,P)
 
     implicit none
     type (modelParam_t), intent(in)		:: P1
     real(8), intent(in)					:: v
-    type (modelParam_t)					:: P
+    type (modelParam_t), intent(inout)	:: P
     ! * EOP
 
-    if(.not.P1%allocated) then
-		write(0,*) 'Error: (scMult_modelParam) parametrization not allocated yet'
-		return
-	else if (P%allocated) then
-		write(0,*) 'Error: (scMult_modelParam) output structure cannot be allocated before calling'
-		continue
+	if (.not. P1%allocated) then
+		call errStop('(scMult_modelParam) input parametrization not allocated yet')
+	else if (.not. P%allocated) then
+		call errStop('(scMult_modelParam) output structure has to be allocated before calling')
+	else if (.not. compare(P1,P)) then
+		call errStop('(scMult_modelParam) output parametrization is incompatible')
 	end if
-
-	P = zero_modelParam(P1)
 
 	P%c%value = v * P1%c%value
 
 
-  end function scMult_modelParam_f
+  end subroutine scMult_modelParam
 
   ! **********************************************************************
   ! * BOP
@@ -951,15 +940,13 @@ Contains
     type (modelParam_t)					:: P
     ! * EOP
 
-    if(.not.P1%allocated) then
-		write(0,*) 'Error: (scDiv_modelParam) parametrization not allocated yet'
-		return
-	else if (P%allocated) then
-		write(0,*) 'Error: (scDiv_modelParam) output structure cannot be allocated before calling'
-		continue
+	if (.not. P1%allocated) then
+		call errStop('(scDiv_modelParam) input parametrization not allocated yet')
+	else if (.not. P%allocated) then
+		call errStop('(scDiv_modelParam) output structure has to be allocated before calling')
+	else if (.not. compare(P1,P)) then
+		call errStop('(scDiv_modelParam) output parametrization is incompatible')
 	end if
-
-	P = zero_modelParam(P1)
 
 	if(v==R_ZERO) then
 	   write(0,*) 'Error: (scDiv_modelParam) division by zero'
@@ -973,17 +960,10 @@ Contains
 
   ! **********************************************************************
   ! * We can add or subtract values with exists==.FALSE. (they equal zero)
-  ! * New rules of the game (HIGHLY RECOMMENDED):
-  ! * demand that the output isn't allocated when we call this and similar
-  ! * routines. This prevents overwriting an input with a call such as
-  ! * m1 = a1*m1 + a2*m2.
-  ! * Calls like this cause errors that are extremely hard to debug.
-  ! * The reason is that all function arguments are passed by reference
-  ! * in Fortran. Setting P = zero(P1) set P1 to zero too, if these are
-  ! * the same variable in the calling subroutine.
-  ! * This can be avoided by creating temporary variables (inefficient)
-  ! * or by copying the variable instead of setting it to zero;
-  ! * but the only truly safe practice is the disallow allocated outputs.
+  ! *
+  ! * Output has to be allocated and of the right size before calling.
+  ! * This is necessary to ensure we don't modify the inputs in a call
+  ! * such as m1 = a*m1 + b*m2 (thus allowing to overwrite input with output).
   ! * BOP
   subroutine linComb_modelParam(r1,P1,r2,P2,P)
 
@@ -991,35 +971,32 @@ Contains
      !    P = r1*P1 + r2*P2
      !  where r1 and r2 are real constants and P1 and P2
      !   are model parameters
-     !   output P may NOT overwrite P1 or P2
+     !   output P may overwrite P1 or P2
 
     implicit none
     type (modelParam_t), intent(in)				   :: P1
     type (modelParam_t), intent(in)				   :: P2
     real(8), intent(in)							   :: r1
     real(8), intent(in)							   :: r2
-    type (modelParam_t), intent(out)               :: P
+    type (modelParam_t), intent(inout)             :: P
     ! * EOP
 
 	integer										   :: i,j
 
-	if (.not.verify_modelParam(P1,P2)) then
-		write(0,*) 'Error: (linComb_modelParam) parametrization structures incompatible'
-		return
-	else if (P%allocated) then
-		write(0,*) 'Error: (linComb_modelParam) output structure cannot be allocated before calling'
-		continue
+	if (.not. compare(P1,P2)) then
+		call errStop('(linComb_modelParam) input parametrization structures incompatible')
+	else if (.not. P%allocated) then
+		call errStop('(linComb_modelParam) output structure has to be allocated before calling')
+	else if (.not. compare(P1,P)) then
+		call errStop('(linComb_modelParam) output parametrization is incompatible')
 	end if
-
-	P = zero_modelParam(P1)
 
 	do j=1,P%nL
 	  do i=1,P%nF
 	    if((P1%c(j,i)%F%l==P2%c(j,i)%F%l).and.(P1%c(j,i)%F%m==P2%c(j,i)%F%m)) then
-		 P%c(j,i)%value = r1 * P1%c(j,i)%value + r2 * P2%c(j,i)%value
+		  P%c(j,i)%value = r1 * P1%c(j,i)%value + r2 * P2%c(j,i)%value
 	    else
-		 write(0,*) 'Error: (linComb_modelParam) parametrization not set up correctly'
-	     stop
+	      call errStop('(linComb_modelParam) parametrization not set up correctly')
 	    end if
 	  end do
 	end do
@@ -1038,7 +1015,7 @@ Contains
 	integer										   :: i,j
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (smoothH_modelParam) parametrization not allocated yet'
+       call warning('(smoothH_modelParam) parametrization not allocated yet')
 	   return
 	end if
 
@@ -1065,7 +1042,7 @@ Contains
 	real(8),dimension(P%nL,P%nF)				   :: v,v_prev,v_next
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (smoothV_modelParam) parametrization not allocated yet'
+       call warning('(smoothV_modelParam) parametrization not allocated yet')
 	   return
 	end if
 
@@ -1103,6 +1080,8 @@ Contains
 
   ! **********************************************************************
   ! * Preconditioning operator C_p^{1/2}
+  ! * One of the few occasions where it is illegal to overwrite the input
+  ! * i.e. no calls like m = multBy_CmSqrt(m) allowed
   ! * BOP
   function multBy_CmSqrt(P1) result (P)
 
@@ -1111,12 +1090,10 @@ Contains
     type (modelParam_t)							   :: P
     ! * EOP
 
-    if(.not.P1%allocated) then
-		write(0,*) 'Error: (multBy_CmSqrt) parametrization not allocated yet'
-		return
+	if (.not. P1%allocated) then
+		call errStop('(multBy_CmSqrt) input parametrization not allocated yet')
 	else if (P%allocated) then
-		write(0,*) 'Error: (multBy_CmSqrt) output structure cannot be allocated before calling'
-		continue
+		call errStop('(multBy_CmSqrt) output structure cannot to be allocated before calling')
 	end if
 
 	P = P1
@@ -1131,6 +1108,8 @@ Contains
 
   ! **********************************************************************
   ! * Preconditioning operator C_p
+  ! * One of the few occasions where it is illegal to overwrite the input
+  ! * i.e. no calls like m = multBy_CmSqrt(m) allowed
   ! * BOP
   function multBy_Cm(P1) result (P)
 
@@ -1140,12 +1119,10 @@ Contains
     type (modelParam_t)							   :: P
     ! * EOP
 
-    if(.not.P1%allocated) then
-		write(0,*) 'Error: (multBy_Cm) parametrization not allocated yet'
-		return
+	if (.not. P1%allocated) then
+		call errStop('(multBy_Cm) input parametrization not allocated yet')
 	else if (P%allocated) then
-		write(0,*) 'Error: (multBy_Cm) output structure cannot be allocated before calling'
-		continue
+		call errStop('(multBy_Cm) output structure cannot be allocated before calling')
 	end if
 
 	! apply operator C_p^{1/2} twice
@@ -1165,8 +1142,7 @@ Contains
     integer                                  :: nx,ny,status
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (setCrust_modelParam) parametrization not allocated yet'
-	   return
+       call errStop('(setCrust_modelParam) parametrization not allocated yet')
 	end if
 
 	if(.not.crust%allocated) then
@@ -1176,8 +1152,7 @@ Contains
 	end if
 
 	if(.not. associated(crust%cond)) then
-	   write(0,*) 'Error: (setCrust_modelParam) crust not allocated yet'
-	   return
+	   call errStop('(setCrust_modelParam) crust not allocated yet')
 	end if
 
 	if(associated(P%crust%cond)) then
@@ -1207,7 +1182,7 @@ Contains
 	integer									:: i,j
 
     if(.not.P%allocated) then
-	   write(0,*) 'Error: (print_modelParam) parametrization not allocated yet'
+       call warning('(print_modelParam) parametrization not allocated yet')
 	   return
 	end if
 

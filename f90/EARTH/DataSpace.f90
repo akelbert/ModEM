@@ -21,6 +21,10 @@ module DataSpace
      MODULE PROCEDURE deall_dataVecMTX
   end interface
 
+  interface compare
+     MODULE PROCEDURE compare_dataVecMTX_f
+  end interface
+
   interface zero
      MODULE PROCEDURE zero_dataVecMTX
   end interface
@@ -57,6 +61,7 @@ module DataSpace
   ! basic operators for all dataVec types
   public			:: create_dataVecMTX
   public            :: deall_dataVecMTX
+  public            :: compare_dataVecMTX_f
   public            :: zero_dataVecMTX
   public			:: copy_dataVecMTX
   public			:: linComb_dataVecMTX
@@ -121,6 +126,8 @@ Contains
 
   !**********************************************************************
   ! set the data values and error bars to zero
+  !
+  ! output cannot overwrite input, i.e. d = zero(d) illegal
 
   function zero_dataVecMTX(d1) result (d2)
 
@@ -134,6 +141,40 @@ Contains
 	d2%v(:,:,:)%resp%value = C_ZERO
 
   end function zero_dataVecMTX
+
+  !**********************************************************************
+  ! check whether the two inputs are of compatible size & nature
+  ! for basic arithmetic operations
+
+  function compare_dataVecMTX_f(d1,d2) result (status)
+
+    type (dataVecMTX_t), intent(in)	    :: d1
+    type (dataVecMTX_t), intent(in)     :: d2
+    logical								:: status
+    ! local
+    integer                             :: nTx1, nTx2
+    integer                             :: nDt1, nDt2
+    integer                             :: nRx1, nRx2
+
+    status = .false.
+
+    if ((.not. d1%allocated) .or. (.not. d2%allocated)) then
+      return
+    endif
+
+    nTx1 = size(d1%v,1)
+    nDt1 = size(d1%v,2)
+    nRx1 = size(d1%v,3)
+
+    nTx2 = size(d2%v,1)
+    nDt2 = size(d2%v,2)
+    nRx2 = size(d2%v,3)
+
+    if ((nTx1 .eq. nTx2) .and. (nDt1 .eq. nDt2) .and. (nRx1 .eq. nRx2)) then
+      status = .true.
+    endif
+
+  end function compare_dataVecMTX_f
 
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...
@@ -188,6 +229,8 @@ Contains
   ! calculates linear combination of two dataVecMTX objects a*d1 + b*d2
   ! Note that the error bars are allocated and the errorBar variable
   ! initialized in create_dataVec and linComb_dataVec
+  !
+  ! output can safely overwrite input, but output has to be allocated
 
   subroutine linComb_dataVecMTX(a,d1,b,d2,dOut)
 
@@ -203,18 +246,20 @@ Contains
        call errStop('inputs not allocated on call to linComb_dataVecMTX')
     endif
 
-    ! check to see if inputs are compatable
-    if (d1%nTx .ne. d2%nTx) then
+    ! check to see if inputs are of compatible sizes
+    if (.not. compare(d1,d2)) then
        call errStop('input sizes not consistent in linComb_dataVecMTX')
     endif
 
     ! create the output vector that is consistent with inputs
-    if(dOut%allocated) then
-       call errStop('output structure cannot be allocated before calling linComb_dataVecMTX')
-       !call deall_dataVecMTX(dOut)
+    if (.not. dOut%allocated) then
+       call errStop('output structure has to be allocated before calling linComb_dataVecMTX')
     end if
 
-	dOut = zero_dataVecMTX(d1)
+    ! check to see that output is of compatible size
+    if (.not. compare(d1,dOut)) then
+       call errStop('output size not consistent in linComb_dataVecMTX')
+    endif
 
     nTx = size(d1%v,1)
     nDt = size(d1%v,2)
@@ -280,8 +325,8 @@ Contains
        call errStop('inputs not allocated yet for dotProd_dataVecMTX_f')
     endif
 
-    ! check to see if inputs are compatable
-    if (d1%nTx .ne. d2%nTx) then
+    ! check to see if inputs are of compatible sizes
+    if (.not. compare(d1,d2)) then
        call errStop('input sizes not consistent in dotProd_dataVecMTX_f')
     endif
 
@@ -294,12 +339,14 @@ Contains
     do i = 1, nTx
     	do j = 1, nDt
     		do k = 1, nRx
-    			d1real = dreal(d1%v(i,j,k)%resp%value)
-    			d2real = dreal(d2%v(i,j,k)%resp%value)
-    			r = r + d1real * d2real
-				d1imag = dimag(d1%v(i,j,k)%resp%value)
-				d2imag = dimag(d2%v(i,j,k)%resp%value)
-    			r = r + d1imag * d2imag
+    			if (d1%v(i,j,k)%resp%exists .and. d2%v(i,j,k)%resp%exists) then
+    				d1real = dreal(d1%v(i,j,k)%resp%value)
+    				d2real = dreal(d2%v(i,j,k)%resp%value)
+    				r = r + d1real * d2real
+					d1imag = dimag(d1%v(i,j,k)%resp%value)
+					d2imag = dimag(d2%v(i,j,k)%resp%value)
+    				r = r + d1imag * d2imag
+    			end if
     		enddo
     	enddo
     enddo
@@ -343,7 +390,7 @@ Contains
         		if (abs(d%v(i,j,k)%resp%err) <= TOL6 * abs(d%v(i,j,k)%resp%value)) then
            			call errStop('data error bars too small in normalize_dataVec')
         		endif
-        		d%v(i,j,k)%resp%value = d%v(i,j,k)%resp%value/(d%v(i,j,k)%resp%err**nn)
+        		d%v(i,j,k)%resp%value = d%v(i,j,k)%resp%value/(abs(d%v(i,j,k)%resp%err)**nn)
     		enddo
     	enddo
     enddo
@@ -362,7 +409,7 @@ Contains
    type(dataVecMTX_t), intent(in)		:: d
    integer				:: ndata
 
-   ndata = sum(d%n)
+   ndata = 2 * sum(d%n)
 
   end function count_dataVecMTX_f
 

@@ -43,7 +43,7 @@ Contains
 	integer										:: i,ios=0,istat=0
 	character(100)								:: label
 	real(8),dimension(:),intent(in),optional	:: da
-	type (modelParam_t)							:: p_delta, p_smooth
+	type (modelParam_t)							:: p_delta
 	type (modelCoeff_t)							:: coeff
 	type (modelShell_t)                         :: crust
 
@@ -83,10 +83,10 @@ Contains
 		! Adjust the layer boundaries to match the grid
 		call adjustLayers_modelParam(p0_input,grid%r)
 		! NOTE: regularization information is taken from the prior model!!!
-		if (.not.verify_modelParam(p_input,p0_input)) then
+		if (.not. compare(p_input,p0_input)) then
 			write(0,*) 'Warning: Using the layer structure from the prior model'
 			p_input%L = p0_input%L
-			if (.not.verify_modelParam(p_input,p0_input)) then
+			if (.not. compare(p_input,p0_input)) then
 				write(0,*) 'Warning: Base parametrization incompatible with main model'
 				stop
 			end if
@@ -100,16 +100,16 @@ Contains
 	if (present(da)) then
 	  p_delta = zero_modelParam(p_input)
 	  call fillParamValues_modelParam(p_delta,da)
-	  p_input = p_input + p_delta
+	  call linComb(ONE,p_input,ONE,p_delta,p_input)
 	  call deall_modelParam(p_delta)
 	  !param%p(:)%value = param%p(:)%value + da(:)
 	end if
 	!--------------------------------------------------------------------------
 	! 'Smooth' the parametrization by applying inverted regularization operator
-	p_smooth = multBy_CmSqrt(p_input)
+	param = multBy_CmSqrt(p_input)
 	!--------------------------------------------------------------------------
 	! Compute parametrization to use (for model norm we will still use p_input)
-	param = p_smooth + p0_input
+	call linComb(ONE,param,ONE,p0_input,param)
 	!--------------------------------------------------------------------------
 	! Allocate the resistivity vector
 	allocate(rho(grid%nx,grid%ny,grid%nz),STAT=istat)
