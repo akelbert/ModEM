@@ -299,7 +299,8 @@ module ModelSens
 
    if(txDict(e0%tx)%mode.eq.'TE') then
 
-       call zero_dataVec(d)
+       !dOut = zero(d)
+       !d = dOut
 
    else
 
@@ -315,7 +316,8 @@ module ModelSens
        ! instead, will implement
 	   ! the mapping d\psi/d\pi, or multQtilde:
 	   ! a linearized mapping from the edges to the data space
-	   call zero_dataVec(d)
+	   ! dOut = zero(d)
+	   ! d = dOut
 
 	   call deall_cvector(Jy)
 	   call deall_cvector(Jz)

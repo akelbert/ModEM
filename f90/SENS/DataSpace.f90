@@ -27,9 +27,9 @@ module DataSpace
   end interface
 
   interface zero
-     MODULE PROCEDURE zero_dataVec
-     MODULE PROCEDURE zero_dataVecTX
-     MODULE PROCEDURE zero_dataVecMTX
+     MODULE PROCEDURE zero_dataVec_f
+     MODULE PROCEDURE zero_dataVecTX_f
+     MODULE PROCEDURE zero_dataVecMTX_f
   end interface
 
   interface linComb
@@ -38,10 +38,10 @@ module DataSpace
      MODULE PROCEDURE linComb_dataVecMTX
   end interface
 
-  interface operator (*) ! interface to linComb
-     MODULE PROCEDURE scMult_dataVec_f
-     MODULE PROCEDURE scMult_dataVecTX_f
-     MODULE PROCEDURE scMult_dataVecMTX_f
+  interface scMult ! operator (*) interface to linComb
+     MODULE PROCEDURE scMult_dataVec
+     MODULE PROCEDURE scMult_dataVecTX
+     MODULE PROCEDURE scMult_dataVecMTX
   end interface
 
   interface scMultAdd ! interface to linComb
@@ -135,10 +135,10 @@ module DataSpace
   ! basic operators for all dataVec types
   public			:: create_dataVec, create_dataVecTX, create_dataVecMTX
   public            :: deall_dataVec, deall_dataVecTX, deall_dataVecMTX
-  public            :: zero_dataVec, zero_dataVecTX, zero_dataVecMTX
+  public            :: zero_dataVec_f, zero_dataVecTX_f, zero_dataVecMTX_f
   public			:: copy_dataVec, copy_dataVecTX, copy_dataVecMTX
   public			:: linComb_dataVec, linComb_dataVecTX, linComb_dataVecMTX
-  public            :: scMult_dataVec_f, scMult_dataVecTX_f, scMult_dataVecMTX_f
+  public            :: scMult_dataVec, scMult_dataVecTX, scMult_dataVecMTX
   public            :: scMultAdd_dataVec, scMultAdd_dataVecTX, scMultAdd_dataVecMTX
   public			:: dotProd_dataVec_f, dotProd_dataVecTX_f, dotProd_dataVecMTX_f
   public            :: normalize_dataVec, normalize_dataVecTX, normalize_dataVecMTX
@@ -258,18 +258,22 @@ Contains
 
   !**********************************************************************
   ! set the data values and error bars to zero
+  ! output cannot overwrite input, i.e. d = zero(d) illegal
 
-  subroutine zero_dataVec(d)
+  function zero_dataVec_f(d1) result (d2)
 
-    type (dataVec_t), intent(inout)	:: d
+    type (dataVec_t), intent(in)	:: d1
+    type (dataVec_t)				:: d2
 
-    if(d%allocated) then
-       d%value = R_ZERO
-       if (associated(d%error)) d%error = R_ZERO
-       d%errorBar = .false.
+    call copy_dataVec(d2, d1)
+
+    if(d2%allocated) then
+       d2%value = R_ZERO
+       if (associated(d2%error)) d2%error = R_ZERO
+       d2%errorBar = .false.
     endif
 
-  end subroutine zero_dataVec
+  end function zero_dataVec_f
 
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...
@@ -325,6 +329,7 @@ Contains
 
     ! local variables
     logical					:: errBar = .false.
+    integer					:: istat
 
     ! check to see if inputs (d1, d2) are both allocated
     if ((.not. d1%allocated) .or. (.not. d2%allocated)) then
@@ -348,15 +353,16 @@ Contains
        call errStop('input dataVecs correspond to different receiver sets in linComb_dataVec')
     endif
 
-	! set errBar=.true. if at least one of the inputs has error bars
-	errBar = (d1%errorBar .or. d2%errorBar)
-
     ! create the output vector that is consistent with inputs
-    if(dOut%allocated) then
-       call deall_dataVec(dOut)
+    if (.not. dOut%allocated) then
+       call errStop('output structure has to be allocated before calling linComb_dataVec')
     end if
 
-    call create_dataVec(d1%nComp, d1%nSite, dOut, d1%isComplex, errBar)
+    ! check to see if inputs and output are compatible
+    if ((d1%nComp .ne. dOut%nComp) .or. (d1%nSite .ne. dOut%nSite) .or. &
+    	(d1%isComplex .neqv. dOut%isComplex)) then
+       call errStop('input and output dataVecs not consistent in linComb_dataVec')
+    endif
 
 	! set the receiver indices to those of d1
 	dOut%tx = d1%tx
@@ -365,6 +371,15 @@ Contains
 
     !  finally do the linear combination ...
     dOut%value = a*d1%value + b*d2%value
+
+	! set errBar=.true. if at least one of the inputs has error bars
+	errBar = (d1%errorBar .or. d2%errorBar)
+	dOut%errorBar = errBar
+
+	! allocate error bars, if needed
+    if (errBar .and. .not. associated(dOut%error)) then
+       allocate(dOut%error(dOut%nComp, dOut%nSite), STAT=istat)
+    endif
 
 	! deal with the error bars by copying them from one of the vectors;
 	! currently exit if both of the input vectors have error bars defined
@@ -389,15 +404,15 @@ Contains
   ! **********************************************************************
   !  computes dOut = a * dIn for dataVec objects dIn and dOut
   !  and real scalar a
-  function scMult_dataVec_f(a,dIn) result (dOut)
+  subroutine scMult_dataVec(a,d1,d2)
 
     real (kind=prec), intent(in)		:: a
-    type (dataVec_t), intent(in)	    :: dIn
-    type (dataVec_t)                    :: dOut
+    type (dataVec_t), intent(in)	    :: d1
+    type (dataVec_t), intent(inout)     :: d2
 
-	call linComb_dataVec(R_ZERO,dIn,a,dIn,dOut)
+	call linComb_dataVec(R_ZERO,d1,a,d1,d2)
 
-  end function scMult_dataVec_f
+  end subroutine scMult_dataVec
 
   ! **********************************************************************
   !  computes d2+a*d1 for dataVec objects d1, d2 and real scalar a,
@@ -569,20 +584,24 @@ Contains
 
   !**********************************************************************
   ! set the data values and error bars to zero
+  ! output cannot overwrite input, i.e. d = zero(d) illegal
 
-  subroutine zero_dataVecTX(d)
+  function zero_dataVecTX_f(d1) result (d2)
 
-    type (dataVecTX_t), intent(inout)	:: d
+    type (dataVecTX_t), intent(in)		:: d1
+    type (dataVecTX_t)					:: d2
     ! local
     integer                             :: i
 
-    if(d%allocated) then
-       do i = 1,d%nDt
-          call zero_dataVec(d%data(i))
+    call copy_dataVecTX(d2, d1)
+
+    if(d2%allocated) then
+       do i = 1,d2%nDt
+          d2%data(i) = zero_dataVec_f(d1%data(i))
        enddo
     endif
 
-  end subroutine zero_dataVecTX
+  end function zero_dataVecTX_f
 
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...
@@ -639,7 +658,7 @@ Contains
        call errStop('inputs not allocated on call to linComb_dataVecTX')
     endif
 
-    ! check to see if inputs are compatable
+    ! check to see if inputs are of compatible sizes
     if (d1%nDt .ne. d2%nDt) then
        call errStop('input sizes not consistent in linComb_dataVecTX')
     endif
@@ -650,13 +669,19 @@ Contains
     endif
 
     ! create the output vector that is consistent with inputs
-    if(dOut%allocated) then
-       call deall_dataVecTX(dOut)
+    if (.not. dOut%allocated) then
+       call errStop('output structure has to be allocated before calling linComb_dataVecTX')
     end if
 
-    call create_dataVecTX(d1%nDt, dOut)
+    ! check to see that output is of compatible size
+    if (d1%nDt .ne. dOut%nDt) then
+       call errStop('output size not consistent in linComb_dataVecTX')
+    endif
 
-	dOut%tx = d1%tx
+    ! check to see that the transmitters are the same
+    if (d1%tx .ne. dOut%tx) then
+       call errStop('input and output correspond to different transmitters in linComb_dataVecTX')
+    endif
 
     ! finally do the linear combination ...
     do i = 1, d1%nDt
@@ -670,15 +695,15 @@ Contains
   ! **********************************************************************
   !  computes dOut = a * dIn for dataVecMTX objects dIn and dOut
   !  and real scalar a
-  function scMult_dataVecTX_f(a,dIn) result (dOut)
+  subroutine scMult_dataVecTX(a,d1,d2)
 
     real (kind=prec), intent(in)		:: a
-    type (dataVecTX_t), intent(in)	    :: dIn
-    type (dataVecTX_t)                  :: dOut
+    type (dataVecTX_t), intent(in)	    :: d1
+    type (dataVecTX_t), intent(inout)   :: d2
 
-	call linComb_dataVecTX(R_ZERO,dIn,a,dIn,dOut)
+	call linComb_dataVecTX(R_ZERO,d1,a,d1,d2)
 
-  end function scMult_dataVecTX_f
+  end subroutine scMult_dataVecTX
 
   ! **********************************************************************
   !  computes d2+a*d1 for dataVecTX objects d1, d2 and real scalar a,
@@ -812,20 +837,24 @@ Contains
 
   !**********************************************************************
   ! set the data values and error bars to zero
+  ! output cannot overwrite input, i.e. d = zero(d) illegal
 
-  subroutine zero_dataVecMTX(d)
+  function zero_dataVecMTX_f(d1) result (d2)
 
-    type (dataVecMTX_t), intent(inout)	:: d
+    type (dataVecMTX_t), intent(in)		:: d1
+    type (dataVecMTX_t)					:: d2
     ! local
     integer                             :: j
 
-    if(d%allocated) then
-       do j = 1,d%nTx
-          call zero_dataVecTX(d%d(j))
+    call copy_dataVecMTX(d2, d1)
+
+    if(d2%allocated) then
+       do j = 1,d2%nTx
+          d2%d(j) = zero_dataVecTX_f(d1%d(j))
        enddo
     endif
 
-  end subroutine zero_dataVecMTX
+  end function zero_dataVecMTX_f
 
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...
@@ -868,6 +897,8 @@ Contains
   ! calculates linear combination of two dataVecMTX objects a*d1 + b*d2
   ! Note that the error bars are allocated and the errorBar variable
   ! initialized in create_dataVec and linComb_dataVec
+  !
+  ! output can safely overwrite input, but output has to be allocated
 
   subroutine linComb_dataVecMTX(a,d1,b,d2,dOut)
 
@@ -882,17 +913,20 @@ Contains
        call errStop('inputs not allocated on call to linComb_dataVecMTX')
     endif
 
-    ! check to see if inputs are compatable
+    ! check to see if inputs are of compatible sizes
     if (d1%nTx .ne. d2%nTx) then
        call errStop('input sizes not consistent in linComb_dataVecMTX')
     endif
 
     ! create the output vector that is consistent with inputs
-    if(dOut%allocated) then
-       call deall_dataVecMTX(dOut)
+    if (.not. dOut%allocated) then
+       call errStop('output structure has to be allocated before calling linComb_dataVecMTX')
     end if
 
-    call create_dataVecMTX(d1%nTx, dOut)
+    ! check to see that output is of compatible size
+    if (d1%nTx .ne. dOut%nTx) then
+       call errStop('output size not consistent in linComb_dataVecMTX')
+    endif
 
     ! finally do the linear combination ...
     do j = 1, d1%nTx
@@ -906,15 +940,15 @@ Contains
   ! **********************************************************************
   !  computes dOut = a * dIn for dataVecMTX objects dIn and dOut
   !  and real scalar a
-  function scMult_dataVecMTX_f(a,dIn) result (dOut)
+  subroutine scMult_dataVecMTX(a,d1,d2)
 
     real (kind=prec), intent(in)		:: a
-    type (dataVecMTX_t), intent(in)	    :: dIn
-    type (dataVecMTX_t)                 :: dOut
+    type (dataVecMTX_t), intent(in)	    :: d1
+    type (dataVecMTX_t), intent(inout)  :: d2
 
-	call linComb_dataVecMTX(R_ZERO,dIn,a,dIn,dOut)
+	call linComb_dataVecMTX(R_ZERO,d1,a,d1,d2)
 
-  end function scMult_dataVecMTX_f
+  end subroutine scMult_dataVecMTX
 
   ! **********************************************************************
   !  computes d2+a*d1 for dataVecMTX objects d1, d2 and real scalar a,

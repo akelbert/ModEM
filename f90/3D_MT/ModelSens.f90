@@ -119,8 +119,10 @@ module ModelSens
    type(modelParam_t), intent(in)	    :: sigma0 ! used to compute e0
    type(modelParam_t), intent(in)		:: dsigma
    type(dataVec_t), intent(inout)          	:: d
+   type(dataVec_t)							:: dTemp
 
-   call zero_dataVec(d)
+   dTemp = zero(d)
+   d = dTemp
 
    end subroutine Qmult
 

@@ -61,7 +61,11 @@ interface assignment (=)
    MODULE PROCEDURE copy_modelParam
 end interface
 
-interface operator (*)
+interface zero
+   MODULE PROCEDURE zero_modelParam
+end interface
+
+interface scMult ! operator (*)
    MODULE PROCEDURE scMult_modelParam
 end interface
 
@@ -279,12 +283,12 @@ Contains
    end subroutine linComb_modelParam
 
   ! **********************************************************************
-    function scMult_modelParam(a,mIn) result (mOut)
+    subroutine scMult_modelParam(a,mIn,mOut)
   !  computes mOut = a * mIn for modelParam object m and real scalar a
 
-    real (kind=prec), intent(in)		:: a
+    real (kind=prec), intent(in)				:: a
     type(modelParam_t), intent(in)	            :: mIn
-    type(modelParam_t)                          :: mOut
+    type(modelParam_t), intent(inout)           :: mOut
 
     ! check to see that input m is allocated
     if(.not.mIn%allocated) then
@@ -293,7 +297,7 @@ Contains
 
 	call linComb_modelParam(R_ZERO,mIn,a,mIn,mOut)
 
-  end function scMult_modelParam
+  end subroutine scMult_modelParam
 
    !**********************************************************************
    ! Sets cell conductivities in a model parameter object m
