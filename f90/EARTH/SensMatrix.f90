@@ -241,6 +241,9 @@ Contains
 		! $P^T L^T \delta{R}$
 		call operatorPt(drho,dmisfit)
 
+		! this line is needed to counter some mistake in the above... should be -dmisfit
+		call scMult(MinusONE,dmisfit,dmisfit)
+
 		! add to the total model parametrization
 		call linComb(ONE,dm,ONE,dmisfit,dm)
 

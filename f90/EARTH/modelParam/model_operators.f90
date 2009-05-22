@@ -51,6 +51,10 @@ module model_operators
      MODULE PROCEDURE linComb_modelParam
   END INTERFACE
 
+  INTERFACE scMult
+     MODULE PROCEDURE scMult_modelParam
+  END INTERFACE
+
   INTERFACE compare
      MODULE PROCEDURE compare_modelParam_f
      MODULE PROCEDURE compareLayers_modelParam_f

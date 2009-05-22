@@ -644,11 +644,8 @@ end program earth
 	! Call multiplication by J^T
 	call JmultT(param,wres,dmisfit,H,dR)
 
-	! Note: this is an error; since res=psi-dat, should be +2.0d0, but there is
-	! probably another error in the inverse solution to counter that!
-	dmisfit%c%value = -2.0d0 * dmisfit%c%value
-	!dmisfit = Scmult_modelParam_f(-2.0d0,dmisfit)
 	!dmisfit = -2. * dmisfit
+	call scMult(TWO,dmisfit,dmisfit)
 
 	dmisfit = multBy_CmSqrt(dmisfit)
 
@@ -658,7 +655,7 @@ end program earth
 	do ifreq=1,freqList%n
 	  do ifunc=1,nfunc
 
-	    dR%dm(ifreq,ifunc)%c%value = -2.0d0 * dR%dm(ifreq,ifunc)%c%value
+		call scMult(TWO,dR%dm(ifreq,ifunc),dR%dm(ifreq,ifunc))
 	    dR%dm(ifreq,ifunc) = multBy_CmSqrt(dR%dm(ifreq,ifunc))
 
 		call getParamValues_modelParam(dR%dm(ifreq,ifunc),misfit%dRda(ifreq,ifunc,:))

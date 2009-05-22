@@ -763,7 +763,7 @@ Contains
    ! g_0 is the directional derivative f'(0) = (df/dm).dot.h
    g_0 = dotProd(grad,h)
 
-   ! alpha_1 is the initial step size, which will in future be set in NLCG
+   ! alpha_1 is the initial step size, which is set in NLCG
    alpha_1 = alpha
 
    ! with relaxation, we specify gamma = 1 - eps, eps > 0 small; then the final
