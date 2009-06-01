@@ -286,7 +286,7 @@ Contains
 	  ! Compare the resultant vector to the original. If not identical,
 	  ! output a warning. diffE = E - inE
 	  diffE = E
-	  call linComb_cvector(ONE,E,MinusONE,inE,diffE)
+	  call linComb_cvector(C_ONE,E,C_MinusONE,inE,diffE)
 
 	  if (gridType == EDGE) then
 		! North pole

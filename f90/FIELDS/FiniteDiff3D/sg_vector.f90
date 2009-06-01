@@ -2115,8 +2115,8 @@ Contains
     implicit none
     !   input vectors
     type (cvector), intent(in)             :: E1, E2
-    !  input real scalars
-    real (kind=prec), intent(in)           :: inc1, inc2
+    !  input complex scalars
+    complex (kind=prec), intent(in)           :: inc1, inc2
     type (cvector), intent(inout)          :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
