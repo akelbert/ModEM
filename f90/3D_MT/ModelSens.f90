@@ -119,10 +119,8 @@ module ModelSens
    type(modelParam_t), intent(in)	    :: sigma0 ! used to compute e0
    type(modelParam_t), intent(in)		:: dsigma
    type(dataVec_t), intent(inout)          	:: d
-   type(dataVec_t)							:: dTemp
 
-   dTemp = zero(d)
-   d = dTemp
+   call zero(d)
 
    end subroutine Qmult
 
@@ -137,10 +135,12 @@ module ModelSens
    type(modelParam_t), intent(inout)               :: dsigmaReal
    type(modelParam_t), intent(inout),optional      :: dsigmaImag
 
-   dsigmaReal = zero_modelParam(sigma0)
+   dsigmaReal = sigma0
+   call zero(dsigmaReal)
 
    if(present(dsigmaImag)) then
-      dsigmaImag = zero_modelParam(sigma0)
+      dsigmaImag = sigma0
+      call zero(dsigmaImag)
    endif
 
   end subroutine QmultT
@@ -172,11 +172,13 @@ module ModelSens
    !  local variables
    type (modelParam_t)    :: csQReal, csQImag
 
-   csQReal = zero_modelParam(sigma0)
+   csQReal = sigma0
+   call zero(csQReal)
    call linComb_modelParam(ONE,dsigmaReal,ONE,csQReal,dsigmaReal)
 
    if(present(dSigmaImag)) then
-      csQImag = zero_modelParam(sigma0)
+      csQImag = sigma0
+      call zero(csQImag)
       call linComb_modelParam(ONE,dsigmaImag,ONE,csQImag,dsigmaImag)
    endif
 

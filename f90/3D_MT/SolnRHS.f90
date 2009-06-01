@@ -440,6 +440,8 @@ contains
           endif
        enddo
 
+       call deall_sparsevecc(temp)
+
      end subroutine add_EMsparseEMrhs
 
      !**********************************************************************

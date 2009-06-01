@@ -13,6 +13,7 @@ module output
   !use global
   use responses
   use functionals
+  use dataspace
   implicit none
 
 
@@ -37,7 +38,7 @@ Contains
 	type (receiver_t)							  :: obs
 	real(8), dimension(:,:,:), intent(in)	  :: rho	!(nx,ny,nz)
 	complex(8)								  :: Hx,Hy,Hz
-	integer									  :: i,j,k,n,ios
+	integer									  :: i,j,k,n,ios,istat
 	character(3)							  :: ichar
 	character(10)							  :: echar
 	character(*), intent(in), optional		  :: extension
@@ -60,7 +61,7 @@ Contains
 	do n = 1,slices%n
 	  ! Check that radius is valid
 	  if ((slices%r(n) < grid%r(grid%nz)).or.(slices%r(n) > grid%r(2))) then
-		write(*,*) 'Warning: output radius ',slices%r(n),' too close to a boundary; will not output data' 
+		write(*,*) 'Warning: output radius ',slices%r(n),' too close to a boundary; will not output data'
 		cycle
 	  end if
 	  ! If it is, find the closest grid radius and compute the solution
@@ -84,6 +85,17 @@ Contains
 	end do
 
 	close(ioOut)
+
+	! Deallocate solution
+	deallocate(Hij%x,Hij%y,Hij%z,STAT=istat)
+	do i = 1,grid%nx
+	  do j = 1,grid%ny
+	    call deall_sparsevecc(Hij%o(i,j)%Lx)
+	    call deall_sparsevecc(Hij%o(i,j)%Ly)
+	    call deall_sparsevecc(Hij%o(i,j)%Lz)
+	  end do
+	end do
+	deallocate(Hij%o,STAT=istat)
 
   end subroutine outputSolution	! outputSolution
 
@@ -140,7 +152,7 @@ Contains
 		cycle
 	  end select
 
-!          inquire(FILE=fn_response,EXIST=exists) 
+!          inquire(FILE=fn_response,EXIST=exists)
 !	  if ((.not.exists).and.(i==1)) then
 !		open(ioResp,file=fn_response,status='unknown',form='formatted',iostat=ios)
 !	    write(ioResp,*) "#Output of earth3d (for ",freqList%n," frequency values)";
@@ -150,7 +162,7 @@ Contains
 !		open(ioResp,file=fn_response,position='append', form='formatted',iostat=ios)
 !          else
 !		open(ioResp,file=fn_response,position='append', form='formatted',iostat=ios)
-!	  end if		
+!	  end if
 
 		! NB: No appending for now to make it easier to debug and cleaner. Jan 19, 2007
 	  if (i==1) then
@@ -159,7 +171,7 @@ Contains
 		  write(ioResp,*) "#Period Code GM_Lon GM_Lat Real(km) Imag(km) Error(km)";
     else
 		  open(ioResp,file=fn_response,position='append', form='formatted',iostat=ios)
-	  end if		
+	  end if
 		!write(ioResp,*) "freq = ",freq%value
 		do k=1,size(RespRatio)
 		  if (.not.obsList%info(k)%defined) then
@@ -185,7 +197,7 @@ Contains
 		end do
 	  close(ioResp)
 
-!	  if (fn_response == '') then	
+!	  if (fn_response == '') then
 !		do k=1,size(Resp)
 !		  write(*,*) trim(obsList%info(k)%code),Resp(k) * m2km
 !		end do
@@ -273,11 +285,11 @@ Contains
 	  write(ioOut,'(a40)') 'ifreq,ifunc,code,res,err,res/err = ';
 	else
 	  open(ioOut,file=fname,position='append', form='formatted',iostat=ios)
-	end if		
+	end if
 
 	do j = 1,TFList%n
 	  do k = 1,obsList%n
-		
+
 		if (.not.res%v(i,j,k)%resp%exists) then
 		  cycle
 		end if
@@ -329,7 +341,7 @@ Contains
 			write(ioOut,*) ifreq,ifunc,ilayer,icoeff,param%c(ilayer,icoeff)%code,&
 					   param%c(ilayer,icoeff)%value,&
 					   misfitValue,dmisfitValue
-				  
+
 		  end do
 		end do
 	  end do
@@ -409,7 +421,7 @@ Contains
                      coeff%L%num,coeff%code,coeff%value,&
                      Resp(k),&
                      sens%da(i,j,k,l)
-              
+
             end do
           end do
 	  close(ioJac)

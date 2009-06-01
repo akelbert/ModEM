@@ -164,6 +164,10 @@ Contains
 	  obs%Lx = Lx
 	  obs%Ly = Ly
 	  obs%Lz = Lz
+
+	  call deall_sparsevecc(Lx)
+	  call deall_sparsevecc(Ly)
+	  call deall_sparsevecc(Lz)
 	  return
 
   end subroutine ComputeInterpWeights	! ComputeInterpWeights

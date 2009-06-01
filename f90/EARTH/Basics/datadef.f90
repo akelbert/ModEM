@@ -92,56 +92,6 @@ module datadef
   end type functional_t
 
   ! ***************************************************************************
-  ! * type response_t contains the full information about a single response at a
-  ! * single frequency and observatory: value, error, anything else
-  type :: response_t
-
-	complex(8)								:: value
-	real(8)									:: err
-	logical									:: exists
-
-  end type response_t
-
-
-  ! ***************************************************************************
-  ! * type dataValue_t contains the definition of a single data functionals used
-  ! * in the expression for the penalty functional; they are specified for a
-  ! * particular type of response and a frequency + observatory pair
-  type :: dataValue_t
-
-	type (transmitter_t), pointer			    :: freq
-	type (receiver_t),	pointer			        :: obs
-	type (functional_t),	pointer				:: func
-	type (response_t)							:: resp
-	! For the more general case, define dimension(freq%nMode,dataType%nComp)
-	! type (response_t), pointer, dimension(:,:) :: resp
-
-  end type dataValue_t
-
-
-  ! ***************************************************************************
-  ! * type dataVecMTX_t contains the 3-D array of all data functionals we define;
-  ! * it should be considered an ordered three-dimensional list of data
-  ! * For some observatories data "do not exist" - either because they were
-  ! * not physically present in the input data file, or since the observatory
-  ! * is decided to be too close to one of the poles or the equator, so that
-  ! * the responses at these locations would not be reliable. In these cases
-  ! * we set v(i,j,k)%resp%exists to .FALSE.
-  ! * The variable n is the number of "existing" data values for a given freq.
-  ! * and functional type. It can also be computed by count(v(i,j,:)%resp%exists);
-  ! * however, it is handy to have these values at hand.
-  type :: dataVecMTX_t
-
-	type (dataValue_t), pointer, dimension(:,:,:) :: v	!nfreq,nfunc,nobs
-	integer, pointer, dimension(:,:)			  :: n	!nfreq,nfunc
-	! Total number of frequencies stored in this data vector
-	integer                                       :: ntx
-	logical                                       :: allocated=.FALSE.
-
-  end type dataVecMTX_t
-
-
-  ! ***************************************************************************
   ! * list of radii ("slices") at which we output the full solution
   type :: Rad_List
 

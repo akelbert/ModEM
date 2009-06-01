@@ -229,17 +229,15 @@ Contains
 
 !**********************************************************************
 
-   function zero_modelParam(m1) result (m2)
+   subroutine zero_modelParam(m)
 
      !  zeros a model space object
 
-     type(modelParam_t), intent(in)    		:: m1
-     type(modelParam_t)						:: m2
+     type(modelParam_t), intent(inout) 		:: m
 
-     m2 = m1
-     call zero_rscalar(m2%cellCond)
+     call zero_rscalar(m%cellCond)
 
-   end function zero_modelParam
+   end subroutine zero_modelParam
 
 !**********************************************************************
 

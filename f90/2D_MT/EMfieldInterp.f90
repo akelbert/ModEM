@@ -584,6 +584,7 @@ Contains
     call deall_sparsevecc(LCE)
     call deall_sparsevecc(LCtemp)
     call deall_sparsevecc(Qj)
+    call deall_sparsevecc(Qtemp)
 
   end subroutine EfromBSetUp_TM
 end module EMfieldInterp

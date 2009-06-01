@@ -27,9 +27,9 @@ module DataSpace
   end interface
 
   interface zero
-     MODULE PROCEDURE zero_dataVec_f
-     MODULE PROCEDURE zero_dataVecTX_f
-     MODULE PROCEDURE zero_dataVecMTX_f
+     MODULE PROCEDURE zero_dataVec
+     MODULE PROCEDURE zero_dataVecTX
+     MODULE PROCEDURE zero_dataVecMTX
   end interface
 
   interface linComb
@@ -135,7 +135,7 @@ module DataSpace
   ! basic operators for all dataVec types
   public			:: create_dataVec, create_dataVecTX, create_dataVecMTX
   public            :: deall_dataVec, deall_dataVecTX, deall_dataVecMTX
-  public            :: zero_dataVec_f, zero_dataVecTX_f, zero_dataVecMTX_f
+  public            :: zero_dataVec, zero_dataVecTX, zero_dataVecMTX
   public			:: copy_dataVec, copy_dataVecTX, copy_dataVecMTX
   public			:: linComb_dataVec, linComb_dataVecTX, linComb_dataVecMTX
   public            :: scMult_dataVec, scMult_dataVecTX, scMult_dataVecMTX
@@ -257,23 +257,21 @@ Contains
   end subroutine deall_dataVec
 
   !**********************************************************************
-  ! set the data values and error bars to zero
-  ! output cannot overwrite input, i.e. d = zero(d) illegal
+  ! set the data values and error bars to zero; function would make more
+  ! sense here, but d = zero(d) might create trouble, so make this a
+  ! subroutine instead
 
-  function zero_dataVec_f(d1) result (d2)
+  subroutine zero_dataVec(d)
 
-    type (dataVec_t), intent(in)	:: d1
-    type (dataVec_t)				:: d2
+    type (dataVec_t), intent(inout)	:: d
 
-    call copy_dataVec(d2, d1)
-
-    if(d2%allocated) then
-       d2%value = R_ZERO
-       if (associated(d2%error)) d2%error = R_ZERO
-       d2%errorBar = .false.
+    if(d%allocated) then
+       d%value = R_ZERO
+       if (associated(d%error)) d%error = R_ZERO
+       d%errorBar = .false.
     endif
 
-  end function zero_dataVec_f
+  end subroutine zero_dataVec
 
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...
@@ -583,25 +581,25 @@ Contains
   end subroutine deall_dataVecTX
 
   !**********************************************************************
-  ! set the data values and error bars to zero
-  ! output cannot overwrite input, i.e. d = zero(d) illegal
+  ! set the data values and error bars to zero; function would make more
+  ! sense here, but d = zero(d) might create trouble, so make this a
+  ! subroutine instead
 
-  function zero_dataVecTX_f(d1) result (d2)
+  subroutine zero_dataVecTX(d)
 
-    type (dataVecTX_t), intent(in)		:: d1
-    type (dataVecTX_t)					:: d2
+    type (dataVecTX_t), intent(inout)	:: d
     ! local
     integer                             :: i
 
-    call copy_dataVecTX(d2, d1)
-
-    if(d2%allocated) then
-       do i = 1,d2%nDt
-          d2%data(i) = zero_dataVec_f(d1%data(i))
+    if(d%allocated) then
+       do i = 1,d%nDt
+          call zero_dataVec(d%data(i))
        enddo
+    else
+       call errStop('data vector not allocated in zero_dataVecTX')
     endif
 
-  end function zero_dataVecTX_f
+  end subroutine zero_dataVecTX
 
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...
@@ -836,25 +834,25 @@ Contains
   end subroutine deall_dataVecMTX
 
   !**********************************************************************
-  ! set the data values and error bars to zero
-  ! output cannot overwrite input, i.e. d = zero(d) illegal
+  ! set the data values and error bars to zero; function would make more
+  ! sense here, but d = zero(d) might create trouble, so make this a
+  ! subroutine instead
 
-  function zero_dataVecMTX_f(d1) result (d2)
+  subroutine zero_dataVecMTX(d)
 
-    type (dataVecMTX_t), intent(in)		:: d1
-    type (dataVecMTX_t)					:: d2
+    type (dataVecMTX_t), intent(inout)	:: d
     ! local
     integer                             :: j
 
-    call copy_dataVecMTX(d2, d1)
-
-    if(d2%allocated) then
-       do j = 1,d2%nTx
-          d2%d(j) = zero_dataVecTX_f(d1%d(j))
+    if(d%allocated) then
+       do j = 1,d%nTx
+          call zero_dataVecTX(d%d(j))
        enddo
+    else
+       call errStop('data vector not allocated in zero_dataVecMTX')
     endif
 
-  end function zero_dataVecMTX_f
+  end subroutine zero_dataVecMTX
 
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...

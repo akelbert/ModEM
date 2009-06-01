@@ -56,6 +56,9 @@ Contains
 	!write(*,'(a40,2i6,5g15.7)') 'i,j,lon,colat,Hx,Hy,Hz = ',&
 	!	obs%i,obs%j,obs%lon,obs%colat,Hx,Hy,Hz
 
+	call deall_sparsevecc(Lx)
+	call deall_sparsevecc(Ly)
+	call deall_sparsevecc(Lz)
 
   end function dataResp ! response
 
@@ -110,6 +113,9 @@ Contains
 
 	!write(*,'(a40,2i6,5g15.7)') 'i,j,lon,colat,Hx,Hy,Hz = ',&
 	!	obs%i,obs%j,obs%lon,obs%colat,Hx,Hy,Hz
+	call deall_sparsevecc(Lx)
+	call deall_sparsevecc(Ly)
+	call deall_sparsevecc(Lz)
 
   end function dataResp_ijk ! dataResp_ijk
 

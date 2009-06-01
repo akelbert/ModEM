@@ -14,7 +14,7 @@ module sensMatrix
 
   implicit none
 
-  public 	:: calcSensMatrix, Jmult, JmultT, fwdPred, setGrid
+  public 	:: calcSensMatrix, Jmult, JmultT, fwdPred, setGrid, cleanUp, deall_sensMatrix
 
   ! numerical discretization used to compute the EM solution
   !  (may be different from the grid stored in model parameter)
@@ -113,13 +113,13 @@ Contains
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
-    type (cvector)							:: Hj,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero
+    type (cvector)							:: Hj,B,F,Hconj,dH,dE,Econj
 	type (rvector)							:: dE_real
 	type (rscalar)							:: rho,drho
 	type (sparsevecc)						:: Hb
 	type (functional_t)						:: dataType
 	type (transmitter_t)					:: freq
-	type (modelParam_t)						:: dmisfit,dmisfit2
+	type (modelParam_t)						:: dmisfit
 	integer									:: ifreq,ifunc
 	logical									:: adjoint,delta
 	character(1)							:: cfunc
@@ -139,10 +139,12 @@ Contains
 		endif
 	endif
 
-	dm = zero_modelParam(m0)
+	dm = m0
+	call zero(dm)
 
 	! Temporary model parameter
-	dmisfit = zero_modelParam(m0)
+	dmisfit = m0
+	call zero(dmisfit)
 
     ! Allocate the resistivity vectors
 	call create_rscalar(grid,rho,CENTER)
@@ -230,7 +232,7 @@ Contains
 		call operatorC(Hconj,Econj,grid)
 
 		! $D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
-		dE = Econj * dE
+		call diagMult(Econj,dE,dE) !dE = Econj * dE
 
 		! $\Re( D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega ) )$
 		dE_real = real(dE)
@@ -263,8 +265,17 @@ Contains
 
 	end do
 
+	call deall_modelParam(dmisfit)
 	call deall_rscalar(rho)
 	call deall_rscalar(drho)
+	call deall_sparsevecc(Hb)
+	call deall_cvector(Hj)
+	call deall_cvector(B)
+	call deall_cvector(dH)
+	call deall_cvector(Hconj)
+	call deall_cvector(dE)
+	call deall_cvector(Econj)
+	call deall_rvector(dE_real)
 
    end subroutine JmultT
 
@@ -296,10 +307,8 @@ Contains
     type (cvector)							:: Hj,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero,dR
 	type (rvector)							:: dE_real
 	type (rscalar)							:: rho
-	type (sparsevecc)						:: Hb
 	type (functional_t)						:: dataType
 	type (transmitter_t)					:: freq
-	type (modelParam_t)						:: dmisfit,dmisfit2
 	integer									:: ifreq,ifunc
 	logical									:: adjoint,delta
 	character(1)							:: cfunc
@@ -325,7 +334,8 @@ Contains
     nobs  = obsList%n
 
     dat = d
-    psi = zero(d)
+    psi = d
+    call zero(psi)
 
     ! Allocate the resistivity vector
 	call create_rscalar(grid,rho,CENTER)
@@ -380,7 +390,10 @@ Contains
 
 	d = psi
 
+	call deall_dataVecMTX(dat)
+	call deall_dataVecMTX(psi)
 	call deall_rscalar(rho)
+	call deall_cvector(Hj)
 
    end subroutine fwdPred
 
@@ -409,5 +422,40 @@ Contains
 	x = grid%x; y = grid%y; z = grid%z
 
    end subroutine setGrid
+
+   !**********************************************************************
+   subroutine cleanUp()
+
+   !  delete the private grid variable
+
+   ! local
+   integer                      :: istat
+
+    call deall_grid(grid)
+
+	deallocate(x,y,z,STAT=istat)
+
+   end subroutine cleanUp
+
+   !**********************************************************************
+   subroutine deall_sensMatrix(dsigma)
+
+   !  delete the private grid variable
+   type (sensMatrix_t), intent(inout)   :: dsigma
+   ! local
+   integer                      :: i,j,istat
+
+	if (dsigma%allocated) then
+		do i = 1,size(dsigma%dm,1)
+			do j = 1,size(dsigma%dm,2)
+				call deall_modelParam(dsigma%dm(i,j))
+			enddo
+		enddo
+	endif
+
+	if (associated(dsigma%dm)) deallocate(dsigma%dm,STAT=istat)
+	dsigma%allocated = .false.
+
+   end subroutine deall_sensMatrix
 
 end module sensMatrix

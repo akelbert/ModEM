@@ -2,10 +2,10 @@
 module sg_boundary
   ! This module creates data types for 2D vector fields defined on
   ! boundary nodes of a staggered Cartesian grid, along with basic
-  ! algebraic (2D vector space) operations. Such operations include 
+  ! algebraic (2D vector space) operations. Such operations include
   ! allocation, deallocation, initialization, copying, algebriac operations
   ! (linear combinations, scalar products, dot products) and other operations
-  ! like working between boundary conditions and complex vector data 
+  ! like working between boundary conditions and complex vector data
   ! structures. Belongs to SG_Basics class: staggered cartesian grid, data
   ! types defined on this grid, and operations defined on these data types. Not
   ! specific to EM problem, no dependency on outside (from other classes) modules.
@@ -65,15 +65,15 @@ module sg_boundary
 
   INTERFACE OPERATOR (*)
      MODULE PROCEDURE scMult_cboundary_f
-     MODULE PROCEDURE diagMult_cboundary_f 
+     MODULE PROCEDURE diagMult_cboundary_f
   END INTERFACE
-  
+
   ! gets boundary conditions from the vector field
   INTERFACE getBC
      module procedure copy_cbvector
   END INTERFACE
 
-  ! sets boundary nodes in the vector field 
+  ! sets boundary nodes in the vector field
   INTERFACE setBC
      module procedure copy_bcvector
   END INTERFACE
@@ -89,34 +89,34 @@ module sg_boundary
 
 
   ! ***************************************************************************
-  ! type cboundary defines complex 2D vector for boundary edge in a staggered 
+  ! type cboundary defines complex 2D vector for boundary edge in a staggered
   ! grid
   type :: cboundary
 
-     ! the boundary data are stored in two dimensional data structures 
+     ! the boundary data are stored in two dimensional data structures
      ! xYMax are the boundary conditions for x component on the maximum Y end
      ! zYMax are the boundary conditions for z component on the maximum Y end
      ! xYMin are the boundary conditions for x component on the minimum Y end
      !   .... etc.
-     ! the dimensions are: 
-     ! the dimensions for the YMax and YMin face is nx, nz+1 for x component for 
+     ! the dimensions are:
+     ! the dimensions for the YMax and YMin face is nx, nz+1 for x component for
      ! and nx+1, nz for z component
-     ! the dimensions for the XMax and XMin face is ny, nz+1 for y component for 
+     ! the dimensions for the XMax and XMin face is ny, nz+1 for y component for
      ! and ny+1, nz for z component
      ! the dimensions for the ZMax and ZMin face is nx, ny+1 for x component for
-     !  and nx+1, ny for z component 
+     !  and nx+1, ny for z component
 
      complex (kind=prec), pointer, dimension(:,:)    :: xYMax, zYMax
      complex (kind=prec), pointer, dimension(:,:)    :: xYMin, zYMin
-     complex (kind=prec), pointer, dimension(:,:)    :: yXMax, zXMax 
+     complex (kind=prec), pointer, dimension(:,:)    :: yXMax, zXMax
      complex (kind=prec), pointer, dimension(:,:)    :: yXMin, zXMin
-     complex (kind=prec), pointer, dimension(:,:)    :: xZMin, yZMin 
+     complex (kind=prec), pointer, dimension(:,:)    :: xZMin, yZMin
      complex (kind=prec), pointer, dimension(:,:)    :: xZMax, yZMax
 
      ! Grid Dimensions:
      ! nx is grid dimension (number of cells) in the x-direction
      ! ny is grid dimension (number of cells) in the y-direction
-     ! nz is grid dimension (number of cells) in the z-direction: 
+     ! nz is grid dimension (number of cells) in the z-direction:
      integer                                          :: nx = 0, ny = 0, nz = 0
 
      ! allocated:  .true.  x, y, z arrays have been allocated
@@ -138,7 +138,7 @@ Contains
   ! COPY GRID_EDGE VECTORS :  (=)
   ! * subroutine copy_cboundary(E2,E1)
 
-  ! ZERO GRID_EDGE VECTORS 
+  ! ZERO GRID_EDGE VECTORS
   ! * subroutine zero_cboundary(E)
 
   ! SCALAR MULTIPLICATION :
@@ -153,7 +153,7 @@ Contains
   ! VECTOR SUM : FUNCTION VERSION (E3 = E1+E2)
   ! * function add_cboundary_f(E1, E2) result(E3)
 
-  ! POINTWISE MULTIPLICATION OF VECTORS: 
+  ! POINTWISE MULTIPLICATION OF VECTORS:
   ! * subroutine diagMult_cboundary(E1, E2, E3)
 
   ! POINTWISE MULTIPLICATION OF VECTORS: FUNCTION VERSION (c*E)
@@ -169,7 +169,7 @@ Contains
 
   ! The algebraic routines expect all input and output
   ! variables to be of the correct type, already allocated,
-  ! and of the correct size.  
+  ! and of the correct size.
 
 
   !****************************************************************************
@@ -186,7 +186,7 @@ Contains
     integer                             :: status,nx,ny,nz
 
     if(E%allocated) then
-       ! first deallocate memory for different 2D faces of boundaries 
+       ! first deallocate memory for different 2D faces of boundaries
        deallocate(E%xYMax, E%zYMax, E%xYMin, E%zYMin, E%yXMax, &
             E%zXMax, E%yXMin, E%zXMin, E%xZMin, E%yZMin, &
             E%xZMin, E%yZMin, E%xZMax, E%xZMax, STAT=status)
@@ -203,7 +203,7 @@ Contains
     E%ny = ny
     E%nz = nz
 
-    ! allocate memory for different 2D faces of boundaries; 
+    ! allocate memory for different 2D faces of boundaries;
     ! E%allocated will be true if all allocations succeed
     E%allocated = .true.
     allocate(E%xYMax(nx,nz+1), STAT=status)
@@ -259,10 +259,10 @@ Contains
     type (cboundary)  :: E
     integer	    :: status
 
-    ! deallocate memory for different 2D faces of boundaries 
+    ! deallocate memory for different 2D faces of boundaries
     if(E%allocated) then
-       deallocate(E%xYMax, E%zYMax, E%xYMin, E%zYMin, E%yXMax, &
-            E%zXMax, E%yXMin, E%zXMin, E%xZMin, E%yZMin, &
+       deallocate(E%xYMax, E%zYMax, E%xYMin, E%zYMin, &
+            E%yXMax, E%zXMax, E%yXMin, E%zXMin, &
             E%xZMin, E%yZMin, E%xZMax, E%yZMax, STAT=status)
     end if
 
@@ -275,9 +275,9 @@ Contains
 
 
   !****************************************************************************
-  ! copy_E nodeC makes an exact copy of derived data type 
-  ! cboundary; 
-  subroutine copy_cboundary(E2, E1) 
+  ! copy_E nodeC makes an exact copy of derived data type
+  ! cboundary;
+  subroutine copy_cboundary(E2, E1)
 
     implicit none
     type (cboundary), intent(in)            :: E1
@@ -305,7 +305,7 @@ Contains
           E2%yZMax = E1%yZMax
        else
           if(E2%allocated) then
-             ! first deallocate memory for different 2D faces of boundaries 
+             ! first deallocate memory for different 2D faces of boundaries
              deallocate(E2%xYMax, E2%zYMax, E2%xYMin, E2%zYMin, E2%yXMax, &
                   E2%zXMax, E2%yXMin, E2%zXMin, E2%xZMin, E2%yZMin, &
                   E2%xZMin, E2%yZMin, E2%xZMax, E2%xZMax, STAT=status)
@@ -334,7 +334,7 @@ Contains
 
 
   !****************************************************************************
-  ! zero_E nodeC zeros variable of derived data type 
+  ! zero_E nodeC zeros variable of derived data type
   ! cboundary;
 
   subroutine zero_cboundary(E)
@@ -372,11 +372,11 @@ Contains
   subroutine scMult_cboundary(c, E1, E2)
 
     implicit none
-    complex(kind=prec), intent(in)                      :: c          
+    complex(kind=prec), intent(in)                      :: c
     ! a complex scalar to be multiplied with
-    type (cboundary), intent(in)                       :: E1            
-    type (cboundary), intent(inout)                    :: E2 
-    
+    type (cboundary), intent(in)                       :: E1
+    type (cboundary), intent(inout)                    :: E2
+
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for ScMult_cboundary'
        stop
@@ -389,7 +389,7 @@ Contains
 
        ! Check whether all the boundary nodes are of the same size
        if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
-             ! complex scalar multiplication for different 2D faces of 
+             ! complex scalar multiplication for different 2D faces of
              ! boundaries components
           E2%xYMax = E1%xYMax * c
           E2%zYMax = E1%zYMax * c
@@ -417,15 +417,15 @@ Contains
   function scMult_cboundary_f(c, E1) result(E2)
 
     implicit none
-    complex(kind=prec), intent(in)                      :: c          
+    complex(kind=prec), intent(in)                      :: c
     ! a complex scalar to be multiplied with
-    type (cboundary), intent(in)                       :: E1            
-    type (cboundary)                                   :: E2 
-    
+    type (cboundary), intent(in)                       :: E1
+    type (cboundary)                                   :: E2
+
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for ScMult_cboundary_f'
        stop
-    endif            
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cboundary(E1%grid, E2)
@@ -436,7 +436,7 @@ Contains
 
        ! Check whether all the boundary nodes are of the same size
        if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
-          ! complex scalar multiplication for different 2D faces of 
+          ! complex scalar multiplication for different 2D faces of
           ! boundaries components
           E2%xYMax = E1%xYMax * c
           E2%zYMax = E1%zYMax * c
@@ -465,12 +465,12 @@ Contains
 
     implicit none
     type (cboundary), intent(in)               :: E1, E2
-    type (cboundary), intent(inout)            :: E3 
-    
+    type (cboundary), intent(inout)            :: E3
+
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_cboundary'
        stop
-    endif            
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -508,12 +508,12 @@ Contains
 
     implicit none
     type (cboundary), intent(in)               :: E1, E2
-    type (cboundary)                           :: E3             
+    type (cboundary)                           :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_cboundary_f'
        stop
-    endif   
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cboundary(E1%grid, E3)
@@ -546,7 +546,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_cboundary multiplies two vectors E1, E2 stored as derived data 
+  ! diagMult_cboundary multiplies two vectors E1, E2 stored as derived data
   ! type cboundary pointwise; subroutine version
   ! E3 can overwrite E1 or E2
   subroutine diagMult_cboundary(E1, E2, E3)
@@ -558,7 +558,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_cboundary'
        stop
-    endif   
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -567,7 +567,7 @@ Contains
        ! Check whether all the boundary nodes are of the same size
        if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz).and.&
          (E1%nx == E3%nx).and.(E1%ny == E3%ny).and.(E1%nz == E3%nz)) then
-          ! pointwise multiplication for different 2D faces of 
+          ! pointwise multiplication for different 2D faces of
           ! boundaries components
           E3%xYMax = E1%xYMax * E2%xYMax
           E3%zYMax = E1%zYMax * E2%zYMax
@@ -589,7 +589,7 @@ Contains
 
 
   !****************************************************************************
-  ! diagMult_cboundary_f multiplies two vectors E1, E2 stored as derived 
+  ! diagMult_cboundary_f multiplies two vectors E1, E2 stored as derived
   ! data  type cboundary pointwise; function version
   function diagMult_cboundary_f(E1, E2) result(E3)
 
@@ -600,7 +600,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_cboundary_f'
        stop
-    endif   
+    endif
 
     ! In function version, appropriate data types need to be created
     Call create_cboundary(E1%grid, E3)
@@ -611,7 +611,7 @@ Contains
        ! Check whether both vectors are of the same size
        if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz).and.&
             (E1%nx == E3%nx).and.(E1%ny == E3%ny).and.(E1%nz == E3%nz)) then
-          ! pointwise multiplication for different 2D faces of 
+          ! pointwise multiplication for different 2D faces of
           ! boundaries components
           E3%xYMax = E1%xYMax * E2%xYMax
           E3%zYMax = E1%zYMax * E2%zYMax
@@ -641,11 +641,11 @@ Contains
     complex(kind=prec)		       :: c
 
     c = C_ZERO
-    
+
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProd_cboundary'
        stop
-    endif   
+    endif
 
     ! Check whether both input vectors are of the same size
     if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
@@ -674,15 +674,15 @@ Contains
 
     implicit none
     !   input vectors
-    type (cboundary), intent(in)             :: E1, E2     
+    type (cboundary), intent(in)             :: E1, E2
     !  input complex scalars
     complex (kind=8), intent(in)             :: inc1, inc2
-    type (cboundary), intent(inout)          :: E3  
-    
+    type (cboundary), intent(inout)          :: E3
+
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for linComb_cboundary'
        stop
-    endif               
+    endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
@@ -718,15 +718,15 @@ Contains
   subroutine scMultAdd_cboundary(c, E1, E2)
 
     implicit none
-    complex(kind=prec), intent(in)                        :: c          
+    complex(kind=prec), intent(in)                        :: c
     ! a complex scalar to be multiplied with
-    type (cboundary), intent(in)                       :: E1            
-    type (cboundary), intent(inout)                    :: E2             
+    type (cboundary), intent(in)                       :: E1
+    type (cboundary), intent(inout)                    :: E2
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMultAdd_cboundary'
        stop
-    endif   
+    endif
 
     ! check to see if LHS (E2) is active (allocated)
     if(.not.E2%allocated) then
@@ -735,7 +735,7 @@ Contains
 
        ! Check whether both vectors are of the same size
        if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
-             ! complex scalar multiplication for different 2D faces of 
+             ! complex scalar multiplication for different 2D faces of
              ! boundaries components
           E2%xYMax = E2%xYMax + E1%xYMax * c
           E2%zYMax = E2%zYMax + E1%zYMax * c
@@ -754,25 +754,25 @@ Contains
        end if
     end if
 
-  end subroutine scMultAdd_cboundary 
+  end subroutine scMultAdd_cboundary
 
   ! ***************************************************************************
   ! * copy_cbvector reads the reads a complex vector used for EDGE as an input and
-  ! * extracts the boundary condition values and writes them into boundary 
+  ! * extracts the boundary condition values and writes them into boundary
   ! * conditions derived data types as an output for a specific frequency/
   ! * period and mode.
   subroutine copy_cbvector(inE, outBC)
 
     implicit none
-    type (cvector),target, intent(in)              :: inE      
+    type (cvector),target, intent(in)              :: inE
     ! the electrical field as an input
-    type (cboundary), intent(inout)                :: outBC    
+    type (cboundary), intent(inout)                :: outBC
     ! boundary conditions as an output
     integer                      :: ix, iy, iz        ! dummy integers
     integer                      :: YMax, YMin        ! ends for BC extraction
     integer                      :: XMax, XMin        ! ends for BC extraction
     integer                      :: ZMin, ZMax        ! ends for BC extraction
-    
+
     if (.not.inE%allocated) then
       write(0,*) 'inE in copy_cbvector not allocated yet'
       stop
@@ -870,21 +870,21 @@ Contains
 
 
   ! ***************************************************************************
-  ! * copy_bcvector reads the boundary conditions as an input and writes them to the 
-  ! * complex vector used as EDGE on the designated boundaries for a 
+  ! * copy_bcvector reads the boundary conditions as an input and writes them to the
+  ! * complex vector used as EDGE on the designated boundaries for a
   ! * specific frequency/ period and mode.
   subroutine copy_bcvector(inBC, outE)
 
     implicit none
-    type (cboundary), intent(in)     :: inBC             
+    type (cboundary), intent(in)     :: inBC
     ! boundary conditions as an input
-    type (cvector), intent(inout)    :: outE             
+    type (cvector), intent(inout)    :: outE
     ! the electrical field as an output
     integer                      :: ix, iy, iz       ! dummy integers
     integer                      :: YMax, YMin       ! ends for BC writing
     integer                      :: XMax, XMin       ! ends for BC writing
     integer                      :: ZMin, ZMax       ! ends for BC writing
-    
+
     if (.not.outE%allocated) then
       write(0,*) 'outE in copy_bcvector not allocated yet'
       stop
@@ -909,14 +909,14 @@ Contains
           ZMin = 1
           ZMax = outE%nz+1
 
-          ! passing boundary condition values to the complete description 
-          ! of the vector field by  passing boundary values for the YMin 
+          ! passing boundary condition values to the complete description
+          ! of the vector field by  passing boundary values for the YMin
           ! and YMax face
           ! x-component
           do ix = 1, outE%nx
              do iz = 1, outE%nz+1
                 ! Passing the YMin face
-                outE%x(ix, YMin, iz) = inBC%xYMin(ix, iz) 
+                outE%x(ix, YMin, iz) = inBC%xYMin(ix, iz)
                 ! Passing the YMax face
                 outE%x(ix, YMax, iz) = inBC%xYMax(ix, iz)
              enddo ! iz
@@ -945,7 +945,7 @@ Contains
           do iy = 1, outE%ny+1
              do iz = 1, outE%nz
                 ! Passing the XMax face
-                outE%z(XMax, iy, iz) = inBC%zXMax(iy, iz) 
+                outE%z(XMax, iy, iz) = inBC%zXMax(iy, iz)
                 ! Passing the XMin face
                 outE%z(XMin, iy, iz) = inBC%zXMin(iy, iz)
              enddo  ! iy
@@ -967,7 +967,7 @@ Contains
                 ! Passing the ZMin face
                 outE%y(ix, iy, ZMin) = inBC%yZMin(ix, iy)
                 ! Passing the ZMax face
-                outE%y(ix, iy, ZMax) = inBC%yZMax(ix, iy) 
+                outE%y(ix, iy, ZMax) = inBC%yZMax(ix, iy)
              enddo   ! ix
           enddo      ! iy
 

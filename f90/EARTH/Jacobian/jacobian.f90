@@ -46,7 +46,7 @@ Contains
   ! * solution on the internal nodes does not depend on them, except through the
   ! * divergence correction.
 
-  subroutine operatorM(Xfull,Yfull,omega,rho,grid,fwdCtrls,errflag,adj,sens)
+  subroutine operatorM(Xfull,Yfull,omega,rho,grid,fwdCtrls,errflag,adjflag,sens)
 
 	use maxwells, only: SolveMaxwells
 	use field_vectors
@@ -62,17 +62,17 @@ Contains
 	real(8), dimension(:,:,:), intent(in)	  :: rho
 	type (fwdCtrl_t), intent(in)			  :: fwdCtrls
 	integer, intent(inout)					  :: errflag
-	logical, intent(inout), optional		  :: adj
+	logical, intent(inout), optional		  :: adjflag
 	logical, intent(inout), optional		  :: sens
 	logical									  :: adjoint,delta
 	complex(8),dimension(:),allocatable		  :: vectorx,vectory,vectorb,vectors,vectorh
 	integer									  :: istat,nx,ny,nz
 
 	! Indicator of whether the forward solver or the adjoint has been called
-	if(.not.present(adj)) then
+	if(.not.present(adjflag)) then
 	  adjoint = .FALSE.
 	else
-	  adjoint = adj
+	  adjoint = adjflag
 	end if
 	! Indicator of whether we are computing the data sensitivities;
 	! if so, starting solution and boundary conditions are zero.
@@ -195,6 +195,8 @@ Contains
 	!--------------
 	! Done; exiting
 	!--------------
+	call deall_sparsevecc(Xb)
+	call deall_sparsevecc(Yb)
 	deallocate(vectorx,vectory,vectorh,vectorb,vectors)
 	return
 
@@ -253,6 +255,8 @@ Contains
 	call divide_vec_by_l(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
 	call copyd1_d3_d(vectorx,Xfull,grid,bc=bc)  ! map back with zero b.c.
 	deallocate(vectorx)
+	call deall_sparsevecc(Xb)
+	call deall_sparsevecc(bc)
 
   end subroutine operatorD_l_divide
 
@@ -282,6 +286,8 @@ Contains
 	call mult_vec_by_l(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
 	call copyd1_d3_d(vectorx,Xfull,grid,bc=bc)  ! map back with zero b.c.
 	deallocate(vectorx)
+	call deall_sparsevecc(Xb)
+	call deall_sparsevecc(bc)
 
   end subroutine operatorD_l_mult
 
@@ -1128,7 +1134,8 @@ Contains
 !		stop
 !	end if
 
-	da = zero_modelParam(param)
+	da = param
+	call zero(da)
 
 	do iL = 1,param%nL
 

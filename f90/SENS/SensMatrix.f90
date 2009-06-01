@@ -132,7 +132,8 @@ Contains
       do j = 1,nTot
          ! this makes a copy of model param, of the same type
          !   as sigma0, then zeros it.
-         dsigma(j) = zero_modelParam(sigma0)
+         dsigma(j) = sigma0
+         call zero(dsigma(j))
       enddo
    endif
 
@@ -218,14 +219,21 @@ Contains
                     call QaddT(C_ONE,Q(iFunc),sigma0,dsigma(ii))
                  endif
               endif
+
+              ! deallocate temporary sparse vectors
+              call deall_EMsparse(L(iFunc))
+              call deall_EMsparse(Q(iFunc))
+
            enddo  ! iFunc
         enddo  ! sites
+
         deallocate(L)
         deallocate(Q)
 
       enddo  ! dataType's
    enddo  ! tx
 
+   call deall_dataVec(dvec)
    call exitSolver(e0,e,comb)
 
   end subroutine calcSensMatrix
@@ -355,7 +363,8 @@ Contains
       endif
    endif
 
-   dsigma = zero_modelParam(sigma0)
+   dsigma = sigma0
+   call zero(dsigma)
 
    ! loop over transmitters
    do j = 1,d%nTx
@@ -367,7 +376,8 @@ Contains
       !  manage any necessary initilization for this transmitter
       call initSolver(iTx,sigma0,grid,e0,e,comb)
       if(j.eq.1) then
-        sigmaTemp = zero_modelParam(sigma0)
+        sigmaTemp = sigma0
+        call zero(sigmaTemp)
       endif
 
       if(savedSolns) then
@@ -394,7 +404,8 @@ Contains
                !         is set correctly)
                !  NOTE: linDataComb ADDS to Qcomb, not overwrites
                !   ==> only zero Qcomb for first transmitter requiring Q
-               Qcomb = zero_modelParam(sigmaTemp)
+               Qcomb = sigmaTemp
+               call zero(Qcomb)
                !  set flags indicating that Q is now non-zero
                calcSomeQ = .true.
                firstQ = .false.
@@ -521,5 +532,15 @@ Contains
    grid = newgrid
 
   end subroutine setGrid
+
+
+  !**********************************************************************
+  subroutine cleanUp()
+
+   ! Subroutine to deallocate all memory stored in this module
+
+   call deall_grid(grid)
+
+  end subroutine cleanUp
 
 end module sensMatrix

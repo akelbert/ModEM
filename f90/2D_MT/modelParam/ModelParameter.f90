@@ -155,10 +155,12 @@ Contains
    subroutine deall_modelParam(cond)
      implicit none
      type (modelParam_t), intent(inout)   :: cond
+     ! local
+     integer		:: istat
 
      if(cond%allocated) then
-        deallocate(cond%v)
-        nullify(cond%v)
+        deallocate(cond%v, STAT=istat)
+        !nullify(cond%v)
         nullify(cond%grid)
         cond%allocated = .false.
         cond%paramType = ''
@@ -211,17 +213,15 @@ Contains
    end function maxNorm_modelParam
 
 !**********************************************************************
-   function zero_modelParam(m1) result (m2)
+   subroutine zero_modelParam(m)
 
      !  zeros a model space object
 
-     type(modelParam_t), intent(in)		:: m1
-     type(modelParam_t)					:: m2
+     type(modelParam_t), intent(inout)	:: m
 
-     m2 = m1
-     m2%v = R_ZERO
+     m%v = R_ZERO
 
-   end function zero_modelParam
+   end subroutine zero_modelParam
 
 !**********************************************************************
    subroutine linComb_modelParam(a1,m1,a2,m2,m)

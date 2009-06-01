@@ -104,19 +104,19 @@ Contains
      typeDict(Impedance_Plus_Hz)%tfType     = Impedance_Plus_Hz
      typeDict(Impedance_Plus_Hz)%units   = '[V/m]/[T]'
      typeDict(Impedance_Plus_Hz)%nComp     = 12
-     allocate(typeDict(Full_Impedance)%id(12),STAT=istat)
-     typeDict(Full_Impedance)%id(1)  = 'Re(Zxx)'
-     typeDict(Full_Impedance)%id(2)  = 'Im(Zxx)'
-     typeDict(Full_Impedance)%id(3)  = 'Re(Zxy)'
-     typeDict(Full_Impedance)%id(4)  = 'Im(Zxy)'
-     typeDict(Full_Impedance)%id(5)  = 'Re(Zyx)'
-     typeDict(Full_Impedance)%id(6)  = 'Im(Zyx)'
-     typeDict(Full_Impedance)%id(7)  = 'Re(Zyy)'
-     typeDict(Full_Impedance)%id(8)  = 'Im(Zyy)'
-     typeDict(Full_Impedance)%id(9)  = 'Re(Tx)'
-     typeDict(Full_Impedance)%id(10) = 'Im(Tx)'
-     typeDict(Full_Impedance)%id(11) = 'Re(Ty)'
-     typeDict(Full_Impedance)%id(12) = 'Im(Ty)'
+     allocate(typeDict(Impedance_Plus_Hz)%id(12),STAT=istat)
+     typeDict(Impedance_Plus_Hz)%id(1)  = 'Re(Zxx)'
+     typeDict(Impedance_Plus_Hz)%id(2)  = 'Im(Zxx)'
+     typeDict(Impedance_Plus_Hz)%id(3)  = 'Re(Zxy)'
+     typeDict(Impedance_Plus_Hz)%id(4)  = 'Im(Zxy)'
+     typeDict(Impedance_Plus_Hz)%id(5)  = 'Re(Zyx)'
+     typeDict(Impedance_Plus_Hz)%id(6)  = 'Im(Zyx)'
+     typeDict(Impedance_Plus_Hz)%id(7)  = 'Re(Zyy)'
+     typeDict(Impedance_Plus_Hz)%id(8)  = 'Im(Zyy)'
+     typeDict(Impedance_Plus_Hz)%id(9)  = 'Re(Tx)'
+     typeDict(Impedance_Plus_Hz)%id(10) = 'Im(Tx)'
+     typeDict(Impedance_Plus_Hz)%id(11) = 'Re(Ty)'
+     typeDict(Impedance_Plus_Hz)%id(12) = 'Im(Ty)'
 
      typeDict(Off_Diagonal_Impedance)%name = 'Off Diagonal Impedance'
      typeDict(Off_Diagonal_Impedance)%isComplex = .true.
@@ -124,11 +124,11 @@ Contains
      typeDict(Off_Diagonal_Impedance)%tfType     = Off_Diagonal_Impedance
      typeDict(Off_Diagonal_Impedance)%units  = '[V/m]/[T]'
      typeDict(Off_Diagonal_Impedance)%nComp     = 4
-     allocate(typeDict(Full_Impedance)%id(4),STAT=istat)
-     typeDict(Full_Impedance)%id(1) = 'Re(Zxy)'
-     typeDict(Full_Impedance)%id(2) = 'Im(Zxy)'
-     typeDict(Full_Impedance)%id(3) = 'Re(Zyx)'
-     typeDict(Full_Impedance)%id(4) = 'Im(Zyx)'
+     allocate(typeDict(Off_Diagonal_Impedance)%id(4),STAT=istat)
+     typeDict(Off_Diagonal_Impedance)%id(1) = 'Re(Zxy)'
+     typeDict(Off_Diagonal_Impedance)%id(2) = 'Im(Zxy)'
+     typeDict(Off_Diagonal_Impedance)%id(3) = 'Re(Zyx)'
+     typeDict(Off_Diagonal_Impedance)%id(4) = 'Im(Zyx)'
 
   end subroutine TypeDictSetUp
 
@@ -136,7 +136,13 @@ Contains
 ! Cleans up and deletes type dictionary at end of program execution
   subroutine deall_typeDict()
 
-	integer     :: istat
+	integer     :: j, istat
+
+	do j = 1,size(typeDict)
+	   if (associated(typeDict(j)%id)) then
+	      deallocate(typeDict(j)%id,STAT=istat)
+	   end if
+	end do
 
     if (associated(typeDict)) then
        deallocate(typeDict,STAT=istat)

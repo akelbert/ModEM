@@ -299,8 +299,7 @@ module ModelSens
 
    if(txDict(e0%tx)%mode.eq.'TE') then
 
-       !dOut = zero(d)
-       !d = dOut
+       call zero(d)
 
    else
 
@@ -316,8 +315,7 @@ module ModelSens
        ! instead, will implement
 	   ! the mapping d\psi/d\pi, or multQtilde:
 	   ! a linearized mapping from the edges to the data space
-	   ! dOut = zero(d)
-	   ! d = dOut
+	   call zero(d)
 
 	   call deall_cvector(Jy)
 	   call deall_cvector(Jz)
@@ -351,10 +349,12 @@ module ModelSens
 
    if(txDict(e0%tx)%mode.eq.'TE') then
 
-       dsigmaReal = zero_modelParam(sigma0)
+       dsigmaReal = sigma0
+       call zero(dsigmaReal)
 
 	   if(present(dsigmaImag)) then
-          dsigmaImag = zero_modelParam(sigma0)
+          dsigmaImag = sigma0
+          call zero(dsigmaImag)
 	   endif
 
    else

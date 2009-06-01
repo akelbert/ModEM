@@ -167,7 +167,7 @@ print "# LIBS = -lblas -llapack\n";
 print "#  Uncomment these lines to make program with Intel compiler\n";
 print "# F90 = ifort\n";
 print "# FFLAGS = -O3\n";
-print "# FFLAGS = -g -debug all\n";
+print "# FFLAGS = -debug all -check bounds\n";
 print "# MODULE = -module \$(OBJDIR)\n";
 print "# LIBS = -lblas -llapack\n";
 print "#  Uncomment these lines to make program with PGI compiler\n";

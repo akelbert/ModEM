@@ -141,7 +141,7 @@ subroutine QMR(b,x, QMRiter)
   type (solverControl_t), intent(inout)	:: QMRiter
 
    ! local variables
-  type (cvector)      	    :: AX,R,VT,WORK
+  type (cvector)      	    :: AX,R,VT
   type (cvector)	    :: Y,Z,WT,V,W,YT,ZT,P,Q,PT,D,S
   logical                   :: adjoint, ilu_adjt
   complex (kind=prec)          :: ETA,PDE,EPSIL,RDE,BETA,DELTA,RHO

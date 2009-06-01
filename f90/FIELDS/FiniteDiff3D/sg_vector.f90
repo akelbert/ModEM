@@ -10,8 +10,15 @@ module sg_vector
   ! specific to EM problem, no dependency on outside (from other classes) modules.
 
   use math_constants		! math/ physics constants
+  use utilities
   use griddef
   implicit none
+
+  ! Important - overloading the '=' assignment
+  INTERFACE ASSIGNMENT (=)
+     MODULE PROCEDURE copy_cvector
+     MODULE PROCEDURE copy_rvector
+  END INTERFACE
 
   ! Generic interfaces are done through subroutines
   ! creates edge/ face nodes
@@ -26,6 +33,18 @@ module sg_vector
      module procedure deall_cvector
   END INTERFACE
 
+  ! set the values to zero
+  INTERFACE zero
+     module procedure zero_rvector
+     module procedure zero_cvector
+  END INTERFACE
+
+  ! compatibility test
+  INTERFACE compare
+     module procedure compare_rvector_f
+     module procedure compare_cvector_f
+  END INTERFACE
+
   ! scalar value multiplies the edge/ face nodes
   INTERFACE scMult
      module procedure scMult_rvector
@@ -38,7 +57,8 @@ module sg_vector
   END INTERFACE
 
   INTERFACE linComb
-     MODULE PROCEDURE linComb_cvector
+     module procedure linComb_rvector
+     module procedure linComb_cvector
   END INTERFACE
 
   ! adds the edge/ face nodes
@@ -71,12 +91,6 @@ module sg_vector
      module procedure diagDiv_crvector
   END INTERFACE
 
-  ! zeros the edge/ face nodes
-  INTERFACE zero
-     module procedure zero_rvector
-     module procedure zero_cvector
-  END INTERFACE
-
   INTERFACE dotProd
      MODULE PROCEDURE dotProd_rvector_f
      MODULE PROCEDURE dotProd_cvector_f
@@ -103,42 +117,37 @@ module sg_vector
      MODULE PROCEDURE imag_cvector_f
   END INTERFACE
 
-  ! Important - overloading the '=' assignment
-  INTERFACE ASSIGNMENT (=)
-     MODULE PROCEDURE copy_cvector
-     MODULE PROCEDURE copy_rvector
-  END INTERFACE
-
   ! Interface operators are done through functions
-  INTERFACE OPERATOR (+)
-     MODULE PROCEDURE add_rvector_f
-     MODULE PROCEDURE add_cvector_f
-  END INTERFACE
-
-  INTERFACE OPERATOR (-)
-     MODULE PROCEDURE subtract_rvector_f
-     MODULE PROCEDURE subtract_cvector_f
-  END INTERFACE
-
-  INTERFACE OPERATOR (*)
-     MODULE PROCEDURE scMult_rvector_f
-     MODULE PROCEDURE scMult_cvector_f
-     MODULE PROCEDURE scMultReal_cvector_f
-     MODULE PROCEDURE diagMult_rvector_f
-     MODULE PROCEDURE diagMult_cvector_f
-     MODULE PROCEDURE diagMult_rcvector_f
-     MODULE PROCEDURE diagMult_crvector_f
-  END INTERFACE
-
-  INTERFACE OPERATOR (/)
-     MODULE PROCEDURE diagDiv_rcvector_f
-     MODULE PROCEDURE diagDiv_crvector_f
-  END INTERFACE
+!  INTERFACE OPERATOR (+)
+!     MODULE PROCEDURE add_rvector_f
+!     MODULE PROCEDURE add_cvector_f
+!  END INTERFACE
+!
+!  INTERFACE OPERATOR (-)
+!     MODULE PROCEDURE subtract_rvector_f
+!     MODULE PROCEDURE subtract_cvector_f
+!  END INTERFACE
+!
+!  INTERFACE OPERATOR (*)
+!     MODULE PROCEDURE scMult_rvector_f
+!     MODULE PROCEDURE scMult_cvector_f
+!     MODULE PROCEDURE scMultReal_cvector_f
+!     MODULE PROCEDURE diagMult_rvector_f
+!     MODULE PROCEDURE diagMult_cvector_f
+!     MODULE PROCEDURE diagMult_rcvector_f
+!     MODULE PROCEDURE diagMult_crvector_f
+!  END INTERFACE
+!
+!  INTERFACE OPERATOR (/)
+!     MODULE PROCEDURE diagDiv_rcvector_f
+!     MODULE PROCEDURE diagDiv_crvector_f
+!  END INTERFACE
 
   public		::   create_rvector,  create_cvector, &
        deall_rvector, deall_cvector, &
        copy_rvector, copy_cvector, &
        zero_rvector, zero_cvector, &
+       compare_rvector_f, compare_cvector_f, &
        scMult_rvector, scMult_cvector, scMultReal_cvector, &
        scMult_rvector_f, scMult_cvector_f, scMultReal_cvector_f, &
        add_rvector, add_cvector, &
@@ -152,7 +161,7 @@ module sg_vector
        diagDiv_rcvector, diagDiv_crvector, &
        diagDiv_rcvector_f, diagDiv_crvector_f, &
        dotProd_rvector_f, dotProd_cvector_f, &
-       linComb_cvector, scMultAdd_cvector, conjg_cvector_f, &
+       linComb_cvector, linComb_rvector, scMultAdd_cvector, conjg_cvector_f, &
        cmplx_rvector_f, real_cvector_f, imag_cvector_f
 
 
@@ -331,10 +340,8 @@ Contains
 
     character (len=80), intent(in)     :: gridType
 
-    if(E%allocated) then
-       ! first deallocate memory for x,y,z
-       deallocate(E%x, E%y, E%z, STAT=status)
-    end if
+	! First deallocate anything, that's allocated
+	call deall_rvector(E)
 
     ! Set pointer
     E%grid => igrid
@@ -403,10 +410,8 @@ Contains
 
     character (len=80), intent(in)      :: gridType
 
-    if(E%allocated) then
-       ! first deallocate memory for x,y,z
-       deallocate(E%x, E%y, E%z,STAT=status)
-    end if
+	! First deallocate anything, that's allocated
+    call deall_cvector(E)
 
     ! Set pointer
     E%grid => igrid
@@ -471,10 +476,11 @@ Contains
     type (rvector)  :: E
     integer	    :: status
 
-    if(E%allocated) then
-       ! deallocate memory for x,y,z
-       deallocate(E%x, E%y, E%z,STAT=status)
-    end if
+    ! deallocate memory for x,y,z
+	if(associated(E%x)) deallocate(E%x, STAT=status)
+	if(associated(E%y)) deallocate(E%y, STAT=status)
+	if(associated(E%z)) deallocate(E%z, STAT=status)
+    if(associated(E%grid)) nullify(E%grid)
 
     E%nx = 0
     E%ny = 0
@@ -495,10 +501,10 @@ Contains
     integer	    :: status
 
     ! deallocate memory for x,y,z
-    if(E%allocated) then
-       ! deallocate memory for x,y,z
-       deallocate(E%x, E%y, E%z,STAT=status)
-    end if
+	if(associated(E%x)) deallocate(E%x, STAT=status)
+	if(associated(E%y)) deallocate(E%y, STAT=status)
+	if(associated(E%z)) deallocate(E%z, STAT=status)
+    if(associated(E%grid)) nullify(E%grid)
 
     E%nx = 0
     E%ny = 0
@@ -658,6 +664,48 @@ Contains
 
   end subroutine zero_cvector ! zero_cvector
 
+
+  ! **********************************************************************
+  ! * check two vectors for compatibility for linear operator purposes
+
+  function compare_cvector_f(E1,E2) result (status)
+
+    type (cvector), intent(in)                  :: E1
+    type (cvector), intent(in)                  :: E2
+    logical                                     :: status
+
+	status = .FALSE.
+
+    ! Check whether all the vector nodes are of the same size
+    if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
+       if (E1%gridType == E2%gridType) then
+          status = .TRUE.
+       end if
+    end if
+
+
+  end function compare_cvector_f
+
+  ! **********************************************************************
+  ! * check two vectors for compatibility for linear operator purposes
+
+  function compare_rvector_f(E1,E2) result (status)
+
+    type (rvector), intent(in)                  :: E1
+    type (rvector), intent(in)                  :: E2
+    logical                                     :: status
+
+	status = .FALSE.
+
+    ! Check whether all the vector nodes are of the same size
+    if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
+       if (E1%gridType == E2%gridType) then
+          status = .TRUE.
+       end if
+    end if
+
+
+  end function compare_rvector_f
 
   ! ***************************************************************************
   ! scMult_cvector multiplies vector stored as derived data type
@@ -1917,6 +1965,8 @@ Contains
 
     end if
 
+    call deall_rvector(E3)
+
   end function dotProd_rvector_f  ! dotProd_rvector_f
 
 
@@ -1982,6 +2032,8 @@ Contains
        write(0, *) 'vectors not the same size in dotProd_cvector_f'
 
     end if
+
+    call deall_cvector(E3)
 
   end function dotProd_cvector_f ! dotProd_cvector
 
@@ -2049,6 +2101,8 @@ Contains
 
     end if
 
+    call deall_cvector(E3)
+
   end function dotProd_noConj_cvector_f ! dotProd__noConj_cvector_f
 
 
@@ -2061,44 +2115,62 @@ Contains
     implicit none
     !   input vectors
     type (cvector), intent(in)             :: E1, E2
-    !  input complex scalars
-    complex (kind=prec), intent(in)           :: inc1, inc2
+    !  input real scalars
+    real (kind=prec), intent(in)           :: inc1, inc2
     type (cvector), intent(inout)          :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
-       write(0,*) 'RHS not allocated yet for linComb_cvector'
-       stop
+       call errStop('inputs not allocated yet for linComb_cvector')
     endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
-       write(0,*) 'LHS was not allocated for linComb_cvector'
+       call errStop('output has to be allocated before call to linComb_cvector')
+
+    elseif (compare(E1,E2) .and. compare(E1,E3)) then
+        ! form linear combinatoin
+        E3%x = inc1*E1%x + inc2*E2%x
+        E3%y = inc1*E1%y + inc2*E2%y
+        E3%z = inc1*E1%z + inc2*E2%z
+
     else
-
-       ! Check whether all vectors are of the same size
-       if ((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz).and.&
-            (E1%nx == E3%nx).and.(E1%ny == E3%ny).and.(E1%nz == E3%nz)) then
-
-          if ((E1%gridType == E2%gridType).and.(E1%gridType == E3%gridType)) then
-
-             ! form linear combinatoin
-             E3%x = inc1*E1%x + inc2*E2%x
-             E3%y = inc1*E1%y + inc2*E2%y
-             E3%z = inc1*E1%z + inc2*E2%z
-
-          else
-             write (0, *) 'not compatible usage for linComb_cvector'
-          end if
-
-       else
-
-          write(0, *) 'Error:linComb_cvector:  vectors not same size'
-
-       end if
+        call errStop('not compatible usage for linComb_cvector')
     end if
 
   end subroutine linComb_cvector ! linComb_cvector
 
+  !****************************************************************************
+  ! linComb_rvector computes linear combination of two vectors
+  ! stored as derived data type cvector; subroutine, not a function
+  ! both input vectors must have the same dimension
+  subroutine linComb_rvector(inc1, E1, inc2, E2, E3)
+
+    implicit none
+    !   input vectors
+    type (rvector), intent(in)             :: E1, E2
+    !  input real scalars
+    real (kind=prec), intent(in)           :: inc1, inc2
+    type (rvector), intent(inout)          :: E3
+
+    if((.not.E1%allocated).or.(.not.E2%allocated)) then
+       call errStop('inputs not allocated yet for linComb_rvector')
+    endif
+
+    ! check to see if LHS (E3) is active (allocated)
+    if(.not.E3%allocated) then
+       call errStop('output has to be allocated before call to linComb_rvector')
+
+    elseif (compare(E1,E2) .and. compare(E1,E3)) then
+        ! form linear combinatoin
+        E3%x = inc1*E1%x + inc2*E2%x
+        E3%y = inc1*E1%y + inc2*E2%y
+        E3%z = inc1*E1%z + inc2*E2%z
+
+    else
+        call errStop('not compatible usage for linComb_rvector')
+    end if
+
+  end subroutine linComb_rvector ! linComb_rvector
 
   !****************************************************************************
   ! scMultadd_cvector multiplies vector E1 stored as derived data type
@@ -2265,36 +2337,15 @@ Contains
        write(0,*) 'input not allocated yet for real_cvector_f'
     else
 
-       if((E2%nx == E1%nx).and.(E2%ny == E1%ny).and.(E2%nz == E1%nz)) then
-
-          if  (E1%gridType == E2%gridType) then
-
-             ! just copy components
-             E2%x = real(E1%x, prec)
-             E2%y = real(E1%y, prec)
-             E2%z = real(E1%z, prec)
-             E2%gridType = E1%gridType
-
-          else
-             write (0, *) 'not compatible usage for real_cvector_f'
-          end if
-
-       else
-
-          if(E2%allocated) then
-             ! first deallocate memory for x,y,z
-             deallocate(E2%x, E2%y, E2%z,STAT=status)
-          end if
-
-          !  then allocate E2 as correct size ...
-          Call create_rvector(E1%grid, E2, E1%gridType)
-          !   .... and copy E1
-          E2%x = real(E1%x, prec)
-          E2%y = real(E1%y, prec)
-          E2%z = real(E1%z, prec)
-          E2%gridType = E1%gridType
-
-       end if
+      ! we know nothing about E2 ... deallocate just in case
+      Call deall_rvector(E2)
+      !  then allocate E2 as correct size ...
+      Call create_rvector(E1%grid, E2, E1%gridType)
+      !   .... and copy E1
+      E2%x = real(E1%x)
+      E2%y = real(E1%y)
+      E2%z = real(E1%z)
+      E2%gridType = E1%gridType
 
     end if
 
@@ -2317,36 +2368,15 @@ Contains
        write(0,*) 'input not allocated yet for imag_cvector_f'
     else
 
-       if((E2%nx == E1%nx).and.(E2%ny == E1%ny).and.(E2%nz == E1%nz)) then
-
-          if  (E1%gridType == E2%gridType) then
-
-             ! just copy components
-             E2%x = aimag(E1%x)
-             E2%y = aimag(E1%y)
-             E2%z = aimag(E1%z)
-             E2%gridType = E1%gridType
-
-          else
-             write (0, *) 'not compatible usage for imag_cvector_f'
-          end if
-
-       else
-
-          if(E2%allocated) then
-             ! first deallocate memory for x,y,z
-             deallocate(E2%x, E2%y, E2%z,STAT=status)
-          end if
-
-          !  then allocate E2 as correct size ...
-          Call create_rvector(E1%grid, E2, E1%gridType)
-          !   .... and copy E1
-          E2%x = aimag(E1%x)
-          E2%y = aimag(E1%y)
-          E2%z = aimag(E1%z)
-          E2%gridType = E1%gridType
-
-       end if
+      ! we know nothing about E2 ... deallocate just in case
+      Call deall_rvector(E2)
+      !  then allocate E2 as correct size ...
+      Call create_rvector(E1%grid, E2, E1%gridType)
+      !   .... and copy E1
+      E2%x = aimag(E1%x)
+      E2%y = aimag(E1%y)
+      E2%z = aimag(E1%z)
+      E2%gridType = E1%gridType
 
     end if
 

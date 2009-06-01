@@ -582,6 +582,7 @@ Contains
          enddo
       enddo
       close(fid)
+      call deall(data)
    end subroutine write_Z
 
    !******************************************************************

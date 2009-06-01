@@ -7,6 +7,7 @@ module input
   use utilities
   use modeldef
   use datadef
+  use dataspace
   use iotypes
   implicit none
 

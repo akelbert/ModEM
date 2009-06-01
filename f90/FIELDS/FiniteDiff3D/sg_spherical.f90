@@ -128,8 +128,9 @@ Contains
 	if (present(verbose)) then
 
 	  ! Compare the resultant vector to the original. If not identical,
-	  ! output a warning.
-	  diffE = E - inE
+	  ! output a warning. diffE = E - inE
+	  diffE = E
+	  call linComb_rvector(ONE,E,MinusONE,inE,diffE)
 
 	  if (gridType == EDGE) then
 		! North pole
@@ -283,8 +284,9 @@ Contains
 	if (present(verbose)) then
 
 	  ! Compare the resultant vector to the original. If not identical,
-	  ! output a warning.
-	  diffE = E - inE
+	  ! output a warning. diffE = E - inE
+	  diffE = E
+	  call linComb_cvector(ONE,E,MinusONE,inE,diffE)
 
 	  if (gridType == EDGE) then
 		! North pole
@@ -334,6 +336,9 @@ Contains
 	  end if
 
 	end if
+
+	call deall_cvector(inE)
+	call deall_cvector(diffE)
 
   end subroutine validate_cvector  ! validate_cvector
 

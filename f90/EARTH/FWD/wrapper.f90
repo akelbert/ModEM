@@ -63,7 +63,7 @@ Contains
 			!print *, 'd1->d3: x ',i,j,k,ii,ic,rvec(ic)
 			rx(ii)=rvec(ic)
           end do
-        end do 
+        end do
       end do
 
       do j=1,m
@@ -101,7 +101,7 @@ Contains
       end do
 
       return
-  
+
   end subroutine copyd1_d3_b
 
 
@@ -202,7 +202,7 @@ Contains
             call leng_xijk(i,j,k,x,y,z,xlen)
             rvec(ic)=rvec(ic)/xlen
           end do
-        end do 
+        end do
       end do
 
       do j=1,m
@@ -232,14 +232,14 @@ Contains
       return
       end subroutine divide_vec_by_l
 
-    
+
 ! *****************************************************************************
 ! * multiplies vectorh by edge length elements < l(i,j,k) >
 ! *
 ! * Last mod.: Oct 05, 2005
 
   subroutine mult_vec_by_l(l,m,n,rvec,x,y,z)
-	  	    
+
 	  integer					:: l,m,n
       real(8),dimension(l)	    :: x
       real(8),dimension(m+1)    :: y
@@ -256,7 +256,7 @@ Contains
             call leng_xijk(i,j,k,x,y,z,xlen)
             rvec(ic)=rvec(ic)*xlen
           end do
-        end do 
+        end do
       end do
 
       do j=1,m
@@ -311,7 +311,7 @@ Contains
             call area_sijk2(j-1,k-1,y,z,sijk2)
             rvec(ic)=rvec(ic)/sijk2
           end do
-        end do 
+        end do
       end do
 
       do j=1,m
@@ -384,7 +384,7 @@ Contains
             call area_sijk2(j-1,k-1,y,z,sijk2)
             rvec(ic)=rvec(ic)*sijk2
           end do
-        end do 
+        end do
       end do
 
       do j=1,m
@@ -439,7 +439,7 @@ Contains
 ! * x- and y- components of the field on the upper and lower domain boundaries,
 ! * and z-component on the upper boundary only are not saved in rvec.
 ! * Instead, they are saved in the type (sparsevecc) bvH, and used to
-! * reconstruct the original vecE by the complementary subroutine copyd1_d3_d.   
+! * reconstruct the original vecE by the complementary subroutine copyd1_d3_d.
 ! *
 ! * No multiplication by edge length elements, contrary to the previous versions.
 ! * Last mod.: Oct 05, 2005
@@ -467,7 +467,7 @@ Contains
 	  write(0, *) 'Error: (copyd3_d1_d) output vector length is not np2'
 	  stop
 	end if
-	
+
 	l = vecE%nx
 	m = vecE%ny
 	n = vecE%nz
@@ -538,7 +538,7 @@ Contains
 
 	complex(8), dimension(:), intent(in)				  :: rvec !np2
 	type (grid_t), intent(in)						  :: igrid
-	type (cvector), intent(out)							  :: vecE
+	type (cvector), intent(inout)							  :: vecE
 	type (sparsevecc), intent(in), optional				  :: bc
 	integer												  :: i,j,k,ii,ic
 	integer												  :: l,m,n
@@ -551,6 +551,9 @@ Contains
 	  stop
 	end if
 
+	! Deallocate output vector, if needed
+	call deall_cvector(vecE)
+
 	! Create output vector
 	call create_cvector(igrid, vecE, EDGE)
 	if (present(bc)) then
@@ -561,7 +564,7 @@ Contains
 	l = vecE%nx
 	m = vecE%ny
 	n = vecE%nz
-	
+
 !
 ! Hx
 !
@@ -571,7 +574,7 @@ Contains
 		do j=2,m
 		  ic=ic+1
           !call n_allhijk(l,m,n,i,j,k,1,ic)
-		  vecE%x(i,j,k) = rvec(ic) 
+		  vecE%x(i,j,k) = rvec(ic)
         end do
       end do
 	end do
@@ -594,7 +597,7 @@ Contains
 	  ic=ic+1
       !call n_allhijk(l,m,n,1,1,k,3,ic)
 	  do i=1,l
-		vecE%z(i,1,k) = rvec(ic) 
+		vecE%z(i,1,k) = rvec(ic)
 	  end do
       do j=2,m
         do i=1,l
@@ -758,13 +761,13 @@ Contains
 		else
 		  call n_allhzijk(l,m,n,bvH%i(ib),bvH%j(ib),bvH%k(ib),ii)
 		  Hz(ii) = bvH%c(ib)
-		end if		  
+		end if
 	  end select
-	
+
 	end do
 
   end subroutine insertBoundaryValues ! insertBoundaryValues
- 
+
 
   ! ***************************************************************************
   ! * divide_bc_by_l multiplies the boundary values of the magnetic fields saved
@@ -801,7 +804,7 @@ Contains
         call leng_zijk(Hb%k(ib),grid%z,zz)
 		lHb%c(ib) = Hb%c(ib)/zz
 	  end select
-	
+
 	end do
 
   end subroutine divide_bc_by_l ! divide_bc_by_l
@@ -842,7 +845,7 @@ Contains
         call leng_zijk(Hb%k(ib),grid%z,zz)
 		lHb%c(ib) = zz*Hb%c(ib)
 	  end select
-	
+
 	end do
 
   end subroutine mult_bc_by_l ! mult_bc_by_l
@@ -895,6 +898,7 @@ Contains
 	  hz = C_ZERO
 	  call mult_bc_by_l(bc,newbc)
 	  call insertBoundaryValues(newbc,hx,hy,hz)
+	  call deall_sparsevecc(newbc)
 
 !
 ! First, Hx...
@@ -1269,7 +1273,7 @@ Contains
 	type (cvector), intent(in)			  :: vecE1,vecE2
 	real									  :: eps
 	integer									  :: i,j,k
-	
+
 	eps = 0.0000001
 
 	do k=1,vecE1%nz+1
@@ -1294,10 +1298,10 @@ Contains
 		  end if
 		  if (abs(dimag(vecE1%z(i,j,k)-vecE2%z(i,j,k)))>eps) then
 			print *, 'z: ', i,j,k, dimag(vecE1%z(i,j,k)), dimag(vecE2%z(i,j,k))
-		  end if		
+		  end if
 		end do
 	  end do
-	end do	
+	end do
 
 
   end subroutine compare_fields	! compare_fields

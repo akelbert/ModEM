@@ -10,6 +10,7 @@ module dataFunc
   use sg_vector
   use sg_sparse_vector
   use interp
+  use dataspace
   implicit none
 
 
@@ -57,7 +58,7 @@ Contains
 	  call add_scvector(dvec(j)%resp%value,g_sparse,outE)
 	end do
 
-
+	call deall_sparsevecc(g_sparse)
 	return	! return the outE
 
   end subroutine operatorG	! operatorG
@@ -95,6 +96,7 @@ Contains
 	  dvec(j)%resp%value = dotProd_scvector_f(g_sparse,inE)
 	end do
 
+	call deall_sparsevecc(g_sparse)
 	return	! return the outE
 
   end subroutine operatorGt	! operatorGt
@@ -172,6 +174,11 @@ Contains
 
 	! This was g* (conjugated), now we want g
 	g_sparse = conjg(gc_sparse)
+
+	call deall_sparsevecc(Lx)
+	call deall_sparsevecc(Ly)
+	call deall_sparsevecc(Lz)
+	call deall_sparsevecc(gc_sparse)
 
   end subroutine compute_g	! compute_g
 

@@ -98,6 +98,8 @@ program Mod3DMT
 	 ! cleaning up
 	 call deallGlobalData()
 
+	 call cleanUp()
+
 	 call date_and_time(values=tarray)
 	 etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 	 rtime = etime - stime

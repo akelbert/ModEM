@@ -711,29 +711,23 @@ Contains
 
 
   ! **********************************************************************
-  ! * Use this function when a zero-valued copy of an existing structure
-  ! * is needed
-  ! *
-  ! * output cannot overwrite input, i.e. m = zero(m) illegal
+  ! * A function is more logical here, but the subroutine is much less
+  ! * error-prone, since m = zero(m) might create trouble.
   ! * BOP
-  function zero_modelParam(P1) result (P)
+  subroutine zero_modelParam(P)
 
     implicit none
-    type (modelParam_t), intent(in)		:: P1
-    type (modelParam_t)					:: P
+    type (modelParam_t), intent(inout)	:: P
     ! * EOP
 
-    if(.not.(P1%allocated)) then
+    if(.not.(P%allocated)) then
     	call errStop('(zero_modelParam) input parametrization not allocated yet')
 	end if
-
-	! Create an identical structure to P1
-	P = P1
 
 	! Set all values to zero
 	P%c%value = R_ZERO
 
-  end function zero_modelParam
+  end subroutine zero_modelParam
 
 
   ! **********************************************************************
@@ -1133,6 +1127,7 @@ Contains
 	P2 = multBy_CmSqrt(P1)
 	P  = multBy_CmSqrt(P2)
 
+	call deall_modelParam(P2)
 
   end function multBy_Cm
 

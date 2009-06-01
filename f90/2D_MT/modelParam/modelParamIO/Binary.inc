@@ -41,6 +41,7 @@
       close(ioPrm)
 
       deallocate(v)
+      call deall_grid(grid)
 
       end subroutine write_modelParam_binary
 

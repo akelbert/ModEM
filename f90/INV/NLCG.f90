@@ -145,7 +145,7 @@ Contains
 !			nSites,sites,allData)
 
    ! initialize res
-   res = zero(d)
+   res = d
 
    ! compute residual: res = d-dHat
    call linComb(ONE,d,MinusONE,dHat,res)
@@ -165,6 +165,11 @@ Contains
    	Ndata = countData(res)
    	RMS = sqrt(SS/Ndata)
    end if
+
+   call deall_dataVecMTX(res)
+   call deall_dataVecMTX(Nres)
+   call deall_modelParam(m)
+   call deall_modelParam(JTd)
 
    end subroutine func
 
@@ -202,7 +207,7 @@ Contains
    call linComb(ONE,m,ONE,m0,m)
 
    ! initialize res
-   res = zero(d)
+   res = d
 
    ! compute residual: res = d-dHat
    call linComb(ONE,d,MinusONE,dHat,res)
@@ -219,11 +224,16 @@ Contains
    call CmSqrtMult(JTd,CmJTd)
 
    ! initialize grad
-   grad = zero(m)
+   grad = m
 
    ! multiply by 2 (to be consistent with the formula)
    ! and add the gradient of the model norm
    call linComb(MinusTWO,CmJTd,TWO*lambda,mHat,grad)
+
+   call deall_dataVecMTX(res)
+   call deall_modelParam(m)
+   call deall_modelParam(JTd)
+   call deall_modelParam(CmJTd)
 
    end subroutine gradient
 
@@ -245,7 +255,7 @@ Contains
    SS = F - (lambda * mNorm)
 
    ! initialize
-   dSS = zero(mHat)
+   dSS = mHat
 
    ! subtract the model norm derivative from the gradient of the penalty functional
    call linComb(ONE,grad,MinusTWO*lambda,mHat,dSS)
@@ -258,6 +268,8 @@ Contains
 
 	 ! add the model norm derivative to the gradient of the penalty functional
    call linComb(ONE,dSS,TWO*lambda,mHat,grad)
+
+   call deall_modelParam(dSS)
 
    end subroutine update_damping_parameter
 
@@ -372,7 +384,8 @@ Contains
 
    ! starting from the prior hardcoded by setting mHat = 0 and m = m0
    m = m0
-   mHat = zero_modelParam(m0)
+   mHat = m0
+   call zero(mHat)
 
    !  compute the penalty functional and predicted data
    call func(lambda,d,m0,mHat,value,dHat,eAll,rms)
@@ -397,7 +410,7 @@ Contains
    ! initialize CG: g = - grad; h = g
    nCG = 0
    iter = 0
-   g = zero_modelParam(grad)
+   g = grad
    call linComb(MinusONE,grad,R_ZERO,grad,g)
    h = g
 
@@ -606,7 +619,7 @@ Contains
    end if
 
    ! initialize
-   mHat_1 = zero_modelParam(mHat_0)
+   mHat_1 = mHat_0
    !  compute the trial parameter mHat_1
    call linComb(ONE,mHat_0,alpha_1,h,mHat_1)
 
@@ -675,6 +688,13 @@ Contains
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, line search finished'
+
+   call deall_dataVecMTX(dHat)
+   call deall_dataVecMTX(dHat_1)
+   call deall_modelParam(mHat_0)
+   call deall_modelParam(mHat_1)
+   call deall_EMsolnMTX(eAll)
+   call deall_EMsolnMTX(eAll_1)
 
   end subroutine lineSearchQuadratic
 
@@ -775,7 +795,7 @@ Contains
    end if
 
    ! compute the trial mHat, f, dHat, eAll, rms
-   mHat_1 = zero_modelParam(mHat_0)
+   mHat_1 = mHat_0
    call linComb(ONE,mHat_0,alpha_1,h,mHat_1)
    call func(lambda,d,m0,mHat_1,f_1,dHat_1,eAll_1,rms_1)
    call printf('STARTLS',lambda,alpha,f_1,rms_1)
@@ -902,6 +922,12 @@ Contains
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, line search finished'
 
+   call deall_dataVecMTX(dHat)
+   call deall_dataVecMTX(dHat_1)
+   call deall_modelParam(mHat_0)
+   call deall_modelParam(mHat_1)
+   call deall_EMsolnMTX(eAll)
+   call deall_EMsolnMTX(eAll_1)
 
   end subroutine lineSearchCubic
 

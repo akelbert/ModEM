@@ -72,6 +72,7 @@
          close(ioPrm)
       end if
       deallocate(value)
+      call deall_grid(grid)
 
       end subroutine write_modelParam_mackie
 

@@ -327,6 +327,8 @@ end program earth
 	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 	rtime = etime - stime
 
+	call deall_modelParam(invparam)
+
   end subroutine calc_inverse
 
 
@@ -552,6 +554,8 @@ end program earth
 	!call outputMisfit(param,misfit,misfitValue,cUserDef)
 
 	continue
+	call deall_EMsolnMTX(H)
+
 	call date_and_time(values=tarray)
 	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 	rtime = etime - stime
@@ -594,7 +598,7 @@ end program earth
 	!type (sparsevecc)						:: Hb
 	!type (functional_t)						:: dataType
 	type (transmitter_t)					:: freq
-	type (modelParam_t)						:: dmisfit,dmisfit2
+	type (modelParam_t)						:: dmisfit,dmisfitSmooth
 	integer									:: ifreq,ifunc
 	logical									:: adjoint,delta
 	character(1)							:: cfunc
@@ -630,7 +634,7 @@ end program earth
 	end do
 
 !	! initialize res
-!	res = zero(psi)
+!	res = psi
 !	! compute residual: res = dat-psi
 !	call linComb(ONE,dat,MinusONE,psi,res)
 !	! normalize residuals, compute sum of squares
@@ -647,7 +651,7 @@ end program earth
 	!dmisfit = -2. * dmisfit
 	call scMult(TWO,dmisfit,dmisfit)
 
-	dmisfit = multBy_CmSqrt(dmisfit)
+	dmisfitSmooth = multBy_CmSqrt(dmisfit)
 
 	! We can no longer store misfit%dRda - misfit derivative for each frequency,
 	! functional and model parameter. They are now summed up internally in JmultT.
@@ -656,9 +660,9 @@ end program earth
 	  do ifunc=1,nfunc
 
 		call scMult(TWO,dR%dm(ifreq,ifunc),dR%dm(ifreq,ifunc))
-	    dR%dm(ifreq,ifunc) = multBy_CmSqrt(dR%dm(ifreq,ifunc))
+	    dmisfitSmooth = multBy_CmSqrt(dR%dm(ifreq,ifunc))
 
-		call getParamValues_modelParam(dR%dm(ifreq,ifunc),misfit%dRda(ifreq,ifunc,:))
+		call getParamValues_modelParam(dmisfitSmooth,misfit%dRda(ifreq,ifunc,:))
 
 	  end do
 	end do
@@ -699,6 +703,10 @@ end program earth
 	!call outputDerivative(param,misfit,dmisfitValue,cUserDef)
 
 	continue
+	call deall_sensMatrix(dR)
+	call deall_EMsolnMTX(H)
+	call deall_modelParam(dmisfit)
+	call deall_modelParam(dmisfitSmooth)
 
 	call date_and_time(values=tarray)
 	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
@@ -739,7 +747,7 @@ end program earth
 	type (sparsevecc)						:: g_sparse
 	type (functional_t)						:: dataType
 	type (transmitter_t)					:: freq
-	type (modelParam_t)						:: rsens,isens
+	type (modelParam_t)						:: rsens,isens,rsensTemp,isensTemp
 	integer									:: ifreq,ifunc,iobs,ilayer
 	logical									:: adjoint,delta
 	real(8),dimension(ncoeff)				:: da
@@ -819,7 +827,7 @@ end program earth
 		  call operatorC(Hconj,Econj,grid)
 
 		  ! $D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,\omega} ( g_j )$
-		  dE = Econj * dE
+		  call diagMult(Econj,dE,dE) !dE = Econj * dE
 
 		  ! $L^T D_{\bar{\e}} ... M*^{-1}_{\rho,\omega} g_j$
 		  dE_real = real(dE)
@@ -829,11 +837,11 @@ end program earth
 		  call operatorLt(sens%drho_imag%v,dE_imag,grid)
 
 		  ! $P^T L^T D_{\bar{\e}} C A^{-1}_{\rho,-\omega} g_j$
-		  call operatorPt(sens%drho_real,rsens)
-		  call operatorPt(sens%drho_imag,isens)
+		  call operatorPt(sens%drho_real,rsensTemp)
+		  call operatorPt(sens%drho_imag,isensTemp)
 
-		  rsens = multBy_CmSqrt(rsens)
-		  isens = multBy_CmSqrt(isens)
+		  rsens = multBy_CmSqrt(rsensTemp)
+		  isens = multBy_CmSqrt(isensTemp)
 
 		  call getParamValues_modelParam(rsens,sens%da_real(ifreq,ifunc,iobs,:))
 		  call getParamValues_modelParam(isens,sens%da_imag(ifreq,ifunc,iobs,:))
@@ -865,6 +873,15 @@ end program earth
 	!call outputMisfit(param,misfit,misfitValue,cUserDef)
 
 	continue
+
+	call deall_modelParam(rsensTemp)
+	call deall_modelParam(rsens)
+	call deall_modelParam(isensTemp)
+	call deall_modelParam(isens)
+	call deall_sparsevecc(bv_H)
+	call deall_sparsevecc(bv_dH)
+	call deall_sparsevecc(Hb)
+	call deall_sparsevecc(g_sparse)
 
   end subroutine calc_jacobian	! calc_jacobian
 
@@ -976,7 +993,7 @@ end program earth
 		  call operatorD_l_mult(Hconj,grid)
 		  call operatorC(Hconj,Econj,grid)
 
-		  dE = Econj * dE_real
+		  call diagMult(Econj,dE_real,dE) !dE = Econj * dE_real
 
 		  call operatorCt(dE,F,grid)
 		  call createBC(Hb,grid)
@@ -1018,6 +1035,7 @@ end program earth
 	continue
 
 	call deall_rscalar(drho)
+	call deall_sparsevecc(Hb)
 
   end subroutine calc_symmetry  ! calc_symmetry
 
@@ -1273,6 +1291,8 @@ end program earth
 
 	continue
 
+	call deall_modelParam(dparam)
 	call deall_rscalar(drho)
+	call deall_sparsevecc(g_sparse)
 
   end subroutine calc_symmetric_operators  ! calc_symmetric_operators

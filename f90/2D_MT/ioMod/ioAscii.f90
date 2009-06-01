@@ -285,6 +285,8 @@ module ioAscii
       enddo
       close(fid)
 
+      call deall_dataVec(data)
+
       ! Calculating apparent resistivities and phases
       !temp=dcmplx(data%value(1,k),data%value(2,k))
       !write(fid,*)tab, ((periods(iTx)*MU_0)/(2.0*PI))*abs(temp)**2, abs(atan(data%value(2,k)/data%value(1,k)))*(180/PI)

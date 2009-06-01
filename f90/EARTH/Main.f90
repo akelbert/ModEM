@@ -93,12 +93,14 @@ Contains
 		end if
 	else
 	  write(0,*) 'Warning: No base parametrization found; zero model will be used'
-	  p0_input = zero_modelParam(p_input)
+	  p0_input = p_input
+	  call zero(p0_input)
 	end if
 	!--------------------------------------------------------------------------
 	! Compute the correction (only needed if run for a test perturbation)
 	if (present(da)) then
-	  p_delta = zero_modelParam(p_input)
+	  p_delta = p_input
+	  call zero(p_delta)
 	  call fillParamValues_modelParam(p_delta,da)
 	  call linComb(ONE,p_input,ONE,p_delta,p_input)
 	  call deall_modelParam(p_delta)
@@ -223,10 +225,11 @@ Contains
   ! * DeleteGlobalData deallocates all allocatable data defined globally.
   subroutine DeleteGlobalData()
 
-	integer	:: istat
+	integer	:: i,istat
 
 	! Deallocate global variables that have been allocated by InitGlobalData()
 	call deall_modelParam(param)
+	call deall_modelParam(param0)
 	call deall_modelParam(p_input)
 	call deall_modelParam(p0_input)
 	call deall_modelParam(p_smooth)
@@ -234,8 +237,8 @@ Contains
 	deallocate(x,y,z,STAT=istat)
 	deallocate(grid%x,grid%y,grid%z,STAT=istat)
 	deallocate(grid%ph,grid%th,grid%r,STAT=istat)
-	deallocate(freqList%info,STAT=istat)
 	deallocate(rho,STAT=istat)
+	deallocate(ndat,STAT=istat)
 	deallocate(misfit%value,STAT=istat)
 	deallocate(misfit%ndat,STAT=istat)
 	deallocate(misfit%weight,STAT=istat)
@@ -249,6 +252,16 @@ Contains
 	call deall_dataVecMTX(psi)
 	call deall_dataVecMTX(res)
 	call deall_dataVecMTX(wres)
+
+	do i = 1,obsList%n
+	    call deall_sparsevecc(obsList%info(i)%Lx)
+	    call deall_sparsevecc(obsList%info(i)%Ly)
+	    call deall_sparsevecc(obsList%info(i)%Lz)
+	end do
+	deallocate(obsList%info,STAT=istat)
+	deallocate(freqList%info,STAT=istat)
+	deallocate(TFList%info,STAT=istat)
+	deallocate(slices%r,STAT=istat)
 
 	if (allocated(misfitValue)) then
 	  deallocate(misfitValue)

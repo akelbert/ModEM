@@ -148,7 +148,8 @@ Contains
        else
           call create_CmSqrt(sigma0)
        end if
-       sigma1 = zero_modelParam(sigma0)
+       sigma1 = sigma0
+       call zero(sigma1)
 
     end select
 
@@ -227,7 +228,11 @@ Contains
 	call deall_modelParam(dsigma)
 	call deall_modelParam(sigma1)
 
-	deallocate(modes,periods,sites,STAT=istat)
+	deallocate(modes,STAT=istat)
+	deallocate(periods,STAT=istat)
+	deallocate(sites,STAT=istat)
+    deallocate(siteids,STAT=istat)
+    deallocate(compids,STAT=istat)
 
     if (output_level > 3) then
        write(0,*) 'Cleaning up dictionaries...'

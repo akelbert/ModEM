@@ -329,10 +329,12 @@
    ! local variables
    integer		:: jk,j,k
 
-   dsigmaReal = zero_modelParam(sigma0)
+   dsigmaReal = sigma0
+   call zero(dsigmaReal)
 
    if(present(dSigmaImag)) then
-      dsigmaImag = zero_modelParam(sigma0)
+      dsigmaImag = sigma0
+      call zero(dsigmaImag)
    endif
 
    do jk = 1,Qj%nCoeff

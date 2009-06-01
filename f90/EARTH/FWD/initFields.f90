@@ -109,6 +109,7 @@ Contains
 
 	!deallocate(hx,hy,hz)
 	deallocate(hvec)
+	call deall_sparsevecc(Hb)
 
   end subroutine initialize_fields
 
