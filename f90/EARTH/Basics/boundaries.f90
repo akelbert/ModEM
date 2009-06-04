@@ -13,8 +13,8 @@ Contains
 
   subroutine createBC(Hb,grid)
 
-	type (sparsevecc), intent(out)			:: Hb
-	type (grid_t), intent(in)			:: grid
+	type (sparsevecc), intent(inout)		:: Hb
+	type (grid_t), intent(in)				:: grid
 	integer									:: i,j,k,ib
 	integer									:: b1,b2,b3
 	integer									:: nx,ny,nz

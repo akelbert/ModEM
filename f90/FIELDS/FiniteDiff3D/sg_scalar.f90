@@ -95,6 +95,7 @@ module sg_scalar
   INTERFACE ASSIGNMENT (=)
      MODULE PROCEDURE copy_cscalar
      MODULE PROCEDURE copy_rscalar
+     MODULE PROCEDURE copy_iscalar
   END INTERFACE
 
   ! Interface operators are done through functions
@@ -158,6 +159,11 @@ module sg_scalar
      ! allocated:  .true.  v array has been allocated
      logical		                               :: allocated = .false.
 
+     ! temporary:  .true. for function outputs only; necessary to avoid memory leaks
+     ! (probably will not be needed in the future when compilers will support
+     ! ISO/IEC 15581 - the "allocatable array extension")
+     logical										:: temporary = .false.
+
      ! pointer to parent grid
      type (grid_t), pointer                              :: grid
 
@@ -188,6 +194,11 @@ module sg_scalar
      ! allocated:  .true.  v array has been allocated
      logical		                                :: allocated = .false.
 
+     ! temporary:  .true. for function outputs only; necessary to avoid memory leaks
+     ! (probably will not be needed in the future when compilers will support
+     ! ISO/IEC 15581 - the "allocatable array extension")
+     logical										:: temporary = .false.
+
      ! pointer to parent grid
      type (grid_t), pointer                               :: grid
 
@@ -217,6 +228,11 @@ module sg_scalar
 
      ! allocated:  .true.  v array has been allocated
      logical		                                :: allocated = .false.
+
+     ! temporary:  .true. for function outputs only; necessary to avoid memory leaks
+     ! (probably will not be needed in the future when compilers will support
+     ! ISO/IEC 15581 - the "allocatable array extension")
+     logical										:: temporary = .false.
 
      ! pointer to parent grid
      type (grid_t), pointer                               :: grid
@@ -923,6 +939,10 @@ Contains
 
     end if
 
+    if(E1%temporary) then
+    	call deall_rscalar(E1)
+    end if
+
   end subroutine copy_rscalar  ! copy_rscalar
 
 
@@ -970,8 +990,62 @@ Contains
 
     end if
 
+    if(E1%temporary) then
+    	call deall_cscalar(E1)
+    end if
+
   end subroutine copy_cscalar  ! copy_cscalar
 
+
+  !****************************************************************************
+  ! copy_iscalar makes an exact copy of derived data type
+  ! rscalar;   NOTE: first argument is output
+  subroutine copy_iscalar(E2, E1)
+
+    implicit none
+    type (iscalar), intent(in)       :: E1
+    type (iscalar), intent(inout)    :: E2
+    integer	                     :: status
+
+    ! check to see if RHS (E1) is active (allocated)
+    if(.not.E1%allocated) then
+       write(0,*) 'RHS not allocated yet for copy_iscalar'
+    else
+
+       if((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz)) then
+
+          if (E1%gridType == E2%gridType) then
+
+             ! just copy components
+             E2%v = E1%v
+             E2%gridType = E1%gridType
+
+          else
+             write (0, *) 'not compatible usage in copy_iscalar'
+          end if
+
+       else
+
+          if(E2%allocated) then
+             ! first deallocate memory for v
+             deallocate(E2%v,STAT=status)
+          end if
+
+          !  then allocate E2 as correct size ...
+          Call create_iscalar(E1%grid, E2, E1%gridType)
+          !   .... and copy E1
+          E2%v = E1%v
+          E2%gridType = E1%gridType
+
+       end if
+
+    end if
+
+    if(E1%temporary) then
+    	call deall_iscalar(E1)
+    end if
+
+  end subroutine copy_iscalar  ! copy_iscalar
 
   !****************************************************************************
   ! zero_rscalar zeros variable of derived data type
@@ -1098,6 +1172,8 @@ Contains
        end if
     end if
 
+    E2%temporary = .true.
+
   end function scMult_cscalar_f ! scMult_cscalar_f
 
 
@@ -1187,6 +1263,8 @@ Contains
        end if
     end if
 
+    E2%temporary = .true.
+
   end function scMult_rscalar_f ! scMult_rscalar_f
 
 
@@ -1273,6 +1351,8 @@ Contains
 
        end if
     end if
+
+    E3%temporary = .true.
 
   end function add_rscalar_f ! add_rscalar_f
 
@@ -1361,6 +1441,8 @@ Contains
        end if
     end if
 
+    E3%temporary = .true.
+
   end function add_cscalar_f ! add_cscalar_f
 
 
@@ -1447,6 +1529,8 @@ Contains
 
        end if
     end if
+
+    E3%temporary = .true.
 
   end function subtract_rscalar_f ! subtract_rscalar_f
 
@@ -1535,6 +1619,8 @@ Contains
        end if
     end if
 
+    E3%temporary = .true.
+
   end function subtract_cscalar_f ! subtract_cscalar_f
 
 
@@ -1622,6 +1708,8 @@ Contains
        end if
     end if
 
+    E3%temporary = .true.
+
   end function diagMult_rscalar_f ! diagMult_rscalar_f
 
 
@@ -1708,6 +1796,8 @@ Contains
 
        end if
     end if
+
+    E3%temporary = .true.
 
   end function diagMult_cscalar_f ! diagMult_cscalar_f
 
@@ -1798,6 +1888,8 @@ Contains
        end if
     end if
 
+    E3%temporary = .true.
+
   end function diagMult_crscalar_f ! diagMult_crscalar_f
 
 
@@ -1841,6 +1933,7 @@ Contains
 
        end if
     end if
+
 
   end subroutine diagMult_rcscalar ! diagMult_rcscalar
 
@@ -1886,6 +1979,8 @@ Contains
 
        end if
     end if
+
+    E3%temporary = .true.
 
   end function diagMult_rcscalar_f ! diagMult_rcscalar_f
 

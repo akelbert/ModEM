@@ -25,6 +25,8 @@
 
     call RecursiveAR(m%cellCond%v, mhat%cellCond%v, CmSqrt%N)
 
+    mhat%temporary = .true.
+
   end function multBy_CmSqrt
 
 ! *******************************************************************

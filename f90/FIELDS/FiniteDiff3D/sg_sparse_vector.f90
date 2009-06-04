@@ -89,6 +89,10 @@ module sg_sparse_vector
      complex (kind=prec), pointer, dimension(:) 	:: c
      ! has sparse vector been allocated?
      logical					:: allocated = .false.
+     ! temporary:  .true. for function outputs only; necessary to avoid memory leaks
+     ! (probably will not be needed in the future when compilers will support
+     ! ISO/IEC 15581 - the "allocatable array extension")
+     logical					:: temporary = .false.
      ! pointer to the parent grid
      type (grid_t), pointer                 	:: grid
 
@@ -102,8 +106,8 @@ Contains
   subroutine deall_sparsevecc(oldLC)
 
     implicit none
-    type (sparsevecc), intent(inout)                :: oldLC
-    integer                                        :: status
+    type (sparsevecc)                :: oldLC
+    integer                          :: status
 
        deallocate(oldLC%i,STAT=status)
        deallocate(oldLC%j, STAT=status)
@@ -246,7 +250,7 @@ Contains
   subroutine copy_sparsevecc(SV2,SV1)
 
     implicit none
-    type (sparsevecc), target, intent(in)	:: SV1
+    type (sparsevecc), intent(in)		:: SV1
     type (sparsevecc), intent(inout)		:: SV2
     integer	                     		:: status
 
@@ -300,6 +304,10 @@ Contains
 
     end if
 
+    if(SV1%temporary) then
+    	call deall_sparsevecc(SV1)
+    end if
+
   end subroutine copy_sparsevecc
 
   ! **********************************************************************
@@ -308,7 +316,7 @@ Contains
   subroutine linComb_sparsevecc(Lic1,ic1,Lic2,ic2,Loc3)
 
     implicit none
-    type (sparsevecc), target, intent(in)	:: Lic1,Lic2
+    type (sparsevecc), intent(in)		:: Lic1,Lic2
     type (sparsevecc), intent(inout)		:: Loc3
     complex (kind=prec), intent(in)		:: ic1,ic2
 
@@ -769,6 +777,8 @@ Contains
     SV2%xyz = SV1%xyz
     SV2%c = conjg(SV1%c)
     SV2%grid => SV1%grid
+
+    SV2%temporary = .true.
 
   end function conjg_sparsevecc_f
 

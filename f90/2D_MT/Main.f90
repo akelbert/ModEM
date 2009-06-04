@@ -116,6 +116,7 @@ Contains
      case (MULT_BY_J)
 	   inquire(FILE=cUserDef%rFile_dModel,EXIST=exists)
 	   if (exists) then
+	      call deall_grid(grid)
 	   	  call read_modelParam(grid,dsigma,cUserDef%rFile_dModel)
 	   else
 	      call warning('The input model perturbation file does not exist')

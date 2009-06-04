@@ -31,6 +31,7 @@
 
     m2 = m1
     call solveDiff(CmSqrt,m2)
+    m2%temporary = .true.
 
   end function multBy_CmSqrt
 

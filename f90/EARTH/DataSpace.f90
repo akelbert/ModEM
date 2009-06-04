@@ -116,7 +116,9 @@ module DataSpace
 	integer, pointer, dimension(:,:)			  :: n	!nfreq,nfunc
 	! Total number of frequencies stored in this data vector
 	integer                                       :: ntx
-	logical                                       :: allocated=.FALSE.
+	logical                                       :: allocated = .false.
+    ! needed to avoid memory leaks for temporary function outputs
+    logical										  :: temporary = .false.
 
   end type dataVecMTX_t
 
@@ -159,9 +161,9 @@ Contains
 
   subroutine deall_dataVecMTX(d)
 
-    type (dataVecMTX_t), intent(inout)	:: d
+    type (dataVecMTX_t)	:: d
     ! local
-    integer                             :: j,istat
+    integer             :: j,istat
 
     if(d%allocated) then
        !  deallocate everything relevant
@@ -268,6 +270,10 @@ Contains
 
     d2%allocated = .true.
 
+    if (d1%temporary) then
+    	call deall_dataVecMTX(d1)
+    endif
+
   end subroutine copy_dataVecMTX
 
   ! **********************************************************************
@@ -335,7 +341,11 @@ Contains
     type (dataVecMTX_t), intent(in)	    :: dIn
     type (dataVecMTX_t)                 :: dOut
 
+    dOut = dIn
+
 	call linComb_dataVecMTX(R_ZERO,dIn,a,dIn,dOut)
+
+	dOut%temporary = .true.
 
   end function scMult_dataVecMTX_f
 

@@ -33,7 +33,7 @@ Contains
 	! uses: funcList, obsList, freqList, grid
 	type (dataValue_t), dimension(:), intent(in)		:: dvec	! residuals
 	type (cvector), intent(in)							:: H
-	type (cvector), intent(out)							:: outE
+	type (cvector), intent(inout)							:: outE
 	type (sparsevecc)									:: g_sparse
 	integer												:: j,istat
 	integer												:: m !# of complex data pts
@@ -118,7 +118,7 @@ Contains
 	complex(8)										:: Hx,Hy,Hz
 	complex(8)										:: pd_Hx,pd_Hy,pd_Hz
 	type (sparsevecc)								:: gc_sparse  ! g*
-	type (sparsevecc), intent(out)					:: g_sparse	! g
+	type (sparsevecc), intent(inout)				:: g_sparse	! g
 	real(8)											:: EARTH_R
 
 	if (.not.obs%located) then

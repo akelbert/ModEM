@@ -100,6 +100,9 @@ module DataSpace
       logical       :: normalized = .false.
       logical		:: allocated = .false.
 
+      ! needed to avoid memory leaks for temporary function outputs
+      logical		:: temporary = .false.
+
   end type dataVec_t
 
 
@@ -117,6 +120,9 @@ module DataSpace
 
       logical       :: allocated = .false.
 
+      ! needed to avoid memory leaks for temporary function outputs
+      logical		:: temporary = .false.
+
   end type dataVecTX_t
 
 
@@ -129,6 +135,9 @@ module DataSpace
       type (dataVecTX_t), pointer, dimension(:)	:: d
 
       logical		:: allocated = .false.
+
+      ! needed to avoid memory leaks for temporary function outputs
+      logical		:: temporary = .false.
 
   end type dataVecMTX_t
 
@@ -234,9 +243,9 @@ Contains
 
   subroutine deall_dataVec(d)
 
-    type (dataVec_t), intent(inout)	:: d
+    type (dataVec_t)	:: d
     ! local
-    integer                         :: istat
+    integer             :: istat
 
     if(d%allocated) then
        !  deallocate everything relevant
@@ -310,6 +319,11 @@ Contains
     d2%rx = d1%rx
     d2%tx = d1%tx
     d2%dataType = d1%dataType
+
+    ! if input is a temporary function output, deallocate
+    if (d1%temporary) then
+    	call deall_dataVec(d1)
+    endif
 
   end subroutine copy_dataVec
 
@@ -563,9 +577,9 @@ Contains
 
   subroutine deall_dataVecTX(d)
 
-    type (dataVecTX_t), intent(inout)	:: d
+    type (dataVecTX_t)	:: d
     ! local
-    integer                             :: i,istat
+    integer             :: i,istat
 
     if(d%allocated) then
        !  deallocate everything relevant
@@ -609,7 +623,7 @@ Contains
   subroutine copy_dataVecTX(d2, d1)
 
     type (dataVecTX_t), intent(in)		:: d1
-    type (dataVecTX_t), intent(inout)		:: d2
+    type (dataVecTX_t), intent(inout)	:: d2
     ! local variable
     integer                             :: i
 
@@ -635,6 +649,11 @@ Contains
     enddo
     d2%tx = d1%tx
     d2%allocated = .true.
+
+    ! if input is a temporary function output, deallocate
+    if (d1%temporary) then
+    	call deall_dataVecTX(d1)
+    endif
 
   end subroutine copy_dataVecTX
 
@@ -817,9 +836,9 @@ Contains
 
   subroutine deall_dataVecMTX(d)
 
-    type (dataVecMTX_t), intent(inout)	:: d
+    type (dataVecMTX_t)	:: d
     ! local
-    integer                             :: j,istat
+    integer             :: j,istat
 
     if(d%allocated) then
        !  deallocate everything relevant
@@ -888,6 +907,11 @@ Contains
     enddo
 
     d2%allocated = .true.
+
+    ! if input is a temporary function output, deallocate
+    if (d1%temporary) then
+    	call deall_dataVecMTX(d1)
+    endif
 
   end subroutine copy_dataVecMTX
 

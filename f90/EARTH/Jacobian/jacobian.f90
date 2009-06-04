@@ -306,7 +306,7 @@ Contains
 
     implicit none
 	type (cvector), intent(in)					 :: vecE
-	type (cvector), intent(out)					 :: vecF
+	type (cvector), intent(inout)					 :: vecF
 	type (grid_t), intent(in)				 :: grid
     real(8)										 :: xlen,xlenjp,xlenkp
     real(8)										 :: ylen,ylenip,ylenkp
@@ -418,7 +418,7 @@ Contains
 
     implicit none
 	type (cvector), intent(inout)				 :: vecE
-	type (cvector), intent(out)					 :: vecF
+	type (cvector), intent(inout)					 :: vecF
 	type (grid_t), intent(in)				 :: grid
 	logical										 :: verbose
     integer										 :: i,j,k,istat
@@ -534,7 +534,7 @@ Contains
 
     implicit none
 	type (cvector), intent(inout)				 :: vecF
-	type (cvector), intent(out)					 :: vecE
+	type (cvector), intent(inout)					 :: vecE
 	type (grid_t), intent(in)				 :: grid
 	logical										 :: verbose
     integer										 :: i,j,k,istat
@@ -706,7 +706,7 @@ Contains
 
     implicit none
 	real(8),dimension(:,:,:),intent(in)			 :: resist	 !(nx,ny,nz)
-	type (rvector), intent(out)					 :: vecF
+	type (rvector), intent(inout)					 :: vecF
 	type (grid_t), intent(in)				 :: grid
     real(8)										 :: lm,lp,S
 	integer										 :: i,j,k,istat
@@ -1012,7 +1012,7 @@ Contains
 	use global	! uses grid,param,rho
 
     type (modelParam_t), intent(in)					:: da
-	type (rscalar), intent(out)						:: dm !(nx,ny,nz)
+	type (rscalar), intent(inout)						:: dm !(nx,ny,nz)
 	!real(8), dimension(:,:,:), intent(inout)		:: dm !(nx,ny,nz)
 	integer											:: i,j,k,l,istat
 	integer											:: iL,ip
@@ -1109,7 +1109,7 @@ Contains
 	use global
     implicit none
 	type (rscalar), intent(in)						:: dm !(nx,ny,nz)
-    type (modelParam_t), intent(out)					:: da
+    type (modelParam_t), intent(inout)					:: da
 	!real(8),dimension(:,:,:),intent(in)				 :: dm  !(nx,ny,nz)
 	!real(8),dimension(:),intent(out)				 :: da  !ncoeff
 	integer											 :: i,j,k,l

@@ -138,14 +138,16 @@ Contains
 
 	integer     :: j, istat
 
-	do j = 1,size(typeDict)
-	   if (associated(typeDict(j)%id)) then
-	      deallocate(typeDict(j)%id,STAT=istat)
-	   end if
-	end do
+	if (associated(typeDict)) then
 
-    if (associated(typeDict)) then
+	   do j = 1,size(typeDict)
+	      if (associated(typeDict(j)%id)) then
+	         deallocate(typeDict(j)%id,STAT=istat)
+	      end if
+	   end do
+
        deallocate(typeDict,STAT=istat)
+
     end if
 
   end subroutine deall_typeDict

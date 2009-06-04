@@ -42,6 +42,8 @@ type ::  modelParam_t
    real (kind=prec), pointer, dimension(:,:) :: v
    real (kind=prec)		:: AirCond = SIGMA_AIR
    logical           			:: allocated = .false.
+   !   necessary to avoid memory leaks; only true for function outputs
+   logical						:: temporary = .false.
    !   parameter types supported:
    !   LINEAR = linear conductivity of each grid Earth cell is specified
    !   LOGE = natural log of conductivity in Earth cells specified
@@ -154,7 +156,7 @@ Contains
   !************************************************************
    subroutine deall_modelParam(cond)
      implicit none
-     type (modelParam_t), intent(inout)   :: cond
+     type (modelParam_t)   :: cond
      ! local
      integer		:: istat
 
@@ -298,6 +300,10 @@ Contains
      endif
      mOut%v = mIn%v
      mOut%AirCond = mIn%AirCond
+
+     if(mIn%temporary) then
+     	call deall_modelParam(mIn)
+     endif
 
    end subroutine copy_modelParam
 

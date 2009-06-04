@@ -36,7 +36,7 @@ Contains
 
 
 	complex(8), dimension(:), intent(inout)	:: hvec,bvec
-	type (sparsevecc), intent(out)			:: bvH
+	type (sparsevecc), intent(inout)		:: bvH
 	integer									:: istat
 
 	!allocate(Hx(np1),Hy(np1),Hz(np1),STAT=istat)
@@ -79,7 +79,7 @@ Contains
 
 	!use field_vectors
 
-	type (cvector), intent(out)				:: H,F
+	type (cvector), intent(inout)			:: H,F
 	type (sparsevecc)						:: Hb
 	complex(8), dimension(:), allocatable	:: hvec
 	!complex(8), dimension(:), allocatable   :: Hx,Hy,Hz

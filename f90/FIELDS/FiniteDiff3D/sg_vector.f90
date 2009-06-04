@@ -192,6 +192,11 @@ module sg_vector
      ! allocated:  .true.  x, y, z arrays have been allocated
      logical		                              :: allocated = .false.
 
+     ! temporary:  .true. for function outputs only; necessary to avoid memory leaks
+     ! (probably will not be needed in the future when compilers will support
+     ! ISO/IEC 15581 - the "allocatable array extension")
+     logical										:: temporary = .false.
+
      ! pointer to parent grid
      type (grid_t), pointer                             :: grid
 
@@ -223,6 +228,11 @@ module sg_vector
 
      ! allocated:  .true.  x, y, z arrays have been allocated
      logical		                              :: allocated = .false.
+
+     ! temporary:  .true. for function outputs only; necessary to avoid memory leaks
+     ! (probably will not be needed in the future when compilers will support
+     ! ISO/IEC 15581 - the "allocatable array extension")
+     logical										:: temporary = .false.
 
      ! pointer to parent grid
      type (grid_t), pointer                             :: grid
@@ -565,6 +575,11 @@ Contains
 
     end if
 
+    ! if the input was a temporary function output, deallocate
+    if (E1%temporary) then
+    	call deall_rvector(E1)
+    end if
+
   end subroutine copy_rvector  ! copy_rvector
 
 
@@ -616,6 +631,11 @@ Contains
 
        end if
 
+    end if
+
+    ! if the input was a temporary function output, deallocate
+    if (E1%temporary) then
+    	call deall_cvector(E1)
     end if
 
   end subroutine copy_cvector  ! copy_cvector
@@ -796,6 +816,8 @@ Contains
        end if
     end if
 
+    E2%temporary = .true.
+
   end function scMult_cvector_f ! scMult_cvector_f
 
 
@@ -887,6 +909,8 @@ Contains
 
        end if
     end if
+
+    E2%temporary = .true.
 
   end function scMultReal_cvector_f ! scMultReal_cvector_f
 
@@ -981,6 +1005,8 @@ Contains
        end if
     end if
 
+    E2%temporary = .true.
+
   end function scMult_rvector_f ! scMult_rvector_f
 
 
@@ -1071,6 +1097,8 @@ Contains
 
        end if
     end if
+
+    E3%temporary = .true.
 
   end function add_rvector_f ! add_rvector_f
 
@@ -1163,6 +1191,8 @@ Contains
        end if
     end if
 
+    E3%temporary = .true.
+
   end function add_cvector_f ! add_cvector_f
 
 
@@ -1253,6 +1283,8 @@ Contains
 
        end if
     end if
+
+    E3%temporary = .true.
 
   end function subtract_rvector_f ! subtract_rvector_f
 
@@ -1345,6 +1377,8 @@ Contains
        end if
     end if
 
+    E3%temporary = .true.
+
   end function subtract_cvector_f ! subtract_cvector_f
 
 
@@ -1436,6 +1470,8 @@ Contains
        end if
     end if
 
+    E3%temporary = .true.
+
   end function diagMult_rvector_f ! diagMult_rvector_f
 
 
@@ -1526,6 +1562,8 @@ Contains
 
        end if
     end if
+
+    E3%temporary = .true.
 
   end function diagMult_cvector_f ! diagMult_cvector_f
 
@@ -1620,6 +1658,8 @@ Contains
        end if
     end if
 
+    E3%temporary = .true.
+
   end function diagMult_crvector_f ! diagMult_crvector_f
 
 
@@ -1712,6 +1752,8 @@ Contains
 
        end if
     end if
+
+    E3%temporary = .true.
 
   end function diagMult_rcvector_f ! diagMult_rcvector_f
 
@@ -1806,6 +1848,8 @@ Contains
        end if
     end if
 
+    E3%temporary = .true.
+
   end function diagDiv_crvector_f ! diagDiv_crvector_f
 
 
@@ -1898,6 +1942,8 @@ Contains
 
        end if
     end if
+
+    E3%temporary = .true.
 
   end function diagDiv_rcvector_f ! diagDiv_rcvector_f
 
@@ -2265,6 +2311,8 @@ Contains
 
     end if
 
+    E2%temporary = .true.
+
   end function conjg_cvector_f  ! conjg_cvector_f
 
 
@@ -2318,6 +2366,8 @@ Contains
 
     end if
 
+    E3%temporary = .true.
+
   end function cmplx_rvector_f  ! cmplx_rvector_f
 
 
@@ -2349,6 +2399,8 @@ Contains
 
     end if
 
+    E2%temporary = .true.
+
   end function real_cvector_f  ! real_cvector_f
 
 
@@ -2379,6 +2431,8 @@ Contains
       E2%gridType = E1%gridType
 
     end if
+
+    E2%temporary = .true.
 
   end function imag_cvector_f  ! imag_cvector_f
 

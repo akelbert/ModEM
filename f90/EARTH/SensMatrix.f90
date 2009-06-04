@@ -136,6 +136,7 @@ Contains
 	if (present(dR)) then
 		if (.not. dR%allocated) then
 			allocate(dR%dm(nfreq,nfunc),STAT=istat)
+			dR%allocated = .true.
 		endif
 	endif
 
@@ -271,6 +272,7 @@ Contains
 	call deall_sparsevecc(Hb)
 	call deall_cvector(Hj)
 	call deall_cvector(B)
+	call deall_cvector(F)
 	call deall_cvector(dH)
 	call deall_cvector(Hconj)
 	call deall_cvector(dE)
@@ -394,6 +396,7 @@ Contains
 	call deall_dataVecMTX(psi)
 	call deall_rscalar(rho)
 	call deall_cvector(Hj)
+	call deall_cvector(B)
 
    end subroutine fwdPred
 

@@ -52,6 +52,8 @@ module ModelParameter
      type(grid_t),pointer    :: grid
      real (kind=prec)   :: AirCond
      logical			:: allocated = .false.
+   !   necessary to avoid memory leaks; only true for function outputs
+     logical			:: temporary = .false.
      character (len=80)		:: paramType = ''
      !  supported paramType at present: LINEAR and LOGE
   end type modelParam_t
@@ -162,7 +164,7 @@ Contains
   !************************************************************
    subroutine deall_modelParam(m)
      implicit none
-     type (modelParam_t), intent(inout)   :: m
+     type (modelParam_t)   :: m
 
      if(m%allocated) then
         call deall_rscalar(m%cellCond)
@@ -396,6 +398,10 @@ Contains
      endif
      mOut%cellCond%v = mIn%cellCond%v
      mOut%AirCond = mIn%AirCond
+
+     if(mIn%temporary) then
+     	call deall_modelParam(mIn)
+     endif
 
    end subroutine copy_modelParam
 

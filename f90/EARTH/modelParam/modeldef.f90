@@ -130,10 +130,6 @@ module modeldef
 	  type (modelLayer_t), dimension(:), pointer		  :: L
 
 	  ! all coefficient and function information
-	  !integer											  :: np
-	  !type (modelCoeff_t), dimension(:), pointer		  :: p
-
-	  ! all coefficient and function information
 	  integer											  :: nc ! number of active coeffs
 	  type (modelCoeff_t), dimension(:,:), pointer		  :: c	! structure of all coeffs
 
@@ -141,6 +137,11 @@ module modeldef
 	  type (modelShell_t)                                 :: crust
 
 	  logical											  :: allocated=.FALSE.
+
+	  ! temporary:  .true. for function outputs only; necessary to avoid memory leaks
+	  ! (probably will not be needed in the future when compilers will support
+	  ! ISO/IEC 15581 - the "allocatable array extension")
+	  logical											  :: temporary=.FALSE.
 
   end type modelParam_t	! modelParam_t
 

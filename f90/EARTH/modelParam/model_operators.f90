@@ -81,10 +81,10 @@ Contains
   subroutine deall_modelParam(P)
 
     implicit none
-    type (modelParam_t), intent(inout)               :: P
+    type (modelParam_t)               :: P
     ! * EOP
 
-    integer                                        :: status
+    integer                           :: status
 
     if(P%allocated) then
 	  deallocate(P%F,STAT=status)
@@ -665,17 +665,17 @@ Contains
 
 	! copy functional construction
 	P2%nF = P1%nF
-	allocate(P2%F(P2%nF),STAT=status)
+	if (.not. associated(P2%F)) allocate(P2%F(P2%nF),STAT=status)
 	P2%F = P1%F
 
 	! copy layer construction
 	P2%nL = P1%nL
-	allocate(P2%L(P2%nL),STAT=status)
+	if (.not. associated(P2%L)) allocate(P2%L(P2%nL),STAT=status)
 	P2%L = P1%L
 
 	! copy parameter construction
 	P2%nc = P1%nc
-	allocate(P2%c(P2%nL,P2%nF),STAT=status)
+	if (.not. associated(P2%c)) allocate(P2%c(P2%nL,P2%nF),STAT=status)
 	P2%c = P1%c
 
 	! copy crust, if exists
@@ -706,6 +706,10 @@ Contains
 	end do
 
 	P2%allocated = P1%allocated
+
+	if (P1%temporary) then
+		call deall_modelParam(P1)
+	end if
 
   end subroutine copy_modelParam
 
@@ -745,11 +749,9 @@ Contains
 
 	if (.not. compare(P1,P2)) then
 		call errStop('(add_modelParam) input parametrization structures incompatible')
-	else if (.not. P%allocated) then
-		call errStop('(add_modelParam) output structure has to be allocated before calling')
-	else if (.not. compare(P1,P)) then
-		call errStop('(add_modelParam) output parametrization is incompatible')
 	end if
+
+	P = P1
 
 	do j=1,P%nL
 	  do i=1,P%nF
@@ -760,6 +762,8 @@ Contains
 	    end if
 	  end do
 	end do
+
+	P%temporary = .true.
 
   end function add_modelParam_f
 
@@ -779,11 +783,9 @@ Contains
 
 	if (.not. compare(P1,P2)) then
 		call errStop('(subtract_modelParam) input parametrization structures incompatible')
-	else if (.not. P%allocated) then
-		call errStop('(subtract_modelParam) output structure has to be allocated before calling')
-	else if (.not. compare(P1,P)) then
-		call errStop('(subtract_modelParam) output parametrization is incompatible')
 	end if
+
+	P = P1
 
 	do j=1,P%nL
 	  do i=1,P%nF
@@ -794,6 +796,8 @@ Contains
 	    end if
 	  end do
 	end do
+
+	P%temporary = .true.
 
   end function subtract_modelParam_f
 
@@ -813,11 +817,9 @@ Contains
 
 	if (.not. compare(P1,P2)) then
 		call errStop('(mult_modelParam) input parametrization structures incompatible')
-	else if (.not. P%allocated) then
-		call errStop('(mult_modelParam) output structure has to be allocated before calling')
-	else if (.not. compare(P1,P)) then
-		call errStop('(mult_modelParam) output parametrization is incompatible')
 	end if
+
+	P = P1
 
 	do j=1,P%nL
 	  do i=1,P%nF
@@ -828,6 +830,8 @@ Contains
 	    end if
 	  end do
 	end do
+
+	P%temporary = .true.
 
   end function mult_modelParam_f
 
@@ -940,11 +944,9 @@ Contains
 
 	if (.not. P1%allocated) then
 		call errStop('(scDiv_modelParam) input parametrization not allocated yet')
-	else if (.not. P%allocated) then
-		call errStop('(scDiv_modelParam) output structure has to be allocated before calling')
-	else if (.not. compare(P1,P)) then
-		call errStop('(scDiv_modelParam) output parametrization is incompatible')
 	end if
+
+	P = P1
 
 	if(v==R_ZERO) then
 	   write(0,*) 'Error: (scDiv_modelParam) division by zero'
@@ -953,6 +955,7 @@ Contains
 
 	P%c%value = P1%c%value / v
 
+	P%temporary = .true.
 
   end function scDiv_modelParam_f
 
@@ -1101,6 +1104,8 @@ Contains
 	call smoothH_modelParam(P)
 	call smoothV_modelParam(P)
 
+	P%temporary = .true.
+
   end function multBy_CmSqrt
 
 
@@ -1128,6 +1133,8 @@ Contains
 	P  = multBy_CmSqrt(P2)
 
 	call deall_modelParam(P2)
+
+	P%temporary = .true.
 
   end function multBy_Cm
 
