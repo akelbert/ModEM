@@ -20,7 +20,7 @@
 #  Uncomment these lines to make program with Intel compiler
 # F90 = ifort
 # FFLAGS = -O3
-# FFLAGS = -g -debug all
+# FFLAGS = -debug all -check bounds
 # MODULE = -module $(OBJDIR)
 # LIBS = -lblas -llapack
 #  Uncomment these lines to make program with PGI compiler
@@ -74,7 +74,7 @@ $(OBJDIR)/modeldef.o:EARTH/modelParam/modeldef.f90 $(OBJDIR)/paramfunc.o
 $(OBJDIR)/sg_scalar.o:FIELDS/FiniteDiff3D/sg_scalar.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_scalar.f90 -o $(OBJDIR)/sg_scalar.o
 
-$(OBJDIR)/sg_vector.o:FIELDS/FiniteDiff3D/sg_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o 
+$(OBJDIR)/sg_vector.o:FIELDS/FiniteDiff3D/sg_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/GridDef.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_vector.f90 -o $(OBJDIR)/sg_vector.o
 
 $(OBJDIR)/sg_sparse_vector.o:FIELDS/FiniteDiff3D/sg_sparse_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o $(OBJDIR)/sg_vector.o 

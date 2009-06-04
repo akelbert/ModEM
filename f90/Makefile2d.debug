@@ -3,8 +3,8 @@
 # with command line options
 # -p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/DICT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod
 # -f90 pgf95 (compiler)
-# -opt -g -Mprof=lines -Mbounds (compiler optimisation)
-# -l -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines (linking options)
+# -opt -g -Mbounds (compiler optimisation)
+# -l -L/usr/lib64 -lblas -llapack -lpgftnrtl (linking options)
 # -o ./objs/2D_MT/Debug (output directory for object files)
 
 #  Uncomment these lines to make program for Solaris OS
@@ -20,7 +20,7 @@
 #  Uncomment these lines to make program with Intel compiler
 # F90 = ifort
 # FFLAGS = -O3
-# FFLAGS = -g -debug all
+# FFLAGS = -debug all -check bounds
 # MODULE = -module $(OBJDIR)
 # LIBS = -lblas -llapack
 #  Uncomment these lines to make program with PGI compiler
@@ -34,9 +34,9 @@
 include Makefile.local
 OBJDIR = ./objs/2D_MT/Debug
 F90 = pgf95 
-FFLAGS = -g -Mprof=lines -Mbounds
+FFLAGS = -g -Mbounds
 MODULE = -module $(OBJDIR)
-LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines
+LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl
 
 # -------------------End-macro-Defs---------------------------
 OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o $(OBJDIR)/DataFunc.o $(OBJDIR)/ModelSens.o $(OBJDIR)/DataSens.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 

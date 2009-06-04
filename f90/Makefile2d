@@ -20,7 +20,7 @@
 #  Uncomment these lines to make program with Intel compiler
 # F90 = ifort
 # FFLAGS = -O3
-# FFLAGS = -g -debug all
+# FFLAGS = -debug all -check bounds
 # MODULE = -module $(OBJDIR)
 # LIBS = -lblas -llapack
 #  Uncomment these lines to make program with PGI compiler
