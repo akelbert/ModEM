@@ -1,0 +1,200 @@
+# Makefile suited for building the Mod3DMT program
+# Generated using: ./fmkmf.pl [OPTIONS] Mod3DMT.f90 > Makefile
+# with command line options
+# -p .:INV:LAPACK:SENS:UTILS:FIELDS/FiniteDiff3D:3D_MT:3D_MT/DICT:3D_MT/modelParam:3D_MT/FWD:3D_MT/FWD/Mod2d:3D_MT/ioMod
+# -f90 ifort (compiler)
+# -opt -O3 (compiler optimisation)
+# -l -lblas -llapack (linking options)
+# -o ./objs/3D_MT/Release (output directory for object files)
+
+#  Uncomment these lines to make program for Solaris OS
+# F90 = f90
+# FFLAGS = -dalign -g -C -w  -L/usr/local/lib
+# LIBS = -xlic_lib=sunperf
+#  Uncomment these lines to make program with g95
+# F90 = g95
+# FFLAGS = -O2
+# FFLAGS = -g -ftrace=frame -fbounds-check
+# MODULE = -fmod=$(OBJDIR)
+# LIBS = -lblas -llapack
+#  Uncomment these lines to make program with Intel compiler
+# F90 = ifort
+# FFLAGS = -O3
+# FFLAGS = -debug all -check bounds
+# MODULE = -module $(OBJDIR)
+# LIBS = -lblas -llapack
+#  Uncomment these lines to make program with PGI compiler
+# F90 = pgf95
+# FFLAGS = -O3
+# FFLAGS = -g -Mprof=lines -Mbounds
+# MODULE = -module $(OBJDIR)
+# LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines
+
+# ------------------Macro-Defs---------------------
+include Makefile.local
+OBJDIR = ./objs/3D_MT/LapackRelease
+F90 = ifort 
+FFLAGS = -O3
+MODULE = -module $(OBJDIR)
+LIBS = #-lblas -llapack
+
+# -------------------End-macro-Defs---------------------------
+OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/GridDef.o $(OBJDIR)/file_units.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/receivers.o $(OBJDIR)/transmitters.o $(OBJDIR)/dataTypes.o $(OBJDIR)/DataFunc.o $(OBJDIR)/ModelSens.o $(OBJDIR)/DataSens.o $(OBJDIR)/sg_diff_oper.o $(OBJDIR)/GridCalc.o $(OBJDIR)/WSfwd2Dpar.o $(OBJDIR)/WSutils.o $(OBJDIR)/WSfwd1Dmod.o $(OBJDIR)/WSfwd2Dmod.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/boundary_ws.o $(OBJDIR)/modelOperator3D.o $(OBJDIR)/solver.o $(OBJDIR)/EMsolve3D.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod3DMT.o \
+	LAPACK/BLAS2_3.o LAPACK/LAPACK_C16.o LAPACK/LAPACK_R8.o LAPACK/blas1.o
+
+
+all: Mod3DMT 
+
+# Here is the link step 
+Mod3DMT: $(OBJDIR) $(OBJ) 
+	 $(F90) -o $(OUTDIR)/Mod3DMT $(OBJ) $(LIBS) 
+
+# Here are the compile steps 
+
+$(OBJDIR): 
+	mkdir -p $(OBJDIR)
+
+$(OBJDIR)/math_constants.o:UTILS/math_constants.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) UTILS/math_constants.f90 -o $(OBJDIR)/math_constants.o
+
+$(OBJDIR)/utilities.o:UTILS/utilities.f90 $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) UTILS/utilities.f90 -o $(OBJDIR)/utilities.o
+
+$(OBJDIR)/DataSpace.o:SENS/DataSpace.f90 $(OBJDIR)/utilities.o $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) SENS/DataSpace.f90 -o $(OBJDIR)/DataSpace.o
+
+$(OBJDIR)/GridDef.o:3D_MT/GridDef.f90 $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/GridDef.f90 -o $(OBJDIR)/GridDef.o
+
+$(OBJDIR)/file_units.o:UTILS/file_units.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) UTILS/file_units.f90 -o $(OBJDIR)/file_units.o
+
+$(OBJDIR)/sg_scalar.o:FIELDS/FiniteDiff3D/sg_scalar.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_scalar.f90 -o $(OBJDIR)/sg_scalar.o
+
+$(OBJDIR)/sg_vector.o:FIELDS/FiniteDiff3D/sg_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/GridDef.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_vector.f90 -o $(OBJDIR)/sg_vector.o
+
+$(OBJDIR)/sg_sparse_vector.o:FIELDS/FiniteDiff3D/sg_sparse_vector.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o $(OBJDIR)/sg_vector.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_sparse_vector.f90 -o $(OBJDIR)/sg_sparse_vector.o
+
+$(OBJDIR)/ModelParameter.o:3D_MT/modelParam/ModelParameter.f90 $(OBJDIR)/GridDef.o $(OBJDIR)/file_units.o $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o 3D_MT/modelParam/modelCov/RecursiveAR.hd 3D_MT/modelParam/ModelMap.inc 3D_MT/modelParam/modelCov/RecursiveAR.inc 3D_MT/modelParam/modelParamIO/Binary.inc 3D_MT/modelParam/modelParamIO/Mackie.inc 3D_MT/modelParam/modelParamIO/WS.inc
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/modelParam/ModelParameter.f90 -o $(OBJDIR)/ModelParameter.o
+
+$(OBJDIR)/sg_boundary.o:FIELDS/FiniteDiff3D/sg_boundary.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o $(OBJDIR)/sg_vector.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_boundary.f90 -o $(OBJDIR)/sg_boundary.o
+
+$(OBJDIR)/SolnRHS.o:3D_MT/SolnRHS.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/sg_sparse_vector.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/SolnRHS.f90 -o $(OBJDIR)/SolnRHS.o
+
+$(OBJDIR)/EMfieldInterp.o:3D_MT/EMfieldInterp.f90 $(OBJDIR)/utilities.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/ModelParameter.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/EMfieldInterp.f90 -o $(OBJDIR)/EMfieldInterp.o
+
+$(OBJDIR)/receivers.o:3D_MT/DICT/receivers.f90 $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/DICT/receivers.f90 -o $(OBJDIR)/receivers.o
+
+$(OBJDIR)/transmitters.o:3D_MT/DICT/transmitters.f90 $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/DICT/transmitters.f90 -o $(OBJDIR)/transmitters.o
+
+$(OBJDIR)/dataTypes.o:3D_MT/DICT/dataTypes.f90 $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/DICT/dataTypes.f90 -o $(OBJDIR)/dataTypes.o
+
+$(OBJDIR)/DataFunc.o:3D_MT/DataFunc.f90 $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/receivers.o $(OBJDIR)/transmitters.o $(OBJDIR)/dataTypes.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/DataFunc.f90 -o $(OBJDIR)/DataFunc.o
+
+$(OBJDIR)/ModelSens.o:3D_MT/ModelSens.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataFunc.o $(OBJDIR)/DataSpace.o $(OBJDIR)/transmitters.o $(OBJDIR)/dataTypes.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/ModelSens.f90 -o $(OBJDIR)/ModelSens.o
+
+$(OBJDIR)/DataSens.o:SENS/DataSens.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/DataFunc.o $(OBJDIR)/ModelSens.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) SENS/DataSens.f90 -o $(OBJDIR)/DataSens.o
+
+$(OBJDIR)/sg_diff_oper.o:FIELDS/FiniteDiff3D/sg_diff_oper.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_scalar.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) FIELDS/FiniteDiff3D/sg_diff_oper.f90 -o $(OBJDIR)/sg_diff_oper.o
+
+$(OBJDIR)/GridCalc.o:3D_MT/GridCalc.f90 $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_scalar.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/GridCalc.f90 -o $(OBJDIR)/GridCalc.o
+
+$(OBJDIR)/WSfwd2Dpar.o:3D_MT/FWD/Mod2d/WSfwd2Dpar.f90 $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/FWD/Mod2d/WSfwd2Dpar.f90 -o $(OBJDIR)/WSfwd2Dpar.o
+
+$(OBJDIR)/WSutils.o:3D_MT/FWD/Mod2d/WSutils.f90 $(OBJDIR)/math_constants.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/FWD/Mod2d/WSutils.f90 -o $(OBJDIR)/WSutils.o
+
+$(OBJDIR)/WSfwd1Dmod.o:3D_MT/FWD/Mod2d/WSfwd1Dmod.f90 $(OBJDIR)/WSfwd2Dpar.o $(OBJDIR)/WSutils.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/FWD/Mod2d/WSfwd1Dmod.f90 -o $(OBJDIR)/WSfwd1Dmod.o
+
+$(OBJDIR)/WSfwd2Dmod.o:3D_MT/FWD/Mod2d/WSfwd2Dmod.f90 $(OBJDIR)/WSfwd1Dmod.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/FWD/Mod2d/WSfwd2Dmod.f90 -o $(OBJDIR)/WSfwd2Dmod.o
+
+$(OBJDIR)/FwdTEmod.o:3D_MT/FWD/Mod2d/FwdTEmod.f90 $(OBJDIR)/WSfwd2Dmod.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/FWD/Mod2d/FwdTEmod.f90 -o $(OBJDIR)/FwdTEmod.o
+
+$(OBJDIR)/boundary_ws.o:3D_MT/FWD/boundary_ws.f90 $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/FwdTEmod.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/FWD/boundary_ws.f90 -o $(OBJDIR)/boundary_ws.o
+
+$(OBJDIR)/modelOperator3D.o:3D_MT/FWD/modelOperator3D.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/GridCalc.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/boundary_ws.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/FWD/modelOperator3D.f90 -o $(OBJDIR)/modelOperator3D.o
+
+$(OBJDIR)/solver.o:3D_MT/FWD/solver.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/modelOperator3D.o $(OBJDIR)/sg_vector.o $(OBJDIR)/modelOperator3D.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/FWD/solver.f90 -o $(OBJDIR)/solver.o
+
+$(OBJDIR)/EMsolve3D.o:3D_MT/FWD/EMsolve3D.f90 $(OBJDIR)/sg_boundary.o $(OBJDIR)/sg_diff_oper.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/modelOperator3D.o $(OBJDIR)/solver.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_scalar.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/FWD/EMsolve3D.f90 -o $(OBJDIR)/EMsolve3D.o
+
+$(OBJDIR)/EMsolver.o:3D_MT/EMsolver.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/DataFunc.o $(OBJDIR)/DataSpace.o $(OBJDIR)/EMsolve3D.o $(OBJDIR)/transmitters.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/EMsolver.f90 -o $(OBJDIR)/EMsolver.o
+
+$(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSens.o $(OBJDIR)/ModelSens.o $(OBJDIR)/EMsolver.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) SENS/SensMatrix.f90 -o $(OBJDIR)/SensMatrix.o
+
+$(OBJDIR)/UserCtrl.o:./UserCtrl.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) ./UserCtrl.f90 -o $(OBJDIR)/UserCtrl.o
+
+$(OBJDIR)/ioAscii.o:3D_MT/ioMod/ioAscii.f90 $(OBJDIR)/GridDef.o $(OBJDIR)/math_constants.o $(OBJDIR)/EMsolve3D.o $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o $(OBJDIR)/EMsolver.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/ioMod/ioAscii.f90 -o $(OBJDIR)/ioAscii.o
+
+$(OBJDIR)/Main.o:3D_MT/Main.f90 $(OBJDIR)/ModelParameter.o $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o $(OBJDIR)/EMsolver.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/Main.f90 -o $(OBJDIR)/Main.o
+
+$(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensMatrix.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) INV/NLCG.f90 -o $(OBJDIR)/NLCG.o
+
+$(OBJDIR)/Mod3DMT.o:Mod3DMT.f90 $(OBJDIR)/SensMatrix.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) Mod3DMT.f90 -o $(OBJDIR)/Mod3DMT.o
+
+LAPACK/BLAS2_3.o:LAPACK/BLAS2_3.f
+	 $(F90) -c $(FFLAGS) LAPACK/BLAS2_3.f -o LAPACK/BLAS2_3.o
+
+LAPACK/LAPACK_C16.o:LAPACK/LAPACK_C16.f
+	 $(F90) -c $(FFLAGS) LAPACK/LAPACK_C16.f -o LAPACK/LAPACK_C16.o
+
+LAPACK/LAPACK_R8.o:LAPACK/LAPACK_R8.f
+	 $(F90) -c  $(FFLAGS) LAPACK/LAPACK_R8.f -o LAPACK/LAPACK_R8.o
+
+LAPACK/blas1.o:LAPACK/blas1.f
+	 $(F90) -c $(FFLAGS) LAPACK/blas1.f -o LAPACK/blas1.o
+
+LAPACK/wsBLAS.o:LAPACK/wsBLAS.f90
+	 $(F90) -c $(MODULE) $(FFLAGS) LAPACK/wsBLAS.f90 -o LAPACK/wsBLAS.o
+
+LAPACK/wsLAPACK.o:LAPACK/wsLAPACK.f90
+	 $(F90) -c $(MODULE) $(FFLAGS) LAPACK/wsLAPACK.f90 -o LAPACK/wsLAPACK.o
+
+#LAPACK/wsio.o:LAPACK/wsio.f90
+#	 $(F90) -c -O LAPACK/wsio.f90 -o LAPACK/wsio.o
+#LAPACK/wsio.o:LAPACK/wsio.f90
+#	 $(F90) -c $(FFLAGS) LAPACK/wsio.f90 -o LAPACK/wsio.o
+
+# Type " make clean " to get rid of all object and module files 
+clean: 
+	cd $(OBJDIR); \
+	rm -f *~ *.o *.obj *.mod *.d *.s00 *.dbg *.stackdump \
+	`find . -mindepth 1 -name "*~"` 
+
+cleanall: clean 
+	rm -f $(OUTDIR)/Mod3DMT 
+
+src: clean 
+	tar cvfz $(ARCHIVE).tgz * 
+
+  
