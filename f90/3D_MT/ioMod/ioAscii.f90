@@ -610,7 +610,7 @@ Contains
       integer   :: sign_in_file
       real(kind=8) :: SI_factor
       logical      :: conjugate
-      character(200) :: comments
+      character(400) :: comments
       logical      :: errorBar, isComplex
 
       open(unit=fid,file=cfile,form='formatted',status='old')
@@ -644,7 +644,7 @@ Contains
       ! write(6,*) nTx
       call create(nTx,allData)
       allocate(periods(nTx))
-      allocate(siteids(nTx,1000))
+      allocate(siteids(nTx,10000))
 
      ! loop over dataVec instances
       Ndata = 0
@@ -684,7 +684,7 @@ Contains
 
 	         allData%d(iTx)%data(iDt)%tx = iTx
 
-	         read(fid,'(a200)') comments ! header line: need to parse this
+	         read(fid,'(a400)') comments ! header line: need to parse this
 	         select case (nComp)
 	            case(8)
 	               allData%d(iTx)%data(iDt)%datatype =  Full_Impedance
