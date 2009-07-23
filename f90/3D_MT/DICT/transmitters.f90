@@ -42,7 +42,7 @@ Contains
   subroutine TXdictSetUp(nTx,Periods)
 
      integer, intent(in)            :: nTx
-     real(kind=prec), intent(in)    :: periods(nTx)
+     real(kind=prec), intent(in)    :: Periods(nTx)
 
      ! local variables
      integer                     :: iTx

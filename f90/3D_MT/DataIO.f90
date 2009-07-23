@@ -13,19 +13,19 @@ module DataIO
 
   private
 
-  interface read_data
+  interface read_dataVecMTX
 	MODULE PROCEDURE read_Z
   end interface
 
-  interface write_data
+  interface write_dataVecMTX
 	MODULE PROCEDURE write_Z
   end interface
 
 
-  public     :: read_data, write_data
+  public     :: read_dataVecMTX, write_dataVecMTX
 
 
-  character(400), private, save :: info_in_file
+  character(100), private, save :: info_in_file
   integer,        private, save :: sign_in_file
   character(20),  private, save :: units_in_file
 
@@ -35,7 +35,7 @@ Contains
 !**********************************************************************
 ! writes impedance file in ASCII format
 
-   subroutine write_Z(cfile,allData)
+   subroutine write_Z(allData,cfile)
 
       character(*), intent(in)					:: cfile
       type(dataVecMTX_t), intent(in)			:: allData
@@ -43,10 +43,13 @@ Contains
       type(dataVec_t)                           :: data
       character(400)                            :: info
       integer									:: i,j,k,istat
-      integer                                   :: nBlocks,isite,icomp,iTx,iDt
+      integer                                   :: nBlocks,iTx,iDt
       real(kind=prec)    						:: SI_factor
+      logical                                   :: conjugate
+      character(10)                             :: tab='           '
 
-      info = trim(info_in_file)//': Impedance responses from ModEM'
+
+      info = 'Impedance responses from ModEM'
       SI_factor = ImpUnits('[V/m]/[T]',units_in_file)
       if (sign_in_file == ISIGN) then
         conjugate = .false.
@@ -62,7 +65,7 @@ Contains
       write(ioDat,'(a17,i3)') 'Sign convention: ',sign_in_file
       write(ioDat,*)
 
-      nBlocks = countVec(allData)
+      nBlocks = countDataVec(allData)
       write(ioDat,'(i5)') nBlocks
 
       ! loop over periods
@@ -74,42 +77,41 @@ Contains
 	         ! write period, number of sites and components for this period and data type
 	         write(ioDat,'(es12.6,2i5)') txDict(iTx)%period,data%nComp,data%nSite
 			 ! write latitude, longitude and elevation
-			 do j = 1,3
-			   do k = 1,data%nSite
-	         	  write(ioDat,'(f14.3)',advance='no') rxDict(data%rx(k))%x(j)
+			 do i = 1,3
+			   do j = 1,data%nSite
+	         	  write(ioDat,'(f14.3)',advance='no') rxDict(data%rx(j))%x(i)
 			   enddo
 	           write(ioDat,*)
 			 enddo
 			 write(ioDat,'(a8)',advance='no') ' '
 			 ! write the descriptor
-			 do i = 1,data%nComp
-			 	write(ioDat,'(a15)',advance='no') trim(typeDict(data%dataType)%id(i))
+			 do k = 1,data%nComp
+			 	write(ioDat,'(a15)',advance='no') trim(typeDict(data%dataType)%id(k))
 			 enddo
 			 write(ioDat,*)
 
 	         ! conjugate data as necessary
 	         if (conjugate) then
-	         	do j=2,data%nComp,2
-	         		data%value(j,:) = - data%value(j,:)
+	         	do k=2,data%nComp,2
+	         		data%value(k,:) = - data%value(k,:)
 	         	end do
 	         end if
 
 	         ! write data
-	         do isite = 1,data%nSite
+	         do j = 1,data%nSite
 	         	! Note: temporarily, we write site id's according to their number;
 	         	! in the future, they will be stored in the receiver dictionary
-	         	write(siteid,'(i5)') isite
-	         	write(ioDat,'(a10)',advance='no') trim(rxDict(data%rx(k))%id)
+	         	write(ioDat,'(a10)',advance='no') trim(rxDict(data%rx(j))%id)
       	        !  note that each data field in a dataVec (i.e., allData%d(iTx)%data)
 	         	!   is a real array of size (nComp,nSite)
-	         	do icomp = 1,data%nComp
-	         		write(ioDat,'(es15.6)',advance='no') data%value(icomp,isite)*SI_factor
+	         	do k = 1,data%nComp
+	         		write(ioDat,'(es15.6)',advance='no') data%value(k,j)*SI_factor
 	         	enddo
 	         	write(ioDat,*)
 	         	write(ioDat,'(a10)',advance='no') tab
-	         	do icomp = 1,data%nComp
+	         	do k = 1,data%nComp
 	         	    if (data%errorBar) then
-	         		   write(ioDat,'(es15.6)',advance='no') data%error(icomp,isite)*SI_factor
+	         		   write(ioDat,'(es15.6)',advance='no') data%error(k,j)*SI_factor
 	         		else
 	         		   write(ioDat,'(es15.6)',advance='no') R_ZERO
 	         		endif
@@ -127,26 +129,26 @@ Contains
 ! reads in the ASCII data file, sets up all dictionaries
 ! and the allData structure, including data and error bars
 
-   subroutine read_Z(cfile,allData)
+   subroutine read_Z(allData,cfile)
 
      character(*), intent(in)  				:: cfile
      type(dataVecMTX_t), intent(inout)   	:: allData
      ! local variables
-     type(dataVec), dimension(:), pointer   :: Data
-     integer      							:: nBlocks,nTx,nDt,nSites,nData
-     integer                                :: i,j,k,istat
-     character(10),pointer,dimension(:)     :: siteIDs
+     type(dataVec_t), dimension(:), pointer :: Data
+     integer      							:: nBlocks,nTx,nDt,nSite,nComp,nData
+     integer                                :: iTx,iRx,iDt,i,j,k,istat
+     character(10), pointer,dimension(:)    :: siteIDs
      real(kind=prec), pointer, dimension(:,:) :: siteLoc
-     real(kind=prec)                        :: SI_factor
+     real(kind=prec)                        :: SI_factor, Period
      logical      							:: conjugate, errorBar, isComplex
-     character(400) 						:: header
+     character(400) 						:: temp,header
 
       ! First, set up the data type dictionary, if it's not in existence yet
-      call typeDictSetUp(typeDict)
+      call typeDictSetUp()
 
       ! Now, read the data file
       open(unit=ioDat,file=cfile,form='formatted',status='old')
-      read(ioDat,'(a13,a400)') temp,info_in_file
+      read(ioDat,'(a13,a100)') temp,info_in_file
       read(ioDat,'(a7,a20)') temp,units_in_file
 
       SI_factor = ImpUnits(units_in_file,'[V/m]/[T]')
@@ -184,51 +186,45 @@ Contains
          ! create dataVec object, read in data
          isComplex = .true.
          errorBar = .true.
-         call create_dataVec(nComp,nSite,Data,isComplex,errorBar)
+         call create_dataVec(nComp,nSite,Data(i),isComplex,errorBar)
          nData  = nData + nComp*nSite
 
          read(ioDat,'(a400)') header ! header line: need to parse this
 
-         Data%dataType = ImpType(nComp,header)
+         Data(i)%dataType = ImpType(nComp,header)
 
          do k=1,nSite
-         	read(ioDat,*) siteIDs(k), (Data%value(j,k),j=1,nComp)
-         	read(ioDat,*)             (Data%error(j,k),j=1,nComp)
+         	read(ioDat,*) siteIDs(k), (Data(i)%value(j,k),j=1,nComp)
+         	read(ioDat,*)             (Data(i)%error(j,k),j=1,nComp)
          end do
 
          ! convert data to SI units
-         Data%value = SI_factor * Data%value
-         Data%error = SI_factor * Data%error
+         Data(i)%value = SI_factor * Data(i)%value
+         Data(i)%error = SI_factor * Data(i)%error
 
          ! conjugate data as necessary
          if (conjugate) then
          	do j=2,nComp,2
-         		Data%value(j,:) = - Data%value(j,:)
+         		Data(i)%value(j,:) = - Data(i)%value(j,:)
          	end do
          end if
 
-         ! Update the transmitter dictionary and the index
-         if (i .eq. 1) then
-         	call txDictSetUp(1,Period)
-         	Data%tx = 1
-         else
-         	iTx = update_txDict(Period)
-         	Data%tx = iTx
-         end if
+         ! Update the transmitter dictionary and the index (sets up if necessary)
+         iTx = update_txDict(Period)
+         Data(i)%tx = iTx
 
          ! Now, update the receiver dictionary and indices
          if (i .eq. 1) then
          	call rxDictSetUp(nSite,siteLoc,siteIDs)
          	do k=1,nSite
-         		Data%rx(k) = k
+         		Data(i)%rx(k) = k
          	end do
          else
          	do k=1,nSite
          		iRx = update_rxDict(siteLoc(k,:),siteIDs(k))
-         		Data%rx(k) = iRx
+         		Data(i)%rx(k) = iRx
          	end do
          end if
-
          deallocate(siteLoc,siteIDs,STAT=istat)
 
 	  end do

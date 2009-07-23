@@ -8,6 +8,7 @@ module Main
   use emsolver ! txDict, EMsolnMTX
   use userctrl
   use ioascii
+  use dataio
   implicit none
 
       ! I/O units ... reuse generic read/write units if
@@ -103,12 +104,8 @@ Contains
 	inquire(FILE=cUserDef%rFile_Data,EXIST=exists)
 
 	if (exists) then
-	   call read_Z(fidRead,cUserDef%rFile_Data,nPer,periods,nSites,sites,siteids,data_units,compids,allData)
-       !  Using periods, sites obtained from data file
-       !     set up transmitter and receiver dictionaries
-       call TXdictSetUp(nPer,periods)
-       call RXdictSetUp(nSites,sites,siteids)
-       call TypeDictSetup()
+       !  This also sets up dictionaries
+	   call read_dataVecMTX(allData,cUserDef%rFile_Data)
     else
        call warning('No input data file - unable to set up dictionaries')
     end if
