@@ -3,6 +3,7 @@ module dataTypes
   ! This module contains the data type dictionary (typeDict) for 3D MT
 
   use math_constants
+  use utilities
 
   implicit none
 
@@ -151,5 +152,86 @@ Contains
     end if
 
   end subroutine deall_typeDict
+
+!**********************************************************************
+! Computes the value by which the data must be multiplied to convert
+! from the old units to the new units.
+! The units may be any of the following.
+! 1) SI units for E/B: [V/m]/[T] (used in ModEM code)
+! 2) practical units for E/B: [mV/km]/[nT]
+! 3) SI units for E/H: [V/m]/[A/m] = Ohm
+
+  function ImpUnits(oldUnits,newUnits) result (SI_factor)
+
+	character(*), intent(in)    :: oldUnits, newUnits
+	real(kind=prec)             :: SI_factor
+	! local
+	real(kind=prec)             :: factor1, factor2
+
+	! first convert the old units to [V/m]/[T]
+	if (index(oldUnits,'[V/m]/[T]')>0) then
+	   ! SI units for E/B
+	   factor1 = ONE
+	else if (index(oldUnits,'[mV/km]/[nT]')>0) then
+	   ! practical units for E/B
+	   factor1 = ONE * 1000.0
+	else if ((index(oldUnits,'[V/m]/[A/m]')>0) .or. (index(oldUnits,'Ohm')>0)) then
+	   ! SI units for E/H
+	   factor1 = ONE * 1000.0 * 10000.0/(4*PI) ! approx. 796000.0
+	else
+	   call errStop('Unknown input units in ImpUnits: '//trim(oldUnits))
+	end if
+
+	! now convert [V/m]/[T] to the new units
+	if (index(newUnits,'[V/m]/[T]')>0) then
+	   ! SI units for E/B
+	   factor2 = ONE
+	else if (index(newUnits,'[mV/km]/[nT]')>0) then
+	   ! practical units for E/B
+	   factor2 = ONE / (1000.0)
+	else if ((index(newUnits,'[V/m]/[A/m]')>0) .or. (index(newUnits,'Ohm')>0)) then
+	   ! SI units for E/H
+	   factor2 = ONE / (1000.0 * 10000.0/(4*PI))
+	else
+	   call errStop('Unknown output units in ImpUnits: '//trim(newUnits))
+	end if
+
+	SI_factor = factor1 * factor2
+
+  end function ImpUnits
+
+!**********************************************************************
+! Figures out the data type from the component ids
+
+  function ImpType(nComp,header) result (dataType)
+
+    integer, intent(in)         :: nComp
+    character(*), intent(in)    :: header
+	integer	             	 	:: dataType
+	! local
+	character(15), allocatable  :: compids(:)
+	integer                     :: j,istat
+
+    select case (nComp)
+       case(8)
+          dataType =  Full_Impedance
+       case(12)
+          dataType =  Impedance_Plus_Hz
+       case(4)
+          dataType =  Off_Diagonal_Impedance
+    end select
+
+    allocate(compids(nComp),STAT=istat)
+
+    read(header,*) compids
+    do j = 1,nComp
+    	if (compids(j) .ne. typeDict(dataType)%id(j)) then
+    		call errStop('Wrong order of impedance components in data header')
+    	end if
+    end do
+
+    deallocate(compids,STAT=istat)
+
+  end function ImpType
 
 end module dataTypes

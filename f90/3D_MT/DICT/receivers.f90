@@ -6,7 +6,7 @@ module receivers
 
   implicit none
 
-  public			:: RXdictSetUp, deall_RXdict
+  public			:: RXdictSetUp, update_rxDict, deall_rxDict
 
   !  multiple receiver dictionaries can be defined, as
   !   different sorts of meta-data may be required for different data
@@ -24,7 +24,7 @@ module receivers
      ! x gives location of EM measurements;
   	 ! x(1) points North, x(2) points East, x(3) points down
      real (kind=prec)                   ::  x(3)
-     ! optional site ID; needed for input and output only
+     ! site ID used for input/output and for searching through the list
      character(80)                      ::  id=''
   end type MTrx
 
@@ -44,26 +44,77 @@ Contains
   subroutine RXdictSetUp(nSites,siteLocations,siteIDs)
 
     integer, intent(in)	 		:: nSites
-    real(kind=prec), intent(in)	:: siteLocations(3,nSites)
+    real(kind=prec), intent(in)	:: siteLocations(nSites,3)
     character(*), intent(in), optional  :: siteIDs(nSites)
 	character(3) :: id
 
     !  local variables
-    integer		:: i
+    integer		:: i,istat
 
-    allocate(rxDict(nSites))
+	if (.not. associated(rxDict)) then
+    	allocate(rxDict(nSites),STAT=istat)
+    end if
 
     do i = 1,nSites
-    	rxDict(i)%x = siteLocations(:,i)
+    	rxDict(i)%x = siteLocations(i,:)
 		if (present(siteIDs)) then
 			rxDict(i)%id = siteIDs(i)
 		else
 			write(id,'(i3.3)') i
 			rxDict(i)%id = id
 		end if
-    enddo
+    end do
 
   end subroutine RXdictSetUp
+
+!**********************************************************************
+! Updates the receiver dictionary with a new location and site ID.
+! Returns the index of the new element.
+! This is not efficient; but this would only be used a few times, with
+! a small number of values, so convenience is much more of an issue here!
+
+  function update_rxDict(loc,id) result (iRx)
+
+     character(*), intent(in)           :: id
+     real(kind=prec), intent(in)        :: loc(3)
+     integer                            :: iRx
+     ! local
+     type(MTrx)                         :: new
+     type(MTrx), pointer, dimension(:)  :: temp
+     integer                            :: nRx, istat
+
+     ! Create a receiver for this location
+     new%id = id
+     new%x  = loc
+
+     ! If rxDict doesn't yet exist, create it
+     if(.not. associated(rxDict)) then
+     	allocate(rxDict(1),STAT=istat)
+     	rxDict(1) = new
+     	iRx = 1
+     	return
+     end if
+
+     nRx = size(rxDict)
+
+     ! If this site isn't new, do nothing
+     do iRx = 1,nRx
+     	if (new%id .eq. rxDict(iRx)%id) then
+     		return
+     	end if
+     end do
+
+     ! If the site really is new, append to the end of the dictionary
+     allocate(temp(nRx+1),STAT=istat)
+     temp(1:nRx) = rxDict
+     temp(nRx+1) = new
+     deallocate(rxDict,STAT=istat)
+     allocate(rxDict(nRx+1),STAT=istat)
+     rxDict = temp
+     deallocate(temp,STAT=istat)
+     iRx = nRx+1
+
+  end function update_rxDict
 
   ! **************************************************************************
   ! Cleans up and deletes receiver dictionary at end of program execution
