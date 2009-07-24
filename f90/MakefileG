@@ -39,7 +39,7 @@ MODULE = -module $(OBJDIR)
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
-OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o $(OBJDIR)/utilities.o $(OBJDIR)/polpak.o $(OBJDIR)/paramfunc.o $(OBJDIR)/modeldef.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/datadef.o $(OBJDIR)/DataSpace.o $(OBJDIR)/iotypes.o $(OBJDIR)/model_operators.o $(OBJDIR)/input.o $(OBJDIR)/iospec.o $(OBJDIR)/interp.o $(OBJDIR)/modelmap.o $(OBJDIR)/global.o $(OBJDIR)/grid_orig.o $(OBJDIR)/field_vectors.o $(OBJDIR)/data_vectors.o $(OBJDIR)/dimensions.o $(OBJDIR)/boundaries.o $(OBJDIR)/elements.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/Main.o $(OBJDIR)/responses.o $(OBJDIR)/functionals.o $(OBJDIR)/output.o $(OBJDIR)/dataFunc.o $(OBJDIR)/sg_spherical.o $(OBJDIR)/wrapper.o $(OBJDIR)/coreFwd.o $(OBJDIR)/maxwells.o $(OBJDIR)/jacobian.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/NLCG.o $(OBJDIR)/interp_orig.o $(OBJDIR)/output_orig.o $(OBJDIR)/Global3D.o 
+OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o $(OBJDIR)/utilities.o $(OBJDIR)/polpak.o $(OBJDIR)/paramfunc.o $(OBJDIR)/modeldef.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/datadef.o $(OBJDIR)/DataSpace.o $(OBJDIR)/iotypes.o $(OBJDIR)/model_operators.o $(OBJDIR)/input.o $(OBJDIR)/iospec.o $(OBJDIR)/interp.o $(OBJDIR)/modelmap.o $(OBJDIR)/global.o $(OBJDIR)/grid_orig.o $(OBJDIR)/field_vectors.o $(OBJDIR)/data_vectors.o $(OBJDIR)/dimensions.o $(OBJDIR)/boundaries.o $(OBJDIR)/elements.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/Main.o $(OBJDIR)/responses.o $(OBJDIR)/functionals.o $(OBJDIR)/output.o $(OBJDIR)/dataFunc.o $(OBJDIR)/sg_spherical.o $(OBJDIR)/wrapper.o $(OBJDIR)/coreFwd.o $(OBJDIR)/maxwells.o $(OBJDIR)/jacobian.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/DataIO.o $(OBJDIR)/NLCG.o $(OBJDIR)/interp_orig.o $(OBJDIR)/output_orig.o $(OBJDIR)/Global3D.o 
 
 
 all: Global3D 
@@ -173,7 +173,10 @@ $(OBJDIR)/SolnRHS.o:EARTH/SolnRHS.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utili
 $(OBJDIR)/SensMatrix.o:EARTH/SensMatrix.f90 $(OBJDIR)/GridDef.o $(OBJDIR)/data_vectors.o $(OBJDIR)/dataFunc.o $(OBJDIR)/modelmap.o $(OBJDIR)/jacobian.o $(OBJDIR)/output.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/boundaries.o $(OBJDIR)/DataSpace.o $(OBJDIR)/SolnRHS.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/SensMatrix.f90 -o $(OBJDIR)/SensMatrix.o
 
-$(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensMatrix.o 
+$(OBJDIR)/DataIO.o:EARTH/DataIO.f90 $(OBJDIR)/data_vectors.o $(OBJDIR)/global.o $(OBJDIR)/input.o $(OBJDIR)/output.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/DataIO.f90 -o $(OBJDIR)/DataIO.o
+
+$(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensMatrix.o $(OBJDIR)/DataIO.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) INV/NLCG.f90 -o $(OBJDIR)/NLCG.o
 
 $(OBJDIR)/interp_orig.o:EARTH/Jacobian/interp_orig.f90  

@@ -8,6 +8,7 @@ module Main
   use emsolver ! txDict, EMsolnMTX
   use userctrl
   use ioascii
+  use dataio
   implicit none
 
       ! I/O units ... reuse generic read/write units if
@@ -17,19 +18,12 @@ module Main
      integer (kind=4), save :: fidWrite = 2
      integer (kind=4), save :: fidError = 99
 
-     integer (kind=4), save :: nPer, nSites
-
   ! ***************************************************************************
   ! * fwdCtrls: User-specified information about the forward solver relaxations
   !type (emsolve_control), save								:: fwdCtrls
   !type (inverse_control), save								:: invCtrls
 
   integer, save                                             :: output_level
-
-  real (kind=prec), pointer, dimension(:), save	:: periods
-  real (kind=prec), pointer, dimension(:,:), save	:: sites
-  character(2), pointer, dimension(:), save    		:: modes
-  character(80), save                               :: data_units
 
   ! this is used to set up the numerical grid in SensMatrix
   type(grid_t), save	        :: grid
@@ -99,12 +93,8 @@ Contains
 	inquire(FILE=cUserDef%rFile_Data,EXIST=exists)
 
 	if (exists) then
-       call read_Z(fidRead,cUserDef%rFile_Data,nPer,periods,modes,nSites,sites,data_units,allData)
-       !  Using periods, sites obtained from data file
-       !     set up transmitter and receiver dictionaries
-       call TXdictSetUp(nPer,periods,modes)
-       call RXdictSetUp(nSites,sites)
-       call TypeDictSetup()
+       !  This also sets up dictionaries
+	   call read_dataVecMTX(allData,cUserDef%rFile_Data)
     else
        call warning('No input data file - unable to set up dictionaries')
     end if
@@ -206,14 +196,12 @@ Contains
 	call deall_modelParam(dsigma)
 	call deall_modelParam(sigma1)
 
-	deallocate(modes,periods,sites,STAT=istat)
-
     if (output_level > 3) then
        write(0,*) 'Cleaning up dictionaries...'
     endif
-	call deall_txDict() ! 2D_MT/EMsolver.f90
-	call deall_rxDict() ! 2D_MT/DataFunc.f90
-	call deall_typeDict() ! 2D_MT/DataFunc.f90
+	call deall_txDict() ! 2D_MT/DICT/transmitters.f90
+	call deall_rxDict() ! 2D_MT/DICT/receivers.f90
+	call deall_typeDict() ! 2D_MT/DICT/dataTypes.f90
 
 	if (associated(sigma)) then
 	   do i = 1,size(sigma)

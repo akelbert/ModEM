@@ -6,7 +6,7 @@ module transmitters
 
   implicit none
 
-  public			:: TXdictSetUp, deall_TXdict
+  public			:: setup_txDict,  update_txDict, deall_txDict
 
   type :: MTtx
      !  An MT source is defined by frequency and boundary conditions
@@ -34,29 +34,83 @@ Contains
 !  This is just a simple example of a routine for setting up the TX
 !   dictionary; In this example we assume that there are nPer periods
 !   for either TE or TM modes, or for both.
-!  NOTE:   If TXdict if public, there is no reason for this to
-!    be part of this module (but I leave it here for now!)
 
-  subroutine TXdictSetUp(nTx,Periods,modes)
+  subroutine setup_txDict(nTx,Periods,modes)
 
      integer, intent(in)         :: nTx
      real*8, intent(in)          :: periods(nTx)
      character*2, intent(in)     :: modes(nTx)
 
      ! local variables
-     integer                     :: iTx
+     integer                     :: iTx,istat
 
-     allocate(txDict(nTx))
+	 if (.not. associated(txDict)) then
+    	allocate(txDict(nTx),STAT=istat)
+     end if
+
      do iTx = 1, nTx
         txDict(iTx)%period = Periods(iTx)
         txDict(iTx)%omega = (2*PI)/ txDict(iTx)%period
         txDict(iTx)%mode = modes(iTx)
+        txDict(iTx)%iPer = iTx
      enddo
 
-  end subroutine TXdictSetUp
+  end subroutine setup_txDict
+
+!**********************************************************************
+! Updates the transmitter dictionary for MT with a new period (in secs)
+! Returns the index of the new element.
+! This is not efficient; but this would only be used a few times, with
+! a small number of values, so convenience is much more of an issue here!
+
+  function update_txDict(Period,Mode) result (iTx)
+
+     real(kind=prec), intent(in)        :: Period
+     character(2), intent(in)           :: Mode
+     integer                            :: iTx
+     ! local
+     type(MTtx)                         :: new
+     type(MTtx), pointer, dimension(:)  :: temp
+     integer                            :: nTx, istat
+
+     ! Create a transmitter for this period
+     new%period = Period
+     new%omega  = (2*PI)/Period
+     new%mode   = Mode
+     new%iPer   = nTx + 1
+
+     ! If txDict doesn't yet exist, create it
+     if(.not. associated(txDict)) then
+     	allocate(txDict(1),STAT=istat)
+     	txDict(1) = new
+     	iTx = 1
+     	return
+     end if
+
+     nTx = size(txDict)
+
+     ! If this transmitter isn't new, do nothing
+     do iTx = 1,nTx
+     	if ((Period - txDict(iTx)%period < TOL6) .and. (Mode .eq. txDict(iTx)%mode)) then
+     		return
+     	end if
+     end do
+
+     ! If the period really is new, append to the end of the dictionary
+     allocate(temp(nTx+1),STAT=istat)
+     temp(1:nTx) = txDict
+     temp(nTx+1) = new
+     deallocate(txDict,STAT=istat)
+     allocate(txDict(nTx+1),STAT=istat)
+     txDict = temp
+     deallocate(temp,STAT=istat)
+     iTx = nTx+1
+
+  end function update_txDict
 
 ! **************************************************************************
 ! Cleans up and deletes transmitter dictionary at end of program execution
+
   subroutine deall_txDict()
 
 	integer     :: istat

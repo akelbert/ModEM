@@ -18,8 +18,6 @@ module Main
      integer (kind=4), save :: fidWrite = 2
      integer (kind=4), save :: fidError = 99
 
-     integer (kind=4), save :: nPer, nSites
-
   ! ***************************************************************************
   ! * fwdCtrls: User-specified information about the forward solver relaxations
   !type (emsolve_control), save								:: fwdCtrls
@@ -29,13 +27,6 @@ module Main
   type(EMsolve_control)  :: solverParams
 
   integer, save                                             :: output_level
-
-  real (kind=prec), pointer, dimension(:), save	:: periods
-  real (kind=prec), pointer, dimension(:,:), save	:: sites
-  character(80), pointer, dimension(:,:), save        :: siteids
-  character(2), pointer, dimension(:), save    		:: modes
-  character(15), pointer, dimension(:), save        :: compids
-  character(80), save                               :: data_units
 
   ! this is used to set up the numerical grid in SensMatrix
   type(grid_t), save	        :: grid
@@ -226,18 +217,12 @@ Contains
 	call deall_modelParam(dsigma)
 	call deall_modelParam(sigma1)
 
-	deallocate(modes,STAT=istat)
-	deallocate(periods,STAT=istat)
-	deallocate(sites,STAT=istat)
-    deallocate(siteids,STAT=istat)
-    deallocate(compids,STAT=istat)
-
     if (output_level > 3) then
        write(0,*) 'Cleaning up dictionaries...'
     endif
-	call deall_txDict() ! 3D_MT/EMsolver.f90
-	call deall_rxDict() ! 3D_MT/DataFunc.f90
-	call deall_typeDict() ! 3D_MT/DataFunc.f90
+	call deall_txDict() ! 3D_MT/DICT/transmitters.f90
+	call deall_rxDict() ! 3D_MT/DICT/receivers.f90
+	call deall_typeDict() ! 3D_MT/DICT/dataTypes.f90
 
 	if (associated(sigma)) then
 	   do i = 1,size(sigma)

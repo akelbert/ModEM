@@ -2,20 +2,20 @@
 # Generated using: ./fmkmf.pl [OPTIONS] Global3D.f90 > Makefile
 # with command line options
 # -p .:INV:UTILS:FIELDS/FiniteDiff3D:EARTH:EARTH/modelParam:EARTH/FWD:EARTH/ioMod:EARTH/Basics:EARTH/Jacobian
-# -f90 pgf95 (compiler)
-# -opt -g -Mbounds (compiler optimisation)
-# -l -L/usr/lib64 -lblas -llapack -lpgftnrtl (linking options)
-# -o ./objs/EARTH/Debug (output directory for object files)
+# -f90 ifort (compiler)
+# -opt -O3 (compiler optimisation)
+# -l -lblas -llapack (linking options)
+# -o ./objs/EARTH/Release (output directory for object files)
 
 #  Uncomment these lines to make program for Solaris OS
 # F90 = f90
 # FFLAGS = -dalign -g -C -w  -L/usr/local/lib
 # LIBS = -xlic_lib=sunperf
 #  Uncomment these lines to make program with g95
-# F90 = g95
+F90 = g95
 # FFLAGS = -O2
-# FFLAGS = -g -ftrace=frame -fbounds-check
-# MODULE = -fmod=$(OBJDIR)
+FFLAGS = -g -ftrace=frame -fbounds-check
+MODULE = -fmod=$(OBJDIR)
 # LIBS = -lblas -llapack
 #  Uncomment these lines to make program with Intel compiler
 # F90 = ifort
@@ -32,11 +32,11 @@
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-OBJDIR = ./objs/EARTH/Debug
-F90 = pgf95 
-FFLAGS = -g -Mbounds
-MODULE = -module $(OBJDIR)
-LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl
+OBJDIR = ./objs/EARTH/G95Debug
+#F90 = ifort 
+#FFLAGS = -O3
+#MODULE = -module $(OBJDIR)
+LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
 OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o $(OBJDIR)/utilities.o $(OBJDIR)/polpak.o $(OBJDIR)/paramfunc.o $(OBJDIR)/modeldef.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/datadef.o $(OBJDIR)/DataSpace.o $(OBJDIR)/iotypes.o $(OBJDIR)/model_operators.o $(OBJDIR)/input.o $(OBJDIR)/iospec.o $(OBJDIR)/interp.o $(OBJDIR)/modelmap.o $(OBJDIR)/global.o $(OBJDIR)/grid_orig.o $(OBJDIR)/field_vectors.o $(OBJDIR)/data_vectors.o $(OBJDIR)/dimensions.o $(OBJDIR)/boundaries.o $(OBJDIR)/elements.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/Main.o $(OBJDIR)/responses.o $(OBJDIR)/functionals.o $(OBJDIR)/output.o $(OBJDIR)/dataFunc.o $(OBJDIR)/sg_spherical.o $(OBJDIR)/wrapper.o $(OBJDIR)/coreFwd.o $(OBJDIR)/maxwells.o $(OBJDIR)/jacobian.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/DataIO.o $(OBJDIR)/NLCG.o $(OBJDIR)/interp_orig.o $(OBJDIR)/output_orig.o $(OBJDIR)/Global3D.o 

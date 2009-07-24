@@ -6,7 +6,7 @@ module receivers
 
   implicit none
 
-  public			:: RXdictSetUp, deall_RXdict
+  public			:: setup_rxDict, update_rxDict, deall_rxDict
 
   type :: MTrx
      ! x gives location of EM measurements
@@ -14,7 +14,9 @@ module receivers
      !   different dictionaries can be used for different data types
      !  Additonal elements of MTrx data type can be added to
      !   accomodate additional data types
-     real(kind=prec)			::  x(2)
+     real(kind=prec)					::  x(2)
+     ! site ID used for input/output and for searching through the list
+     character(10)                      ::  id=''
   end type MTrx
 
   ! receiver dictionary for 2D MT data will be an array of
@@ -31,26 +33,86 @@ Contains
   ! **************************************************************************
   ! Initializes and sets up receiver dictionary
   ! Now the reciever dictionary only contains the location of the point obs
-  subroutine RXdictSetUp(nSites,siteLocations)
-    !  siteLocatins(2,nSites) is array of measurement locations (x,z)
+  subroutine setup_rxDict(nSites,siteLocations,siteIDs)
+    !  siteLocatins(nSites,2) is array of measurement locations (x,z)
     !   corresponding to grid  (normally z = 0 for flat Earth surface)
 
     integer, intent(in)	 		:: nSites
-    real(kind=prec), intent(in)	:: siteLocations(2,nSites)
+    real(kind=prec), intent(in)	:: siteLocations(nSites,2)
+    character(*), intent(in), optional  :: siteIDs(nSites)
 
     !  local variables
-    integer                             :: i
+    integer      :: i,istat
+	character(3) :: id
 
-    allocate(rxDict(nSites))
+	if (.not. associated(rxDict)) then
+    	allocate(rxDict(nSites),STAT=istat)
+    end if
+
     do i = 1,nSites
-       rxDict(i)%x = siteLocations(:,i)
-    enddo
+    	rxDict(i)%x = siteLocations(i,:)
+		if (present(siteIDs)) then
+			rxDict(i)%id = siteIDs(i)
+		else
+			write(id,'(i6.6)') i
+			rxDict(i)%id = id
+		end if
+    end do
 
-  end subroutine RXdictSetUp
+  end subroutine setup_rxDict
+
+!**********************************************************************
+! Updates the receiver dictionary with a new location and site ID.
+! Returns the index of the new element.
+! This is not efficient; but this would only be used a few times, with
+! a small number of values, so convenience is much more of an issue here!
+
+  function update_rxDict(loc,id) result (iRx)
+
+     character(*), intent(in)           :: id
+     real(kind=prec), intent(in)        :: loc(2)
+     integer                            :: iRx
+     ! local
+     type(MTrx)                         :: new
+     type(MTrx), pointer, dimension(:)  :: temp
+     integer                            :: nRx, istat
+
+     ! Create a receiver for this location
+     new%id = id
+     new%x  = loc
+
+     ! If rxDict doesn't yet exist, create it
+     if(.not. associated(rxDict)) then
+     	allocate(rxDict(1),STAT=istat)
+     	rxDict(1) = new
+     	iRx = 1
+     	return
+     end if
+
+     nRx = size(rxDict)
+
+     ! If this site isn't new, do nothing
+     do iRx = 1,nRx
+     	if (new%id .eq. rxDict(iRx)%id) then
+     		return
+     	end if
+     end do
+
+     ! If the site really is new, append to the end of the dictionary
+     allocate(temp(nRx+1),STAT=istat)
+     temp(1:nRx) = rxDict
+     temp(nRx+1) = new
+     deallocate(rxDict,STAT=istat)
+     allocate(rxDict(nRx+1),STAT=istat)
+     rxDict = temp
+     deallocate(temp,STAT=istat)
+     iRx = nRx+1
+
+  end function update_rxDict
 
   ! **************************************************************************
   ! Cleans up and deletes receiver dictionary at end of program execution
-  subroutine deall_RXdict()
+  subroutine deall_rxDict()
 
 	integer     :: istat
 
@@ -58,7 +120,7 @@ Contains
        deallocate(rxDict,STAT=istat)
     end if
 
-  end subroutine deall_RXdict
+  end subroutine deall_rxDict
 
 
 end module receivers

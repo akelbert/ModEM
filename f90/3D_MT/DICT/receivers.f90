@@ -6,7 +6,7 @@ module receivers
 
   implicit none
 
-  public			:: RXdictSetUp, update_rxDict, deall_rxDict
+  public			:: setup_rxDict, update_rxDict, deall_rxDict
 
   !  multiple receiver dictionaries can be defined, as
   !   different sorts of meta-data may be required for different data
@@ -25,7 +25,7 @@ module receivers
   	 ! x(1) points North, x(2) points East, x(3) points down
      real (kind=prec)                   ::  x(3)
      ! site ID used for input/output and for searching through the list
-     character(80)                      ::  id=''
+     character(10)                      ::  id=''
   end type MTrx
 
   ! receiver dictionary for 3D MT data will be an array of
@@ -41,15 +41,15 @@ Contains
   ! Initializes and sets up receiver dictionary
   ! The reciever dictionary contains sparse vectors required
   ! for magnetic and electric field vector evaluation
-  subroutine RXdictSetUp(nSites,siteLocations,siteIDs)
+  subroutine setup_rxDict(nSites,siteLocations,siteIDs)
 
     integer, intent(in)	 		:: nSites
     real(kind=prec), intent(in)	:: siteLocations(nSites,3)
     character(*), intent(in), optional  :: siteIDs(nSites)
-	character(3) :: id
 
     !  local variables
-    integer		:: i,istat
+    integer		 :: i,istat
+	character(3) :: id
 
 	if (.not. associated(rxDict)) then
     	allocate(rxDict(nSites),STAT=istat)
@@ -60,12 +60,12 @@ Contains
 		if (present(siteIDs)) then
 			rxDict(i)%id = siteIDs(i)
 		else
-			write(id,'(i3.3)') i
+			write(id,'(i6.6)') i
 			rxDict(i)%id = id
 		end if
     end do
 
-  end subroutine RXdictSetUp
+  end subroutine setup_rxDict
 
 !**********************************************************************
 ! Updates the receiver dictionary with a new location and site ID.

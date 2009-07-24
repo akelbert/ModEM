@@ -6,7 +6,7 @@ module transmitters
 
   implicit none
 
-  public			:: TXdictSetUp, update_txDict, deall_txDict
+  public			:: setup_txDict, update_txDict, deall_txDict
 
   type :: MTtx
      !  An MT source is defined by frequency and boundary conditions
@@ -39,21 +39,24 @@ Contains
 !   dictionary; In this example we assume that there are nPer periods
 !   for either TE or TM modes, or for both.
 
-  subroutine TXdictSetUp(nTx,Periods)
+  subroutine setup_txDict(nTx,Periods)
 
      integer, intent(in)            :: nTx
      real(kind=prec), intent(in)    :: Periods(nTx)
 
      ! local variables
-     integer                     :: iTx
+     integer                     :: iTx,istat
 
-     allocate(txDict(nTx))
+	 if (.not. associated(txDict)) then
+    	allocate(txDict(nTx),STAT=istat)
+     end if
+
      do iTx = 1, nTx
         txDict(iTx)%period = Periods(iTx)
         txDict(iTx)%omega = (2*PI)/ txDict(iTx)%period
      enddo
 
-  end subroutine TXdictSetUp
+  end subroutine setup_txDict
 
 !**********************************************************************
 ! Updates the transmitter dictionary for MT with a new period (in secs)

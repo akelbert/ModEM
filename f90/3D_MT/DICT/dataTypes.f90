@@ -7,7 +7,7 @@ module dataTypes
 
   implicit none
 
-  public			:: typeDictSetUp, deall_typeDict
+  public			:: setup_typeDict, deall_typeDict
 
   !  stores information about the "data type" -- which could include
   !   information that is relevant to transmitter, receiver, or both
@@ -77,7 +77,7 @@ Contains
 
 !**************************************************************************
 ! Initializes and sets up data type dictionary
-  subroutine TypeDictSetUp()
+  subroutine setup_typeDict()
 
   	 integer     :: istat
 
@@ -131,7 +131,7 @@ Contains
      typeDict(Off_Diagonal_Impedance)%id(3) = 'Re(Zyx)'
      typeDict(Off_Diagonal_Impedance)%id(4) = 'Im(Zyx)'
 
-  end subroutine TypeDictSetUp
+  end subroutine setup_typeDict
 
 ! **************************************************************************
 ! Cleans up and deletes type dictionary at end of program execution

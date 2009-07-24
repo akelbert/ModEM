@@ -1,7 +1,7 @@
 ! *****************************************************************************
 module DataIO
   ! This module contains io routines for reading and writing the data vectors
-  ! Version: 3D MT
+  ! Version: 2D MT
 
   use math_constants
   use file_units
@@ -76,9 +76,9 @@ Contains
              data = allData%d(iTx)%data(iDt)
 
 	         ! write period, number of sites and components for this period and data type
-	         write(ioDat,'(es12.6,2i5)') txDict(iTx)%period,data%nComp,data%nSite
+	         write(ioDat,'(es12.6,a5,i5)') txDict(iTx)%period,txDict(iTx)%mode,data%nSite
 			 ! write latitude, longitude and elevation
-			 do i = 1,3
+			 do i = 1,2
 			   do j = 1,data%nSite
 	         	  write(ioDat,'(f14.3)',advance='no') rxDict(data%rx(j))%x(i)
 			   enddo
@@ -143,6 +143,7 @@ Contains
      real(kind=prec)                        :: SI_factor, Period
      logical      							:: conjugate, errorBar, isComplex
      character(400) 						:: temp,header
+     character(2)                           :: Mode
 
       ! First, set up the data type dictionary, if it's not in existence yet
       call setup_typeDict()
@@ -175,14 +176,15 @@ Contains
 
       do i = 1,nBlocks
          ! read in period, number of components and sites for this dataVec
-         read(ioDat,*) Period,nComp,nSite
+         read(ioDat,*) Period,Mode,nSite
 
          ! read in site locations
-         allocate(siteLoc(nSite,3),siteIDs(nSite),STAT=istat)
+         allocate(siteLoc(nSite,2),siteIDs(nSite),STAT=istat)
 
          read(ioDat,*) (siteLoc(j,1),j=1,nSite)
          read(ioDat,*) (siteLoc(j,2),j=1,nSite)
-         read(ioDat,*) (siteLoc(j,3),j=1,nSite)
+
+         nComp = 2
 
          ! create dataVec object, read in data
          isComplex = .true.
@@ -192,7 +194,7 @@ Contains
 
          read(ioDat,'(a400)') header ! header line: need to parse this
 
-         Data(i)%dataType = ImpType(nComp,header)
+         Data(i)%dataType = ImpType(Mode)
 
          do k=1,nSite
          	read(ioDat,*) siteIDs(k), (Data(i)%value(j,k),j=1,nComp)
@@ -211,7 +213,7 @@ Contains
          end if
 
          ! Update the transmitter dictionary and the index (sets up if necessary)
-         iTx = update_txDict(Period)
+         iTx = update_txDict(Period,Mode)
          Data(i)%tx = iTx
 
          ! Now, update the receiver dictionary and indices

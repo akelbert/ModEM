@@ -2,20 +2,20 @@
 # Generated using: ./fmkmf.pl [OPTIONS] Mod2DMT.f90 > Makefile
 # with command line options
 # -p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/DICT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod
-# -f90 pgf95 (compiler)
-# -opt -g -Mbounds (compiler optimisation)
-# -l -L/usr/lib64 -lblas -llapack -lpgftnrtl (linking options)
-# -o ./objs/2D_MT/Debug (output directory for object files)
+# -f90 ifort (compiler)
+# -opt -O3 (compiler optimisation)
+# -l -lblas -llapack (linking options)
+# -o ./objs/2D_MT/Release (output directory for object files)
 
 #  Uncomment these lines to make program for Solaris OS
 # F90 = f90
 # FFLAGS = -dalign -g -C -w  -L/usr/local/lib
 # LIBS = -xlic_lib=sunperf
 #  Uncomment these lines to make program with g95
-# F90 = g95
+F90 = g95
 # FFLAGS = -O2
-# FFLAGS = -g -ftrace=frame -fbounds-check
-# MODULE = -fmod=$(OBJDIR)
+FFLAGS = -g -ftrace=frame -fbounds-check
+MODULE = -fmod=$(OBJDIR)
 # LIBS = -lblas -llapack
 #  Uncomment these lines to make program with Intel compiler
 # F90 = ifort
@@ -32,11 +32,11 @@
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-OBJDIR = ./objs/2D_MT/Debug
-F90 = pgf95 
-FFLAGS = -g -Mbounds
-MODULE = -module $(OBJDIR)
-LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl
+OBJDIR = ./objs/2D_MT/G95Debug
+#F90 = ifort 
+#FFLAGS = -O3
+#MODULE = -module $(OBJDIR)
+LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
 OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o $(OBJDIR)/DataFunc.o $(OBJDIR)/ModelSens.o $(OBJDIR)/DataSens.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 
