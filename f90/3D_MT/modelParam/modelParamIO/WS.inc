@@ -138,8 +138,8 @@
       character(80)                        :: paramType
       integer                              :: Nx, Ny, NzEarth, i, j, k
 
-	  ! Convert modelParam to linear for output
-	  paramType = LINEAR
+	  ! Convert modelParam to natural log for output
+	  paramType = LOGE
 	  call getValue_modelParam(m,paramType,ccond)
 
 	  grid = ccond%grid

@@ -80,7 +80,6 @@ program Mod3DMT
         end if
         call write_modelParam(sigma1,cUserDef%wFile_Model)
         if (write_data) then
-        	call fwdPred(sigma1,allData)
         	call write_dataVecMTX(allData,cUserDef%wFile_Data)
         end if
 

@@ -41,8 +41,8 @@ public  :: NLCGsolver
      real (kind=prec)   :: startdm
      ! optional relaxation parameter (Renormalised Steepest Descent algorithm)
      real (kind=prec)   :: gamma
-     ! model output file name
-     character(80)              :: modelFile
+     ! model and data output file name
+     character(80)              :: fname
      ! fid for output files (in the future will not need this)
      integer                    :: fid
   end type NLCGiterControl_t
@@ -79,8 +79,8 @@ Contains
      iterControl%startdm = 1e0
      ! optional relaxation parameter (Renormalised Steepest Descent algorithm)
      iterControl%gamma = 0.99
-     ! model output file name
-     iterControl%modelFile = 'ModEM'
+     ! model and data output file name
+     iterControl%fname = 'ModEM'
      ! fid for output files (in the future will not need this)
      iterControl%fid = 30
 
@@ -301,6 +301,8 @@ Contains
    	    d_in = d
    	end if
 
+   	call deall(d)
+
    end subroutine CdInvMult
 
 
@@ -345,9 +347,7 @@ Contains
    !  start with the result of a previous search.
 
    !  d is data; on output it contains the responses for the inverse model
-   !  NOTE: trying to set d = dHat on exit results in a corrupted data structure
-   !  that is not readable by Matlab. Have to figure out why!..
-   type(dataVecMTX_t), intent(in)		       :: d
+   type(dataVecMTX_t), intent(inout)		   :: d
    !  lambda is regularization parameter
    real(kind=prec), intent(inout)  :: lambda
    !  m0 is prior model parameter
@@ -368,7 +368,7 @@ Contains
    real(kind=prec)      :: grad_dot_h, g_dot_g, g_dot_gPrev, gPrev_dot_gPrev, g_dot_h
    integer				:: iter, nCG, nLS, nfunc
    character(3)         :: iterChar
-   character(100)       :: modelFile, gradFile
+   character(100)       :: modelFile, gradFile, dataFile, resFile
    type(EMsolnMTX_t)      :: eAll
 
    call set_NLCGiterControl(iterControl)
@@ -396,7 +396,7 @@ Contains
    ! compute gradient of the full penalty functional
    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
    write(iterChar,'(i3.3)') 0
-   gradFile = trim(iterControl%modelFile)//'_NLCG_'//iterChar//'.grt'
+   gradFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.grt'
    call write_modelParam(grad,trim(gradFile))
 
    ! update the initial value of alpha if necessary
@@ -430,12 +430,13 @@ Contains
 
 	  ! at the end of line search, set mHat to the new value
 	  ! mHat = mHat + alpha*h  and evaluate gradient at new mHat
+	  ! data and EMsoln only needed for output
 	  write(*,*) 'Starting line search...'
 	  select case (flavor)
 	  case ('Cubic')
-	  	call lineSearchCubic(lambda,d,m0,h,alpha,mHat,value,grad,rms,nLS)
+	  	call lineSearchCubic(lambda,d,m0,h,alpha,mHat,value,grad,rms,nLS,dHat,eAll)
 	  case ('Quadratic')
-	  	call lineSearchQuadratic(lambda,d,m0,h,alpha,mHat,value,grad,rms,nLS)
+	  	call lineSearchQuadratic(lambda,d,m0,h,alpha,mHat,value,grad,rms,nLS,dHat,eAll)
 	  case default
         call errStop('Unknown line search requested in NLCG')
 	  end select
@@ -455,8 +456,16 @@ Contains
       call CmSqrtMult(mHat,m_minus_m0)
    	  call linComb(ONE,m_minus_m0,ONE,m0,m)
    	  write(iterChar,'(i3.3)') iter
-   	  modelFile = trim(iterControl%modelFile)//'_NLCG_'//iterChar//'.cpr'
+   	  modelFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.cpr'
       call write_modelParam(m,trim(modelFile))
+   	  dataFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.imp'
+      call write_dataVecMTX(dHat,trim(dataFile))
+      ! compute residual for output: res = (d-dHat)/err
+      res = d
+      call linComb(ONE,d,MinusONE,dHat,res)
+      call normalize_dataVecMTX(res,1)
+   	  resFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.res'
+      call write_dataVecMTX(res,trim(resFile))
 
 	  ! if alpha is too small, we are not making progress: update lambda
 	  if (abs(rmsPrev - rms) < iterControl%fdiffTol) then
@@ -508,7 +517,7 @@ Contains
    ! multiply by C^{1/2} and add m_0
    call CmSqrtMult(mHat,m_minus_m0)
    call linComb(ONE,m_minus_m0,ONE,m0,m)
-   !d = dHat
+   d = dHat
    write(*,'(a25,i5,a25,i5)') 'NLCG iterations:',iter,' function evaluations:',nfunc
 
    ! cleaning up
@@ -525,7 +534,8 @@ Contains
    end subroutine NLCGsolver
 
 !**********************************************************************
-  subroutine lineSearchQuadratic(lambda,d,m0,h,alpha,mHat,f,grad,rms,niter,gamma)
+  subroutine lineSearchQuadratic(lambda,d,m0,h,alpha,mHat,f,grad, &
+  								rms,niter,dHat,eAll,gamma)
 
    ! Line search that imitates the strategy of Newman & Alumbaugh (2000),
    ! except without the errors. In particular, we only test the sufficient
@@ -575,6 +585,8 @@ Contains
    type(modelParam_t), intent(inout)         :: grad
    real(kind=prec), intent(out)    :: rms
    integer,intent(out)                     :: niter
+   type(dataVecMTX_t), intent(out)         :: dHat
+   type(EMsolnMTX_t), intent(out)          :: eAll
 
    ! optionally add relaxation (e.g. for Renormalised Steepest Descent)
    real(kind=prec), intent(in), optional :: gamma
@@ -586,8 +598,8 @@ Contains
    real(kind=prec)                 :: eps,k,c,a,b
    real(kind=prec)                 :: g_0,f_0,f_1,f_i,rms_1
    type(modelParam_t)                        :: mHat_0,mHat_1
-   type(dataVecMTX_t)                           :: dHat,dHat_1
-   type(EMsolnMTX_t)                         :: eAll,eAll_1
+   type(dataVecMTX_t)                           :: dHat_1
+   type(EMsolnMTX_t)                         :: eAll_1
 
    ! parameters
    c = iterControl%c
@@ -690,18 +702,17 @@ Contains
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, line search finished'
 
-   call deall_dataVecMTX(dHat)
    call deall_dataVecMTX(dHat_1)
    call deall_modelParam(mHat_0)
    call deall_modelParam(mHat_1)
-   call deall_EMsolnMTX(eAll)
    call deall_EMsolnMTX(eAll_1)
 
   end subroutine lineSearchQuadratic
 
 
   !**********************************************************************
-  subroutine lineSearchCubic(lambda,d,m0,h,alpha,mHat,f,grad,rms,niter,gamma)
+  subroutine lineSearchCubic(lambda,d,m0,h,alpha,mHat,f,grad, &
+  							rms,niter,dHat,eAll,gamma)
 
    ! Line search that is based on the Numerical Recipes and on the
    ! text by Michael Ferris, Chapter 3, p 59. We only test the sufficient
@@ -752,6 +763,8 @@ Contains
    type(modelParam_t), intent(inout)         :: grad
    real(kind=prec), intent(out)    :: rms
    integer, intent(out)                    :: niter
+   type(dataVecMTX_t), intent(out)         :: dHat
+   type(EMsolnMTX_t), intent(out)          :: eAll
 
    ! optionally add relaxation (e.g. for Renormalised Steepest Descent)
    real(kind=prec), intent(in), optional :: gamma
@@ -763,8 +776,8 @@ Contains
    real(kind=prec)                 :: eps,k,c,a,b,q1,q2,q3
    real(kind=prec)                 :: g_0,f_0,f_1,f_i,f_j,rms_1
    type(modelParam_t)                        :: mHat_0,mHat_1
-   type(dataVecMTX_t)                           :: dHat,dHat_1
-   type(EMsolnMTX_t)                         :: eAll,eAll_1
+   type(dataVecMTX_t)                           :: dHat_1
+   type(EMsolnMTX_t)                         :: eAll_1
 
    ! parameters
    c = iterControl%c
@@ -923,11 +936,9 @@ Contains
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, line search finished'
 
-   call deall_dataVecMTX(dHat)
    call deall_dataVecMTX(dHat_1)
    call deall_modelParam(mHat_0)
    call deall_modelParam(mHat_1)
-   call deall_EMsolnMTX(eAll)
    call deall_EMsolnMTX(eAll_1)
 
   end subroutine lineSearchCubic
