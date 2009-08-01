@@ -63,8 +63,8 @@ Contains
      iterControl%maxIter = 120
      ! convergence criteria: return from solver if rms < rmsTol
      iterControl%rmsTol  = 1.05
-     ! the condition to identify when the inversion stalls approx. 1e-3
-     iterControl%fdiffTol = 1.0e-3
+     ! inversion stalls when abs(rms - rmsPrev) < fdiffTol (2e-3 works well)
+     iterControl%fdiffTol = 2.0e-3
      ! exit if lambda < lambdaTol approx. 1e-4
      iterControl%lambdaTol = 1.0e-4
      ! set lambda_i = k * lambda_{i-1} when the inversion stalls
@@ -88,26 +88,27 @@ Contains
 
 
 !**********************************************************************
-   subroutine printf(comment,lambda,alpha,f,rms)
+   subroutine printf(comment,lambda,alpha,f,mNorm,rms)
 
    ! Compute the full penalty functional F
    ! Also output the predicted data and the EM solution
    ! that can be used for evaluating the gradient
 
 	 character(*), intent(in)               :: comment
-   real(kind=prec), intent(in)  :: lambda, alpha, f, rms
+   real(kind=prec), intent(in)  :: lambda, alpha, f, mNorm, rms
 
 		write(*,'(a10)',advance='no') trim(comment)//':'
 		write(*,'(a3,es12.6)',advance='no') ' f=',f
+		write(*,'(a4,es12.6)',advance='no') ' m2=',mNorm
 		write(*,'(a5,f11.6)',advance='no') ' rms=',rms
-		write(*,'(a8,f9.6)',advance='no') ' lambda=',lambda
+		write(*,'(a8,es7.0)',advance='no') ' lambda=',lambda
 		write(*,'(a7,es12.6)') ' alpha=',alpha
 
    end subroutine printf
 
 
 !**********************************************************************
-   subroutine func(lambda,d,m0,mHat,F,dHat,eAll,RMS)
+   subroutine func(lambda,d,m0,mHat,F,mNorm,dHat,eAll,RMS)
 
    ! Compute the full penalty functional F
    ! Also output the predicted data and the EM solution
@@ -117,7 +118,7 @@ Contains
    type(dataVecMTX_t), intent(in)              :: d
    type(modelParam_t), intent(in)           :: m0
    type(modelParam_t), intent(in)           :: mHat
-   real(kind=prec), intent(out) :: F
+   real(kind=prec), intent(out) :: F, mNorm
    type(dataVecMTX_t), optional, intent(out)   :: dHat
    type(EMsolnMTX_t), optional, intent(out) :: eAll
    real(kind=prec), optional, intent(out) :: RMS
@@ -125,7 +126,7 @@ Contains
    !  local variables
    type(dataVecMTX_t)    :: res,Nres
    type(modelParam_t) :: m,JTd
-   real(kind=prec) :: SS,mNorm
+   real(kind=prec) :: SS
    integer :: Ndata
 
    ! compute the smoothed model parameter vector
@@ -154,6 +155,7 @@ Contains
    ! normalize residuals, compute sum of squares
    call CdInvMult(res,Nres)
    SS = dotProd(res,Nres)
+   Ndata = countData(res)
 
    ! compute the model norm
    mNorm = dotProd(mHat,mHat)
@@ -163,7 +165,6 @@ Contains
 
    ! if required, compute the Root Mean Squared misfit
    if (present(RMS)) then
-   	Ndata = countData(res)
    	RMS = sqrt(SS/Ndata)
    end if
 
@@ -196,6 +197,7 @@ Contains
    type(EMsolnMTX_t), intent(in)            :: eAll
 
    !  local variables
+   real(kind=prec)       :: Ndata
    type(dataVecMTX_t)    :: res
    type(modelParam_t) :: m,JTd,CmJTd
 
@@ -210,7 +212,7 @@ Contains
    ! initialize res
    res = d
 
-   ! compute residual: res = d-dHat
+   ! compute residual: res = (d-dHat)/Ndata
    call linComb(ONE,d,MinusONE,dHat,res)
 
    ! loop over transmitters:
@@ -364,7 +366,7 @@ Contains
    type(dataVecMTX_t)			:: dHat, res
    type(modelParam_t)			:: mHat, m_minus_m0, grad, g, h, gPrev
    !type(NLCGiterControl_t)			:: iterControl
-   real(kind=prec)		:: value, valuePrev, rms, rmsPrev, alpha, beta, gnorm
+   real(kind=prec)		:: value, valuePrev, rms, rmsPrev, alpha, beta, gnorm, mNorm
    real(kind=prec)      :: grad_dot_h, g_dot_g, g_dot_gPrev, gPrev_dot_gPrev, g_dot_h
    integer				:: iter, nCG, nLS, nfunc
    character(3)         :: iterChar
@@ -389,8 +391,8 @@ Contains
    call zero(mHat)
 
    !  compute the penalty functional and predicted data
-   call func(lambda,d,m0,mHat,value,dHat,eAll,rms)
-   call printf('START',lambda,alpha,value,rms)
+   call func(lambda,d,m0,mHat,value,mNorm,dHat,eAll,rms)
+   call printf('START',lambda,alpha,value,mNorm,rms)
 	 nfunc = 1
 
    ! compute gradient of the full penalty functional
@@ -405,7 +407,7 @@ Contains
       call errStop('Problem with your gradient computations: first gradient is zero')
    else if (alpha * gnorm > startdm) then
       alpha = startdm / gnorm
-      ! write(*,'(a39,f9.6)') 'The initial value of alpha updated to ',alpha
+      ! write(*,'(a39,es12.6)') 'The initial value of alpha updated to ',alpha
    end if
 
    ! initialize CG: g = - grad; h = g
@@ -450,9 +452,10 @@ Contains
 	  ! adjust the starting step to ensure superlinear convergence properties
 	  alpha = min(ONE,(ONE+0.01)*alpha)
 	  write(*,'(a25,i5)') 'Completed NLCG iteration ',iter
-      call printf('with',lambda,alpha,value,rms)
+	  mNorm = dotProd(mHat,mHat)
+      call printf('with',lambda,alpha,value,mNorm,rms)
 
-      ! write out the intermediate model solution
+      ! write out the intermediate model solution and responses
       call CmSqrtMult(mHat,m_minus_m0)
    	  call linComb(ONE,m_minus_m0,ONE,m0,m)
    	  write(iterChar,'(i3.3)') iter
@@ -468,9 +471,14 @@ Contains
       call write_dataVecMTX(res,trim(resFile))
 
 	  ! if alpha is too small, we are not making progress: update lambda
-	  if (abs(rmsPrev - rms) < iterControl%fdiffTol) then
-	  	! update lambda, penalty functional and gradient
-      call update_damping_parameter(lambda,mHat,value,grad)
+      if (abs(rmsPrev - rms) < iterControl%fdiffTol) then
+      		! update lambda, penalty functional and gradient
+      		call update_damping_parameter(lambda,mHat,value,grad)
+      		! update alpha
+      		gnorm = sqrt(dotProd(grad,grad))
+      		alpha = min(iterControl%alpha_1,startdm/gnorm)
+      		write(*,'(a48,es12.6)') 'The value of line search step alpha updated to ',alpha
+      		! g = - grad
 			call linComb(MinusONE,grad,R_ZERO,grad,g)
 			! check that lambda is still at a reasonable value
 			if (lambda < iterControl%lambdaTol) then
@@ -478,12 +486,12 @@ Contains
 				! multiply by C^{1/2} and add m_0
                 call CmSqrtMult(mHat,m_minus_m0)
                 call linComb(ONE,m_minus_m0,ONE,m0,m)
-                !d = dHat
+                d = dHat
 				return
 			end if
 	  	! restart
 			write(*,'(a55)') 'Restarting NLCG with the damping parameter updated'
-			call printf('to',lambda,alpha,value,rms)
+			call printf('to',lambda,alpha,value,mNorm,rms)
 	  	h = g
 	  	nCG = 0
 	  	cycle
@@ -592,11 +600,11 @@ Contains
    real(kind=prec), intent(in), optional :: gamma
 
    ! local variables
-   real(kind=prec)                 :: alpha_1,alpha_i
+   real(kind=prec)                 :: alpha_1,alpha_i,mNorm
    logical                                 :: starting_guess
    logical                                 :: relaxation
    real(kind=prec)                 :: eps,k,c,a,b
-   real(kind=prec)                 :: g_0,f_0,f_1,f_i,rms_1
+   real(kind=prec)                 :: g_0,f_0,f_1,f_i,rms_1,mNorm_1
    type(modelParam_t)                        :: mHat_0,mHat_1
    type(dataVecMTX_t)                           :: dHat_1
    type(EMsolnMTX_t)                         :: eAll_1
@@ -637,8 +645,8 @@ Contains
    call linComb(ONE,mHat_0,alpha_1,h,mHat_1)
 
    !  compute the penalty functional and predicted data at mHat_1
-   call func(lambda,d,m0,mHat_1,f_1,dHat_1,eAll_1,rms_1)
-   call printf('STARTLS',lambda,alpha,f_1,rms_1)
+   call func(lambda,d,m0,mHat_1,f_1,mNorm_1,dHat_1,eAll_1,rms_1)
+   call printf('STARTLS',lambda,alpha,f_1,mNorm_1,rms_1)
    niter = niter + 1
 
    if (f_1 - f_0 >= LARGE_REAL) then
@@ -667,8 +675,8 @@ Contains
   !  	alpha = alpha_i/TWO ! reset alpha to ensure progress
   !  end if
     call linComb(ONE,mHat_0,alpha,h,mHat)
-    call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
-    call printf('QUADLS',lambda,alpha,f,rms)
+    call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
+    call printf('QUADLS',lambda,alpha,f,mNorm,rms)
     niter = niter + 1
     ! check whether the solution satisfies the sufficient decrease condition
     if (f < f_0 + c * alpha * g_0) then
@@ -696,8 +704,8 @@ Contains
    ! compute gradient of the full penalty functional and exit
     if (relaxation) then
    		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
-    	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
-   		call printf('RELAX',lambda,gamma*alpha,f,rms)
+    	call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms)
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, line search finished'
@@ -770,11 +778,11 @@ Contains
    real(kind=prec), intent(in), optional :: gamma
 
     ! local variables
-   real(kind=prec)                 :: alpha_1,alpha_i,alpha_j
+   real(kind=prec)                 :: alpha_1,alpha_i,alpha_j,mNorm
    logical                                 :: starting_guess
    logical                                 :: relaxation
    real(kind=prec)                 :: eps,k,c,a,b,q1,q2,q3
-   real(kind=prec)                 :: g_0,f_0,f_1,f_i,f_j,rms_1
+   real(kind=prec)                 :: g_0,f_0,f_1,f_i,f_j,rms_1,mNorm_1
    type(modelParam_t)                        :: mHat_0,mHat_1
    type(dataVecMTX_t)                           :: dHat_1
    type(EMsolnMTX_t)                         :: eAll_1
@@ -811,8 +819,8 @@ Contains
    ! compute the trial mHat, f, dHat, eAll, rms
    mHat_1 = mHat_0
    call linComb(ONE,mHat_0,alpha_1,h,mHat_1)
-   call func(lambda,d,m0,mHat_1,f_1,dHat_1,eAll_1,rms_1)
-   call printf('STARTLS',lambda,alpha,f_1,rms_1)
+   call func(lambda,d,m0,mHat_1,f_1,mNorm_1,dHat_1,eAll_1,rms_1)
+   call printf('STARTLS',lambda,alpha,f_1,mNorm_1,rms_1)
    niter = niter + 1
 
 	 if (f_1 - f_0 >= LARGE_REAL) then
@@ -836,8 +844,8 @@ Contains
     ! compute the gradient and exit
     if (relaxation) then
    		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
-    	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
-   		call printf('RELAX',lambda,gamma*alpha,f,rms)
+    	call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms)
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, exiting line search'
@@ -847,8 +855,8 @@ Contains
    ! otherwise compute the functional at the minimizer of the quadratic
    alpha = - b/(TWO*a)
    call linComb(ONE,mHat_0,alpha,h,mHat)
-   call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
-   call printf('QUADLS',lambda,alpha,f,rms)
+   call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
+   call printf('QUADLS',lambda,alpha,f,mNorm,rms)
    niter = niter + 1
    ! check whether the solution satisfies the sufficient decrease condition
    if (f < f_0 + c * alpha * g_0) then
@@ -865,8 +873,8 @@ Contains
     ! compute the gradient and exit
     if (relaxation) then
    		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
-    	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
-   		call printf('RELAX',lambda,gamma*alpha,f,rms)
+    	call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms)
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, exiting line search'
@@ -894,8 +902,8 @@ Contains
   !  end if
 	! compute the penalty functional
     call linComb(ONE,mHat_0,alpha,h,mHat)
-    call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
-    call printf('CUBICLS',lambda,alpha,f,rms)
+    call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
+    call printf('CUBICLS',lambda,alpha,f,mNorm,rms)
     niter = niter + 1
     ! check whether the solution satisfies the sufficient decrease condition
     if (f < f_0 + c * alpha * g_0) then
@@ -930,8 +938,8 @@ Contains
    ! compute gradient of the full penalty functional and exit
     if (relaxation) then
    		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
-    	call func(lambda,d,m0,mHat,f,dHat,eAll,rms)
-   		call printf('RELAX',lambda,gamma*alpha,f,rms)
+    	call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms)
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, line search finished'
