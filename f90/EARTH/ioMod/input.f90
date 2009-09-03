@@ -3,6 +3,7 @@ module input
   ! This module defines input file information and input routines
 
   use math_constants
+  use file_units
   use griddef
   use utilities
   use modeldef
@@ -11,19 +12,19 @@ module input
   use iotypes
   implicit none
 
-  integer, parameter							:: ioStartup=101
-  integer, parameter							:: ioMdl=1
-  integer, parameter							:: ioGrd=2
-  integer, parameter							:: ioShell=3
-  integer, parameter							:: ioPrm=4
+  !integer, parameter							:: ioStartup=101
+  !integer, parameter							:: ioMdl=1
+  !integer, parameter							:: ioGrd=2
+  !integer, parameter							:: ioShell=3
+  !integer, parameter							:: ioPrm=4
   integer, parameter							:: ioPt=32
   integer, parameter							:: ioPer=31
   integer, parameter							:: ioCtrl=16
   integer, parameter							:: ioCond=23
-  integer, parameter							:: ioDat=17
+  !integer, parameter							:: ioDat=17
   integer, parameter							:: ioObs=18
   integer, parameter							:: ioFunc=19
-  integer, parameter							:: ioRad=15
+  !integer, parameter							:: ioRad=15
 
   logical										:: exists ! for I/O inquiries
   character(100)								:: label  ! first line in files
@@ -984,11 +985,10 @@ Contains
     integer								:: sum,sum0,degree
     integer								:: ios,istat
     real(8)								:: upperb,lowerb,width,depth,alpha,beta
-    character(5)							:: if_log_char
-    character(5)							:: if_var_char
+    character(6)						:: if_log_char,if_var_char
     logical								:: if_log, if_fixed
-    character(80)							:: prmname, string
-    real(8)                                :: v,min,max
+    character(80)						:: prmname, string
+    real(8)                             :: v,min,max
 
     lowerb = EARTH_R
     depth = 0.0d0

@@ -8,6 +8,7 @@ module model_operators
 	! from those coefficients in the parametrization, whose values 'exist'.
 
   use math_constants
+  use file_units
   use utilities
   use modeldef
   implicit none
@@ -59,6 +60,11 @@ module model_operators
      MODULE PROCEDURE compare_modelParam_f
      MODULE PROCEDURE compareLayers_modelParam_f
   END INTERFACE
+
+  INTERFACE getDegree
+     MODULE PROCEDURE getDegree_modelParam_f
+     MODULE PROCEDURE getLayerDegree_modelParam_f
+  END INTERFACE
   ! * EOP
 
   public			:: create_modelParam, deall_modelParam, setup_modelParam, copy_modelParam
@@ -67,6 +73,7 @@ module model_operators
   public			:: zero_modelParam, getParamValues_modelParam
   public			:: setLayer_modelParam, setCoeffValue_modelParam, setCrust_modelParam
   public            :: getCoeffValue_modelParam, getCoeff_modelParam, getCoeffArray_modelParam
+  public			:: getDegree_modelParam_f, getLayerDegree_modelParam_f
   public			:: add_modelParam_f, subtract_modelParam_f, linComb_modelParam
   public			:: mult_modelParam_f, dotProd_modelParam_f, dotProdVec_modelParam_f
   public			:: scMult_modelParam, scDiv_modelParam_f
@@ -405,15 +412,11 @@ Contains
 	integer										   :: i,j,k
 
     if(.not.P%allocated) then
-       call errStop('')
-	   write(0,*) 'Error: (fillParamValues_modelParam) parametrization not allocated yet'
-	   return
+       call errStop('(fillParamValues_modelParam) parametrization not allocated yet')
 	end if
 
 	if(count(P%c%exists) /= size(v)) then
-       call errStop('')
-	   write(0,*) 'Error: (fillParamValues_modelParam) wrong number of input coefficients'
-	   return
+       call errStop('(fillParamValues_modelParam) wrong number of input coefficients')
 	end if
 
 	k=0
@@ -429,6 +432,57 @@ Contains
 
   end subroutine fillParamValues_modelParam
 
+  ! **********************************************************************
+  ! * BOP
+  function getDegree_modelParam_f(P) result (lmax)
+
+    implicit none
+    type (modelParam_t), intent(in)				   :: P
+    integer							   			   :: lmax
+    ! * EOP
+
+	integer										   :: i,j,k
+
+    if(.not.P%allocated) then
+       call errStop('(getDegree_modelParam) parametrization not allocated yet')
+	end if
+
+	lmax = 0
+
+	do i=1,P%nF
+		if (P%F(i)%l > lmax) then
+			lmax = P%F(i)%l
+		end if
+	end do
+
+  end function getDegree_modelParam_f
+
+
+  ! **********************************************************************
+  ! * BOP
+  function getLayerDegree_modelParam_f(P,iLayer) result (lmax)
+
+    implicit none
+    type (modelParam_t), intent(in)				   :: P
+    integer, intent(in)				   			   :: iLayer
+    integer							   			   :: lmax
+    ! * EOP
+
+	integer										   :: i,j,k
+
+    if(.not.P%allocated) then
+       call errStop('(getLayerDegree_modelParam) parametrization not allocated yet')
+	end if
+
+	lmax = 0
+
+	do i=1,P%nF
+		if ((.not.P%c(iLayer,i)%frozen) .and. (P%c(iLayer,i)%F%l > lmax)) then
+			lmax = P%F(i)%l
+		end if
+	end do
+
+  end function getLayerDegree_modelParam_f
 
   ! **********************************************************************
   ! * BOP
@@ -1249,7 +1303,48 @@ Contains
 	character(*), intent(in)				:: cfile
     ! * EOP
 
-	call print_modelParam(P,3)
+	integer									:: lmax,i,j,k,istat
+    character(6)							:: if_log_char,if_var_char
+
+	!call print_modelParam(P,3)
+	!call initModel(grid,P,rho)
+
+	open(unit=ioPrm, file=cfile, status='unknown', iostat=istat)
+
+	lmax = getDegree(P)
+
+	write(ioPrm,'(a24,i2,a8,i2)') 'Format: harmonic layers ',P%nL,' degree ',lmax
+	write(ioPrm,*)
+
+	do j=1,P%nL
+		if (P%L(j)%if_log) then
+			if_log_char = 'log'
+		else
+			if_log_char = 'linear'
+		end if
+		lmax = getDegree(P,j)
+		write(ioPrm,'(a6)',advance='no') if_log_char
+		write(ioPrm,'(a8,i2)',advance='no') ' degree ',lmax
+		write(ioPrm,'(a7,g10.5)',advance='no') ' layer ',P%L(j)%depth
+		write(ioPrm,'(a5,2g10.5)') ' reg ',P%L(j)%alpha, P%L(j)%beta
+		write(ioPrm,*) '  l   m   value  	  min     	max'
+		do i=1,P%nF
+			if (.not.P%c(j,i)%exists) then
+				cycle
+			end if
+			write(ioPrm,'(2i4,g15.7)',advance='no') P%F(i)%l,P%F(i)%m,P%c(j,i)%value
+			if (P%c(j,i)%frozen) then
+				if_var_char = 'const'
+			else
+				if_var_char = 'range'
+			end if
+			write(ioPrm,'(2g15.7,a6)') P%c(j,i)%min,P%c(j,i)%max,if_var_char
+		end do
+    	write(ioPrm,*)
+	end do
+	write(ioPrm,*)
+
+	close(ioPrm)
 
   end subroutine write_modelParam
 

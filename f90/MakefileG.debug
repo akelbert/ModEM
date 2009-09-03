@@ -39,7 +39,7 @@ MODULE = -module $(OBJDIR)
 LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl
 
 # -------------------End-macro-Defs---------------------------
-OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o $(OBJDIR)/utilities.o $(OBJDIR)/polpak.o $(OBJDIR)/paramfunc.o $(OBJDIR)/modeldef.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/datadef.o $(OBJDIR)/DataSpace.o $(OBJDIR)/iotypes.o $(OBJDIR)/model_operators.o $(OBJDIR)/input.o $(OBJDIR)/iospec.o $(OBJDIR)/interp.o $(OBJDIR)/modelmap.o $(OBJDIR)/global.o $(OBJDIR)/grid_orig.o $(OBJDIR)/field_vectors.o $(OBJDIR)/data_vectors.o $(OBJDIR)/dimensions.o $(OBJDIR)/boundaries.o $(OBJDIR)/elements.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/Main.o $(OBJDIR)/responses.o $(OBJDIR)/functionals.o $(OBJDIR)/output.o $(OBJDIR)/dataFunc.o $(OBJDIR)/sg_spherical.o $(OBJDIR)/wrapper.o $(OBJDIR)/coreFwd.o $(OBJDIR)/maxwells.o $(OBJDIR)/jacobian.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/DataIO.o $(OBJDIR)/NLCG.o $(OBJDIR)/interp_orig.o $(OBJDIR)/output_orig.o $(OBJDIR)/Global3D.o 
+OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/utilities.o $(OBJDIR)/polpak.o $(OBJDIR)/paramfunc.o $(OBJDIR)/modeldef.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/datadef.o $(OBJDIR)/DataSpace.o $(OBJDIR)/iotypes.o $(OBJDIR)/model_operators.o $(OBJDIR)/input.o $(OBJDIR)/iospec.o $(OBJDIR)/interp.o $(OBJDIR)/modelmap.o $(OBJDIR)/global.o $(OBJDIR)/grid_orig.o $(OBJDIR)/field_vectors.o $(OBJDIR)/data_vectors.o $(OBJDIR)/dimensions.o $(OBJDIR)/boundaries.o $(OBJDIR)/elements.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/Main.o $(OBJDIR)/responses.o $(OBJDIR)/functionals.o $(OBJDIR)/output.o $(OBJDIR)/dataFunc.o $(OBJDIR)/sg_spherical.o $(OBJDIR)/wrapper.o $(OBJDIR)/coreFwd.o $(OBJDIR)/maxwells.o $(OBJDIR)/jacobian.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/DataIO.o $(OBJDIR)/NLCG.o $(OBJDIR)/interp_orig.o $(OBJDIR)/output_orig.o $(OBJDIR)/Global3D.o 
 
 
 all: Global3D 
@@ -56,6 +56,9 @@ $(OBJDIR):
 $(OBJDIR)/math_constants.o:UTILS/math_constants.f90  
 	 $(F90) -c $(MODULE) $(FFLAGS) UTILS/math_constants.f90 -o $(OBJDIR)/math_constants.o
 
+$(OBJDIR)/file_units.o:UTILS/file_units.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) UTILS/file_units.f90 -o $(OBJDIR)/file_units.o
+
 $(OBJDIR)/GridDef.o:EARTH/GridDef.f90 $(OBJDIR)/math_constants.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/GridDef.f90 -o $(OBJDIR)/GridDef.o
 
@@ -68,7 +71,7 @@ $(OBJDIR)/polpak.o:UTILS/polpak.f90
 $(OBJDIR)/paramfunc.o:EARTH/modelParam/paramfunc.f90 $(OBJDIR)/polpak.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/modelParam/paramfunc.f90 -o $(OBJDIR)/paramfunc.o
 
-$(OBJDIR)/modeldef.o:EARTH/modelParam/modeldef.f90 $(OBJDIR)/paramfunc.o 
+$(OBJDIR)/modeldef.o:EARTH/modelParam/modeldef.f90 $(OBJDIR)/GridDef.o $(OBJDIR)/paramfunc.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/modelParam/modeldef.f90 -o $(OBJDIR)/modeldef.o
 
 $(OBJDIR)/sg_scalar.o:FIELDS/FiniteDiff3D/sg_scalar.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o 
@@ -89,10 +92,10 @@ $(OBJDIR)/DataSpace.o:EARTH/DataSpace.f90 $(OBJDIR)/utilities.o $(OBJDIR)/math_c
 $(OBJDIR)/iotypes.o:EARTH/ioMod/iotypes.f90  
 	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/ioMod/iotypes.f90 -o $(OBJDIR)/iotypes.o
 
-$(OBJDIR)/model_operators.o:EARTH/modelParam/model_operators.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/modeldef.o 
+$(OBJDIR)/model_operators.o:EARTH/modelParam/model_operators.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/utilities.o $(OBJDIR)/modeldef.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/modelParam/model_operators.f90 -o $(OBJDIR)/model_operators.o
 
-$(OBJDIR)/input.o:EARTH/ioMod/input.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/GridDef.o $(OBJDIR)/utilities.o $(OBJDIR)/modeldef.o $(OBJDIR)/datadef.o $(OBJDIR)/DataSpace.o $(OBJDIR)/iotypes.o $(OBJDIR)/model_operators.o 
+$(OBJDIR)/input.o:EARTH/ioMod/input.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/utilities.o $(OBJDIR)/modeldef.o $(OBJDIR)/datadef.o $(OBJDIR)/DataSpace.o $(OBJDIR)/iotypes.o $(OBJDIR)/model_operators.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) EARTH/ioMod/input.f90 -o $(OBJDIR)/input.o
 
 $(OBJDIR)/iospec.o:EARTH/ioMod/iospec.f90  

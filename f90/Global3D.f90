@@ -40,6 +40,7 @@ program earth
   call InitGlobalArrays()
 
   if (cUserDef%calculate == 'nothing') then
+    call write_modelParam(param,'testOutput.prm')
 	call DeleteGlobalData()
 	call DeleteGlobalArrays()
 	print *,'Successfully initialized the model. Exiting...'
