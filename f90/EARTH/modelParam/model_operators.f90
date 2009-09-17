@@ -1290,11 +1290,15 @@ Contains
 
 
   ! **********************************************************************
-  ! * This essential subroutine doesn't exist yet!!!
-  ! * We have never had to write out the model parameter (spherical harmonic
-  ! * coefficients) since that was always done by an external inverse program.
-  ! * Need to implement this soon!!!
-  ! * For now, make this a wrapper of print_modelParam.
+  ! * This is an essential subroutine that is used to output the model
+  ! * solution in e.g. NLCG. This solution is then used as the prior/initial
+  ! * model, or to compute the fields.
+  ! * Important: since we do not have an "un-smooth" subroutine Cm^{-1},
+  ! * we output the "final" smooth model mhat instead of m. This means
+  ! * that we should not write the regularisation parameters. If we do,
+  ! * and then use the model as input, the forward solver will smooth
+  ! * the input according to the information in the file. We do not want
+  ! * this to happen. Thus, we output the final model, and no regularisation.
   ! * BOP
   subroutine write_modelParam(P,cfile)
 
@@ -1305,9 +1309,6 @@ Contains
 
 	integer									:: lmax,i,j,k,istat
     character(6)							:: if_log_char,if_var_char
-
-	!call print_modelParam(P,3)
-	!call initModel(grid,P,rho)
 
 	open(unit=ioPrm, file=cfile, status='unknown', iostat=istat)
 
@@ -1326,7 +1327,10 @@ Contains
 		write(ioPrm,'(a6)',advance='no') if_log_char
 		write(ioPrm,'(a8,i2)',advance='no') ' degree ',lmax
 		write(ioPrm,'(a7,g10.5)',advance='no') ' layer ',P%L(j)%depth
-		write(ioPrm,'(a5,2g10.5)') ' reg ',P%L(j)%alpha, P%L(j)%beta
+		! DO NOT WRITE THE REGULARISATION PARAMETERS...
+		!write(ioPrm,'(a5,2g10.5)') ' reg ',P%L(j)%alpha, P%L(j)%beta
+		! INSTEAD, START NEW LINE:
+		write(ioPrm,*)
 		write(ioPrm,*) '  l   m   value  	  min     	max'
 		do i=1,P%nF
 			if (.not.P%c(j,i)%exists) then

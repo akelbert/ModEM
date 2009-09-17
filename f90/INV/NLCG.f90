@@ -682,7 +682,15 @@ Contains
     if (f < f_0 + c * alpha * g_0) then
     	exit
     end if
-    ! if not, iterate, using the most recent value of f & alpha
+    ! this should not happen, but in practice it is possible to end up with
+    ! a function increase at this point (e.g. in the current global code).
+    ! Most likely, this is due to an inaccuracy in the gradient computations.
+    ! In this case, we avoid an infinite loop by exiting the line search.
+    if (f > f_0) then
+		print *, 'Unable to fit a quadratic due to bad gradient estimate, exiting line search'
+   		exit
+    end if
+    ! otherwise, iterate, using the most recent value of f & alpha
     alpha_i = alpha
     f_i = f
    end do fit_quadratic
@@ -849,6 +857,10 @@ Contains
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, exiting line search'
+	call deall_dataVecMTX(dHat_1)
+	call deall_modelParam(mHat_0)
+	call deall_modelParam(mHat_1)
+	call deall_EMsolnMTX(eAll_1)
    	return
    end if
 
@@ -878,9 +890,26 @@ Contains
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, exiting line search'
+	call deall_dataVecMTX(dHat_1)
+	call deall_modelParam(mHat_0)
+	call deall_modelParam(mHat_1)
+	call deall_EMsolnMTX(eAll_1)
    	return
    end if
 
+   ! this should not happen, but in practice it is possible to end up with
+   ! a function increase at this point (e.g. in the current global code).
+   ! Most likely, this is due to an inaccuracy in the gradient computations.
+   ! In this case, we avoid an infinite loop by exiting the line search.
+   if (f > f_0) then
+    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
+	print *, 'Unable to fit a quadratic due to bad gradient estimate, exiting line search'
+	call deall_dataVecMTX(dHat_1)
+	call deall_modelParam(mHat_0)
+	call deall_modelParam(mHat_1)
+	call deall_EMsolnMTX(eAll_1)
+   	return
+   end if
 
    ! fit a cubic and backtrack (initialize)
    alpha_i = alpha_1

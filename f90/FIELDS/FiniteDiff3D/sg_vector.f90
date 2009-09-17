@@ -145,6 +145,7 @@ module sg_vector
 
   public		::   create_rvector,  create_cvector, &
        deall_rvector, deall_cvector, &
+       write_rvector, write_cvector, &
        copy_rvector, copy_cvector, &
        zero_rvector, zero_cvector, &
        compare_rvector_f, compare_cvector_f, &
@@ -524,6 +525,127 @@ Contains
 
   end subroutine deall_cvector  ! deall_cvector
 
+  !****************************************************************************
+  ! write_rvector writes an rvector in a simple ASCII format; rvector has
+  ! to exist and be allocated before calling this routine, and the file unit
+  ! must already be available for writing.
+  subroutine write_rvector(fid, E)
+
+      integer,        intent(in)		:: fid
+      type (rvector), intent(in)		:: E
+
+      !  local variables
+      integer 		                    :: Nx, Ny, Nz
+      integer                           :: i, j, k, istat
+      real (kind(E%x)), allocatable, dimension(:,:,:)  :: x, y, z
+
+      if(.not. E%allocated) then
+         write(0, *) 'rvector must be allocated before call to write_rvector'
+         stop
+      endif
+
+      write(fid,'(3i5,a10)',iostat=istat) E%nx,E%ny,E%nz,trim(E%gridType)
+
+	  Nx = E%nx + 1
+	  Ny = E%ny + 1
+	  Nz = E%nz + 1
+
+      allocate(x(Nx,Ny,Nz),y(Nx,Ny,Nz),z(Nx,Ny,Nz),STAT=istat)
+      x = R_ZERO
+      y = R_ZERO
+      z = R_ZERO
+
+      if (E%gridType == EDGE) then
+	   ! For spherical problem:
+	   ! 1) E%x(:,1,:) and E%x(:,ny+1,:) are undefined,
+	   ! 2) E%y(nx+1,:,:) and E%z(nx+1,:,:) are repetitios,
+	   ! 3) E%x(-1,0,ny+1,ny+2,:,:) will be needed for interpolation.
+	   x(1:E%nx,:,:) = E%x
+	   y(:,1:E%ny,:) = E%y
+	   z(:,:,1:E%nz) = E%z
+      else if (E%gridType == FACE) then
+	   ! For spherical problem:
+	   ! 1) E%y(:,1,:) and E%y(:,ny+1,:) are undefined,
+	   ! 2) E%x(nx+1,:,:) is repetitios and equals E%x(1,:,:).
+	   x(:,1:E%ny,1:E%nz) = E%x
+	   y(1:E%nx,:,1:E%nz) = E%y
+	   z(1:E%nx,1:E%ny,:) = E%z
+      else
+       write (0, *) 'not a known tag'
+      end if
+
+      do k = 1,Nz
+      	do j = 1,Ny
+      		do i = 1,Nx
+      			write(fid,'(3i5,3es13.5)',iostat=istat) i,j,k,x(i,j,k),y(i,j,k),z(i,j,k)
+      		end do
+      	end do
+      end do
+
+	  deallocate(x,y,z,STAT=istat)
+
+  end subroutine write_rvector
+
+  !****************************************************************************
+  ! write_cvector writes an ivector in a simple ASCII format; cvector has
+  ! to exist and be allocated before calling this routine, and the file unit
+  ! must already be available for writing.
+  subroutine write_cvector(fid, E)
+
+      integer,        intent(in)		:: fid
+      type (cvector), intent(in)		:: E
+
+      !  local variables
+      integer 		                    :: Nx, Ny, Nz
+      integer                           :: i, j, k, istat
+      complex (kind(E%x)), allocatable, dimension(:,:,:)  :: x, y, z
+
+      if(.not. E%allocated) then
+         write(0, *) 'cvector must be allocated before call to write_cvector'
+         stop
+      endif
+
+      write(fid,'(3i5,a10)',iostat=istat) E%nx,E%ny,E%nz,trim(E%gridType)
+
+	  Nx = E%nx + 1
+	  Ny = E%ny + 1
+	  Nz = E%nz + 1
+
+      allocate(x(Nx,Ny,Nz),y(Nx,Ny,Nz),z(Nx,Ny,Nz),STAT=istat)
+      x = C_ZERO
+      y = C_ZERO
+      z = C_ZERO
+
+      if (E%gridType == EDGE) then
+	   ! For spherical problem:
+	   ! 1) E%x(:,1,:) and E%x(:,ny+1,:) are undefined,
+	   ! 2) E%y(nx+1,:,:) and E%z(nx+1,:,:) are repetitios,
+	   ! 3) E%x(-1,0,ny+1,ny+2,:,:) will be needed for interpolation.
+	   x(1:E%nx,:,:) = E%x
+	   y(:,1:E%ny,:) = E%y
+	   z(:,:,1:E%nz) = E%z
+      else if (E%gridType == FACE) then
+	   ! For spherical problem:
+	   ! 1) E%y(:,1,:) and E%y(:,ny+1,:) are undefined,
+	   ! 2) E%x(nx+1,:,:) is repetitios and equals E%x(1,:,:).
+	   x(:,1:E%ny,1:E%nz) = E%x
+	   y(1:E%nx,:,1:E%nz) = E%y
+	   z(1:E%nx,1:E%ny,:) = E%z
+      else
+       write (0, *) 'not a known tag'
+      end if
+
+      do k = 1,Nz
+      	do j = 1,Ny
+      		do i = 1,Nx
+      			write(fid,'(3i5,6es13.5)',iostat=istat) i,j,k,x(i,j,k),y(i,j,k),z(i,j,k)
+      		end do
+      	end do
+      end do
+
+	  deallocate(x,y,z,STAT=istat)
+
+  end subroutine write_cvector
 
   !****************************************************************************
   ! copy_rvector makes an exact copy of derived data type

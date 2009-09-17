@@ -371,6 +371,11 @@ Contains
 	  ! compute and output fields & C and D responses at cells
 	  call outputSolution(freq,Hj,slices,grid,cUserDef,rho%v,'h')
 
+	  ! output full H-field cvector
+	  if (output_level > 4) then
+	  	call outputFields(freq,Hj,cUserDef,'field')
+	  end if
+
 	  ! compute and output C and D responses at observatories
 	  call calcResponses(freq,Hj,dat,psi)
 	  call outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)

@@ -27,6 +27,38 @@ Contains
   ! * Output full solution into separate files called "slices": each file
   ! * contains values for a single frequency and a single radius
 
+  subroutine outputFields(freq,H,cUserDef,extension)
+
+	type (input_info), intent(in)			  :: cUserDef
+	type (transmitter_t), intent(in)			  :: freq
+	type (cvector), intent(in)				  :: H
+	integer									  :: i,j,k,n,ios,istat
+	character(3)							  :: ichar
+	character(10)							  :: echar
+	character(*), intent(in), optional		  :: extension
+	character(80)							  :: fn_output
+
+	write (ichar,'(i3.3)') freq%i
+	if (present(extension)) then
+	  echar = trim(extension)
+	else
+	  echar = 'H'
+	end if
+	fn_output = trim(cUserDef%modelname)//'_'//trim(freq%code)//'.'//trim(echar)
+	!print *, "Output solution to ",fn_output
+
+	open(ioOut,file=fn_output,status='unknown',form='formatted',iostat=ios)
+	write(ioOut,'(a33,f0.3,a6)') "# Full H-field output for period ",freq%period," days."
+	call write_cvector(ioOut,H)
+	close(ioOut)
+
+  end subroutine outputFields	! outputFields
+
+
+  ! ***************************************************************************
+  ! * Output full solution into separate files called "slices": each file
+  ! * contains values for a single frequency and a single radius
+
   subroutine outputSolution(freq,H,slices,grid,cUserDef,rho,extension)
 
 	type (input_info), intent(in)			  :: cUserDef
