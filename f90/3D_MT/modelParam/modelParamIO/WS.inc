@@ -199,7 +199,7 @@
 	  ! call write_rscalar(ioPrm,rho)
 
       ! Also write the grid origin (in metres!) and rotation (in degrees)...
-      write(ioPrm,'(3f9.3)',iostat=istat) grid%ox, grid%oy, grid%oz
+      write(ioPrm,'(3f16.3)',iostat=istat) grid%ox, grid%oy, grid%oz
       write(ioPrm,'(f9.3)',iostat=istat)  grid%rotdeg
       close(ioPrm)
 
