@@ -59,6 +59,8 @@ Contains
   ! Z(5) = Zzx; Z(6) = Zzy in addition
   !   iDT=Off_Diagonal_Impedance
   !  Z(1) = Zxy, Z(2) = Zyx
+  !   iDT=Hz_Only
+  !  Z(1) = Tx, Z(2) = Ty
 
   !  optional argument, useful for linearized impedance
   complex(kind=prec), intent(out), optional	:: Binv(2,2)
@@ -74,7 +76,8 @@ Contains
   !  probably should dependence on omega into BinterpSetup, as in 2D!
   omega = txDict(ef%tx)%omega
   x = rxDict(iRX)%x
-  ComputeHz = (typeDict(iDT)%tfType.EQ.Impedance_Plus_Hz)
+  ComputeHz = (typeDict(iDT)%tfType .eq. Impedance_Plus_Hz) .or. &
+              (typeDict(iDT)%tfType .eq. Hz_Only)
 
   ! First set up interpolation functionals for Ex, Ey, Bx, By, Bz
   xyz = 1
@@ -135,6 +138,10 @@ Contains
      case(Off_Diagonal_Impedance)
         Z(1) = EE(1,1)*BB(1,2)+EE(1,2)*BB(2,2)
         Z(2) = EE(2,1)*BB(1,1)+EE(2,2)*BB(2,1)
+     case(Hz_Only)
+       !  vertical field TF
+        Z(1) = BB(3,1)*BB(1,1)+BB(3,2)*BB(2,1)
+        Z(2) = BB(3,1)*BB(1,2)+BB(3,2)*BB(2,2)
   end select
 
   if(present(Binv)) then
@@ -176,7 +183,7 @@ Contains
   complex (kind=prec)	:: Z(6), i_omega,c1,c2
   real(kind=prec)	:: x(3),omega
   type(sparsevecc)		:: L1
-  integer			:: i,j,k,nComp,IJ(2,6),xyz,n
+  integer			:: i,j,k,nComp,IJ(3,6),xyz,n, predictedComp
   type(sparsevecC)		:: Lex,Ley,Lbx,Lby,Lbz
   logical			:: ComputeHz
 
@@ -186,24 +193,36 @@ Contains
   !  set up which components are needed,  ... and ! evaluate
   !   impedance, Binv for background solution
   !          ... appear to need full impedance for offdiagonal
+
+  !   Some modifications to allow for other TFs ... e.g., the case
+  !     of Hz TFs only (changes also slightly simplify generalization
+  !      to interstation TFs) :  increase first dimension of array IJ
+  !      to 3: (IJ(1,:) = row index in TF matrix Z;
+  !             IJ(2,:) = column index in TF martrix X;
+  !             IJ(3,:) = predicted field component ...
+  !                     Ex = 1; Ey =2; Bz = 3;  (can add more cases,
+  !                         e.g., Bx, By at another site)
+  !
   select case(iDT)
      case(Full_Impedance)
-        nComp = 4;
+        nComp = 4
         ComputeHz = .false.
         do j = 1,2
            do i = 1,2
               IJ(1,2*(i-1)+j) = i
               IJ(2,2*(i-1)+j) = j
+              IJ(3,2*(i-1)+j) = i
            enddo
         enddo
         Call nonlinDataFunc(e0,Sigma0,Full_Impedance,iRX,Z,Binv)
      case(Impedance_Plus_Hz)
-        nComp = 6;
+        nComp = 6
         ComputeHz = .true.
         do j = 1,2
            do i = 1,3
               IJ(1,2*(i-1)+j) = i
               IJ(2,2*(i-1)+j) = j
+              IJ(3,2*(i-1)+j) = i
            enddo
         enddo
         Call nonlinDataFunc(e0,Sigma0,Impedance_Plus_Hz,iRX,Z,Binv)
@@ -214,7 +233,17 @@ Contains
         IJ(2,1) = 2
         IJ(1,2) = 2
         IJ(2,2) = 1
+        IJ(3,1) = 1
+        IJ(3,2) = 2
         Call nonlinDataFunc(e0,Sigma0,Full_Impedance,iRX,Z,Binv)
+     case(Hz_Only)
+        nComp = 2
+        ComputeHz = .true.
+        IJ(1,1) = 1
+        IJ(1,2) = 1
+        IJ(2,1) = 1
+        IJ(2,2) = 2
+        Call nonlinDataFunc(e0,Sigma0,Hz_Only,iRX,Z,Binv)
   endselect
 
   ! Then set up interpolation functionals for Ex, Ey, Bx, By, Bz
@@ -236,6 +265,7 @@ Contains
      !  i runs over rows of TF matrix, j runs over columns of TF
      i = IJ(1,n)
      j = IJ(2,n)
+     predictedComp = IJ(3,n)
      c1 = Z(2*(i-1)+1)
      c2 = Z(2*(i-1)+2)
      Call linComb_sparsevecc(Lbx,c1,Lby,c2,L1)
@@ -244,13 +274,13 @@ Contains
         !   to be applied to
         c1 = Binv(k,j)
         c2 = -c1
-        if(i.eq.1) then
+        if(predictedComp.eq.1) then
            !  component in x row of impedance tensor
            Call linComb_sparsevecc(Lex,c1,L1,c2,L(n)%L(k))
-        elseif(i.eq.2) then
+        elseif(predictedComp.eq.2) then
            !  component in y row of impedance tensor
            Call linComb_sparsevecc(Ley,c1,L1,c2,L(n)%L(k))
-        else
+        elseif(predictedComp.eq.3) then
            !  component in Bz row (vertical field TF)
            Call linComb_sparsevecc(Lbz,c1,L1,c2,L(n)%L(k))
         endif

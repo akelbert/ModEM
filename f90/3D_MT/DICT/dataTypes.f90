@@ -59,7 +59,7 @@ module dataTypes
      ! the units of the data type
      ! (obviously, the way this is currently formulated, Impedance_Plus_Hz will
      ! be partly non-dimensional; but this works for practical purposes)
-     character(80)     :: units = ''
+     character(80), pointer, dimension(:) :: units
 
   end type dataType
 
@@ -70,7 +70,7 @@ module dataTypes
   integer, parameter   :: Full_Impedance = 1
   integer, parameter   :: Impedance_Plus_Hz = 2
   integer, parameter   :: Off_Diagonal_Impedance = 3
-
+  integer, parameter   :: Hz_Only = 4
 
 Contains
 
@@ -81,55 +81,95 @@ Contains
 
   	 integer     :: istat
 
-     allocate(typeDict(3),STAT=istat)
+     allocate(typeDict(4),STAT=istat)
 
      typeDict(Full_Impedance)%name = 'Full Impedance'
      typeDict(Full_Impedance)%isComplex = .true.
      typeDict(Full_Impedance)%calcQ     = .false.
-     typeDict(Full_Impedance)%tfType     = Full_Impedance
-     typeDict(Full_Impedance)%units   = '[V/m]/[T]'
+     typeDict(Full_Impedance)%tfType    = Full_Impedance
      typeDict(Full_Impedance)%nComp     = 8
      allocate(typeDict(Full_Impedance)%id(8),STAT=istat)
-     typeDict(Full_Impedance)%id(1) = 'Re(Zxx)'
-     typeDict(Full_Impedance)%id(2) = 'Im(Zxx)'
-     typeDict(Full_Impedance)%id(3) = 'Re(Zxy)'
-     typeDict(Full_Impedance)%id(4) = 'Im(Zxy)'
-     typeDict(Full_Impedance)%id(5) = 'Re(Zyx)'
-     typeDict(Full_Impedance)%id(6) = 'Im(Zyx)'
-     typeDict(Full_Impedance)%id(7) = 'Re(Zyy)'
-     typeDict(Full_Impedance)%id(8) = 'Im(Zyy)'
+     typeDict(Full_Impedance)%id(1)    = 'Re(Zxx)'
+     typeDict(Full_Impedance)%id(2)    = 'Im(Zxx)'
+     typeDict(Full_Impedance)%id(3)    = 'Re(Zxy)'
+     typeDict(Full_Impedance)%id(4)    = 'Im(Zxy)'
+     typeDict(Full_Impedance)%id(5)    = 'Re(Zyx)'
+     typeDict(Full_Impedance)%id(6)    = 'Im(Zyx)'
+     typeDict(Full_Impedance)%id(7)    = 'Re(Zyy)'
+     typeDict(Full_Impedance)%id(8)    = 'Im(Zyy)'
+     allocate(typeDict(Full_Impedance)%units(8),STAT=istat)
+     typeDict(Full_Impedance)%units(1) = '[V/m]/[T]'
+     typeDict(Full_Impedance)%units(2) = '[V/m]/[T]'
+     typeDict(Full_Impedance)%units(3) = '[V/m]/[T]'
+     typeDict(Full_Impedance)%units(4) = '[V/m]/[T]'
+     typeDict(Full_Impedance)%units(5) = '[V/m]/[T]'
+     typeDict(Full_Impedance)%units(6) = '[V/m]/[T]'
+     typeDict(Full_Impedance)%units(7) = '[V/m]/[T]'
+     typeDict(Full_Impedance)%units(8) = '[V/m]/[T]'
 
      typeDict(Impedance_Plus_Hz)%name = 'Full Impedance Plus Hz'
      typeDict(Impedance_Plus_Hz)%isComplex = .true.
      typeDict(Impedance_Plus_Hz)%calcQ     = .false.
-     typeDict(Impedance_Plus_Hz)%tfType     = Impedance_Plus_Hz
-     typeDict(Impedance_Plus_Hz)%units   = '[V/m]/[T]'
+     typeDict(Impedance_Plus_Hz)%tfType    = Impedance_Plus_Hz
      typeDict(Impedance_Plus_Hz)%nComp     = 12
      allocate(typeDict(Impedance_Plus_Hz)%id(12),STAT=istat)
-     typeDict(Impedance_Plus_Hz)%id(1)  = 'Re(Zxx)'
-     typeDict(Impedance_Plus_Hz)%id(2)  = 'Im(Zxx)'
-     typeDict(Impedance_Plus_Hz)%id(3)  = 'Re(Zxy)'
-     typeDict(Impedance_Plus_Hz)%id(4)  = 'Im(Zxy)'
-     typeDict(Impedance_Plus_Hz)%id(5)  = 'Re(Zyx)'
-     typeDict(Impedance_Plus_Hz)%id(6)  = 'Im(Zyx)'
-     typeDict(Impedance_Plus_Hz)%id(7)  = 'Re(Zyy)'
-     typeDict(Impedance_Plus_Hz)%id(8)  = 'Im(Zyy)'
-     typeDict(Impedance_Plus_Hz)%id(9)  = 'Re(Tx)'
-     typeDict(Impedance_Plus_Hz)%id(10) = 'Im(Tx)'
-     typeDict(Impedance_Plus_Hz)%id(11) = 'Re(Ty)'
-     typeDict(Impedance_Plus_Hz)%id(12) = 'Im(Ty)'
+     typeDict(Impedance_Plus_Hz)%id(1)    = 'Re(Zxx)'
+     typeDict(Impedance_Plus_Hz)%id(2)    = 'Im(Zxx)'
+     typeDict(Impedance_Plus_Hz)%id(3)    = 'Re(Zxy)'
+     typeDict(Impedance_Plus_Hz)%id(4)    = 'Im(Zxy)'
+     typeDict(Impedance_Plus_Hz)%id(5)    = 'Re(Zyx)'
+     typeDict(Impedance_Plus_Hz)%id(6)    = 'Im(Zyx)'
+     typeDict(Impedance_Plus_Hz)%id(7)    = 'Re(Zyy)'
+     typeDict(Impedance_Plus_Hz)%id(8)    = 'Im(Zyy)'
+     typeDict(Impedance_Plus_Hz)%id(9)    = 'Re(Tx)'
+     typeDict(Impedance_Plus_Hz)%id(10)   = 'Im(Tx)'
+     typeDict(Impedance_Plus_Hz)%id(11)   = 'Re(Ty)'
+     typeDict(Impedance_Plus_Hz)%id(12)   = 'Im(Ty)'
+     allocate(typeDict(Impedance_Plus_Hz)%units(12),STAT=istat)
+     typeDict(Impedance_Plus_Hz)%units(1) = '[V/m]/[T]'
+     typeDict(Impedance_Plus_Hz)%units(2) = '[V/m]/[T]'
+     typeDict(Impedance_Plus_Hz)%units(3) = '[V/m]/[T]'
+     typeDict(Impedance_Plus_Hz)%units(4) = '[V/m]/[T]'
+     typeDict(Impedance_Plus_Hz)%units(5) = '[V/m]/[T]'
+     typeDict(Impedance_Plus_Hz)%units(6) = '[V/m]/[T]'
+     typeDict(Impedance_Plus_Hz)%units(7) = '[V/m]/[T]'
+     typeDict(Impedance_Plus_Hz)%units(8) = '[V/m]/[T]'
+     typeDict(Impedance_Plus_Hz)%units(9) = '[]'
+     typeDict(Impedance_Plus_Hz)%units(10) = '[]'
+     typeDict(Impedance_Plus_Hz)%units(11) = '[]'
+     typeDict(Impedance_Plus_Hz)%units(12) = '[]'
 
      typeDict(Off_Diagonal_Impedance)%name = 'Off Diagonal Impedance'
      typeDict(Off_Diagonal_Impedance)%isComplex = .true.
      typeDict(Off_Diagonal_Impedance)%calcQ     = .false.
-     typeDict(Off_Diagonal_Impedance)%tfType     = Off_Diagonal_Impedance
-     typeDict(Off_Diagonal_Impedance)%units  = '[V/m]/[T]'
+     typeDict(Off_Diagonal_Impedance)%tfType    = Off_Diagonal_Impedance
      typeDict(Off_Diagonal_Impedance)%nComp     = 4
      allocate(typeDict(Off_Diagonal_Impedance)%id(4),STAT=istat)
-     typeDict(Off_Diagonal_Impedance)%id(1) = 'Re(Zxy)'
-     typeDict(Off_Diagonal_Impedance)%id(2) = 'Im(Zxy)'
-     typeDict(Off_Diagonal_Impedance)%id(3) = 'Re(Zyx)'
-     typeDict(Off_Diagonal_Impedance)%id(4) = 'Im(Zyx)'
+     typeDict(Off_Diagonal_Impedance)%id(1)    = 'Re(Zxy)'
+     typeDict(Off_Diagonal_Impedance)%id(2)    = 'Im(Zxy)'
+     typeDict(Off_Diagonal_Impedance)%id(3)    = 'Re(Zyx)'
+     typeDict(Off_Diagonal_Impedance)%id(4)    = 'Im(Zyx)'
+     allocate(typeDict(Off_Diagonal_Impedance)%units(4),STAT=istat)
+     typeDict(Off_Diagonal_Impedance)%units(1) = '[V/m]/[T]'
+     typeDict(Off_Diagonal_Impedance)%units(2) = '[V/m]/[T]'
+     typeDict(Off_Diagonal_Impedance)%units(3) = '[V/m]/[T]'
+     typeDict(Off_Diagonal_Impedance)%units(4) = '[V/m]/[T]'
+
+     typeDict(Hz_Only)%name = 'Hz Only'
+     typeDict(Hz_Only)%isComplex = .true.
+     typeDict(Hz_Only)%calcQ     = .false.
+     typeDict(Hz_Only)%tfType    = Hz_Only
+     typeDict(Hz_Only)%nComp     = 4
+     allocate(typeDict(Hz_Only)%id(4),STAT=istat)
+     typeDict(Hz_Only)%id(1)    = 'Re(Tx)'
+     typeDict(Hz_Only)%id(2)    = 'Im(Tx)'
+     typeDict(Hz_Only)%id(3)    = 'Re(Ty)'
+     typeDict(Hz_Only)%id(4)    = 'Im(Ty)'
+     allocate(typeDict(Hz_Only)%units(4),STAT=istat)
+     typeDict(Hz_Only)%units(1) = '[]'
+     typeDict(Hz_Only)%units(2) = '[]'
+     typeDict(Hz_Only)%units(3) = '[]'
+     typeDict(Hz_Only)%units(4) = '[]'
 
   end subroutine setup_typeDict
 
@@ -144,6 +184,9 @@ Contains
 	   do j = 1,size(typeDict)
 	      if (associated(typeDict(j)%id)) then
 	         deallocate(typeDict(j)%id,STAT=istat)
+	      end if
+	      if (associated(typeDict(j)%units)) then
+	         deallocate(typeDict(j)%units,STAT=istat)
 	      end if
 	   end do
 
@@ -167,6 +210,12 @@ Contains
 	real(kind=prec)             :: SI_factor
 	! local
 	real(kind=prec)             :: factor1, factor2
+
+	! if the quantity is dimensionless, do nothing
+	if ((index(oldUnits,'[]')>0) .or. (index(newUnits,'[]')>0)) then
+	   SI_factor = ONE
+	   return
+	end if
 
 	! first convert the old units to [V/m]/[T]
 	if (index(oldUnits,'[V/m]/[T]')>0) then
@@ -212,18 +261,23 @@ Contains
 	character(15), allocatable  :: compids(:)
 	integer                     :: j,istat
 
+    allocate(compids(nComp),STAT=istat)
+
+    read(header,*) compids
+
     select case (nComp)
        case(8)
           dataType =  Full_Impedance
        case(12)
           dataType =  Impedance_Plus_Hz
        case(4)
-          dataType =  Off_Diagonal_Impedance
+          if (index(compids(1),'Tx')>0) then
+             dataType =  Hz_Only
+          else
+             dataType =  Off_Diagonal_Impedance
+          end if
     end select
 
-    allocate(compids(nComp),STAT=istat)
-
-    read(header,*) compids
     do j = 1,nComp
     	if (compids(j) .ne. typeDict(dataType)%id(j)) then
     		call errStop('Wrong order of impedance components in data header')

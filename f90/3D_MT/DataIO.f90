@@ -45,13 +45,12 @@ Contains
       character(400)                            :: info
       integer									:: i,j,k,istat
       integer                                   :: nBlocks,iTx,iDt
-      real(kind=prec)    						:: SI_factor
+      real(kind=prec), pointer, dimension(:)    :: SI_factor
       logical                                   :: conjugate
       character(10)                             :: tab='           '
 
 
       info = 'Impedance responses from ModEM'
-      SI_factor = ImpUnits('[V/m]/[T]',units_in_file)
       if (sign_in_file == ISIGN) then
         conjugate = .false.
       else if (abs(sign_in_file) == 1) then
@@ -98,27 +97,33 @@ Contains
 	         	end do
 	         end if
 
+             ! compute the units conversion factors
+             allocate(SI_factor(data%nComp),STAT=istat)
+             do k=1,data%nComp
+                SI_factor(k) = ImpUnits(typeDict(data%dataType)%units(k),units_in_file)
+             end do
+
 	         ! write data
 	         do j = 1,data%nSite
-	         	! Note: temporarily, we write site id's according to their number;
-	         	! in the future, they will be stored in the receiver dictionary
+	         	! site id's are stored in the receiver dictionary
 	         	write(ioDat,'(a10)',advance='no') trim(rxDict(data%rx(j))%id)
       	        !  note that each data field in a dataVec (i.e., allData%d(iTx)%data)
 	         	!   is a real array of size (nComp,nSite)
 	         	do k = 1,data%nComp
-	         		write(ioDat,'(es15.6)',advance='no') data%value(k,j)*SI_factor
+	         		write(ioDat,'(es15.6)',advance='no') data%value(k,j)*SI_factor(k)
 	         	enddo
 	         	write(ioDat,*)
 	         	write(ioDat,'(a10)',advance='no') tab
 	         	do k = 1,data%nComp
 	         	    if (data%errorBar) then
-	         		   write(ioDat,'(es15.6)',advance='no') data%error(k,j)*SI_factor
+	         		   write(ioDat,'(es15.6)',advance='no') data%error(k,j)*SI_factor(k)
 	         		else
 	         		   write(ioDat,'(es15.6)',advance='no') R_ZERO
 	         		endif
 	         	enddo
 	         	write(ioDat,*)
 	         enddo
+	         deallocate(SI_factor,STAT=istat)
          enddo
       enddo
       close(ioDat)
@@ -140,7 +145,8 @@ Contains
      integer                                :: iTx,iRx,iDt,i,j,k,istat
      character(10), pointer,dimension(:)    :: siteIDs
      real(kind=prec), pointer, dimension(:,:) :: siteLoc
-     real(kind=prec)                        :: SI_factor, Period
+     real(kind=prec), pointer, dimension(:) :: SI_factor
+     real(kind=prec)                        :: Period
      logical      							:: conjugate, errorBar, isComplex
      character(400) 						:: temp,header
 
@@ -151,9 +157,6 @@ Contains
       open(unit=ioDat,file=cfile,form='formatted',status='old')
       read(ioDat,'(a13,a100)') temp,info_in_file
       read(ioDat,'(a7,a20)') temp,units_in_file
-
-      SI_factor = ImpUnits(units_in_file,'[V/m]/[T]')
-
       read(ioDat,'(a17,i3)') temp,sign_in_file
       read(ioDat,*)
 
@@ -192,7 +195,12 @@ Contains
 
          read(ioDat,'(a400)') header ! header line: need to parse this
 
+         ! set data type and its SI units
          Data(i)%dataType = ImpType(nComp,header)
+         allocate(SI_factor(nComp),STAT=istat)
+         do j=1,nComp
+            SI_factor(j) = ImpUnits(units_in_file,typeDict(Data(i)%dataType)%units(j))
+         end do
 
          do k=1,nSite
          	read(ioDat,*) siteIDs(k), (Data(i)%value(j,k),j=1,nComp)
@@ -200,8 +208,10 @@ Contains
          end do
 
          ! convert data to SI units
-         Data(i)%value = SI_factor * Data(i)%value
-         Data(i)%error = SI_factor * Data(i)%error
+         do j=1,nComp
+            Data(i)%value(j,:) = SI_factor(j) * Data(i)%value(j,:)
+            Data(i)%error(j,:) = SI_factor(j) * Data(i)%error(j,:)
+         end do
 
          ! conjugate data as necessary
          if (conjugate) then
@@ -226,7 +236,7 @@ Contains
          		Data(i)%rx(k) = iRx
          	end do
          end if
-         deallocate(siteLoc,siteIDs,STAT=istat)
+         deallocate(siteLoc,siteIDs,SI_factor,STAT=istat)
 
 	  end do
 
