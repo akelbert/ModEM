@@ -243,6 +243,8 @@ Contains
         IJ(1,2) = 1
         IJ(2,1) = 1
         IJ(2,2) = 2
+        IJ(3,1) = 3
+        IJ(3,2) = 3
         Call nonlinDataFunc(e0,Sigma0,Hz_Only,iRX,Z,Binv)
   endselect
 

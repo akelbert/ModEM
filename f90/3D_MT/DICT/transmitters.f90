@@ -88,13 +88,15 @@ Contains
 
      nTx = size(txDict)
 
+     
      ! If this period isn't new, do nothing
      do iTx = 1,nTx
-     	if (Period - txDict(iTx)%period < TOL6) then
+     	if (abs(Period - txDict(iTx)%period) < TOL6) then
      		return
      	end if
      end do
-
+ 
+     
      ! If the period really is new, append to the end of the dictionary
      allocate(temp(nTx+1),STAT=istat)
      temp(1:nTx) = txDict
