@@ -20,6 +20,7 @@ module iotypes
 	character(80)				:: fn_func  ! information about data functionals
 	character(80)				:: fn_ctrl	! forward solver control
 	character(80)				:: fn_slices  ! grid radii at which we output the data
+	character(80)				:: fn_field	! input radial field solution (if required)
 	character(80)				:: fn_precond	! preconditioning parameters
 	character(80)				:: fn_param0	! base model parametrization
 	character(80)				:: fn_param	! information about the parametrization

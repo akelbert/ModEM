@@ -373,7 +373,7 @@ Contains
 
 	  ! output full H-field cvector
 	  if (output_level > 4) then
-	  	call outputFields(freq,Hj,cUserDef,'field')
+	  	call outputField(freq,Hj,cUserDef,'field')
 	  end if
 
 	  ! compute and output C and D responses at observatories

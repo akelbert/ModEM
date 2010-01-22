@@ -53,6 +53,7 @@ module sg_scalar
   END INTERFACE
 
   INTERFACE linComb
+     MODULE PROCEDURE linComb_rscalar
      MODULE PROCEDURE linComb_cscalar
   END INTERFACE
 
@@ -136,7 +137,7 @@ module sg_scalar
        diagMult_rcscalar, diagMult_crscalar, &
        diagMult_rcscalar_f, diagMult_crscalar_f, &
        dotProd_rscalar_f, dotProd_cscalar_f, &
-       linComb_cscalar, scMultAdd_cscalar
+       linComb_rscalar, linComb_cscalar, scMultAdd_cscalar
 
   ! ***************************************************************************
   ! type cscalar defines scalar for either edge or face in a staggered grid as
@@ -2056,6 +2057,51 @@ Contains
 
   end function dotProd_cscalar_f ! dotProd_cscalar
 
+
+  !****************************************************************************
+  ! linComb_rscalar computes linear combination of two scalars
+  ! stored as derived data type rscalar; subroutine, not a function
+  ! both input scalars must have the same dimension
+  subroutine linComb_rscalar(inc1, E1, inc2, E2, E3)
+
+    implicit none
+    !   input scalars
+    type (rscalar), intent(in)             :: E1, E2
+    !  input complex scalars
+    real (kind=prec), intent(in)           :: inc1, inc2
+    type (rscalar), intent(inout)          :: E3
+
+    if((.not.E1%allocated).or.(.not.E2%allocated)) then
+       write(0,*) 'RHS not allocated yet for linComb_rscalar'
+       stop
+    endif
+
+    ! check to see if LHS (E3) is active (allocated)
+    if(.not.E3%allocated) then
+       write(0,*) 'LHS was not allocated for linComb_rscalar'
+    else
+
+       ! Check whether all scalars are of the same size
+       if ((E1%nx == E2%nx).and.(E1%ny == E2%ny).and.(E1%nz == E2%nz).and.&
+            (E1%nx == E3%nx).and.(E1%ny == E3%ny).and.(E1%nz == E3%nz)) then
+
+          if ((E1%gridType == E2%gridType).and.(E1%gridType == E3%gridType)) then
+
+             ! form linear combinatoin
+             E3%v = inc1*E1%v + inc2*E2%v
+
+          else
+             write (0, *) 'not compatible usage for linComb_rscalar'
+          end if
+
+       else
+
+          write(0, *) 'Error:linComb_rscalar:  scalars not same size'
+
+       end if
+    end if
+
+  end subroutine linComb_rscalar ! linComb_rscalar
 
   !****************************************************************************
   ! linComb_cscalar computes linear combination of two scalars

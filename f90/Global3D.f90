@@ -66,6 +66,12 @@ program earth
 
 	call calc_original(runtime)
 
+  case ('secondary')
+
+	print *,'Calculating solution using the secondary field formulation.'
+
+	call calc_secondary_fields(runtime)
+
   case ('responses')
 
 	print *,'Calculating responses only.'
@@ -563,6 +569,153 @@ end program earth
 
 
   end subroutine calc_responses	! calc_responses
+
+
+  ! ***************************************************************************
+  ! * calc_secondary_fields is a subroutine to calculate fields and responses
+  ! * using secondary field formulation; reading the primary field (1D solution)
+  ! * from a file, or computing it internally (not implemented yet).
+
+  subroutine calc_secondary_fields(rtime)
+
+	use griddef
+	use data_vectors
+	use global
+	use dataFunc
+	use jacobian
+	use input
+	use output
+	use initFields
+	use dataMisfit
+	use boundaries	!for testing
+	use sensmatrix
+	implicit none
+
+	real, intent(inout)						:: rtime  ! run time
+	real									:: ftime  ! run time per frequency
+	real									:: stime, etime ! start and end times
+    integer, dimension(8)					:: tarray ! utility variable
+    integer	                                :: errflag	! internal error flag
+	real(8)									:: omega  ! variable angular frequency
+	integer									:: istat,i,j,k
+	type (EMsolnMTX_t)						:: H1D
+	type (cvector)                     	    :: Hj, Bj, dH, F
+	type (rvector)							:: drhoF
+	type (rscalar)							:: rho1D, drho
+	type (modelParam_t)                     :: param1D
+    !type (cvector)							:: H,B,F
+	!type (sparsevecc)						:: Hb
+	!type (functional_t)						:: dataType
+	type (transmitter_t)					:: freq
+	integer									:: ifreq
+	logical									:: adjoint, delta
+
+	! Start the (portable) clock
+	call date_and_time(values=tarray)
+	stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+
+	! Don't need to initialize fields: initial dH and boundary conditions are zero
+	! call initialize_fields(dH,Bj)
+
+	! Make 1D parametrization out of full, and map to grid (primary cell centers)
+	param1D = getRadial(param)
+	call create_rscalar(grid,rho1D,CENTER)
+	call initModel(grid,param1D,rho1D%v)
+
+	! Take the difference on the grid, to avoid the problem with zero resistivity
+	! call linComb_rscalar(ONE,rho,MinusONE,rho1D,drho)
+	call create_rscalar(grid,drho,CENTER)
+	drho%v = rho - rho1D%v
+
+	! Map the resistivity vector to primary cell faces (dual edges)
+	call operatorL(drho%v,drhoF,grid)
+
+	! Read the primary field solution, computed for a 1D model
+	! (alternatively, compute it locally)
+	call initField(cUserDef,grid,H1D)
+
+	do ifreq=1,freqList%n
+
+	  freq = freqList%info(ifreq)
+
+	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
+
+	  ! Compute the RHS = - del x drho (del x H)
+	  call operatorlC(H1D%solns(ifreq),F,grid)
+	  call diagMult(drhoF,F,F)
+	  call operatorCt(F,Bj,grid)
+	  call operatorD_Si_divide(Bj,grid)
+	  call linComb(C_MinusONE,Bj,C_ZERO,Bj,Bj)
+
+	  ! solve A <h> = <b> for vector <h>
+	  adjoint=.FALSE.
+	  delta=.TRUE.
+	  call operatorM(dH,Bj,omega,rho,grid,fwdCtrls,errflag,adjoint,delta)
+
+	  ! Full solution for one frequency is the sum H1D + dH
+	  Hj = dH
+	  call linComb_cvector(C_ONE,H1D%solns(ifreq),C_ONE,dH,Hj)
+
+	  ! compute and output fields; C and D responses at cells
+	  call outputSolution(freq,Hj,slices,grid,cUserDef,rho,'h')
+
+	  ! output full H-field cvector
+	  if (output_level > 4) then
+	  	call outputField(freq,Hj,cUserDef,'field')
+	  end if
+
+	  ! compute and output C and D responses at observatories
+	  call calcResponses(freq,Hj,dat,psi)
+	  call outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
+
+	  call calcResiduals(freq,dat,psi,res)
+
+	  ! If computing different kinds of misfits, be consistent;
+	  ! write different kinds into different data structures
+	  call calcMisfit(freq,res,misfit,misfit%name)
+
+	!call OutputResiduals(freq,res,TFList,obsList)
+
+	  call date_and_time(values=tarray)
+	  etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+	  ftime = etime - stime
+	  print *,'Time taken (secs) ',ftime
+	  rtime = rtime + ftime
+
+	end do
+
+	if (output_level>0) then
+	write(0,*)
+  	do i=1,freqList%n
+	  do j=1,TFList%n
+    write(6,'(a12,i3,a2,a35,i2,a2,g15.7)') 'Misfit for ',misfit%ndat(i,j),&
+			trim(TFList%info(j)%name),' responses, computed for frequency ',i,' :',&
+			misfit%value(i,j)/(2*misfit%ndat(i,j))
+	  end do
+	end do
+	end if
+
+	call misfitSumUp(res,misfit,misfitValue)
+
+	!call outputMisfit(param,misfit,misfitValue,cUserDef)
+
+	continue
+	call deall_cvector(Hj)
+	call deall_cvector(Bj)
+	call deall_cvector(dH)
+	call deall_cvector(F)
+	call deall_rvector(drhoF)
+	call deall_rscalar(drho)
+	call deall_rscalar(rho1D)
+	call deall_modelParam(param1D)
+	call deall_EMsolnMTX(H1D)
+
+	call date_and_time(values=tarray)
+	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+	rtime = etime - stime
+
+
+  end subroutine calc_secondary_fields	! calc_secondary_fields
 
 
   ! ***************************************************************************

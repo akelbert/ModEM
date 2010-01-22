@@ -65,6 +65,10 @@ module model_operators
      MODULE PROCEDURE getDegree_modelParam_f
      MODULE PROCEDURE getLayerDegree_modelParam_f
   END INTERFACE
+
+  INTERFACE getRadial
+     MODULE PROCEDURE getRadial_modelParam_f
+  END INTERFACE
   ! * EOP
 
   public			:: create_modelParam, deall_modelParam, setup_modelParam, copy_modelParam
@@ -74,6 +78,7 @@ module model_operators
   public			:: setLayer_modelParam, setCoeffValue_modelParam, setCrust_modelParam
   public            :: getCoeffValue_modelParam, getCoeff_modelParam, getCoeffArray_modelParam
   public			:: getDegree_modelParam_f, getLayerDegree_modelParam_f
+  public			:: getRadial_modelParam_f
   public			:: add_modelParam_f, subtract_modelParam_f, linComb_modelParam
   public			:: mult_modelParam_f, dotProd_modelParam_f, dotProdVec_modelParam_f
   public			:: scMult_modelParam, scDiv_modelParam_f
@@ -433,6 +438,38 @@ Contains
   end subroutine fillParamValues_modelParam
 
   ! **********************************************************************
+  ! * P1 is the 1D (radial) part of P.
+  ! * Always use a new variable for P1; should not overwrite P!!!
+  function getRadial_modelParam_f(P) result (P1)
+
+    implicit none
+    type (modelParam_t), intent(in)				   :: P
+    type (modelParam_t)							   :: P1
+    integer							   			   :: lmax
+    ! * EOP
+
+	integer										   :: i,j,k
+
+    if(.not.P%allocated) then
+       call errStop('(getRadial_modelParam) parametrization not allocated yet')
+	end if
+
+    P1 = P
+
+	do j=1,P%nL
+	  do i=1,P%nF
+		if((P%F(i)%l == 0) .and. (P%F(i)%m == 0)) then
+		  cycle
+		end if
+		P1%c(j,i)%value=R_ZERO
+	  end do
+	end do
+
+	P1%temporary = .TRUE.
+
+  end function getRadial_modelParam_f
+
+  ! **********************************************************************
   ! * BOP
   function getDegree_modelParam_f(P) result (lmax)
 
@@ -456,7 +493,6 @@ Contains
 	end do
 
   end function getDegree_modelParam_f
-
 
   ! **********************************************************************
   ! * BOP

@@ -27,7 +27,7 @@ Contains
   ! * Output full solution into separate files called "slices": each file
   ! * contains values for a single frequency and a single radius
 
-  subroutine outputFields(freq,H,cUserDef,extension)
+  subroutine outputField(freq,H,cUserDef,extension)
 
 	type (input_info), intent(in)			  :: cUserDef
 	type (transmitter_t), intent(in)			  :: freq
@@ -52,7 +52,7 @@ Contains
 	call write_cvector(ioOut,H)
 	close(ioOut)
 
-  end subroutine outputFields	! outputFields
+  end subroutine outputField	! outputField
 
 
   ! ***************************************************************************

@@ -146,6 +146,7 @@ module sg_vector
   public		::   create_rvector,  create_cvector, &
        deall_rvector, deall_cvector, &
        write_rvector, write_cvector, &
+       read_rvector, read_cvector, &
        copy_rvector, copy_cvector, &
        zero_rvector, zero_cvector, &
        compare_rvector_f, compare_cvector_f, &
@@ -546,11 +547,11 @@ Contains
 
       write(fid,'(3i5,a10)',iostat=istat) E%nx,E%ny,E%nz,trim(E%gridType)
 
-	  Nx = E%nx + 1
-	  Ny = E%ny + 1
-	  Nz = E%nz + 1
+	  Nx = E%nx
+	  Ny = E%ny
+	  Nz = E%nz
 
-      allocate(x(Nx,Ny,Nz),y(Nx,Ny,Nz),z(Nx,Ny,Nz),STAT=istat)
+      allocate(x(Nx+1,Ny+1,Nz+1),y(Nx+1,Ny+1,Nz+1),z(Nx+1,Ny+1,Nz+1),STAT=istat)
       x = R_ZERO
       y = R_ZERO
       z = R_ZERO
@@ -560,23 +561,23 @@ Contains
 	   ! 1) E%x(:,1,:) and E%x(:,ny+1,:) are undefined,
 	   ! 2) E%y(nx+1,:,:) and E%z(nx+1,:,:) are repetitios,
 	   ! 3) E%x(-1,0,ny+1,ny+2,:,:) will be needed for interpolation.
-	   x(1:E%nx,:,:) = E%x
-	   y(:,1:E%ny,:) = E%y
-	   z(:,:,1:E%nz) = E%z
+	   x(1:Nx,:,:) = E%x
+	   y(:,1:Ny,:) = E%y
+	   z(:,:,1:Nz) = E%z
       else if (E%gridType == FACE) then
 	   ! For spherical problem:
 	   ! 1) E%y(:,1,:) and E%y(:,ny+1,:) are undefined,
 	   ! 2) E%x(nx+1,:,:) is repetitios and equals E%x(1,:,:).
-	   x(:,1:E%ny,1:E%nz) = E%x
-	   y(1:E%nx,:,1:E%nz) = E%y
-	   z(1:E%nx,1:E%ny,:) = E%z
+	   x(:,1:Ny,1:Nz) = E%x
+	   y(1:Nx,:,1:Nz) = E%y
+	   z(1:Nx,1:Ny,:) = E%z
       else
        write (0, *) 'not a known tag'
       end if
 
-      do k = 1,Nz
-      	do j = 1,Ny
-      		do i = 1,Nx
+      do k = 1,Nz+1
+      	do j = 1,Ny+1
+      		do i = 1,Nx+1
       			write(fid,'(3i5,3es13.5)',iostat=istat) i,j,k,x(i,j,k),y(i,j,k),z(i,j,k)
       		end do
       	end do
@@ -587,7 +588,7 @@ Contains
   end subroutine write_rvector
 
   !****************************************************************************
-  ! write_cvector writes an ivector in a simple ASCII format; cvector has
+  ! write_cvector writes a cvector in a simple ASCII format; cvector has
   ! to exist and be allocated before calling this routine, and the file unit
   ! must already be available for writing.
   subroutine write_cvector(fid, E)
@@ -607,11 +608,11 @@ Contains
 
       write(fid,'(3i5,a10)',iostat=istat) E%nx,E%ny,E%nz,trim(E%gridType)
 
-	  Nx = E%nx + 1
-	  Ny = E%ny + 1
-	  Nz = E%nz + 1
+	  Nx = E%nx
+	  Ny = E%ny
+	  Nz = E%nz
 
-      allocate(x(Nx,Ny,Nz),y(Nx,Ny,Nz),z(Nx,Ny,Nz),STAT=istat)
+      allocate(x(Nx+1,Ny+1,Nz+1),y(Nx+1,Ny+1,Nz+1),z(Nx+1,Ny+1,Nz+1),STAT=istat)
       x = C_ZERO
       y = C_ZERO
       z = C_ZERO
@@ -621,23 +622,23 @@ Contains
 	   ! 1) E%x(:,1,:) and E%x(:,ny+1,:) are undefined,
 	   ! 2) E%y(nx+1,:,:) and E%z(nx+1,:,:) are repetitios,
 	   ! 3) E%x(-1,0,ny+1,ny+2,:,:) will be needed for interpolation.
-	   x(1:E%nx,:,:) = E%x
-	   y(:,1:E%ny,:) = E%y
-	   z(:,:,1:E%nz) = E%z
+	   x(1:Nx,:,:) = E%x
+	   y(:,1:Ny,:) = E%y
+	   z(:,:,1:Nz) = E%z
       else if (E%gridType == FACE) then
 	   ! For spherical problem:
 	   ! 1) E%y(:,1,:) and E%y(:,ny+1,:) are undefined,
 	   ! 2) E%x(nx+1,:,:) is repetitios and equals E%x(1,:,:).
-	   x(:,1:E%ny,1:E%nz) = E%x
-	   y(1:E%nx,:,1:E%nz) = E%y
-	   z(1:E%nx,1:E%ny,:) = E%z
+	   x(:,1:Ny,1:Nz) = E%x
+	   y(1:Nx,:,1:Nz) = E%y
+	   z(1:Nx,1:Ny,:) = E%z
       else
        write (0, *) 'not a known tag'
       end if
 
-      do k = 1,Nz
-      	do j = 1,Ny
-      		do i = 1,Nx
+      do k = 1,Nz+1
+      	do j = 1,Ny+1
+      		do i = 1,Nx+1
       			write(fid,'(3i5,6es13.5)',iostat=istat) i,j,k,x(i,j,k),y(i,j,k),z(i,j,k)
       		end do
       	end do
@@ -646,6 +647,142 @@ Contains
 	  deallocate(x,y,z,STAT=istat)
 
   end subroutine write_cvector
+
+  !****************************************************************************
+  ! read_rvector reads an rvector in a simple ASCII format; rvector must match
+  ! the input grid; file unit must already be available for reading.
+  subroutine read_rvector(fid, E, grid)
+
+      integer,        intent(in)		:: fid
+      type (rvector), intent(inout)		:: E
+      type (grid_t), target, intent(in) :: grid
+
+      !  local variables
+      integer 		                    :: Nx, Ny, Nz
+      character(80)						:: gridType
+      integer                           :: i, j, k, ii, jj, kk, istat
+      real (kind(E%x)), allocatable, dimension(:,:,:)  :: x, y, z
+
+      read(fid,*,iostat=istat) Nx,Ny,Nz,gridType
+
+      if ((Nx .ne. grid%nx) .or. (Ny .ne. grid%ny) .or. (Nz .ne. grid%nz)) then
+         write(0, *) 'rvector size does not match the grid in read_rvector'
+         stop
+      endif
+
+      if(.not. E%allocated) then
+      	call create_rvector(grid,E,gridType)
+      else
+      	E%nx = Nx
+      	E%ny = Ny
+      	E%nz = Nz
+      	E%gridType = gridType
+      	E%grid => grid
+      endif
+
+      allocate(x(Nx+1,Ny+1,Nz+1),y(Nx+1,Ny+1,Nz+1),z(Nx+1,Ny+1,Nz+1),STAT=istat)
+      x = R_ZERO
+      y = R_ZERO
+      z = R_ZERO
+
+      do k = 1,Nz+1
+      	do j = 1,Ny+1
+      		do i = 1,Nx+1
+      			read(fid,'(3i5,3es13.5)',iostat=istat) ii,jj,kk,x(i,j,k),y(i,j,k),z(i,j,k)
+      		end do
+      	end do
+      end do
+
+      if (E%gridType == EDGE) then
+	   ! For spherical problem:
+	   ! 1) E%x(:,1,:) and E%x(:,ny+1,:) are undefined,
+	   ! 2) E%y(nx+1,:,:) and E%z(nx+1,:,:) are repetitios,
+	   ! 3) E%x(-1,0,ny+1,ny+2,:,:) will be needed for interpolation.
+	   E%x = x(1:Nx,:,:)
+	   E%y = y(:,1:Ny,:)
+	   E%z = z(:,:,1:Nz)
+      else if (E%gridType == FACE) then
+	   ! For spherical problem:
+	   ! 1) E%y(:,1,:) and E%y(:,ny+1,:) are undefined,
+	   ! 2) E%x(nx+1,:,:) is repetitios and equals E%x(1,:,:).
+	   E%x = x(:,1:Ny,1:Nz)
+	   E%y = y(1:Nx,:,1:Nz)
+	   E%z = z(1:Nx,1:Ny,:)
+      else
+       write (0, *) 'not a known tag'
+      end if
+
+	  deallocate(x,y,z,STAT=istat)
+
+  end subroutine read_rvector
+
+  !****************************************************************************
+  ! read_cvector reads a cvector in a simple ASCII format; cvector must match
+  ! the input grid; file unit must already be available for reading.
+  subroutine read_cvector(fid, E, grid)
+
+      integer,        intent(in)		:: fid
+      type (cvector), intent(inout)		:: E
+      type (grid_t), target, intent(in) :: grid
+
+      !  local variables
+      integer 		                    :: Nx, Ny, Nz
+      character(80)						:: gridType
+      integer                           :: i, j, k, ii, jj, kk, istat
+      complex (kind(E%x)), allocatable, dimension(:,:,:)  :: x, y, z
+
+      read(fid,*,iostat=istat) Nx,Ny,Nz,gridType
+
+      if ((Nx .ne. grid%nx) .or. (Ny .ne. grid%ny) .or. (Nz .ne. grid%nz)) then
+         write(0, *) 'cvector size does not match the grid in read_cvector'
+         stop
+      endif
+
+      if(.not. E%allocated) then
+      	call create_cvector(grid,E,gridType)
+      else
+      	E%nx = Nx
+      	E%ny = Ny
+      	E%nz = Nz
+      	E%gridType = gridType
+      	E%grid => grid
+      endif
+
+      allocate(x(Nx+1,Ny+1,Nz+1),y(Nx+1,Ny+1,Nz+1),z(Nx+1,Ny+1,Nz+1),STAT=istat)
+      x = C_ZERO
+      y = C_ZERO
+      z = C_ZERO
+
+      do k = 1,Nz+1
+      	do j = 1,Ny+1
+      		do i = 1,Nx+1
+      			read(fid,'(3i5,6es13.5)',iostat=istat) ii,jj,kk,x(i,j,k),y(i,j,k),z(i,j,k)
+      		end do
+      	end do
+      end do
+
+      if (E%gridType == EDGE) then
+	   ! For spherical problem:
+	   ! 1) E%x(:,1,:) and E%x(:,ny+1,:) are undefined,
+	   ! 2) E%y(nx+1,:,:) and E%z(nx+1,:,:) are repetitios,
+	   ! 3) E%x(-1,0,ny+1,ny+2,:,:) will be needed for interpolation.
+	   E%x = x(1:Nx,:,:)
+	   E%y = y(:,1:Ny,:)
+	   E%z = z(:,:,1:Nz)
+      else if (E%gridType == FACE) then
+	   ! For spherical problem:
+	   ! 1) E%y(:,1,:) and E%y(:,ny+1,:) are undefined,
+	   ! 2) E%x(nx+1,:,:) is repetitios and equals E%x(1,:,:).
+	   E%x = x(:,1:Ny,1:Nz)
+	   E%y = y(1:Nx,:,1:Nz)
+	   E%z = z(1:Nx,1:Ny,:)
+      else
+       write (0, *) 'not a known tag'
+      end if
+
+	  deallocate(x,y,z,STAT=istat)
+
+  end subroutine read_cvector
 
   !****************************************************************************
   ! copy_rvector makes an exact copy of derived data type

@@ -9,6 +9,7 @@ module input
   use modeldef
   use datadef
   use dataspace
+  use solnrhs
   use iotypes
   implicit none
 
@@ -65,6 +66,7 @@ Contains
     read (ioStartup,'(a17,g15.7)') string,cUserDef%damping;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_grid;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_shell;
+    read (ioStartup,'(a17,a80)') string,cUserDef%fn_field;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_period;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_coords;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_func;
@@ -112,7 +114,7 @@ Contains
 
 	open(ioGrd,file=cUserDef%fn_grid,status='old',iostat=ios)
 
-    write(6,*) 'Reading from the grid file ',cUserDef%fn_grid
+    write(6,*) 'Reading from the grid file ',trim(cUserDef%fn_grid)
 	read(ioGrd,*) nx,ny,nz
 	! model grid and resistivity memory allocation
 	allocate(x(nx+1),y(ny+1),z(nz+1))
@@ -192,6 +194,30 @@ Contains
 
   end subroutine initGrid	! initGrid
 
+  ! ***************************************************************************
+  ! * initField reads in the full field solution from fn_field.
+  ! * This is used for reading in the primary (radial) magnetic fields.
+
+  subroutine initField(cUserDef,mygrid,H)
+
+    type (input_info), intent(in)					:: cUserDef
+    type (grid_t) , intent(in)						:: mygrid
+    type (EMsolnMTX_t) , intent(inout)				:: H
+    ! local
+    integer				                            :: ios,istat,i
+
+    write(6,*) 'Reading from the EM solution file ',trim(cUserDef%fn_field)
+
+	inquire(FILE=cUserDef%fn_field,EXIST=exists)
+	if(.not.exists) then
+      write(6,*) 'Field solution will not be initialized: ',trim(cUserDef%fn_field)," not found"
+	  call deall_EMsolnMTX(H)
+	  return
+	end if
+
+	call read_EMsolnMTX(cUserDef%fn_field,H,mygrid)
+
+  end subroutine initField	! initField
 
   ! ***************************************************************************
   ! * initCrust reads the modelfile fn_shell to store S-conductance of Earth's
@@ -217,7 +243,7 @@ Contains
 
 	open(ioShell,file=cUserDef%fn_shell,status='old',iostat=ios)
 
-    write(6,*) 'Reading from the thin sheet conductance file ',cUserDef%fn_shell
+    write(6,*) 'Reading from the thin sheet conductance file ',trim(cUserDef%fn_shell)
 
 	do i=1,mygrid%nx
 	  read(ioShell,*,iostat=ios) mycrust%cond(i,1:mygrid%ny)
@@ -247,7 +273,7 @@ Contains
 
     open(ioPer,file=cUserDef%fn_period,status='old',form='formatted',iostat=ios)
 
-    write(6,*) 'Reading from the periods file ',cUserDef%fn_period
+    write(6,*) 'Reading from the periods file ',trim(cUserDef%fn_period)
     read(ioPer,'(a)') label
     ! write(6,*) label
 
@@ -328,7 +354,7 @@ Contains
 
     open(ioObs,file=cUserDef%fn_coords,status='old',form='formatted',iostat=ios)
 
-    write(6,*) 'Reading from the coordinates file ',cUserDef%fn_coords
+    write(6,*) 'Reading from the coordinates file ',trim(cUserDef%fn_coords)
     read(ioObs,'(a)') label
     ! write(6,*) label
 
@@ -364,7 +390,7 @@ Contains
 
     open(ioFunc,file=cUserDef%fn_func,status='old',form='formatted',iostat=ios)
 
-    write(6,*) 'Reading from the transfer functions file ',cUserDef%fn_func
+    write(6,*) 'Reading from the transfer functions file ',trim(cUserDef%fn_func)
     read(ioFunc,'(a)') label
 
 	read(ioFunc,*) num
@@ -403,7 +429,7 @@ Contains
 
     open(ioRad,file=cUserDef%fn_slices,status='old',form='formatted',iostat=ios)
 
-    write(6,*) 'Reading from the output radii file ',cUserDef%fn_slices
+    write(6,*) 'Reading from the output radii file ',trim(cUserDef%fn_slices)
     read(ioRad,'(a)') label
 
 	read(ioRad,*) num
@@ -745,7 +771,7 @@ Contains
 
     open(ioDat,file=cUserDef%fn_cdata,status='old',form='formatted',iostat=ios)
 
-    write(6,*) 'Reading from the data file ',cUserDef%fn_cdata
+    write(6,*) 'Reading from the data file ',trim(cUserDef%fn_cdata)
     read(ioDat,'(a)') label
     write(6,*) label
 
@@ -871,7 +897,7 @@ Contains
 
     open(ioDat,file=cUserDef%fn_ddata,status='old',form='formatted',iostat=ios)
 
-    write(6,*) 'Reading from the data file ',cUserDef%fn_ddata
+    write(6,*) 'Reading from the data file ',trim(cUserDef%fn_ddata)
     read(ioDat,'(a)') label
     write(6,*) label
 
@@ -999,11 +1025,11 @@ Contains
 	if(present(p0)) then
 	  if(p0) then
 		open(ioPrm,file=cUserDef%fn_param0,status='old',form='formatted',iostat=ios)
-		write(6,*) 'Reading from the parametrization file ',cUserDef%fn_param0
+		write(6,*) 'Reading from the parametrization file ',trim(cUserDef%fn_param0)
 	  end if
 	else
 	  open(ioPrm,file=cUserDef%fn_param,status='old',form='formatted',iostat=ios)
-	  write(6,*) 'Reading from the parametrization file ',cUserDef%fn_param
+	  write(6,*) 'Reading from the parametrization file ',trim(cUserDef%fn_param)
 	end if
 
     read(ioPrm,'(a8,a80)') string,prmname
@@ -1115,7 +1141,7 @@ Contains
 
 	  open(ioCtrl,file=cUserDef%fn_ctrl,form='formatted',status='old')
 
-      write(6,*) 'Reading from the forward solver controls file ',cUserDef%fn_ctrl
+      write(6,*) 'Reading from the forward solver controls file ',trim(cUserDef%fn_ctrl)
       read(ioCtrl,*) fwdCtrls%ipotloopmax
       read(ioCtrl,*) fwdCtrls%errend
       read(ioCtrl,*) fwdCtrls%nrelmax

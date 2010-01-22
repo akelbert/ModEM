@@ -1,6 +1,6 @@
 ! *****************************************************************************
 module maxwells
-  ! Central module in the project earth3d, containing the subroutine to solve 
+  ! Central module in the project earth3d, containing the subroutine to solve
   ! numerically the integral form of the quasi-static approximation to Maxwell's
   ! equations on the given grid
 
@@ -23,7 +23,7 @@ Contains
   ! * <b>=<lB>. This is the typical use of this operator. However, the subroutine
   ! * given here is the general version so that for any two vectors <x> and <y>,
   ! * where <y> is known, the output is <x>.
-  ! *	
+  ! *
   ! * SolveMaxwells is the routine to solve numerically the system of equations.
   !	* Input includes rho in cell centres, scalar angular frequency and the forcing
   !	* vector <y>. Output includes the vector <x> of line integrals lH, defined along
@@ -80,7 +80,7 @@ Contains
     complex(8)                               :: lambda	! <t,s>/<t,t>
   ! subsidiary variables (H stands for the Hermitian operator)
     complex(8)                               :: gamma ! <r0,r>
-    complex(8)                               :: gamma0	! <r0,r(i-1)>	
+    complex(8)                               :: gamma0	! <r0,r(i-1)>
     complex(8)                               :: yHy,rHq,tHs,tHt
   !---------------------------------------------------------------------
   ! convergence criteria
@@ -111,7 +111,8 @@ Contains
     integer,   dimension(100)                :: itest
     integer                                  :: i,j,iflag,idiv,itest_n
 
-    complex(8)                               :: cone  ! constant
+    complex(8)                               :: cone, czero  ! constant
+    real(8)									 :: eps
 !------------------------------------------------------------------
 ! The following variable determines if this routine has been called
 ! previously (e.g. for a previous frequency) - which if so, changes
@@ -133,7 +134,7 @@ Contains
 !toh: put the stopping criterion of the first frequency order of magnitude
 !     more strict than others. hope this may work for a better accuracy of a
 !     frequency loop in ASCENDING order. [22/FEB/1999]
-!ak: don't know if greater accuracy is required for dh; errend = divH tolerance 
+!ak: don't know if greater accuracy is required for dh; errend = divH tolerance
 
 !	if ( nfreq > 1 .and. ifreq == 1 ) then
 	if ( call_flag == 0 ) then
@@ -149,9 +150,12 @@ Contains
 
 
 !-------------------------------------------------------------
-!	  Initialize real 1 and -1 in the complex plane
+!	  Initialize real 1 and 0 in the complex plane
 !-------------------------------------------------------------
 	cone  = dcmplx( 1.0d0,0.0d0)
+	czero = dcmplx( 0.0d0,0.0d0)
+
+	eps = 1.0e-30
 
 
 !-------------------------------------------------------------
@@ -206,7 +210,7 @@ Contains
 	! Currently, to go along with the previous version of the code,
 	! all vectors that should be length np are length np2, where
 	!	np=nhx+nhy+nhz; np2=3*nx*(ny+1)*(nz+1) (ak, 12/Apr/2005)
-	! 
+	!
 	! Lemma: sufficient condition for np<=np2 to hold is nx>=1.
 	! Proof:
 	! nhx+nhy<2*nx(ny+1)(nz+1); nx*(ny-1)+2<=nx(ny+1) iff nx>=1.
@@ -241,7 +245,7 @@ Contains
 !  toh: set up 3d em operator
 !-------------------------------------------------------------
 
-	! compute SP1 of SP1 <h>=<p> and its diagonal portion SP        
+	! compute SP1 of SP1 <h>=<p> and its diagonal portion SP
 	call set_op3u(nx,ny,nz,sp1,ija1,sp,ija,resist,x,y,z, &
 				 omega,dp1,np)
 
@@ -318,14 +322,29 @@ Contains
 	IPOTMAX=ctrls%ipot0
 
 
-  ! compute Norm2(<y>) = <y,y>
+	! compute Norm2(<y>) = <y,y>
     yHy = dot_product(yvec(1:np),yvec(1:np))
+
 
 	Main: do
 
 	  ICTPOT=0
       IPOTMAX=IPOTMAX+IPOTINT
       if(IPOTMAX > IPOTMAXMAX) IPOTMAX=IPOTMAXMAX
+
+!-------------------------------------------------------------
+! If the forcing is zero, set solution to zero and exit
+!-------------------------------------------------------------
+	  if (cdabs(yHy) < eps) then
+		if (output_level>2) then
+			print*,'initial forcing norm =',yHy
+			print*,'exiting with zero solution...'
+		end if
+		xvec = czero
+		exitflg=0
+		exit Main
+	  end if
+
 !-------------------------------------------------------------
 ! Calculate initial residual, and begin relaxation iterations
 !-------------------------------------------------------------
@@ -349,7 +368,7 @@ Contains
 	  gamma0 = dot_product(rvec0(1:np),rvec0(1:np))
 
 	  BiCGSTAB: do ICOUNT=1,NRELMAX
- 
+
 	  ! compute <d> = A<p(i-1)>
 		call atimes(pvec,dvec,sp1,ija1,dp1,np)
 	  ! solve (LU)<q(i)> = A<p(i-1)> for <q>
@@ -386,22 +405,22 @@ Contains
 
 	  ! convergence criterion (is the <x> update significant?)
 		herr = cdsqrt( dot_product(dxvec(1:np),dxvec(1:np)) &
-		   /dot_product(xvec(1:np),xvec(1:np)) )
+			/ dot_product(xvec(1:np),xvec(1:np)) )
 
 	  ! estimate error <y> - A <x(i)>
-		erre=cdabs(dot_product(rvec(1:np),rvec(1:np)))/yHy
+		erre = cdabs( dot_product(rvec(1:np),rvec(1:np)) )/yHy
 
 		if (output_level>2) then
 		  print *, ICOUNT, erre, dreal(herr)
 		end if
-  
+
 		ICTPOT=ICTPOT+1
 		if((ICOUNT > IPOTMAX).and.(IPOTLOOP <= IPOTLOOPMAX)) then
 		! If i'th error > (i-1)'th error, update hx,hy,hz and start again;
-		! otherwise either exit or update error and continue BiCGSTAB. 
+		! otherwise either exit or update error and continue BiCGSTAB.
 		  errchk=dlog10(errlast/erre)
 		  ! If the error has increased in the last iteration, do divH correction
-		  if(errchk < 0.0d0) then !Gary's version 
+		  if(errchk < 0.0d0) then !Gary's version
 		  ! if(errchk > 0.0d0) then !Adam's version
 		  !----------------------------------------------------------------
 		  ! Static Divergence Correction (SDC)
@@ -526,12 +545,12 @@ end module maxwells	! maxwells
 !          cholesky decomposition
 !     real space values are used - no renormalization is done.
 !
-!     several air layers are added on top of the earth model. The 
+!     several air layers are added on top of the earth model. The
 !          H fields are set to be uniform on the top of these layers.
 !
 !     modified to read boundary value file that may have TE mode
 !     values for the Hx polarization.
-! 
+!
 !     15-12-97 last modified by M.Uyeshima
 !     27-12-97 computing surface EM-field
 !     30-12-97 air resistivity can be given
@@ -587,6 +606,6 @@ end module maxwells	! maxwells
 !			   and about the source term forcing (which in practice has been used
 !			   in generating <y>) to the divergence correction routine.
 !
-!	  Profiling shows 'atimes' is the longest by far routine. This subroutine	
+!	  Profiling shows 'atimes' is the longest by far routine. This subroutine
 !	  is called up to IPOTMAX*(2*(NRELMAX+1)) times.
 !--------------------------------------------------------------------
