@@ -8,11 +8,19 @@ module sensMatrix
 
   implicit none
 
-  public 	:: calcSensMatrix, Jmult, JmultT, fwdPred, setGrid
+  public 	:: calcSensMatrix, setGrid, cleanUp
+  public	:: Jmult,   Jmult_TX
+  public	:: JmultT,  JmultT_TX
+  public	:: fwdPred, fwdPred_TX
 
   ! numerical discretization used to compute the EM solution
   !  (may be different from the grid stored in model parameter)
   type (grid_t), target, save, private     :: grid
+
+  ! temporary EM fields, that are saved for efficiency - to avoid
+  !  memory allocation & deallocation for each transmitter
+  type(EMsoln_t), save, private		:: e,e0
+  type(EMrhs_t) , save, private		:: comb
 
   !***********************************************************************
   ! Data type definitions for the full sensitivity matrix; a cross between
@@ -116,8 +124,6 @@ Contains
 
    !  local variables
    type(dataVec_t)  :: dVec
-   type(EMsoln_t)		:: e,e0
-   type(EMrhs_t)		:: comb
    integer 		:: i,j,nTx,k,nSite,nTot,ii,iTx, &
 				iDT,nfunc,ncomp,iRx,iFunc
    type(EMsparse_t), pointer	:: L(:),Q(:)
@@ -234,9 +240,79 @@ Contains
    enddo  ! tx
 
    call deall_dataVec(dvec)
-   call exitSolver(e0,e,comb)
 
   end subroutine calcSensMatrix
+
+
+  !**********************************************************************
+  subroutine Jmult_TX(dsigma,sigma0,d,emsoln)
+
+   !  Calculate product of sensitivity matrix and a model parameter
+   !    for one transmitter (but possibly for multiple data types)
+   !
+   !  First need to set up transmitter and receiver dictionaries;
+   !  indicies into dictionaries are attached to data vector d .
+   !
+   !  If optional input parameter e1 is present, it must contain
+   !   solutions for this transmitter for conductivity sigma0
+   !   (This can be used to avoid recomputing forward solutions)
+   !
+   !   sigma0 is background conductivity parameter
+   type(modelParam_t), intent(in)	:: sigma0
+   !   dsigma is the input conductivity parameter perturbation
+   type(modelParam_t), intent(in)	:: dsigma
+   !   d is the computed (output) data vector, also used to identify
+   !     receiver transmitter pairs for various computations
+   type(dataVecTX_t), intent(inout)		:: d
+   type(EMsoln_t), intent(inout), optional	:: emsoln
+
+   !  local variables
+   integer 		:: i,j,iTx,iDT
+   logical		:: savedSolns
+
+      savedSolns = present(emsoln)
+      if(savedSolns) then
+         if(d%tx .ne. emsoln%tx) then
+            call errStop('EM soln and d do not agree in Jmult')
+         endif
+      endif
+
+      !   get index into transmitter dictionary for this dataVecTX
+      iTx = d%tx
+
+      !  manage any necessary initilization for this transmitter
+      call initSolver(iTx,sigma0,grid,e0,e,comb)
+
+      if(savedSolns) then
+         ! e0 = emsoln
+         call copy_EMsoln(e0,emsoln)
+      else
+         ! solve forward problem; result is stored in e0
+         call fwdSolve(iTx,e0)
+      endif
+
+      !  compute rhs (stored in comb) for forward sensitivity
+      !  calculation, using conductivity perturbations and
+      !  background soln:
+      call Pmult(e0,sigma0,dsigma,comb)
+
+      ! solve forward problem with source in comb
+      call sensSolve(iTx,FWD,comb,e)
+
+      ! now, loop over data types
+      do i = 1,d%nDt
+         ! get index into the dataType dictionary
+         iDT = d%data(i)%dataType
+         ! finally apply linearized data functionals
+         if(typeDict(iDT)%calcQ) then
+            call linDataMeas(e0,sigma0,e,d%data(i),dsigma)
+         else
+	        call linDataMeas(e0,sigma0,e,d%data(i))
+         endif
+      enddo
+
+  end subroutine Jmult_TX
+
 
   !**********************************************************************
   subroutine Jmult(dsigma,sigma0,d,eAll)
@@ -261,15 +337,13 @@ Contains
    type(EMsolnMTX_t), intent(inout), optional	:: eAll
 
    !  local variables
-   type(EMsoln_t)		:: e,e0
-   type(EMrhs_t)		:: comb
-   integer 		:: i,j,iTx,iDT
+   integer 		:: j
    logical		:: savedSolns
 
    savedSolns = present(eAll)
    if(savedSolns) then
       if(d%nTx .ne. eAll%nTx) then
-         call errStop('dimensions of eAll and d do not agree in Jmult')
+         call errStop('dimensions of eAll and d do not agree in Jmult_MTX')
       endif
    endif
 
@@ -279,120 +353,84 @@ Contains
    !    to perturbation solution
    do j = 1,d%nTx
 
-      !   get index into transmitter dictionary for this dataVecTX
-      iTx = d%d(j)%tx
+    if(savedSolns) then
+   	   ! compute d = J x m for a single transmitter
+   	   call Jmult_TX(dsigma,sigma0,d%d(j),eAll%solns(j))
+    else
+       ! do not pass the EM soln to Jmult - it will be computed
+   	   call Jmult_TX(dsigma,sigma0,d%d(j))
+    endif
 
-      !  manage any necessary initilization for this transmitter
-      call initSolver(iTx,sigma0,grid,e0,e,comb)
+   enddo  ! tx
 
-      if(savedSolns) then
-         !e0 = eAll%solns(j)
-         call copy_EMsoln(e0,eAll%solns(j))
-      else
-         !  solve forward problem; result is stored in e0
-         call fwdSolve(iTx,e0)
-      endif
-
-      !  compute rhs (stored in comb) for forward sensitivity
-      !  calculation, using conductivity perturbations and
-      !  background soln:
-      call Pmult(e0,sigma0,dsigma,comb)
-
-      ! solve forward problem with source in comb
-      call sensSolve(iTx,FWD,comb,e)
-
-      ! now, loop over data types
-      do i = 1,d%d(j)%nDt
-         ! get index into the dataType dictionary
-         iDT = d%d(j)%data(i)%dataType
-         ! finally apply linearized data functionals
-         if(TypeDict(iDT)%calcQ) then
-            call linDataMeas(e0,sigma0,e,d%d(j)%data(i),dsigma)
-         else
-	        call linDataMeas(e0,sigma0,e,d%d(j)%data(i))
-         endif
-      enddo
-
-   enddo
-
-   !  clean up
-   call exitSolver(e0,e,comb)
 
   end subroutine Jmult
 
-  !**********************************************************************
-  subroutine JmultT(sigma0,d,dsigma,eAll)
 
-   !  Transpose of Jmult mujltiplied by data vector d; output is a
-   !      single conductivity parameter in dsigma
+  !**********************************************************************
+  subroutine JmultT_TX(sigma0,d,dsigma,emsoln)
+
+   !  Transpose of Jmult mujltiplied by data vector d for one transmitter;
+   !   output is a single conductivity parameter in dsigma
    !
    !   sigma0 is background conductivity parameter
    !
-   !  If optional input parameter eAll is present, it must contain
-   !   solutions for all transmitters for conductivity sigma0
-   !   IN THE PROPER ORDER (at present) !!!!
+   !  If optional input parameter e0 is present, it must contain
+   !   solutions for this transmitter for conductivity sigma0
    !   (This can be used to avoid recomputing forward solutions,
    !    e.g., in a CG solution scheme)
    !
    !  First need to set up transmitter and receiver dictionaries;
-   !  "pointers" to dictionary entries are attached to multi-transmitter
-   !   data vector d
+   !  "pointers" to dictionary entries are attached to data vector d
 
    type(modelParam_t), intent(in)	:: sigma0
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
-   type(dataVecMTX_t), intent(in)		:: d
+   type(dataVecTX_t), intent(in)		:: d
    !   dsigma is the output conductivity parameter
-   type(modelParam_t), intent(Out)  	:: dsigma
-   type(EMsolnMTX_t), intent(in), optional	:: eAll
+   type(modelParam_t), intent(inout)  	:: dsigma
+   type(EMsoln_t), intent(in), optional	:: emsoln
 
    !  local variables
-   type(EMsoln_t)		:: e,e0
-   type(EMrhs_t) 		:: comb
    type(modelParam_t)	:: sigmaTemp, Qcomb
    integer 		:: i,j,iTx,iDT
    logical		:: calcSomeQ, firstQ
    logical		:: savedSolns
 
-   calcSomeQ = .false.
-   firstQ = .true.
-   savedSolns = present(eAll)
-   if(savedSolns) then
-      if(d%nTx .ne. eAll%nTx) then
-         call errStop('dimensions of eAll and d do not agree in JmultT')
+      calcSomeQ = .false.
+      firstQ = .true.
+      savedSolns = present(emsoln)
+      if(savedSolns) then
+         if(d%tx .ne. emsoln%tx) then
+            call errStop('EM soln and d do not agree in JmultT')
+         endif
       endif
-   endif
 
-   dsigma = sigma0
-   call zero(dsigma)
+      dsigma = sigma0
+      call zero(dsigma)
 
-   ! loop over transmitters
-   do j = 1,d%nTx
+      sigmaTemp = sigma0
+      call zero(sigmaTemp)
 
       !   get index into transmitter dictionary for this dataVecTX
-      iTx = d%d(j)%tx
-
+      iTx = d%tx
 
       !  manage any necessary initilization for this transmitter
       call initSolver(iTx,sigma0,grid,e0,e,comb)
-      if(j.eq.1) then
-        sigmaTemp = sigma0
-        call zero(sigmaTemp)
-      endif
 
       if(savedSolns) then
-         !e0 = eAll%solns(j)
-	     call copy_EMsoln(e0,eAll%solns(j))
+         ! e0 = e1
+         call copy_EMsoln(e0,emsoln)
       else
-         !  solve forward problem; result is stored in e0
+         ! solve forward problem; result is stored in e0
          call fwdSolve(iTx,e0)
       endif
 
       ! now, loop over data types
-      do i = 1,d%d(j)%nDt
+      do i = 1,d%nDt
 
          ! get index into dataType dictionary
-         iDT = d%d(j)%data(i)%dataType
+         iDT = d%data(i)%dataType
 
          ! set up comb using linearized data functionals
          !  ... for dataVecs with data functionals depending on conductivity
@@ -413,10 +451,10 @@ Contains
             !  BUT: linDataComb overwrites comb ... so zero this
             !       for every transmitter
             call zero_EMrhs(comb)
-            call linDataComb(e0,sigma0,d%d(j)%data(i),comb,Qcomb)
+            call linDataComb(e0,sigma0,d%data(i),comb,Qcomb)
          else
             call zero_EMrhs(comb)
-            call linDataComb(e0,sigma0,d%d(j)%data(i),comb)
+            call linDataComb(e0,sigma0,d%data(i),comb)
          endif
          ! solve forward problem with source in comb
          call sensSolve(iTx,TRN,comb,e)
@@ -430,19 +468,132 @@ Contains
 
       enddo  ! dataType's
 
-   enddo  ! tx
+	  ! In theory, linDataComb should compute Qcomb for each transmitter
+	  ! and data type, and add it to dsigma; however, this is currently
+	  ! implemented such that linDataComb *adds* to Qcomb, each time it
+	  ! is called. So for now, we add the total Qcomb once at the end.
+      if(calcSomeQ) then
+         !  add Qcomb
+         call linComb_ModelParam(ONE,dsigma,ONE,Qcomb,dsigma)
+      endif
 
-   if(calcSomeQ) then
-      !  add Qcomb
-      call linComb_ModelParam(ONE,dsigma,ONE,Qcomb,dsigma)
+      !  clean up
       call deall_modelParam(Qcomb)
+      call deall_modelParam(sigmaTemp)
+
+  end subroutine JmultT_TX
+
+
+  !**********************************************************************
+  subroutine JmultT(sigma0,d,dsigma,eAll)
+
+   !  Transpose of Jmult multiplied by data vector d for all transmitters;
+   !   output is a single conductivity parameter in dsigma
+   !
+   !   sigma0 is background conductivity parameter
+   !
+   !  If optional input parameter eAll is present, it must contain
+   !   solutions for all transmitters for conductivity sigma0
+   !   IN THE PROPER ORDER (at present) !!!!
+   !   (This can be used to avoid recomputing forward solutions,
+   !    e.g., in a CG solution scheme)
+   !
+   !  First need to set up transmitter and receiver dictionaries;
+   !  "pointers" to dictionary entries are attached to multi-transmitter
+   !   data vector d
+
+   type(modelParam_t), intent(in)	:: sigma0
+   !   d is the computed (output) data vector, also used to identify
+   !     receiver transmitter pairs for various computations
+   type(dataVecMTX_t), intent(in)		:: d
+   !   dsigma is the output conductivity parameter
+   type(modelParam_t), intent(out)  	:: dsigma
+   type(EMsolnMTX_t), intent(in), optional	:: eAll
+
+   !  local variables
+   type(modelParam_t)	:: sigmaTemp
+   integer 		:: j
+   logical		:: savedSolns
+
+   savedSolns = present(eAll)
+   if(savedSolns) then
+      if(d%nTx .ne. eAll%nTx) then
+         call errStop('dimensions of eAll and d do not agree in JmultT_MTX')
+      endif
    endif
 
+   dsigma = sigma0
+   call zero(dsigma)
+
+   ! loop over transmitters
+   do j = 1,d%nTx
+
+    if(savedSolns) then
+   	   ! compute sigmaTemp = JT x d for a single transmitter
+   	   call JmultT_TX(sigma0,d%d(j),sigmaTemp,eAll%solns(j))
+    else
+       ! do not pass the EM soln to JmultT - it will be computed
+   	   call JmultT_TX(sigma0,d%d(j),sigmaTemp)
+    endif
+   	! ... add to dsigma
+   	call linComb_modelParam(ONE,dsigma,ONE,sigmaTemp,dsigma)
+
+   enddo  ! tx
+
    !  clean up
-   call exitSolver(e0,e,comb)
    call deall_modelParam(sigmaTemp)
 
   end subroutine JmultT
+
+
+  !**********************************************************************
+  subroutine fwdPred_TX(sigma,d,emsoln)
+
+   !  Calculate predicted data for single-transmitter dataVecTX object d
+   !    and for conductivity parameter sigma
+   !  Also returns the EM solution e for this transmitter
+   !
+   !  First need to set up transmitter, receiver, dataType dictionaries;
+   !  "pointers" to dictionaries are attached to data vector d .
+   !
+   !   sigma is input conductivity parameter
+   type(modelParam_t), intent(in)	:: sigma
+   !   d is the computed (output) data vector, also used to identify
+   !     receiver/transmitter
+   type(dataVecTX_t), intent(inout)	:: d
+   !  structure containing array of solution vectors (should be
+   !   allocated before calling)
+   type(EMsoln_t), intent(inout)	:: emsoln
+
+   ! local variables
+   integer				:: iTx,i,j
+
+      if(.not.d%allocated) then
+         call errStop('data vector not allocated on input to fwdPred')
+      end if
+
+      ! get index into transmitter dictionary for this dataVecTX
+      iTx = d%tx
+
+      !  do any necessary initialization for transmitter iTx
+      call initSolver(iTx,sigma,grid,emsoln)
+
+      ! compute forward solution
+      call fwdSolve(iTx,emsoln)
+
+      ! cycle over data types
+      do i = 1,d%nDt
+
+         ! set errorBar=.false. since predicted data do not have
+         ! well-defined error bars (important for the inversion)
+         d%data(i)%errorBar = .false.
+
+         ! apply data functionals
+         call dataMeas(emsoln,sigma,d%data(i))
+
+      enddo
+
+  end subroutine fwdPred_TX
 
 
   !**********************************************************************
@@ -467,8 +618,7 @@ Contains
    type(EMsolnMTX_t), intent(inout), optional	:: eAll
 
    ! local variables
-   type(EMsoln_t)		:: e0
-   integer				:: iTx,i,j
+   integer				:: j
 
    if(.not.d%allocated) then
       call errStop('data vector not allocated on input to fwdPred')
@@ -484,41 +634,18 @@ Contains
 
    ! loop over transmitters: solve forward system for each,
    !    apply (non-linear) data functionals
-   ! write(6,*) 'd%nTx = ',d%nTx
-
-
    do j = 1,d%nTx
-      ! get index into transmitter dictionary for this dataVecTX
-      iTx = d%d(j)%tx
 
-      !  do any necessary initialization for transmitter iTx
-      call initSolver(iTx,sigma,grid,e0)
+      call fwdPred_TX(sigma,d%d(j),e0)
 
-      ! compute forward solution
-      call fwdSolve(iTx,e0)
-
-      ! cycle over data types
-      do i = 1,d%d(j)%nDt
-
-         ! set errorBar=.false. since predicted data do not have
-         ! well-defined error bars (important for the inversion)
-         d%d(j)%data(i)%errorBar = .false.
-
-         ! apply data functionals
-         call dataMeas(e0,sigma,d%d(j)%data(i))
-
-         if(present(eAll)) then
-            call copy_EMsoln(eAll%solns(j),e0)
-         endif
-
-      enddo
+      if(present(eAll)) then
+         call copy_EMsoln(eAll%solns(j),e0)
+      endif
 
    enddo
 
-   ! deallocate and clean up
-   call exitSolver(e0)
-
   end subroutine fwdPred
+
 
   !**********************************************************************
   subroutine setGrid(newgrid)
@@ -526,6 +653,8 @@ Contains
    !  Use to set and/or update the numerical grid, that is then used
    !   all computations in this module;
    !   This is not a pointer target.
+   !  Might also have to run exitSolver at this point, if we are updating
+   !   the grid during an inversion; that restarts the EMsolver module.
 
    type(grid_t), intent(in)     :: newgrid
 
@@ -539,6 +668,7 @@ Contains
 
    ! Subroutine to deallocate all memory stored in this module
 
+   call exitSolver(e0,e,comb)
    call deall_grid(grid)
 
   end subroutine cleanUp
