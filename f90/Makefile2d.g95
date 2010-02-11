@@ -2,44 +2,51 @@
 # Generated using: ./fmkmf.pl [OPTIONS] Mod2DMT.f90 > Makefile
 # with command line options
 # -p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/DICT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod
-# -f90 ifort (compiler)
-# -opt -O3 (compiler optimisation)
+# -f90 g95 (compiler)
+# -opt -g -ftrace=frame -fbounds-check (compiler optimisation)
 # -l -lblas -llapack (linking options)
-# -o ./objs/2D_MT/Release (output directory for object files)
+# -o ./objs/2D_MT/G95Debug (output directory for object files)
 
 #  Uncomment these lines to make program for Solaris OS
 # F90 = f90
 # FFLAGS = -dalign -g -C -w  -L/usr/local/lib
 # LIBS = -xlic_lib=sunperf
 #  Uncomment these lines to make program with g95
-F90 = g95
+# include Makefile.local
+# OBJDIR = ./objs/3D_MT/G95Debug
+# F90 = g95
 # FFLAGS = -O2
-FFLAGS = -g -ftrace=frame -fbounds-check
-MODULE = -fmod=$(OBJDIR)
+# FFLAGS = -g -ftrace=frame -fbounds-check
+# MODULE = -fmod=$(OBJDIR)
 # LIBS = -lblas -llapack
 #  Uncomment these lines to make program with Intel compiler
+# include Makefile.local
+# OBJDIR = ./objs/3D_MT/IFortDebug
 # F90 = ifort
 # FFLAGS = -O3
 # FFLAGS = -debug all -check bounds
 # MODULE = -module $(OBJDIR)
 # LIBS = -lblas -llapack
 #  Uncomment these lines to make program with PGI compiler
+# include Makefile.local
+# OBJDIR = ./objs/3D_MT/PGIDebug
 # F90 = pgf95
 # FFLAGS = -O3
 # FFLAGS = -g -Mprof=lines -Mbounds
 # MODULE = -module $(OBJDIR)
-# LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines
+# LIBS = -llapack -lblas
+# LIBS = -L/usr/lib64 -llapack -lblas -lpgftnrtl -Mprof=lines
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
 OBJDIR = ./objs/2D_MT/G95Debug
-#F90 = ifort 
-#FFLAGS = -O3
-#MODULE = -module $(OBJDIR)
+F90 = g95 
+FFLAGS = -g -ftrace=frame -fbounds-check
+MODULE = -fmod=$(OBJDIR)
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
-OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o $(OBJDIR)/DataFunc.o $(OBJDIR)/ModelSens.o $(OBJDIR)/DataSens.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 
+OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o $(OBJDIR)/DataFunc.o $(OBJDIR)/ModelSens.o $(OBJDIR)/DataSens.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/SensComp.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 
 
 
 all: Mod2DMT 
@@ -110,8 +117,11 @@ $(OBJDIR)/FwdTMmod.o:2D_MT/FWD/FwdTMmod.f90 $(OBJDIR)/math_constants.o $(OBJDIR)
 $(OBJDIR)/EMsolver.o:2D_MT/EMsolver.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataFunc.o $(OBJDIR)/DataSpace.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/transmitters.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/EMsolver.f90 -o $(OBJDIR)/EMsolver.o
 
-$(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSens.o $(OBJDIR)/ModelSens.o $(OBJDIR)/EMsolver.o 
+$(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/ModelParameter.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) SENS/SensMatrix.f90 -o $(OBJDIR)/SensMatrix.o
+
+$(OBJDIR)/SensComp.o:SENS/SensComp.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSens.o $(OBJDIR)/ModelSens.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) SENS/SensComp.f90 -o $(OBJDIR)/SensComp.o
 
 $(OBJDIR)/UserCtrl.o:./UserCtrl.f90  
 	 $(F90) -c $(MODULE) $(FFLAGS) ./UserCtrl.f90 -o $(OBJDIR)/UserCtrl.o
@@ -125,10 +135,10 @@ $(OBJDIR)/DataIO.o:2D_MT/DataIO.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_un
 $(OBJDIR)/Main.o:2D_MT/Main.f90 $(OBJDIR)/ModelParameter.o $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o $(OBJDIR)/EMsolver.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/Main.f90 -o $(OBJDIR)/Main.o
 
-$(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensMatrix.o $(OBJDIR)/DataIO.o 
+$(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensComp.o $(OBJDIR)/DataIO.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) INV/NLCG.f90 -o $(OBJDIR)/NLCG.o
 
-$(OBJDIR)/Mod2DMT.o:Mod2DMT.f90 $(OBJDIR)/SensMatrix.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o 
+$(OBJDIR)/Mod2DMT.o:Mod2DMT.f90 $(OBJDIR)/SensComp.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) Mod2DMT.f90 -o $(OBJDIR)/Mod2DMT.o
 
 # Type " make clean " to get rid of all object and module files 

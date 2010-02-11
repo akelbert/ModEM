@@ -2,7 +2,7 @@
 program Mod3DMT
 !  program for running 3D MT forward, sensitivity and inverse modelling
 
-     use sensmatrix
+     use senscomp
      use main
      use nlcg
      !use mtinvsetup

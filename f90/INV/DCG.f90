@@ -2,7 +2,7 @@ module DCG
 
 use math_constants
 use utilities
-use sensmatrix
+use senscomp
    ! inherits datasens,  dataspace, dataFunc, solnrhs,
    !            modelspace, soln2d
 

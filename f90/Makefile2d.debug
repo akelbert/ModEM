@@ -39,7 +39,7 @@ MODULE = -module $(OBJDIR)
 LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl
 
 # -------------------End-macro-Defs---------------------------
-OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o $(OBJDIR)/DataFunc.o $(OBJDIR)/ModelSens.o $(OBJDIR)/DataSens.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 
+OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o $(OBJDIR)/DataFunc.o $(OBJDIR)/ModelSens.o $(OBJDIR)/DataSens.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/SensComp.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 
 
 
 all: Mod2DMT 
@@ -110,8 +110,11 @@ $(OBJDIR)/FwdTMmod.o:2D_MT/FWD/FwdTMmod.f90 $(OBJDIR)/math_constants.o $(OBJDIR)
 $(OBJDIR)/EMsolver.o:2D_MT/EMsolver.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataFunc.o $(OBJDIR)/DataSpace.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/transmitters.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/EMsolver.f90 -o $(OBJDIR)/EMsolver.o
 
-$(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSens.o $(OBJDIR)/ModelSens.o $(OBJDIR)/EMsolver.o 
+$(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/ModelParameter.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) SENS/SensMatrix.f90 -o $(OBJDIR)/SensMatrix.o
+
+$(OBJDIR)/SensComp.o:SENS/SensComp.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSens.o $(OBJDIR)/ModelSens.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) SENS/SensComp.f90 -o $(OBJDIR)/SensComp.o
 
 $(OBJDIR)/UserCtrl.o:./UserCtrl.f90  
 	 $(F90) -c $(MODULE) $(FFLAGS) ./UserCtrl.f90 -o $(OBJDIR)/UserCtrl.o
@@ -125,10 +128,10 @@ $(OBJDIR)/DataIO.o:2D_MT/DataIO.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_un
 $(OBJDIR)/Main.o:2D_MT/Main.f90 $(OBJDIR)/ModelParameter.o $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o $(OBJDIR)/EMsolver.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/Main.f90 -o $(OBJDIR)/Main.o
 
-$(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensMatrix.o $(OBJDIR)/DataIO.o 
+$(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensComp.o $(OBJDIR)/DataIO.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) INV/NLCG.f90 -o $(OBJDIR)/NLCG.o
 
-$(OBJDIR)/Mod2DMT.o:Mod2DMT.f90 $(OBJDIR)/SensMatrix.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o 
+$(OBJDIR)/Mod2DMT.o:Mod2DMT.f90 $(OBJDIR)/SensComp.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) Mod2DMT.f90 -o $(OBJDIR)/Mod2DMT.o
 
 # Type " make clean " to get rid of all object and module files 

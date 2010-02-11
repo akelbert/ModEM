@@ -10,7 +10,7 @@ program Mod2DMT
 !        input data from these files, and outputs to other files),
 !        and then reads the outputs.  Generalize to a mex file!
 
-     use sensmatrix
+     use senscomp
      use main
      use nlcg
 

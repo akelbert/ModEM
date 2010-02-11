@@ -3,7 +3,7 @@ program earth
 
   use main
   use output
-  use sensmatrix
+  use senscomp
   use nlcg
 
   use global ! for symmetry testing only
@@ -503,7 +503,7 @@ end program earth
 	use initFields
 	use dataMisfit
 	use boundaries	!for testing
-	use sensmatrix
+	use senscomp
 	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -588,7 +588,7 @@ end program earth
 	use initFields
 	use dataMisfit
 	use boundaries	!for testing
-	use sensmatrix
+	use senscomp
 	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -734,7 +734,7 @@ end program earth
 	use initFields
 	use dataFunc
 	use dataMisfit
-	use sensmatrix
+	use senscomp
 	implicit none
 
 	type (sensMatrix_t)					    :: dR

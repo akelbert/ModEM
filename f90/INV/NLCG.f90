@@ -2,7 +2,7 @@ module NLCG
 
 !use math_constants
 !use utilities
-use sensmatrix
+use senscomp
 use dataio
    ! inherits datasens,  dataspace, dataFunc, solnrhs,
    !            modelspace, soln2d

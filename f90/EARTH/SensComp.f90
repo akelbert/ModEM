@@ -1,4 +1,4 @@
-module sensMatrix
+module sensComp
 
   use griddef
   use data_vectors
@@ -466,4 +466,4 @@ Contains
 
    end subroutine deall_sensMatrix
 
-end module sensMatrix
+end module sensComp

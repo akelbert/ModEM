@@ -159,23 +159,30 @@ print "# F90 = f90\n";
 print "# FFLAGS = -dalign -g -C -w  -L/usr/local/lib\n";
 print "# LIBS = -xlic_lib=sunperf\n";
 print "#  Uncomment these lines to make program with g95\n";
+print "# include Makefile.local\n";
+print "# OBJDIR = ./objs/3D_MT/G95Debug\n";
 print "# F90 = g95\n";
 print "# FFLAGS = -O2\n";
 print "# FFLAGS = -g -ftrace=frame -fbounds-check\n";
 print "# MODULE = -fmod=\$(OBJDIR)\n";
 print "# LIBS = -lblas -llapack\n";
 print "#  Uncomment these lines to make program with Intel compiler\n";
+print "# include Makefile.local\n";
+print "# OBJDIR = ./objs/3D_MT/IFortDebug\n";
 print "# F90 = ifort\n";
 print "# FFLAGS = -O3\n";
 print "# FFLAGS = -debug all -check bounds\n";
 print "# MODULE = -module \$(OBJDIR)\n";
 print "# LIBS = -lblas -llapack\n";
 print "#  Uncomment these lines to make program with PGI compiler\n";
+print "# include Makefile.local\n";
+print "# OBJDIR = ./objs/3D_MT/PGIDebug\n";
 print "# F90 = pgf95\n";
 print "# FFLAGS = -O3\n";
 print "# FFLAGS = -g -Mprof=lines -Mbounds\n";
 print "# MODULE = -module \$(OBJDIR)\n";
-print "# LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines\n";
+print "# LIBS = -llapack -lblas\n";
+print "# LIBS = -L/usr/lib64 -llapack -lblas -lpgftnrtl -Mprof=lines\n";
 
 if($optiond){
   print "# Main program is $mainprogfile \n" ;
@@ -191,7 +198,13 @@ print "include Makefile.local\n";
 print "OBJDIR = $linkdir\n";
 print "F90 = $f90 \n";
 print "FFLAGS = $optim\n";
-print "MODULE = -module \$(OBJDIR)\n";
+if ($f90 =~ /^g95$/){
+	print "MODULE = -fmod=\$(OBJDIR)\n";
+} elsif ($f90 =~ /^gfortran$/){
+	print "MODULE = --sysroot=\$(OBJDIR)\n";	
+} else {
+	print "MODULE = -module \$(OBJDIR)\n";	
+}
 print "LIBS = $linkopts\n";
 
 
