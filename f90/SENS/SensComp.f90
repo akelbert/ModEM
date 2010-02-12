@@ -9,10 +9,11 @@ module sensComp
 
   implicit none
 
-  public 	:: calcSensMatrix, setGrid, cleanUp
+  public 	:: calcSensMatrix, calcSensValue
   public	:: Jmult,   Jmult_TX
   public	:: JmultT,  JmultT_TX
   public	:: fwdPred, fwdPred_TX
+  public	:: setGrid, cleanUp
 
   ! numerical discretization used to compute the EM solution
   !  (may be different from the grid stored in model parameter)
@@ -27,7 +28,136 @@ module sensComp
 Contains
 
   !**********************************************************************
-  subroutine calcSensMatrix(d,sigma0,dsigma)
+  subroutine calcSensValue(iTx,iDt,iRx,sigma0,emsoln,dsigma)
+   !  Calculate sensitivity matrix for data in d
+   !  Approaching a generic form that will work for any problem;
+   !   Documentation not edited.  Code not debugged!
+   !
+   !  Mostly self-contained, but BEFORE CALLING:
+   !   1)  read in and initialize grid (sigma0 points
+   !        to this grid)
+   !   2)  call setWSparams to set grid dimensions inside
+   !         WS forward modeling module
+   !   3)  set up transmitter and receiver dictionaries;
+   !       "pointers" to entries in these dictionaries are
+   !        attached to multi-transmitter data vector d .
+   !        Note that the actual frequencies used for the
+   !        solver are extracted from the transmitter dictionary
+   !   IT IS NOT necessary to initialize for modeling
+   !     before calling
+   !
+   !   indices into transmitter, receiver & data type dictionaries
+   integer, intent(in)				:: iTx, iRx, iDt
+   !   sigma0 is background conductivity parameter
+   type(modelParam_t), intent(in)	:: sigma0
+   !   to use this routine, need to first supply background EM soln
+   type(EMsoln_t), intent(in)  		:: emsoln
+   !   dsigma is the output array of data sensitivities,
+   !   one for each element in the data array.  Each sensitivity
+   !    is an element of type modelParam, an abstract
+   !    data type that defines the unknown conductivity
+   type(modelParam_t), pointer   	:: dsigma(:)
+
+   !  local variables
+   type(dataVec_t)  :: dVec
+   integer 		:: i,j,k,istat,nTot,ii,nFunc,nComp,iFunc
+   type(EMsparse_t), pointer	:: L(:),Q(:)
+   logical 		:: calcQ
+
+   nComp = typeDict(iDt)%nComp
+
+   ! first test dsigma and deallocate if incompatible
+   if(associated(dsigma)) then
+      if (size(dsigma) .ne. nComp) then
+         do j = 1,nComp
+            call deall_modelParam(dsigma(j))
+         enddo
+         deallocate(dsigma, STAT=istat)
+      endif
+   endif
+
+   ! now, allocate for sensitivity values, if necessary
+   if(.not. associated(dsigma)) then
+      allocate(dsigma(nComp), STAT=istat)
+      do j = 1,nComp
+         ! this makes a copy of model param, then zeroes it
+         dsigma(j) = sigma0
+         call zero(dsigma(j))
+      enddo
+   endif
+
+   !  manage any necessary initialization for this transmitter
+   call initSolver(iTx,sigma0,grid,e0,e,comb)
+
+   !  store the provided emsoln in e0
+   e0 = emsoln
+
+   calcQ = typeDict(iDt)%calcQ
+
+   ! get data type info for this dataVec: here we allow for either
+   !  real or complex data, though we always store as real
+   !  Complex data come in pairs, stored as two succesive
+   !  "components" in the dataVec structure.
+   !  "isComplex" is an attribute of a dataVec structure; can
+   !  be different for different dataVecs within the overall data
+   !  vector
+   if(typeDict(iDt)%isComplex) then
+      !  data are complex; one sensitivity calculation can be
+      !   used for both real and imaginary parts
+      if(mod(nComp,2).ne.0) then
+         call errStop('for complex data # of components must be even in CalcSensMatrix')
+      endif
+      nFunc = nComp/2
+   else
+      !  data are treated as real: full sensitivity computation is required
+      !   for each component
+      nFunc = nComp
+   endif
+   allocate(L(nFunc))
+   allocate(Q(nFunc))
+
+   !  compute linearized data functional(s) : L
+   call linDataFunc(e0,sigma0,iDt,iRx,L,Q)
+
+   ! loop over functionals  (for TE/TM impedances nFunc = 1)
+   ii = 0
+
+   do iFunc = 1,nFunc
+
+      ! solve forward problem for each of nFunc functionals
+      call zero_EMrhs(comb)
+      call add_EMsparseEMrhs(C_ONE,L(iFunc),comb)
+
+      call sensSolve(iTx,TRN,comb,e)
+
+      ! multiply by P^T (and add Q^T if appropriate)
+      if(typeDict(iDt)%isComplex) then
+         ii = ii + 2
+         call PmultT(e0,sigma0,e,dsigma(ii-1),dsigma(ii))
+         if(calcQ) then
+            call QaddT(C_ONE,Q(iFunc),sigma0,dsigma(ii-1),dsigma(ii))
+         endif
+      else
+         ii = ii + 1
+         call PmultT(e0,sigma0,e,dsigma(ii))
+         if(calcQ) then
+            call QaddT(C_ONE,Q(iFunc),sigma0,dsigma(ii))
+         endif
+      endif
+
+      ! deallocate temporary sparse vectors
+      call deall_EMsparse(L(iFunc))
+      call deall_EMsparse(Q(iFunc))
+
+   enddo  ! iFunc
+
+   deallocate(L)
+   deallocate(Q)
+
+  end subroutine calcSensValue
+
+  !**********************************************************************
+  subroutine calcSensMatrix(d,sigma0,sens)
    !  Calculate sensitivity matrix for data in d
    !  Approaching a generic form that will work for any problem;
    !   Documentation not edited.  Code not debugged!
@@ -54,26 +184,24 @@ Contains
    !   one for each element in the data array.  Each sensitivity
    !    is an element of type modelParam, an abstract
    !    data type that defines the unknow conductivity
-   type(modelParam_t), pointer   :: dsigma(:)
+   type(modelParam_t), pointer   :: sens(:)
 
    !  local variables
+   type(modelParam_t), pointer   :: dsigma(:)
    type(dataVec_t)  :: dVec
    integer 		:: i,j,nTx,k,nSite,nTot,ii,iTx, &
-				iDT,nfunc,ncomp,iRx,iFunc
-   type(EMsparse_t), pointer	:: L(:),Q(:)
-   logical 		:: calcQ
+				iDT,nfunc,ncomp,iRx,iFunc,iComp,istat
 
    ! nTot is number of real data
    nTot = countData(d)
 
-   if(.not.associated(dsigma)) then
-      ! allocate for sensitivity matrix
-      allocate(dsigma(nTot))
+   ! now, allocate for sensitivity values, if necessary
+   if(.not. associated(sens)) then
+      allocate(sens(nTot), STAT=istat)
       do j = 1,nTot
-         ! this makes a copy of model param, of the same type
-         !   as sigma0, then zeros it.
-         dsigma(j) = sigma0
-         call zero(dsigma(j))
+         ! this makes a copy of model param, then zeroes it
+         sens(j) = sigma0
+         call zero(sens(j))
       enddo
    endif
 
@@ -102,81 +230,37 @@ Contains
 
         ! get index into dataType dictionary for this dataVec
         iDT = dVec%dataType
-        calcQ = typeDict(iDT)%calcQ
 
-        ! get data type info for this dataVec: here we allow for either
-        !  real or complex data, though we always store as real
-        !  Complex data come in pairs, stored as two succesive
-        !  "components" in the dataVec structure.
-        !  "isComplex" is an attribute of a dataVec structure; can
-        !  be different for different dataVecs within the overall data
-        !  vector
-        nComp = dVec%nComp
+        ! get the dimensions of this data vector
         nSite = dVec%nSite
-        if(dVec%isComplex) then
-           !  data are complex; one sensitivity calculation can be
-           !   used for both real and imaginary parts
-           if(mod(nComp,2).ne.0) then
-              call errStop('for complex data # of components must be even in CalcSensMatrix')
-           endif
-           nFunc = nComp/2
-        else
-           !  data are treated as real: full sensitivity computation is required
-           !   for each component
-           nFunc = nComp
-        endif
-        allocate(L(nFunc))
-        allocate(Q(nFunc))
+        nComp = dVec%nComp
 
         ! loop over sites, computing sensitivity for all components for each site
         do k = 1,nSite
 
            iRx = dVec%rx(k)
 
-           !  compute linearized data functional(s) : L
-           call linDataFunc(e0,sigma0,iDT,iRx,L,Q)
+           ! compute the sensitivities for these transmitter, data type & receiver
+           call calcSensValue(iTx,iDt,iRx,sigma0,e0,dsigma)
 
-           ! loop over functionals  (for TE/TM impedances nFunc = 1)
-           do iFunc = 1,nFunc
+           ! store in the full sensitivity matrix
+           do iComp = 1,nComp
+              sens(ii+iComp) = dsigma(iComp)
+           enddo
 
-              ! solve forward problem for each of nFunc functionals
-              call zero_EMrhs(comb)
-              call add_EMsparseEMrhs(C_ONE,L(iFunc),comb)
+           ii = ii+nComp
 
-              call sensSolve(iTx,TRN,comb,e)
-
-              ! multiply by P^T (and add Q^T if appropriate)
-              if(dVec%isComplex) then
-                 ii = ii + 2
-                 call PmultT(e0,sigma0,e,dsigma(ii-1),dsigma(ii))
-                 if(calcQ) then
-                    call QaddT(C_ONE,Q(iFunc),sigma0,dsigma(ii-1),dsigma(ii))
-                 endif
-              else
-                 ii = ii+1
-                 call PmultT(e0,sigma0,e,dsigma(ii))
-                 if(calcQ) then
-                    call QaddT(C_ONE,Q(iFunc),sigma0,dsigma(ii))
-                 endif
-              endif
-
-              ! deallocate temporary sparse vectors
-              call deall_EMsparse(L(iFunc))
-              call deall_EMsparse(Q(iFunc))
-
-           enddo  ! iFunc
         enddo  ! sites
-
-        deallocate(L)
-        deallocate(Q)
-
       enddo  ! dataType's
    enddo  ! tx
 
    call deall_dataVec(dvec)
+   do j = 1,nComp
+      call deall_modelParam(dsigma(j))
+   enddo
+   deallocate(dsigma, STAT=istat)
 
   end subroutine calcSensMatrix
-
 
   !**********************************************************************
   subroutine Jmult_TX(dsigma,sigma0,d,emsoln)

@@ -19,6 +19,8 @@ module dataTypes
      !        different names, types, etc.) for  different applications.
      ! character(2)                :: mode = ''! = 'TE' or 'TM'
      character(80)               :: name = ''
+     ! the number of components in the data type
+     integer           			:: nComp
      !  could add rxDictNumber to keep track of reciever dictionary
      !  number used for this dataType (only 1 receiver dictionary now,
      !   so this is omitted)
@@ -48,12 +50,14 @@ Contains
      typeDict(TE_Impedance)%name = 'TE Impedance'
      typeDict(TE_Impedance)%isComplex = .true.
      typeDict(TE_Impedance)%calcQ     = .false.
+     typeDict(TE_Impedance)%nComp     = 2
      allocate(typeDict(TE_Impedance)%id(2),STAT=istat)
      typeDict(TE_Impedance)%id(1)     = 'Re'
      typeDict(TE_Impedance)%id(2)     = 'Im'
      typeDict(TM_Impedance)%name = 'TM Impedance'
      typeDict(TM_Impedance)%isComplex = .true.
      typeDict(TM_Impedance)%calcQ     = .true.
+     typeDict(TM_Impedance)%nComp     = 2
      allocate(typeDict(TM_Impedance)%id(2),STAT=istat)
      typeDict(TM_Impedance)%id(1)     = 'Re'
      typeDict(TM_Impedance)%id(2)     = 'Im'
