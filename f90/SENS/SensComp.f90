@@ -184,7 +184,7 @@ Contains
    !   one for each element in the data array.  Each sensitivity
    !    is an element of type modelParam, an abstract
    !    data type that defines the unknow conductivity
-   type(modelParam_t), pointer   :: sens(:)
+   type(sensMatrix_t), pointer 		:: sens(:)
 
    !  local variables
    type(modelParam_t), pointer   :: dsigma(:)
@@ -194,15 +194,11 @@ Contains
 
    ! nTot is number of real data
    nTot = countData(d)
+   write(0,'(a32,i6,a15)') 'Computing the sensitivities for ',nTot,' data values...'
 
    ! now, allocate for sensitivity values, if necessary
    if(.not. associated(sens)) then
-      allocate(sens(nTot), STAT=istat)
-      do j = 1,nTot
-         ! this makes a copy of model param, then zeroes it
-         sens(j) = sigma0
-         call zero(sens(j))
-      enddo
+      call create_sensMatrixMTX(d, sigma0, sens)
    endif
 
    ! nTX is number of transmitters
@@ -210,7 +206,6 @@ Contains
 
    ! loop over frequencies, computing all sensitivities for
    !   one frequency
-   ii = 0
    do j = 1,nTx
 
       ! identify the transmitter
@@ -235,6 +230,10 @@ Contains
         nSite = dVec%nSite
         nComp = dVec%nComp
 
+        ! keep the user informed
+        write(0,'(a35,i4,a12,i4,a4,i4,a6)') &
+        	'Computing the sensitivities for tx ',iTx,' & dataType ',iDt,' at ',nSite,' sites'
+
         ! loop over sites, computing sensitivity for all components for each site
         do k = 1,nSite
 
@@ -245,10 +244,8 @@ Contains
 
            ! store in the full sensitivity matrix
            do iComp = 1,nComp
-              sens(ii+iComp) = dsigma(iComp)
+              sens(j)%v(i)%dm(iComp,k) = dsigma(iComp)
            enddo
-
-           ii = ii+nComp
 
         enddo  ! sites
       enddo  ! dataType's

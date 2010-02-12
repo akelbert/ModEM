@@ -12,23 +12,30 @@
 # FFLAGS = -dalign -g -C -w  -L/usr/local/lib
 # LIBS = -xlic_lib=sunperf
 #  Uncomment these lines to make program with g95
+# include Makefile.local
+# OBJDIR = ./objs/3D_MT/G95Debug
 # F90 = g95
 # FFLAGS = -O2
 # FFLAGS = -g -ftrace=frame -fbounds-check
 # MODULE = -fmod=$(OBJDIR)
 # LIBS = -lblas -llapack
 #  Uncomment these lines to make program with Intel compiler
+# include Makefile.local
+# OBJDIR = ./objs/3D_MT/IFortDebug
 # F90 = ifort
 # FFLAGS = -O3
 # FFLAGS = -debug all -check bounds
 # MODULE = -module $(OBJDIR)
 # LIBS = -lblas -llapack
 #  Uncomment these lines to make program with PGI compiler
+# include Makefile.local
+# OBJDIR = ./objs/3D_MT/PGIDebug
 # F90 = pgf95
 # FFLAGS = -O3
 # FFLAGS = -g -Mprof=lines -Mbounds
 # MODULE = -module $(OBJDIR)
-# LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl -Mprof=lines
+# LIBS = -llapack -lblas
+# LIBS = -L/usr/lib64 -llapack -lblas -lpgftnrtl -Mprof=lines
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
@@ -110,7 +117,7 @@ $(OBJDIR)/FwdTMmod.o:2D_MT/FWD/FwdTMmod.f90 $(OBJDIR)/math_constants.o $(OBJDIR)
 $(OBJDIR)/EMsolver.o:2D_MT/EMsolver.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataFunc.o $(OBJDIR)/DataSpace.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/transmitters.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/EMsolver.f90 -o $(OBJDIR)/EMsolver.o
 
-$(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/ModelParameter.o 
+$(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/ModelParameter.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) SENS/SensMatrix.f90 -o $(OBJDIR)/SensMatrix.o
 
 $(OBJDIR)/SensComp.o:SENS/SensComp.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSens.o $(OBJDIR)/ModelSens.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o 
@@ -125,7 +132,7 @@ $(OBJDIR)/ioAscii.o:2D_MT/ioMod/ioAscii.f90 $(OBJDIR)/math_constants.o $(OBJDIR)
 $(OBJDIR)/DataIO.o:2D_MT/DataIO.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/DataSpace.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/DataIO.f90 -o $(OBJDIR)/DataIO.o
 
-$(OBJDIR)/Main.o:2D_MT/Main.f90 $(OBJDIR)/ModelParameter.o $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o $(OBJDIR)/EMsolver.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o 
+$(OBJDIR)/Main.o:2D_MT/Main.f90 $(OBJDIR)/ModelParameter.o $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 2D_MT/Main.f90 -o $(OBJDIR)/Main.o
 
 $(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensComp.o $(OBJDIR)/DataIO.o 

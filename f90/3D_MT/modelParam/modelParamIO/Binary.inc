@@ -101,29 +101,37 @@
       integer                :: ios
 
       integer 		:: i,Nz,NzAir
+      character(80) :: temp
+      logical		:: opened
 
-      open(unit=ioPrm, file=cfile, form='unformatted', iostat=ios)
-      write(ioPrm) header
-      write(ioPrm) nSigma
+      temp = header
+
+      inquire(file=cfile, opened=opened)
+      if (.not. opened) then
+      	open(unit=ioSens, file=cfile, form='unformatted', iostat=ios)
+      endif
+      !write(ioSens) temp
+      !write(ioSens) nSigma
 
       do i = 1,nSigma
          Nz = m(i)%grid%Nz
          NzAir = m(i)%grid%Nz-m(i)%NzEarth
-         write(ioPrm) m(i)%paramType
-         write(ioPrm) m(i)%Nx,m(i)%Ny,m(i)%NzEarth
-         write(ioPrm) m(i)%grid%dx
-         write(ioPrm) m(i)%grid%dy
-         write(ioPrm) m(i)%grid%dz(NzAir+1:Nz)
-         write(ioPrm) m(i)%AirCond
-         write(ioPrm) m(i)%CellCond%v
+         write(ioSens) m(i)%paramType
+         write(ioSens) m(i)%Nx,m(i)%Ny,m(i)%NzEarth
+         write(ioSens) m(i)%grid%dx
+         write(ioSens) m(i)%grid%dy
+         write(ioSens) m(i)%grid%dz(NzAir+1:Nz)
+         write(ioSens) m(i)%AirCond
+         write(ioSens) m(i)%CellCond%v
       enddo
-      close(ioPrm)
+      ! for efficiency, will need to close the file in the calling program`
+      !close(ioSens)
       end subroutine writeVec_modelParam_binary
 
      !******************************************************************
       subroutine readVec_modelParam_binary(grid,nSigma,m,header,cfile)
 
-      !  open cfile on unit ioPrm, writes out nSigma objects of
+      !  open cfile on unit ioSens, writes out nSigma objects of
       !   type modelParam , closes file
       !  note - the code will not work unless the global grid already exists
       !         (it has to be initialized outside of this routine)
@@ -137,30 +145,30 @@
 
       integer 		:: i,nS,Nx,Ny,Nz,NzAir,NzEarth,istat
 
-      open(unit=ioPrm, file=cfile, form='unformatted', iostat=ios)
-      read(ioPrm) header
-      read(ioPrm) nS
+      open(unit=ioSens, file=cfile, form='unformatted', iostat=ios)
+      read(ioSens) header
+      read(ioSens) nS
 
       if(nS .NE. nSigma) then
           call errStop('size of sigma does not agree with contents of file in readAll_Cond2D')
       endif
 
       do i = 1,nSigma
-         read(ioPrm) m(i)%paramType
-         read(ioPrm) Nx,Ny,NzEarth
+         read(ioSens) m(i)%paramType
+         read(ioSens) Nx,Ny,NzEarth
          if((m(i)%Nx .NE. Nx) .OR. (m(i)%Ny .NE. Ny) .OR. (m(i)%NzEarth .NE. NzEarth)) then
-            close(ioPrm)
+            close(ioSens)
             call errStop('Size of cond does not agree with contents of file in readAll_Cond2D')
          else
             Nz = m(i)%grid%Nz
             NzAir = m(i)%grid%Nz-m(i)%NzEarth
-            read(ioPrm) m(i)%grid%dx
-            read(ioPrm) m(i)%grid%dy
-            read(ioPrm) m(i)%grid%dz(NzAir+1:Nz)
-            read(ioPrm) m(i)%AirCond
-            read(ioPrm) m(i)%CellCond%v
+            read(ioSens) m(i)%grid%dx
+            read(ioSens) m(i)%grid%dy
+            read(ioSens) m(i)%grid%dz(NzAir+1:Nz)
+            read(ioSens) m(i)%AirCond
+            read(ioSens) m(i)%CellCond%v
          endif
          m(i)%grid => grid
       enddo
-      close(ioPrm)
+      close(ioSens)
       end subroutine readVec_modelParam_binary

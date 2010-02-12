@@ -1,6 +1,7 @@
 module sensMatrix
 
   use math_constants
+  use file_units
   use utilities
   use dataspace
   use modelparameter
@@ -8,6 +9,7 @@ module sensMatrix
   implicit none
 
   public 	:: create_sensMatrix, deall_sensMatrix
+  public 	:: create_sensMatrixMTX, deall_sensMatrixMTX
 
   !***********************************************************************
   ! Data type definitions for the full sensitivity matrix; a cross between
@@ -51,8 +53,10 @@ module sensMatrix
   end type sensVector_t
 
 
-  ! collection of sensVector objects for all data types, single transmitter
-  type :: sensMatrixTX_t
+  ! sensMatrix is a collection of sensVector objects for all data types,
+  ! *single* transmitter... full sensitivity matrix is an array of these object
+  ! (avoids the extra layer of complication)
+  type :: sensMatrix_t
       ! the number of dataVecs (generally the number of data types) associated
       ! with this transmitter (note: not the total number of data types)
       integer       :: ndt = 0
@@ -65,19 +69,6 @@ module sensMatrix
 
       logical       :: allocated = .false.
 
-  end type sensMatrixTX_t
-
-
-  ! collection of sensVector objects for all transmitters
-  type :: sensMatrix_t
-      ! ntx is number of transmitters, number of frequencies for MT
-      integer		:: ntx = 0
-
-      ! d is array of dataVec's for each transmitter (dimension nTX)
-      type (sensMatrixTX_t), pointer, dimension(:)	:: sens
-
-      logical		:: allocated = .false.
-
   end type sensMatrix_t
 
 
@@ -89,18 +80,18 @@ Contains
   ! --> nComp: number of components, nSite: number of sites
   ! --> nDt: number of data types for transmitter tx
 
-  subroutine create_sensMatrixTX(d, sigma0, sens)
+  subroutine create_sensMatrix(d, sigma0, sens)
 
     type (dataVecTX_t), intent(in)		 :: d
     type (modelParam_t), intent(in)		 :: sigma0
-    type (sensMatrixTX_t), intent(inout) :: sens
+    type (sensMatrix_t), intent(inout)   :: sens
     ! local
     integer                              :: nComp,nSite,i,j,k,istat
 
     if(sens%allocated) then
-       call errStop('input sens matrix already allocated in create_sensMatrixTX')
+       call errStop('input sens matrix already allocated in create_sensMatrix')
     else if(.not. d%allocated) then
-       call errStop('input data vector not allocated in create_sensMatrixTX')
+       call errStop('input data vector not allocated in create_sensMatrix')
     end if
 
     sens%ndt = d%ndt
@@ -136,14 +127,15 @@ Contains
     sens%tx = d%tx
     sens%allocated = .true.
 
-  end subroutine create_sensMatrixTX
+  end subroutine create_sensMatrix
 
   !**********************************************************************
-  ! deallocates all memory and reinitialized sensMatrixTX object sens
+  ! deallocates all memory and reinitialized sensitivity matrix
+  ! for one transmitter tx
 
-  subroutine deall_sensMatrixTX(sens)
+  subroutine deall_sensMatrix(sens)
 
-    type (sensMatrixTX_t)	:: sens
+    type (sensMatrix_t)	:: sens
     ! local
     integer             	:: nComp,nSite,i,j,k,istat
 
@@ -175,58 +167,124 @@ Contains
     sens%tx = 0
     sens%allocated = .false.
 
-  end subroutine deall_sensMatrixTX
+  end subroutine deall_sensMatrix
 
 
   ! **********************************************************************
-  ! creates an object of type sensMatrix:
+  ! creates an object of type sensMatrixMTX:
   ! a vector containing sensitivities for all transmitters.
 
-  subroutine create_sensMatrix(d, sigma0, J)
+  subroutine create_sensMatrixMTX(d, sigma0, sens)
 
     type (dataVecMTX_t), intent(in)  	:: d
     type (modelParam_t), intent(in)  	:: sigma0
-    type (sensMatrix_t), intent(inout)  :: J
+    type (sensMatrix_t), pointer		:: sens(:)
     ! local
-    integer                             :: i,istat
+    integer                             :: nTx,i,istat
 
-    if(J%allocated) then
-        call errStop('sensitivity matrix already allocated in create_sensMatrix')
+    if(associated(sens)) then
+        call errStop('sensitivity matrix already allocated in create_sensMatrixMTX')
     end if
 
-    J%ntx = d%ntx
+    nTx = d%nTx
 
     ! allocate space for the sensitivity matrix
-    allocate(J%sens(d%ntx), STAT=istat)
-    do i = 1,d%ntx
-		call create_sensMatrixTX(d%d(i), sigma0, J%sens(i))
+    allocate(sens(nTx), STAT=istat)
+    do i = 1,nTx
+		call create_sensMatrix(d%d(i), sigma0, sens(i))
 	end do
 
-    ! memory allocation complete
-    J%allocated = .true.
+  end subroutine create_sensMatrixMTX
 
-  end subroutine create_sensMatrix
 
   !**********************************************************************
   ! deallocates all memory and reinitialized the full sensitivity matrix
 
-  subroutine deall_sensMatrix(J)
+  subroutine deall_sensMatrixMTX(sens)
 
-    type (sensMatrix_t)	:: J
+    type (sensMatrix_t), pointer	:: sens(:)
     ! local
     integer             :: i,istat
 
-    if(J%allocated) then
+    if(associated(sens)) then
        !  deallocate everything relevant
-       do i = 1,J%ntx
-          call deall_sensMatrixTX(J%sens(i))
+       do i = 1,size(sens)
+          call deall_sensMatrix(sens(i))
        end do
-       deallocate(J%sens, STAT=istat)
+       deallocate(sens, STAT=istat)
     endif
 
-    J%ntx = 0
-    J%allocated = .false.
+  end subroutine deall_sensMatrixMTX
 
-  end subroutine deall_sensMatrix
+
+  !**********************************************************************
+  ! count all sensitivity values in the full sensitivity matrix
+
+  function count_sensMatrixMTX(sens) result(N)
+
+    type(sensMatrix_t), pointer, intent(in)	:: sens(:)
+    integer				:: N
+    ! local variables
+    integer 				:: i,j,nTx
+
+    nTx = size(sens)
+    N = 0
+    do i = 1,nTx
+      do j = 1,sens(i)%nDt
+        N = N + sens(i)%v(j)%nComp * sens(i)%v(j)%nSite
+      enddo
+    enddo
+
+  end function count_sensMatrixMTX
+
+  !*********************************************************************
+  ! output is a quick fix, as always - reduces to nearly the same thing
+  ! as before, a vector of model parameters
+  subroutine write_sensMatrixMTX(sens,cfile)
+
+    type(sensMatrix_t), pointer, intent(in)	:: sens(:)
+    character(*), intent(in)				:: cfile
+    ! local
+    integer  iTx,iDt,iRx,nTx,nDt,nSite,nComp,i,j,k,istat,ios,nAll
+    character(80) header
+
+    open(unit=ioSens, file=cfile, form='unformatted', iostat=ios)
+	write(0,*) 'Output sensitivity matrix...'
+
+    write(header,*) 'Sensitivity Matrix'
+	nAll = count_sensMatrixMTX(sens)
+	write(ioSens) header
+	write(ioSens) nAll
+
+    nTx = size(sens)
+
+    do i = 1,nTx
+
+      nDt = sens(i)%nDt
+      iTx = sens(i)%tx
+
+      do j = 1,nDt
+
+        nComp = sens(i)%v(j)%nComp
+        nSite = sens(i)%v(j)%nSite
+        iDt   = sens(i)%v(j)%dataType
+
+        do k = 1,nSite
+        	! append to the file: writes nComp, header and the values;
+        	! could also write the full transmitter, receiver and data type...
+        	iRx = sens(i)%v(j)%rx(k)
+        	write(header,'(a19,i4,a11,i4,a5,i4)') &
+        		'Sensitivity for tx=',iTx,'; dataType=',iDt,'; rx=',iRx
+        	call writeVec_modelParam(nComp,sens(i)%v(j)%dm(:,k),header,cfile)
+        end do ! rx
+
+      end do  ! data type
+
+    end do  ! tx
+
+    close(ioSens)
+
+  end subroutine write_sensMatrixMTX
+
 
 end module sensMatrix

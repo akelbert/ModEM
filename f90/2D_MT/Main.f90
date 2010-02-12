@@ -6,6 +6,7 @@ module Main
   use dataspace ! dataVecMTX_t
   use datafunc ! to deallocate rxDict, typeDict
   use emsolver ! txDict, EMsolnMTX
+  use sensmatrix
   use userctrl
   use ioascii
   use dataio
@@ -33,12 +34,13 @@ module Main
 
   !  storage for the "background" conductivity parameter
   type(modelParam_t), save		:: sigma0
-  !  storage for the full sensitivity matrix
-  type(modelParam_t), pointer, dimension(:), save	:: sigma
   !  storage for a perturbation to conductivity
   type(modelParam_t), save		:: dsigma
   !  storage for the inverse solution
   type(modelParam_t), save		:: sigma1
+
+  !  storage for the full sensitivity matrix (dimension nTx)
+  type(sensMatrix_t), pointer, dimension(:), save	:: sens
 
   !  storage for EM solutions
   type(EMsolnMTX_t), save            :: eAll
@@ -203,11 +205,8 @@ Contains
 	call deall_rxDict() ! 2D_MT/DICT/receivers.f90
 	call deall_typeDict() ! 2D_MT/DICT/dataTypes.f90
 
-	if (associated(sigma)) then
-	   do i = 1,size(sigma)
-	       call deall_modelParam(sigma(i))
-	   end do
-	   deallocate(sigma,STAT=istat)
+	if (associated(sens)) then
+		call deall_sensMatrixMTX(sens)
 	end if
 
 	call deall_CmSqrt()

@@ -151,7 +151,7 @@ $(OBJDIR)/EMsolve3D.o:3D_MT/FWD/EMsolve3D.f90 $(OBJDIR)/sg_boundary.o $(OBJDIR)/
 $(OBJDIR)/EMsolver.o:3D_MT/EMsolver.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/DataFunc.o $(OBJDIR)/DataSpace.o $(OBJDIR)/EMsolve3D.o $(OBJDIR)/transmitters.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/EMsolver.f90 -o $(OBJDIR)/EMsolver.o
 
-$(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/ModelParameter.o 
+$(OBJDIR)/SensMatrix.o:SENS/SensMatrix.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/ModelParameter.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) SENS/SensMatrix.f90 -o $(OBJDIR)/SensMatrix.o
 
 $(OBJDIR)/SensComp.o:SENS/SensComp.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSens.o $(OBJDIR)/ModelSens.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o 
@@ -166,7 +166,7 @@ $(OBJDIR)/ioAscii.o:3D_MT/ioMod/ioAscii.f90 $(OBJDIR)/GridDef.o $(OBJDIR)/math_c
 $(OBJDIR)/DataIO.o:3D_MT/DataIO.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/DataSpace.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/DataIO.f90 -o $(OBJDIR)/DataIO.o
 
-$(OBJDIR)/Main.o:3D_MT/Main.f90 $(OBJDIR)/ModelParameter.o $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o $(OBJDIR)/EMsolver.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o 
+$(OBJDIR)/Main.o:3D_MT/Main.f90 $(OBJDIR)/ModelParameter.o $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) 3D_MT/Main.f90 -o $(OBJDIR)/Main.o
 
 $(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensComp.o $(OBJDIR)/DataIO.o 

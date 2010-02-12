@@ -56,9 +56,8 @@ program Mod3DMT
 
      case (COMPUTE_J)
         write(*,*) 'Calculating the full sensitivity matrix...'
-        call calcSensMatrix(allData,sigma0,sigma)
-        nData = countData(allData)
-        call writeVec_modelParam(nData,sigma,'Sensitivity matrix',cUserDef%wFile_Sens)
+        call calcSensMatrix(allData,sigma0,sens)
+        call write_sensMatrixMTX(sens,cUserDef%wFile_Sens)
 
      case (MULT_BY_J)
         write(*,*) 'Multiplying by J...'

@@ -119,19 +119,25 @@
 
       integer i
       character(80) temp
+      logical opened
 
       temp = header
 
-      open(unit=ioPrm, file=cfile, form='unformatted', iostat=ios)
-      write(ioPrm) temp
-      write(ioPrm) nSigma
+      inquire(file=cfile, opened=opened)
+      if (.not. opened) then
+      	open(unit=ioSens, file=cfile, form='unformatted', iostat=ios)
+      endif
+      !write(ioSens) temp
+      !write(ioSens) nSigma
+
       do i = 1,nSigma
-         write(ioPrm) sigma(i)%paramType
-         write(ioPrm) sigma(i)%Ny,sigma(i)%NzEarth
-         write(ioPrm) sigma(i)%v
-         write(ioPrm) sigma(i)%AirCond
+         write(ioSens) sigma(i)%paramType
+         write(ioSens) sigma(i)%Ny,sigma(i)%NzEarth
+         write(ioSens) sigma(i)%v
+         write(ioSens) sigma(i)%AirCond
       enddo
-      close(ioPrm)
+      ! for efficiency, will need to close the file in the calling program`
+      ! close(ioSens)
       end subroutine writeVec_modelParam_binary
 
      !******************************************************************
@@ -153,25 +159,25 @@
       ! local variables
       integer i, nS, Ny,NzEarth
 
-      open(unit=ioPrm, file=cfile, form='unformatted', iostat=ios)
-      read(ioPrm) header
-      read(ioPrm) nS
+      open(unit=ioSens, file=cfile, form='unformatted', iostat=ios)
+      read(ioSens) header
+      read(ioSens) nS
       if(nS .NE. nSigma) then
           call errStop('size of sigma does not agree with contents of file in readAll_Cond2D')
       endif
 
       do i = 1,nSigma
-         read(ioPrm) sigma(i)%paramType
-         read(ioPrm) Ny,NzEarth
+         read(ioSens) sigma(i)%paramType
+         read(ioSens) Ny,NzEarth
          if((sigma(i)%Ny .NE. Ny).OR. (sigma(i)%NzEarth .NE. NzEarth)) then
-            close(ioPrm)
+            close(ioSens)
             call errStop('Size of cond does not agree with contents of file in readAll_Cond2D')
          else
-            read(ioPrm) sigma(i)%v
-            read(ioPrm) sigma(i)%AirCond
+            read(ioSens) sigma(i)%v
+            read(ioSens) sigma(i)%AirCond
          endif
          sigma(i)%grid => grid
       enddo
-      close(ioPrm)
+      close(ioSens)
 
       end subroutine readVec_modelParam_binary
