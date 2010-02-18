@@ -46,9 +46,9 @@
 	CmSqrt%NzEarth = m%NzEarth
 	allocate(CmSqrt%Sx(CmSqrt%NzEarth), STAT=istat)
 	allocate(CmSqrt%Sy(CmSqrt%NzEarth), STAT=istat)
-	CmSqrt%Sx = 0.1
-	CmSqrt%Sy = 0.1
-	CmSqrt%Sz = 0.1
+	CmSqrt%Sx = 0.3
+	CmSqrt%Sy = 0.3
+	CmSqrt%Sz = 0.3
 	call create_iscalar(m%grid,CmSqrt%mask,CELL_EARTH)
 	CmSqrt%mask%v = FREE
 	CmSqrt%N = 1

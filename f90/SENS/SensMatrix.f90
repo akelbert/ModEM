@@ -222,7 +222,7 @@ Contains
 
   function count_sensMatrixMTX(sens) result(N)
 
-    type(sensMatrix_t), pointer, intent(in)	:: sens(:)
+    type(sensMatrix_t), pointer	:: sens(:)
     integer				:: N
     ! local variables
     integer 				:: i,j,nTx
@@ -242,7 +242,7 @@ Contains
   ! as before, a vector of model parameters
   subroutine write_sensMatrixMTX(sens,cfile)
 
-    type(sensMatrix_t), pointer, intent(in)	:: sens(:)
+    type(sensMatrix_t), pointer	:: sens(:)
     character(*), intent(in)				:: cfile
     ! local
     integer  iTx,iDt,iRx,nTx,nDt,nSite,nComp,i,j,k,istat,ios,nAll
