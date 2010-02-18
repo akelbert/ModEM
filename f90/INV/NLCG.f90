@@ -4,6 +4,13 @@ module NLCG
 !use utilities
 use senscomp
 use dataio
+
+#ifdef MPI
+  use MPI_main
+  use MPI_sub
+#endif
+
+
    ! inherits datasens,  dataspace, dataFunc, solnrhs,
    !            modelspace, soln2d
 
@@ -141,7 +148,12 @@ Contains
    !  compute predicted data for current model parameter m
    !   also sets up forward solutions for all transmitters in eAll
    !   (which is created on the fly if it doesn't exist)
-   call fwdPred(m,dHat,eAll)
+#ifdef MPI
+        call Master_job_Distribute_Model(m)
+        call Master_job_FORWARD_INV(dHat)
+#else
+      call fwdPred(m,dHat,eAll)
+#endif
 
 !	call write_Z_ascii(fidWrite,cfile,nPer,periods,modes, &
 !			nSites,sites,allData)
@@ -223,7 +235,14 @@ Contains
 
    ! multiply by J^T
    call CdInvMult(res)
-   call JmultT(m,res,JTd,eAll)
+#ifdef MPI
+        call Master_job_Distribute_Model(m)
+        call Master_job_Distribute_Data(res)
+        call Master_job_JmultT(m,res,JTd,eAll)
+#else
+        call JmultT(m,res,JTd,eAll)
+#endif
+
    call CmSqrtMult(JTd,CmJTd)
 
    ! initialize grad

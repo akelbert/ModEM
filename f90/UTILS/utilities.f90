@@ -178,7 +178,7 @@ Contains
          if( string(i:i).eq.' ' .or.string(i:i).eq.',' .or.  &
 	     string(i:i).eq.'  '    )then
 
-!           /* current character is blank
+!           /* current character is blank */
              wasblk=.true.
 	 else
 	     if (wasblk) then
@@ -217,7 +217,7 @@ Contains
 	    string(i:i).eq.',' .or.  &
 	    string(i:i).eq.'  '    )then
 
-!          /* current character is blank
+!          /* current character is blank */
            wasblk=.true.
            if(nword.eq.iwrd) RETURN
 

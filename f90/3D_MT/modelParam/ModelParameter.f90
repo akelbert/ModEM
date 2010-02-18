@@ -26,6 +26,9 @@ module ModelParameter
   use sg_scalar
   use sg_vector
   use sg_sparse_vector
+#ifdef MPI
+  use MPI_declaration
+#endif
 
   implicit none
 
@@ -99,7 +102,7 @@ end interface
 
 ! definitions for CmSqrt: must be consistent with the include file below
 
-include "modelCov/RecursiveAR.hd"
+#include "modelCov/RecursiveAR.hd"
 
 Contains
 
@@ -107,16 +110,20 @@ Contains
 !  routines which define mappings between the "natural" representation
 !  of conductivity/resistivity on the model grid and the formal
 !  model parameter structure
-   include "ModelMap.inc"
+#include "ModelMap.inc"
 
 !  The included file must contain subroutines create_CmSqrt, deall_CmSqrt, multBy...
-   include "modelCov/RecursiveAR.inc"
+#include "modelCov/RecursiveAR.inc"
 
 !  I/O choices
-   include "modelParamIO/Binary.inc"
-   include "modelParamIO/Mackie.inc"
-   include "modelParamIO/WS.inc"
+#include "modelParamIO/Binary.inc"
+#include "modelParamIO/Mackie.inc"
+#include "modelParamIO/WS.inc"
 
+!  MPI model parameter, if needed
+#ifdef MPI
+#include "ModelParam_MPI.inc"
+#endif
 !**********************************************************************
 !
    !  create_modelParam allocates and initializes arrays for

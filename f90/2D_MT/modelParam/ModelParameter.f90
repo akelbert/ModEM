@@ -23,6 +23,9 @@ use file_units
 use math_constants
 use utilities
 use emfield
+#ifdef MPI
+  use MPI_declaration
+#endif
 
 implicit none
 
@@ -90,22 +93,26 @@ end interface
 
 ! definitions for CmSqrt: must be consistent with the include file below
 
-include "modelCov/Diffusion.hd"
+#include "modelCov/Diffusion.hd"
 
 Contains
 
 ! *****************************************************************************
 !  conductivity mappings and adjoints for 2D MT modeling and inversion code
 !  routines that are public
-   include "ModelMap.inc"
+#include "ModelMap.inc"
 
 !  The included file must contain subroutines create_CmSqrt, deall_CmSqrt, multBy...
-   include "modelCov/Diffusion.inc"
+#include "modelCov/Diffusion.inc"
 
 !  I/O choices
-   include "modelParamIO/Binary.inc"
-   include "modelParamIO/Mackie.inc"
+#include "modelParamIO/Binary.inc"
+#include "modelParamIO/Mackie.inc"
 
+!  MPI model parameter, if needed
+#ifdef MPI
+#include "ModelParam_MPI.inc"
+#endif
 !************************************************************************
    !  allocateEarthCond allocates and initializes arrays for
    !   Earth-cell conductivity structure;

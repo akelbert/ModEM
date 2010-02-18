@@ -1,11 +1,11 @@
 # Makefile suited for building the Mod2DMT program
 # Generated using: ./fmkmf.pl [OPTIONS] Mod2DMT.f90 > Makefile
 # with command line options
-# -p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/DICT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod
-# -f90 pgf95 (compiler)
-# -opt -g -Mbounds (compiler optimisation)
+# -p .:INV:MPI:LAPACK:SENS:UTILS:2D_MT:2D_MT/DICT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod
+# -f90 mpif90 (compiler)
+# -opt -O2 (compiler optimisation)
 # -l -L/usr/lib64 -lblas -llapack -lpgftnrtl (linking options)
-# -o ./objs/2D_MT/Debug (output directory for object files)
+# -o ./objs/2D_MT/MPIRelease (output directory for object files)
 
 #  Uncomment these lines to make program for Solaris OS (legacy)
 # F90 = f90
@@ -43,15 +43,15 @@
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-OBJDIR = ./objs/2D_MT/Debug
-F90 = pgf95 
-FFLAGS = -g -Mbounds
-MPIFLAGS = -Mpreprocess
+OBJDIR = ./objs/2D_MT/MPIRelease
+F90 = mpif90 
+FFLAGS = -O2
+MPIFLAGS = -Bstatic  -Mipa=fast  -Mextend  -Kieee -Mpreprocess -DMPI
 MODULE = -module $(OBJDIR)
 LIBS = -L/usr/lib64 -lblas -llapack -lpgftnrtl
 
 # -------------------End-macro-Defs---------------------------
-OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o $(OBJDIR)/DataFunc.o $(OBJDIR)/ModelSens.o $(OBJDIR)/DataSens.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/SensComp.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 
+OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/EMfield.o $(OBJDIR)/MPI_declaration.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o $(OBJDIR)/DataFunc.o $(OBJDIR)/ModelSens.o $(OBJDIR)/DataSens.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/SensComp.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o $(OBJDIR)/Main.o $(OBJDIR)/MPI_main.o $(OBJDIR)/NLCG.o $(OBJDIR)/Mod2DMT.o 
 
 
 all: Mod2DMT 
@@ -83,7 +83,10 @@ $(OBJDIR)/GridDef.o:2D_MT/GridDef.f90 $(OBJDIR)/math_constants.o
 $(OBJDIR)/EMfield.o:2D_MT/EMfield.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/GridDef.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) 2D_MT/EMfield.f90 -o $(OBJDIR)/EMfield.o
 
-$(OBJDIR)/ModelParameter.o:2D_MT/modelParam/ModelParameter.f90 $(OBJDIR)/file_units.o $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/EMfield.o 2D_MT/modelParam/modelCov/Diffusion.hd 2D_MT/modelParam/ModelMap.inc 2D_MT/modelParam/modelCov/Diffusion.inc 2D_MT/modelParam/modelParamIO/Binary.inc 2D_MT/modelParam/modelParamIO/Mackie.inc
+$(OBJDIR)/MPI_declaration.o:MPI/MPI_declaration.f90  
+	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) MPI/MPI_declaration.f90 -o $(OBJDIR)/MPI_declaration.o
+
+$(OBJDIR)/ModelParameter.o:2D_MT/modelParam/ModelParameter.f90 $(OBJDIR)/file_units.o $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/EMfield.o $(OBJDIR)/MPI_declaration.o 2D_MT/modelParam/modelCov/Diffusion.hd 2D_MT/modelParam/ModelMap.inc 2D_MT/modelParam/modelCov/Diffusion.inc 2D_MT/modelParam/modelParamIO/Binary.inc 2D_MT/modelParam/modelParamIO/Mackie.inc 2D_MT/modelParam/ModelParam_MPI.inc
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) 2D_MT/modelParam/ModelParameter.f90 -o $(OBJDIR)/ModelParameter.o
 
 $(OBJDIR)/SolnRHS.o:2D_MT/SolnRHS.f90 $(OBJDIR)/EMfield.o 
@@ -140,7 +143,10 @@ $(OBJDIR)/DataIO.o:2D_MT/DataIO.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_un
 $(OBJDIR)/Main.o:2D_MT/Main.f90 $(OBJDIR)/ModelParameter.o $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) 2D_MT/Main.f90 -o $(OBJDIR)/Main.o
 
-$(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensComp.o $(OBJDIR)/DataIO.o 
+$(OBJDIR)/MPI_main.o:MPI/MPI_main.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSens.o $(OBJDIR)/ModelSens.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensComp.o $(OBJDIR)/MPI_declaration.o $(OBJDIR)/Main.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) MPI/MPI_main.f90 -o $(OBJDIR)/MPI_main.o
+
+$(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensComp.o $(OBJDIR)/DataIO.o $(OBJDIR)/MPI_main.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) INV/NLCG.f90 -o $(OBJDIR)/NLCG.o
 
 $(OBJDIR)/Mod2DMT.o:Mod2DMT.f90 $(OBJDIR)/SensComp.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o 

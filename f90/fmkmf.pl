@@ -69,6 +69,15 @@ else {
   $optim="-O2";
 }
 
+if ( $ENV{FMKMF_MPIFLAGS} ) {
+  #print "\# FMKMF_MPIFLAGS set to $ENV{FMKMF_MPIFLAGS}\n";
+  $mpiflags=$ENV{FMKMF_MPIFLAGS};
+} 
+else {
+  #print "\# FMKMF_MPIFLAGS not set: using no link options \n";
+  $mpiflags=" ";
+}
+
 if ( $ENV{FMKMF_LINKOPTS} ) {
   #print "\# FMKMF_LINKOPTS set to $ENV{FMKMF_LINKOPTS}\n";
   $linkopts=$ENV{FMKMF_LINKOPTS};
@@ -87,37 +96,45 @@ $linkdir=".";
 #------------------------------
 
 my ($optiond)=0;
+my  $DMPI = 0;
 
 while (@ARGV){
 
   $arg=shift;
   if ($arg =~ /^-p$/){
     $spath=shift;
-    #print "# Using search path $spath from cmd line\n";
+    print STDERR "# Using search path from cmd line:\n $spath\n";
   }
   if ($arg =~ /^-f90$/){
     $f90=shift;
-    #print "# Using compile cmd $f90 from cmd line\n";
+    print STDERR "# Using compile cmd $f90 from cmd line\n";
   }
   if ($arg =~ /^-tag$/){
     $sftag=shift;
-    #print "# Using source file tag $sftag from cmd line\n";
+    print STDERR "# Using source file tag $sftag from cmd line\n";
   }
   if ($arg =~ /^-opt$/){
     $optim=shift;
-    #print "# Using compiler optimization options $optim from cmd line\n";
+    print STDERR "# Using compiler optimization options $optim from cmd line\n";
+  }
+  if ($arg =~ /^-mpi$/){
+    $mpiflags=shift;
+    if ($mpiflags =~ /MPI/) {
+    	$DMPI = 1; # MPI is defined
+    }
+    print STDERR "# Using compiler MPI flags $mpiflags from cmd line\n";
   }
   if ($arg =~ /^-l$/){
     $linkopts=shift;
-    #print "# Using Link options $linkopts from cmd line\n";
+    print STDERR "# Using Link options $linkopts from cmd line\n";
   }
   if ($arg =~ /^-d$/){
-    $optiond=1
-    #print "# Using debug option (full output on) from cmd line\n";
+    $optiond=1;
+    print STDERR "# Using debug option (full output on) from cmd line\n";
   }
   if ($arg =~ /^-o$/){
   	$linkdir=shift;
-  	#print "# Using the default object file output directory\n";
+  	print STDERR "# Using $linkdir for object file output directory\n";
   }
 
 }
@@ -154,7 +171,7 @@ print "# -opt $optim (compiler optimisation)\n";
 print "# -l $linkopts (linking options)\n";
 print "# -o $linkdir (output directory for object files)\n\n";
 
-print "#  Uncomment these lines to make program for Solaris OS\n";
+print "#  Uncomment these lines to make program for Solaris OS (legacy)\n";
 print "# F90 = f90\n";
 print "# FFLAGS = -dalign -g -C -w  -L/usr/local/lib\n";
 print "# LIBS = -xlic_lib=sunperf\n";
@@ -164,6 +181,7 @@ print "# OBJDIR = ./objs/3D_MT/G95Debug\n";
 print "# F90 = g95\n";
 print "# FFLAGS = -O2\n";
 print "# FFLAGS = -g -ftrace=frame -fbounds-check\n";
+print "# MPIFLAGS = -cpp # for serial code\n";
 print "# MODULE = -fmod=\$(OBJDIR)\n";
 print "# LIBS = -lblas -llapack\n";
 print "#  Uncomment these lines to make program with Intel compiler\n";
@@ -172,20 +190,23 @@ print "# OBJDIR = ./objs/3D_MT/IFortDebug\n";
 print "# F90 = ifort\n";
 print "# FFLAGS = -O3\n";
 print "# FFLAGS = -debug all -check bounds\n";
+print "# MPIFLAGS = -cpp # for serial code\n";
 print "# MODULE = -module \$(OBJDIR)\n";
 print "# LIBS = -lblas -llapack\n";
 print "#  Uncomment these lines to make program with PGI compiler\n";
 print "# include Makefile.local\n";
 print "# OBJDIR = ./objs/3D_MT/PGIDebug\n";
-print "# F90 = pgf95\n";
+print "# F90 = pgf95  # mpif90\n";
 print "# FFLAGS = -O3\n";
 print "# FFLAGS = -g -Mprof=lines -Mbounds\n";
+print "# MPIFLAGS = -Mpreprocess # for serial code\n";
+print "# MPIFLAGS = -Bstatic  -Mipa=fast  -Mextend  -Kieee -Mpreprocess -DMPI\n";
 print "# MODULE = -module \$(OBJDIR)\n";
 print "# LIBS = -llapack -lblas\n";
 print "# LIBS = -L/usr/lib64 -llapack -lblas -lpgftnrtl -Mprof=lines\n";
 
 if($optiond){
-  print "# Main program is $mainprogfile \n" ;
+  print STDERR "# Main program is $mainprogfile \n" ;
 }
 # this subroutine (def below) does most of the work.
 process_fsource($mainprogfile); 
@@ -198,6 +219,7 @@ print "include Makefile.local\n";
 print "OBJDIR = $linkdir\n";
 print "F90 = $f90 \n";
 print "FFLAGS = $optim\n";
+print "MPIFLAGS = $mpiflags\n";
 if ($f90 =~ /^g95$/){
 	print "MODULE = -fmod=\$(OBJDIR)\n";
 } elsif ($f90 =~ /^gfortran$/){
@@ -256,7 +278,7 @@ sub process_fsource {
   
   my $mainprogfile=$_[0];
   if($optiond){
-    print"# process_fsource called with arg $mainprogfile \n";
+    print STDERR "# process_fsource called with arg $mainprogfile \n";
   }
   open( MAINPROG, $mainprogfile) or 
     die "Can't find main program file $mainprogfile: $! \n";
@@ -264,19 +286,29 @@ sub process_fsource {
   # Read through Fortran source looking for USE statements
   # There should be nothing but whitespace before the USE. Sloppily, 
   # we allow tabs, although the standard (IIRC) does not
+  # An important exception, helpful for our purposes:
+  # if the used module has MPI in the name, omit it unless MPI is defined.
+  # In the code, this is accomplished with #ifdef MPI statements.
   my @modulelist=();
   my @includelist=();
   while ($line=<MAINPROG>) { 
     if ($line =~ /^[ \t]*use (\w+)/i ) { # line matches regexp between / /
+      my $modulefile = $1;
       if($optiond){
-		print "# $mainprogfile Uses Module $1\n";
+		print STDERR "# $mainprogfile Uses Module $modulefile\n";
       }
-      @modulelist=(@modulelist,$1);
-    } elsif  ($line =~ /^[ \t]*include "(\S+)"/i ){
-      if($optiond){
-		print "# $mainprogfile Includes $1\n";
+      if ($modulefile =~ /MPI/) { # if MPI is found in module name, skip unless MPI is defined
+      	next unless ($DMPI);
       }
+      @modulelist=(@modulelist,$modulefile);
+    } elsif  ($line =~ /^[ \t]*\#?include "(\S+)"/i ){
       my $includefile = $1;
+      if($optiond){
+		print STDERR "# $mainprogfile Includes $includefile\n";
+      }
+      if ($includefile =~ /MPI/) { # if MPI is found in module name, skip unless MPI is defined
+      	next unless ($DMPI);
+      }
       my $mainprogpath = dirname($mainprogfile); 
       @includelist=(@includelist,"$mainprogpath/$includefile");    	
     }
@@ -285,9 +317,9 @@ sub process_fsource {
   close(MAINPROG);
 
   if($optiond){
-    print "# Full list of modules in $mainprogfile: @modulelist \n";
+    print STDERR "# Full list of modules in $mainprogfile: @modulelist \n";
     if (@includelist > 0) {
-    	print "# Full list of includes in $mainprogfile: @includelist \n";
+    	print STDERR "# Full list of includes in $mainprogfile: @includelist \n";
     }
   }
   # Find which file each module is in.
@@ -310,13 +342,13 @@ sub process_fsource {
 	if ($line =~ /^ *module (\w+)/i ){
 	  if($1 =~ /^$module$/i){
 	    if($optiond){
-	      print "# Uses $module which is in $pathsourcefile\n";
+	      print STDERR "# Uses $module which is in $pathsourcefile\n";
 	    }
 	    @modfiles=(@modfiles,$pathsourcefile);
 	    
 	    if (grep (/$pathsourcefile/,@global_modfiles )){
 	      if($optiond){
-		print "# $pathsourcefile already in list\n";
+		print STDERR "# $pathsourcefile already in list\n";
 	      }
 	    }
 	    else {
@@ -360,7 +392,7 @@ foreach  $mf (@modfiles) {
 }
 
 @global_outlines=(@global_outlines,"\n$objfile:$mainprogfile @objlist @includelist\n");
-@global_outlines=(@global_outlines,"\t \$(F90) -c \$(MODULE) \$(FFLAGS) $mainprogfile -o $objfile\n");
+@global_outlines=(@global_outlines,"\t \$(F90) -c \$(MODULE) \$(FFLAGS) \$(MPIFLAGS) $mainprogfile -o $objfile\n");
 
 #if (@includelist > 0) {
 #	@global_outlines=(@global_outlines,"\n$mainprogfile: @includelist \n");
