@@ -111,7 +111,7 @@ Contains
     end do
 
     E3%tx = E1%tx
-    E3%errflag = E1%errflag .or. E2%errflag
+    E3%errflag = max(E1%errflag, E2%errflag)
     E3%grid => E1%grid
 
   end subroutine linComb_EMsolnMTX ! linComb_EMsolnMTX

@@ -6,6 +6,7 @@ module solnrhs
 ! Uses: EMfield
 
 use emfield
+use transmitters
 
 implicit none
 
@@ -60,17 +61,22 @@ contains
 !**********************************************************************
 !           Basic EMsoln methods
 !**********************************************************************
-
-     subroutine create_EMsoln(grid,iTx,mode,e)
+     subroutine create_EMsoln(grid,iTx,e)
+       ! no need to pass the mode to create_EMsoln:
+       ! we now get it from the transmitter dict.
+       ! now the interface is generic,
+       ! and could be used as such
 
        implicit none
        type(grid_t), intent(in), target	:: grid
        integer, intent(in)              :: iTx
-       character(2), intent(in)         :: mode
        type (EMsoln_t), intent(inout)	:: e
 
        ! local
+       character(2)      :: mode
        character(80)     :: gridType
+
+       mode = txDict(iTx)%mode
 
        if(mode .eq. 'TE') then
           gridType = NODE
@@ -179,12 +185,26 @@ contains
 !           Basic EMsparse methods
 !**********************************************************************
 
-     subroutine create_EMsparse(grid,gridType,nCoeff,LC)
+     subroutine create_EMsparse(grid,iTx,LC,nCoeff)
 
        type(grid_t), intent(in)	:: grid
-       character (len=80), intent(in)	:: gridType
-       integer, intent(in)		:: nCoeff
+       integer, intent(in)		:: iTx
        type(EMsparse_t)			:: LC
+       integer, intent(in)		:: nCoeff
+
+       ! local
+       character(2)      :: mode
+       character(80)     :: gridType
+
+       mode = txDict(iTx)%mode
+
+       if(mode .eq. 'TE') then
+          gridType = NODE
+       else if(mode .eq. 'TM') then
+          gridType = NODE_EARTH
+       else
+          call errStop('Unknown mode in create_EMsparse')
+       endif
 
        call create_sparsevecc(grid,gridType,nCoeff,LC%L)
 
@@ -241,20 +261,22 @@ contains
 !**********************************************************************
      !  allocates and initializes arrays for the "rhs" structure
      !   set pointer to grid + mode/source fields of rhs before calling
-     subroutine create_EMrhs(grid,iTx,mode,b)
+     subroutine create_EMrhs(grid,iTx,b)
 
        type(grid_t), intent(in),target	:: grid
        integer, intent(in)              :: iTx
-       character(2), intent(in)         :: mode
        type (EMrhs_t), intent(inout)   	:: b
 
        !  local variables
+       character(2)     :: mode
        character(80)    :: gridType
        integer ::       Nz,Ny,Nza,Nzi,nBC
 
        Nz = grid%Nz
        Ny = grid%Ny
        Nza = grid%Nza
+
+       mode = txDict(iTx)%mode
 
        if(mode .eq. 'TE') then
           gridType = NODE

@@ -93,8 +93,10 @@ module sg_sparse_vector
      ! (probably will not be needed in the future when compilers will support
      ! ISO/IEC 15581 - the "allocatable array extension")
      logical					:: temporary = .false.
-     ! pointer to the parent grid
-     type (grid_t), pointer                 	:: grid
+     ! pointer to the parent grid not needed or set: we can
+     ! make full use of the sparse vector without it...
+     ! - should be passed explicitly if it is ever required!
+     !type (grid_t), pointer                 	:: grid
 
   end type sparsevecc
 
@@ -122,11 +124,12 @@ Contains
 
   ! **********************************************************************
   ! create an object of type sparsevecc of length nCoeff
-  ! NB: no pointer to the grid at creation? - A.K.
+  ! pointer to the grid not needed (and in some cases
+  ! when sparse vectors are set up, we don't even have it).
   subroutine create_sparsevecc(nCoeff,newLC, gridType)
 
     implicit none
-    integer, intent(in) 			:: nCoeff
+    integer, intent(in) 					:: nCoeff
     type (sparsevecc), intent(inout) 		:: newLC
     character (len=80), intent(in)     		:: gridType
     integer					:: status
@@ -271,7 +274,6 @@ Contains
              SV2%k = SV1%k
              SV2%xyz = SV1%xyz
              SV2%c = SV1%c
-	     SV2%grid => SV1%grid
 
 	  else
              write (0, *) 'not compatible usage for copy_sparsevecc'
@@ -289,7 +291,7 @@ Contains
        	     SV2%allocated = .false.
           end if
 
-          !  then allocate SV2 as correct szie ...
+          !  then allocate SV2 of correct size ...
           Call create_sparsevecc(SV1%nCoeff, SV2, SV1%gridType)
           !   .... and copy SV1
           SV2%nCoeff = SV1%nCoeff
@@ -298,7 +300,6 @@ Contains
 	  SV2%k = SV1%k
 	  SV2%xyz = SV1%xyz
 	  SV2%c = SV1%c
-	  SV2%grid => SV1%grid
 
        end if
 
@@ -360,8 +361,7 @@ Contains
        write (0, *) 'not compatible usage for LinCompSparseVecC'
     end if
 
-    Call create_sparsevecc(nCoeffsum,Loc3, Lic1%gridType)
-    Loc3%grid => Lic1%grid
+    Call create_sparsevecc(nCoeffsum, Loc3, Lic1%gridType)
     nm = Lic1%nCoeff
     Loc3%i(1:nm) = Lic1%i
     Loc3%j(1:nm) = Lic1%j
@@ -418,7 +418,6 @@ Contains
     SV2%k = SV1%k
     SV2%xyz = SV1%xyz
     SV2%c = cs * SV1%c
-    SV2%grid => SV1%grid
 
   end subroutine scMult_sparsevecc
 
@@ -776,7 +775,6 @@ Contains
     SV2%k = SV1%k
     SV2%xyz = SV1%xyz
     SV2%c = conjg(SV1%c)
-    SV2%grid => SV1%grid
 
     SV2%temporary = .true.
 
@@ -1027,8 +1025,6 @@ Contains
     write (0, *) 'Vector (full) use not proper in copy_csvector'
 
  end if
-
- SV%grid => V%grid
 
 end subroutine copy_csvector
 

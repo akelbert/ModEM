@@ -6,6 +6,6 @@ fi
 if [ -e $1 ]; then
     rm $1
 fi
-perl fmkmf.pl -f90 ifort -opt '-O3' -l '-lblas -llapack' -o './objs/EARTH/Release' \
+perl fmkmf.pl -f90 ifort -opt '-O3' -mpi '-cpp' -l '-lblas -llapack' -o './objs/EARTH/Release' \
 -p .:INV:UTILS:FIELDS/FiniteDiff3D:EARTH:EARTH/modelParam:EARTH/FWD:EARTH/ioMod:EARTH/Basics:EARTH/Jacobian \
 Global3D.f90 > $1

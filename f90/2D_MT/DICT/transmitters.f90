@@ -13,7 +13,9 @@ module transmitters
      !   at present there does not seem to be much need for BC info ... add
      !    if needed.  Other sorts of EM data may have more
      !    complex tx descriptions
-     character(2)                :: mode = ''! = 'TE' or 'TM'
+     ! required attribute - number of polarizations
+     integer					:: nPol = 1 ! = 1 for 2D MT
+     character(2)               :: mode = ''! = 'TE' or 'TM'
      ! angular frequency (radians/sec), and for convenience period (s)
      real(kind=prec)            :: omega = R_ZERO
      real(kind=prec)            :: period = R_ZERO

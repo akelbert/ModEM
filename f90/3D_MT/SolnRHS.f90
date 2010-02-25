@@ -11,6 +11,7 @@ use utilities
 use sg_vector
 use sg_boundary
 use sg_sparse_vector
+use transmitters
 
 implicit none
 
@@ -23,11 +24,12 @@ implicit none
     !!  and collects solutions for both "polarizations" in a single
     !!   structure.  Thus the impedance operator acts on an object of this type.
 
-    !! e is array of electric field solution vectors for two source
-    !! polarizations; one electrical field solution for each
-    !!  might generalize to allow a variable number of polarizations
-    integer			:: nPol = 2
-    type(cvector), dimension(2)  	:: pol
+    !! e is array of electric field solution vectors for nPol source
+    !! polarizations; 2 for 3D MT - one electrical field solution for each
+    !! allows a variable number of polarizations to accommodate other uses
+    !! e.g. active source applications
+    integer					:: nPol = 2
+    type(cvector), pointer  :: pol(:)
 
     !! tx points to information in the transmitter dictionary about the source
     !!   used to compute the solution, e.g. omega/period;
@@ -44,18 +46,19 @@ implicit none
 
   type :: EMsolnMTX_t
     !! Generic solution type for storing solutions from multiple transmitters
-    integer			:: nTx = 0
+    integer						:: nTx = 0
     type(EMsoln_t), pointer		:: solns(:)
-    logical			:: allocated = .false.
+    logical						:: allocated = .false.
   end type EMsolnMTX_t
 
   type :: EMsparse_t
     !!   Generic solution type, same name must be used to allow
     !!   use of higher level inversion modules on different problems.
-    !!   Here we need two sparse vectors, one for each polarization
+    !!   Here we need nPol sparse vectors, one for each polarization
     !!    to represent linear data functionals on objects of type EMsoln
-    integer			:: nPol = 2
-    type(sparseVecC)		:: L(2)
+    integer						:: nPol = 2
+    type(sparsevecc), pointer	:: L(:)
+    logical						:: allocated = .false.
   end type EMsparse_t
 
   type :: RHS_t
@@ -80,9 +83,9 @@ implicit none
      ! rhs data structure for multiple polarizations, the abstract
      !  full rhs used for the abstract full EMsoln
 
-     integer			:: nPol = 2
-     type (RHS_t) 		:: b(2)
-     logical			:: allocated = .false.
+     integer				:: nPol = 2
+     type (RHS_t), pointer	:: b(:)
+     logical				:: allocated = .false.
   end type EMrhs_t
 
 contains
@@ -93,21 +96,24 @@ contains
 
      subroutine create_EMsoln(grid,iTx,e)
 
-     !  3DMT  version:  NO gridType needed
+     !  generic routine for creating the EMsoln type for 3D problems:
+     !  number of polarization obtained from the transmitter dictionary
+
        implicit none
        type(grid_t), intent(in), target	    :: grid
        integer, intent(in)                  :: iTx
        type (EMsoln_t), intent(inout)		:: e
 
        ! local variables
-       integer				:: k
+       integer				:: k,istat
 
-			 if (e%allocated) then
-				! do nothing
-				return
-			 end if
+       if (e%allocated) then
+          ! do nothing
+          return
+       end if
 
-       e%nPol = 2
+       e%nPol = txDict(iTx)%nPol
+       allocate(e%pol(e%nPol), STAT=istat)
        do k = 1,e%nPol
           call create_cvector(grid,e%pol(k),EDGE)
        enddo
@@ -120,16 +126,20 @@ contains
 
      !************************************************************
      subroutine deall_EMsoln(e)
-     !  3D-MT  version
+
+       !  3D  version
        implicit none
        type (EMsoln_t), intent(inout)   :: e
 
        ! local variables
-       integer				:: k
+       integer				:: k, istat
 
-       do k = 1,e%nPol
-          call deall_cvector(e%pol(k))
-       enddo
+       if (associated(e%pol)) then
+          do k = 1,e%nPol
+             call deall_cvector(e%pol(k))
+          enddo
+          deallocate(e%pol, STAT=istat)
+       endif
 
        if(associated(e%grid)) then
            nullify(e%grid)
@@ -141,14 +151,25 @@ contains
 
      !************************************************************
      subroutine copy_EMsoln(eOut,eIn)
-     !  3D-MT  version
+
+       !  3D  version
        implicit none
        type (EMsoln_t), intent(in)	:: eIn
        type (EMsoln_t), intent(inout)	:: eOut
 
        ! local variables
        integer				:: k
-       !  should have some error checking for eIn ...
+
+       if (.not. eIn%allocated) then
+         call errStop('input EM soln not allocated yet in copy_EMsoln')
+       endif
+
+       if (associated(eOut%pol)) then
+         if (eOut%nPol .ne. eIn%nPol) then
+         	call deall_EMsoln(eOut)
+         endif
+       endif
+
        do k = 1,eIn%nPol
           call copy_cvector(eOut%pol(k),eIn%pol(k))
        enddo
@@ -214,28 +235,68 @@ contains
 !**********************************************************************
 !           Basic EMsparse methods
 !**********************************************************************
-!  NOTE:  create_EMsparse appears to be unnecessary!
-!     also don't really use linear combinations ...
+!    don't really use linear combinations ... so not implemented
 
-     !************************************************************
-     subroutine deall_EMsparse(LC)
+    subroutine create_EMsparse(grid,iTx,LC,nCoeff)
 
-       ! 3D version
-       type (EMsparse_t), intent(inout)   	:: LC
+      !  generic routine for creating the EMsparse type for 3D problems:
+      !  number of polarization obtained from the transmitter dictionary
+
+       implicit none
+       type(grid_t), intent(in), target	    :: grid
+       integer, intent(in)                  :: iTx
+       type (EMsparse_t), intent(inout)		:: LC
+       integer, intent(in), optional		:: nCoeff
 
        ! local variables
-       integer				:: k
+       integer				:: nc,k,istat
 
-       LC%nPol = 2
+       if (LC%allocated) then
+          ! do nothing
+          return
+       end if
+
+       if (present(nCoeff)) then
+          nc = nCoeff
+       else
+          nc = 0 ! will reallocate memory later in the program
+       end if
+
+       LC%nPol = txDict(iTx)%nPol
+       allocate(LC%L(LC%nPol), STAT=istat)
        do k = 1,LC%nPol
-          call deall_sparsevecc(LC%L(k))
+          call create_sparsevecc(nc,LC%L(k),EDGE)
        enddo
 
-     end subroutine deall_EMsparse
+	   LC%allocated = .true.
+
+    end subroutine create_EMsparse
+
+    !************************************************************
+    subroutine deall_EMsparse(LC)
+
+      ! 3D version
+      type (EMsparse_t), intent(inout)   	:: LC
+
+      ! local variables
+      integer				:: k,istat
+
+      if (associated(LC%L)) then
+         do k = 1,LC%nPol
+            call deall_sparsevecc(LC%L(k))
+         enddo
+         deallocate(LC%L, STAT=istat)
+      endif
+
+   end subroutine deall_EMsparse
+
+
 !**********************************************************************
 !           combined EMsoln/EMsparse methods
 !**********************************************************************
-     function dotProd_EMsparseEMsoln(SV,FV,Conj_Case) result(c)
+!  subroutine add_EMsparseEMsoln(cs,SV,FV)  does not appear to be needed
+
+   function dotProd_EMsparseEMsoln(SV,FV,Conj_Case) result(c)
 
        type (EMsparse_t), intent(in)             :: SV  ! sparse vector
        type (EMsoln_t), intent(in)               :: FV  ! full vector
@@ -254,11 +315,8 @@ contains
           enddo
        endif
 
-     end function dotProd_EMsparseEMsoln
+   end function dotProd_EMsparseEMsoln
 
-     !**********************************************************************
-
-     !  subroutine add_EMsparseEMsoln(cs,SV,FV)  does not appear to be needed
 
 !**********************************************************************
 !           RHS methods
@@ -355,14 +413,15 @@ contains
           endif
        endif
      end subroutine zero_RHS
+
+
 !**********************************************************************
 !           EMrhs methods
 !**********************************************************************
-     !  allocates and initializes arrays for the "rhs" structure
-     !   set pointer to grid before calling
-     !   NO gridType needed for 3DMT
 
      subroutine create_EMrhs(grid,iTx,b)
+     !  allocates and initializes arrays for the "rhs" structure
+     !   set pointer to grid before calling
      !   3D version  ...
      !     does not create sparse vectors if sparsesource = .true.
      !       (this would in any event require knowing number of
@@ -372,13 +431,15 @@ contains
        integer, intent(in)              :: iTx
        type (EMrhs_t), intent(inout)   	:: b
 
-       integer				:: k
+       integer				:: k,istat
 
        if (b%allocated) then
           ! do nothing - exit the create subroutine
           return
        endif
 
+       b%nPol = txDict(iTx)%nPol
+       allocate(b%b(b%nPol), STAT=istat)
        do k = 1,b%nPol
           call create_RHS(grid,iTx,b%b(k))
        enddo
@@ -392,11 +453,14 @@ contains
 
        type (EMrhs_t), intent(inout)   :: b
 
-       integer			:: k
+       integer			:: k,istat
 
-       do k = 1,b%nPol
+       if (associated(b%b)) then
+          do k = 1,b%nPol
              call deall_RHS(b%b(k))
-       enddo
+          enddo
+          deallocate(b%b, STAT=istat)
+       endif
 
        b%allocated = .false.
 

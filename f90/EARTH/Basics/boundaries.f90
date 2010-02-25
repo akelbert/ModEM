@@ -151,9 +151,6 @@ Contains
         end do
       end do
 
-
-	Hb%grid => H%grid
-
   end subroutine extractBC	! extractBC
 
 

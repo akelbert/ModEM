@@ -13,6 +13,9 @@ module transmitters
      !   at present there does not seem to be much need for BC info ... add
      !    if needed.  Other sorts of EM data may have more
      !    complex tx descriptions
+     ! required attribute - number of polarizations
+     ! this could be different for e.g. active source 3D applications
+     integer					:: nPol = 2 ! = 2 for 3D MT
      ! angular frequency (radians/sec), and for convenience period (s)
      real(kind=prec)            :: omega = R_ZERO
      real(kind=prec)            :: period = R_ZERO
@@ -39,10 +42,11 @@ Contains
 !   dictionary; In this example we assume that there are nPer periods
 !   for either TE or TM modes, or for both.
 
-  subroutine setup_txDict(nTx,Periods)
+  subroutine setup_txDict(nTx,Periods,nPol)
 
      integer, intent(in)            :: nTx
      real(kind=prec), intent(in)    :: Periods(nTx)
+     integer, intent(in), optional	:: nPol
 
      ! local variables
      integer                     :: iTx,istat
@@ -54,6 +58,9 @@ Contains
      do iTx = 1, nTx
         txDict(iTx)%period = Periods(iTx)
         txDict(iTx)%omega = (2*PI)/ txDict(iTx)%period
+        if (present(nPol)) then
+        	txDict(iTx)%nPol = nPol
+        endif
      enddo
 
   end subroutine setup_txDict
@@ -64,9 +71,10 @@ Contains
 ! This is not efficient; but this would only be used a few times, with
 ! a small number of values, so convenience is much more of an issue here!
 
-  function update_txDict(Period) result (iTx)
+  function update_txDict(Period,nPol) result (iTx)
 
      real(kind=prec), intent(in)        :: Period
+     integer, intent(in), optional		:: nPol
      integer                            :: iTx
      ! local
      type(MTtx)                         :: new
@@ -76,6 +84,11 @@ Contains
      ! Create a transmitter for this period
      new%period = Period
      new%omega  = (2*PI)/Period
+     if (present(nPol)) then
+     	new%nPol = nPol
+     else
+     	new%nPol = 2
+     end if
      new%iPer   = nTx + 1
 
      ! If txDict doesn't yet exist, create it
@@ -88,15 +101,15 @@ Contains
 
      nTx = size(txDict)
 
-     
+
      ! If this period isn't new, do nothing
      do iTx = 1,nTx
-     	if (abs(Period - txDict(iTx)%period) < TOL6) then
+     	if ((abs(Period - txDict(iTx)%period) < TOL6) .and. (nPol == txDict(iTx)%nPol)) then
      		return
      	end if
      end do
- 
-     
+
+
      ! If the period really is new, append to the end of the dictionary
      allocate(temp(nTx+1),STAT=istat)
      temp(1:nTx) = txDict

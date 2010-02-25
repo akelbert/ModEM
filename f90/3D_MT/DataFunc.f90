@@ -271,7 +271,9 @@ Contains
      c1 = Z(2*(i-1)+1)
      c2 = Z(2*(i-1)+2)
      Call linComb_sparsevecc(Lbx,c1,Lby,c2,L1)
-     do k = 1,2
+     !  initialize L (& maybe Q) with the correct number of polarizations
+     Call create_EMsparse(e0%grid,e0%tx,L(n))
+     do k = 1,L(n)%nPol
         !  k defines which mode the linearized functional is
         !   to be applied to
         c1 = Binv(k,j)

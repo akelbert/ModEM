@@ -289,7 +289,7 @@
 <buildTargets>
 <target name="Mod3DMT" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>make</buildCommand>
-<buildArguments>-f Makefile3d</buildArguments>
+<buildArguments>-f Makefile3d.g95</buildArguments>
 <buildTarget/>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>false</useDefaultCommand>
@@ -297,7 +297,7 @@
 </target>
 <target name="Mod2DMT" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>make</buildCommand>
-<buildArguments>-f Makefile2d</buildArguments>
+<buildArguments>-f Makefile2d.g95</buildArguments>
 <buildTarget/>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>false</useDefaultCommand>
@@ -305,7 +305,7 @@
 </target>
 <target name="Global3D" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 <buildCommand>make</buildCommand>
-<buildArguments>-f MakefileG</buildArguments>
+<buildArguments>-f MakefileG.g95</buildArguments>
 <buildTarget/>
 <stopOnError>true</stopOnError>
 <useDefaultCommand>false</useDefaultCommand>

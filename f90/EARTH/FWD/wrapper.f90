@@ -641,7 +641,7 @@ Contains
   subroutine initBoundaryValues(bvH,Hx,Hy,Hz,grid)
 
 	type (sparsevecc), intent(out)			:: bvH
-	type (grid_t), intent(in), target	:: grid
+	type (grid_t), intent(in)				:: grid
 	complex(8), dimension(:), intent(in)	:: Hx,Hy,Hz
 	integer									:: i,j,k,ii,ib
 	integer									:: bv1,bv2,bv3
@@ -715,8 +715,6 @@ Contains
 		ib=ib+1
 		call newValueC_sparsevecc(bvH,ib,Hz(ii),i,m+1,k,z)
 	  end do
-
-	  bvH%grid => grid
 
   end subroutine initBoundaryValues
 

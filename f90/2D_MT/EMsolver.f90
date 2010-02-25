@@ -133,18 +133,18 @@ Contains
       b0%nonzero_source = .false.
       b0%nonzero_bc = .true.
       b0%adj = 'FWD'
-      call create_EMrhs(grid,iTx,mode,b0)
+      call create_EMrhs(grid,iTx,b0)
 
       !  allocate for background solution
-      call create_EMsoln(grid,iTx,mode,e0)
+      call create_EMsoln(grid,iTx,e0)
 
       if(initForSens) then
          !  allocate for sensitivity solution, RHS
-         call create_EMsoln(grid,iTx,mode,e)
+         call create_EMsoln(grid,iTx,e)
          comb%nonzero_source = .true.
          comb%nonzero_bc = .false.
          comb%adj = ''
-         call create_EMrhs(grid,iTx,mode,comb)
+         call create_EMrhs(grid,iTx,comb)
       endif
    endif
 

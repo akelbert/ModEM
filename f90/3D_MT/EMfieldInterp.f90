@@ -194,7 +194,6 @@ Contains
     !   assuming xyz will be assigned to all elements of LC%xyz
     LC%xyz = xyz
     LC%c = C
-    LC%grid => inGrid
 
   end subroutine EinterpSetUp
 
@@ -214,7 +213,7 @@ Contains
     ! except usage of xEdge and xCener are reversed
 
     implicit none
-    type (grid_t), target, intent(in)    		:: inGrid
+    type (grid_t), intent(in)    		:: inGrid
     real (kind=prec), dimension(3), intent(in) 	:: x
     integer, intent(in)        			:: xyz
     type (sparsevecc), intent(inout) 		:: LC
@@ -333,7 +332,6 @@ Contains
     !   assuming xyz will be assigned to all elements of LC%xyz
     LC%xyz = xyz
     LC%c = C
-    LC%grid => inGrid
 
   end subroutine BinterpSetUp
 
@@ -464,7 +462,6 @@ Contains
           LC%k = K
           LC%xyz = AXES
           LC%c= C*LCH%c(1)*i_omega_inv
-	  LC%grid => inGrid
        else
           ! add coefficients for next face
           ! first store cumulative sum so far in LCtemp
