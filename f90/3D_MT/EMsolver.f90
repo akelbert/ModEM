@@ -22,7 +22,10 @@ implicit none
 !    keep data structures used only by
 !    routines in this module private
 !   rhs data structures for solving forward, sensitivity probs
-type(RHS_t), save, private		:: b0
+type(RHS_t), save, private			:: b0
+
+!  model parameter is saved here after initSolver is called
+type(modelParam_t), save, private	:: sigma0
 
 !  initialization routines (call Fwd version if no sensitivities are
 !     are calculated).  Note that these routines are set up to
@@ -40,9 +43,6 @@ public exitSolver
 ! solver routines
 public fwdSolve, sensSolve
 
-logical, save, private		:: modelDataInitialized = .false.
-!  logical, save, private		:: sigmaNotCurrent = .true.
-
 Contains
 
    !**********************************************************************
@@ -55,7 +55,8 @@ Contains
    !     (after deallocation/cleanup if required) is performed.
    !
    !   iTx defines transmitter: for 2D MT, this provides info about
-   !       frequency and TE/TM mode; for 3D MT just frequency
+   !       frequency and TE/TM mode; for 3D frequency and number
+   !       of polarizations
    !
    !   This now does all setup (including matrix factorization) for
    !     the appropriate mode/frequency
@@ -76,8 +77,11 @@ Contains
    !  local variables
    integer		:: IER,k
    character*80 :: gridType
-   logical		:: initForSens,sigmaNotCurrent
+   logical		:: initForSens
 
+
+   !  set the saved model parameter
+   sigma0 = sigma
 
    initForSens = present(comb)
 
@@ -94,40 +98,28 @@ Contains
    if(initForSens) then
       !  allocate for sensitivity solution, RHS
       call create_EMsoln(grid,iTx,e)
+      call create_EMrhs(grid,iTx,comb)
       do k = 1,comb%nPol
-
         comb%b(k)%nonzero_source = .true.
         comb%b(k)%nonzero_bc = .false.
-      !   assuming here that we don't use sparse storage ... we could!
+        !  assuming here that we don't use sparse storage ... we could!
         comb%b(k)%sparse_Source = .false.
         comb%b(k)%adj = ''
+        !  using all this information, reallocate storage for each polarization
+        call create_RHS(grid,iTx,comb%b(k))
       enddo
-      call create_EMrhs(grid,iTx,comb)
    endif
 
-   if(.NOT.modelDataInitialized) then
-   !   Initialize modelData, setup model operators
-      call ModelDataInit(grid)
-      call ModelOperatorSetup()
-      modelDataInitialized = .true.
-   endif
+   !   set up all model operators, but only if they don't exist already...
+   !   to override this, run ModelOperatorCleanup()
+   call ModelOperatorSetup(grid)
 
-!    the following needs work ... want to avoid reinitializing
-!     operator coefficients when conductivity does not change;
-!     need to have a way to reset sigmaNotCurrent to false when
-!     conductivity changes (one idea: assign a random number whenever
-!     a conductivity parameter is modified (by any of the routines in
-!     module ModelParameter); store this in the modelOperator module (which
-!     is where updateCond sits) and have updateCond compare the random key
-!     with what is stored)
-!  if(sigmaNotCurrent) then
-       call updateCond(sigma)
-!      sigmaNotCurrent = .false.
-!   endif
+   !   checks that omega or sigma0 are new, and only goes through
+   !   the necessary steps to update the forward solver
+   call updateModelData(txDict(iTx)%omega,sigma0)
 
-   ! This needs to be called before solving for a different frequency
-   !!!!!!!  BUT AFTER UPDATECOND !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   call UpdateFreq(txDict(iTx)%omega)
+   !   model parameter no longer new
+   call setValueUpdated_modelParam(sigma0)
 
    end subroutine initSolver
 
@@ -151,12 +143,9 @@ Contains
       call deall_EMsoln(e)
    endif
 
-   if(modelDataInitialized) then
-      ! cleanup/deallocation routines for model operators
-      call ModelDataCleanUp() ! FWD/modelOperator3D.f90
-      call ModelOperatorCleanUp() ! FWD/EMsolve3D.f90
-      modelDataInitialized = .false.
-   endif
+   ! cleanup/deallocation routines for model operators
+   call ModelOperatorCleanUp() ! FWD/modelOperator3D.f90
+   call deall_modelParam(sigma0)
 
    end subroutine exitSolver
 
@@ -187,10 +176,10 @@ Contains
    !  complete operator intialization, for this frequency
    !  call UpdateFreq(txDict(iTx)%omega)
    !  loop over polarizations
-   do iMode = 1,2
+   do iMode = 1,e0%nPol
       ! compute boundary conditions for polarization iMode
       !   uses cell conductivity already set by updateCond
-      call SetBound(imode,period,e0%pol(imode),b0%bc)
+      call SetBound(imode,period,sigma0,e0%pol(imode),b0%bc)
 			write(*,'(a12,a3,a18,es12.6,a10,i2)') 'Solving the ','FWD', &
 				' problem for freq ',omega/(2*PI),' & mode # ',imode
       call FWDsolve3D(b0,omega,e0%pol(imode))
@@ -221,9 +210,9 @@ Contains
 
    omega = txDict(iTx)%omega
    period = txDict(iTx)%period
-   !  zero starting solution, solve for both modes
+   !  zero starting solution, solve for all modes
    call zero_EMsoln(e)
-   do iMode = 1,2
+   do iMode = 1,e%nPol
       comb%b(imode)%adj = FWDorADJ
 			write(*,'(a12,a3,a18,es12.6,a10,i2)') 'Solving the ',FWDorADJ, &
 				' problem for freq ',omega/(2*PI),' & mode # ',imode

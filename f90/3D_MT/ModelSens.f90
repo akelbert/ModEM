@@ -51,7 +51,7 @@ module ModelSens
    call dModelParamToEdge(dsigma,temp,sigma0)
 
    !  multiply temp by i_omeag_mu*e0, put result in e
-   do k = 1,2
+   do k = 1,e0%nPol
       call diagMult_crvector(e0%pol(k),temp,e%b(k)%s)
       call scMult_cvector(minus_i_omega_mu,e%b(k)%s,e%b(k)%s)
    enddo
@@ -77,21 +77,25 @@ module ModelSens
 
    !  local variables
    complex(kind=prec)			:: minus_i_omega_mu
-   type(cvector)				:: Ctemp(2)
+   type(cvector), pointer		:: Ctemp(:)
    type(rvector)				:: temp
-   integer					:: k
+   integer					:: k,istat
 
    minus_i_omega_mu = cmplx(0.,-ISIGN*MU_0*txDict(e0%tx)%omega,kind=prec)
    call create_rvector(e0%grid,temp,EDGE)
-   call create_cvector(e0%grid,Ctemp(1),EDGE)
-   call create_cvector(e0%grid,Ctemp(2),EDGE)
+   allocate(Ctemp(e0%nPol), STAT=istat)
+   do k = 1,e0%nPol
+      call create_cvector(e0%grid,Ctemp(k),EDGE)
+   enddo
 
    ! multiply backward solutions (e) by minus_i_omega_mu * e0
    !   and sum over modes ...
-   do k = 1,2
+   do k = 1,e0%nPol
       call diagMult_cvector(e0%pol(k),e%pol(k),Ctemp(k))
    enddo
-   call add_cvector(Ctemp(1), Ctemp(2), Ctemp(1))
+   do k = 2,e0%nPol
+      call add_cvector(Ctemp(1), Ctemp(k), Ctemp(1))
+   enddo
    call scMult_cvector(minus_i_omega_mu,Ctemp(1),Ctemp(1))
 
    ! map real/imag parts onto parameter space
@@ -105,8 +109,10 @@ module ModelSens
    endif
 
    call deall_rvector(temp)
-   call deall_cvector(Ctemp(1))
-   call deall_cvector(Ctemp(2))
+   do k = 1,e0%nPol
+      call deall_cvector(Ctemp(k))
+   enddo
+   deallocate(Ctemp, STAT=istat)
 
    end subroutine PmultT
 

@@ -37,6 +37,7 @@
       typelist(6) = MPI_LOGICAL
       typelist(7) = MPI_CHARACTER
       typelist(8) = MPI_LOGICAL
+      typelist(9) = MPI_LOGICAL
 
 
       block_lengths(0) = 3
@@ -48,6 +49,7 @@
       block_lengths(6) = 1
       block_lengths(7) = 80
       block_lengths(8) = 1
+      block_lengths(9) = 1
 
       call MPI_Address(sigma_mpi%Nx,                      address(0), ierr)
       call MPI_Address(sigma_mpi%cellCond,                address(1), ierr)
@@ -59,12 +61,13 @@
       call MPI_Address(sigma_mpi%allocated,               address(7), ierr)
       call MPI_Address(sigma_mpi%paramType,               address(8), ierr)
       call MPI_Address(sigma_mpi%temporary,               address(9), ierr)
+      call MPI_Address(sigma_mpi%updated,                address(10), ierr)
 
-     do ii=0,8
+     do ii=0,9
        displacements(ii) = address(ii+1) - address(0)
      end do
 
-      call MPI_TYPE_STRUCT(9, block_lengths, displacements,typelist, modelParam_t_mpi, ierr)
+      call MPI_TYPE_STRUCT(10, block_lengths, displacements,typelist, modelParam_t_mpi, ierr)
       call MPI_TYPE_COMMIT(modelParam_t_mpi, ierr)
 
    end subroutine create_modelParam_t_mpi

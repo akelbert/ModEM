@@ -170,12 +170,12 @@ contains
          endif
        endif
 
+       call create_EMsoln(eIn%grid,eIn%tx,eOut)
+
        do k = 1,eIn%nPol
           call copy_cvector(eOut%pol(k),eIn%pol(k))
        enddo
 
-       eOut%tx = eIn%tx
-       eOut%grid => eIn%grid
        eOut%allocated = eIn%allocated
 
      end subroutine copy_EMsoln

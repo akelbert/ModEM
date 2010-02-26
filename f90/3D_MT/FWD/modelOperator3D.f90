@@ -34,9 +34,7 @@ module modelOperator3D
   type(rvector), public			::	volE    ! THE volume elements
   type(rvector), private		::	condE   ! THE edge conductivities
   real(kind=prec),private	::      omega   ! THE (active) frequency
-
-  ! NOTE: THIS VARIABLE IS TEMPORARILY REQUIRED TO SET THE BOUNDARY CONDITIONS
-  type(rscalar), private        :: Cond3D
+  logical, private			:: modelDataInitialized = .false.
 
   !!!!!!>>>>>>>>> FROM multA
   ! aBC is for the Ea equation using the b component in the c direction.
@@ -62,8 +60,6 @@ module modelOperator3D
 
   ! coefficients of diagonal of (unweighted) A operator
   type (cvector), private                                :: Adiag
-  ! information about the heritage ... probably this is not needed!
-  real (kind=prec), private			:: whichOmega, whichCondE
 
   !!!!!!>>>>>>>>> FROM preconditioner
   ! coefficients of diagonal of preconditoner for A operator
@@ -89,9 +85,8 @@ module modelOperator3D
 
   ! *****************************************************************************
   !  routines from model_data_update:
-  public                             	:: UpdateFreq, UpdateCond
-  public                                :: UpdateFreqCond
-  public                                :: ModelDataInit
+  public                                :: ModelOperatorSetup, ModelOperatorCleanup
+  public                                :: updateModelData
   !   These are used to initialize the modules grid, and to set/modify
   !     conductivity and/or frequency
 
@@ -113,143 +108,149 @@ module modelOperator3D
   public                :: DivCorrInit, DivCorrSetUp, Deallocate_DivCorr
   public                :: DivCgradILU, DivCgrad, DivC
 
-  ! interface for data_update  ... is this needed ?
-  INTERFACE updateModelData
-     module procedure UpdateFreq
-     module procedure UpdateCond
-     module procedure UpdateFreqCond
-  END INTERFACE
 
 Contains
 
-  subroutine ModelDataInit(inGrid)
   !**********************************************************************
-  ! *   Copies grid to mGrid
-  !      and/or compute variables stored in model_data module:
-  !         create: allocate for edge conductivity
-  !              volume weights;
-  !         EdgeVolume:  compute volume weights for edge-centered prisms
-  !
+  ! Bundles the Inits that are used for an EM problem.
+  ! These Inits can be used separately as well, once the grid is set up.
+  subroutine ModelOperatorSetUp(inGrid)
+  !**********************************************************************
+  !   Copies grid to mGrid - the target grid used to set all vectors.
+  !      Then uses mGrid to set up variables stored in this module:
+  !         1. initializes model operators Adiag, Dilu and everything
+  !              needed for divergence correction and curl curl E;
+  !         2. allocates for edge conductivity volume weights volE;
+  !         3. computes volume weights volE for edge-centered prisms;
+  !         4. allocates for edge conductivity condE.
   !**********************************************************************
 
-    implicit none
-    !  INPUTS:
-    type (grid_t), intent(in)		  :: inGrid
+    type (grid_t), intent(in)	:: inGrid
 
-    !   copy inGrid to mGrid
-    call copy_grid(mGrid,inGrid)
+    ! If model data already initialized, do nothing... to force
+    ! this routine to execute, run ModelOperatorCleanUp() first.
+    if (modelDataInitialized) then
+       ! do nothing
+       return
+    endif
 
+    ! Then, set the target grid, that gets saved in this module
+    mGrid = inGrid
+
+    ! Use this grid to initialize EM equation operator arrays
+    Call AdiagInit()
+    Call DiluInit()
+    Call DivCorrInit()
+
+    ! Set up model operators
+    ! Set up operator arrays that only need grid geometry information
+    ! discretization of del X del X E
+    Call CurlcurleSetUp()
+
+    ! Now, use this grid to initialize model data:
     ! Allocate data structure for volume elements, and compute these
     Call create(mGrid, volE, EDGE)
     Call EdgeVolume(mGrid, volE)
 
-    !  Allocate condE, conductivity defined on computational cell edges
-    !   condE is also kept in module model_data
+    ! Allocate condE, conductivity defined on computational cell edges
     Call create(mGrid, condE, EDGE)
 
-    ! set a default omega
-    omega = 0.0
+    ! logical to use for clean up
+    modelDataInitialized = .true.
 
-  end subroutine ModelDataInit
+  end subroutine ModelOperatorSetUp
 
 
-  subroutine ModelDataCleanUp
+  !**********************************************************************
+  ! Deallocate the model operators after an EM problem is finished
+  subroutine ModelOperatorCleanUp()
 
-    call deall_grid(mGrid)
-    call deall_rvector(volE)
-    call deall_rvector(condE)
+    if (modelDataInitialized) then
 
-    ! Cond3D is temporary
-    call deall_rscalar(Cond3D)
+    	! Deallocate EM equation operator arrays
+    	call deall_Adiag()
+		call DeallocateDilu()
+		call Deallocate_DivCorr()
 
-  end subroutine ModelDataCleanUp
+    	! Deallocate model operators arrays
+ 		call CurlcurleCleanUp()
 
-  ! **************************************************************************
-  ! * UpdateFreq updates the frequency that is currently being use
-  subroutine UpdateFreq(inOmega)
+        ! Deallocate volE, condE and the grid
+        call deall_rvector(volE)
+        call deall_rvector(condE)
+        call deall_grid(mGrid)
 
-    implicit none
-    real (kind=prec), intent (in)             :: inOmega
+ 	endif
 
-    omega = inOmega
-    Call AdiagSetUp()
-    Call DiluSetUp()
+ 	modelDataInitialized = .false.
 
-  end subroutine UpdateFreq  ! UpdateFreq
-
-  ! ***************************************************************************
-  ! * UpdateCond _updates the conductivity values on the edges
-  subroutine UpdateCond(CondParam)
-
-    implicit none
-    type(modelParam_t), intent(in)      :: CondParam      ! input conductivity
-
-    ! structure on the center of the grid
-
-    !  ModelParamToEdge is to be interpreted as an abstract routine
-    !    that maps from the external conductivity parameter to the
-    !    internal edge representation  ... the type of CondParam
-    !    is now fixed as rscalar;  if a different representation is
-    !    to be used changes to the declarations in this routine will
-    !    be required, along with changes in the module interface
-    Call ModelParamToEdge(CondParam, condE)
-
-    Call DivCorrSetUp()
-
-    ! TEMPORARY; REQUIRED FOR BOUNDARY CONDITIONS
-    !  set static array for cell conductivities
-    call ModelParamToCell(CondParam,Cond3D)
-
-  end subroutine UpdateCond  ! UpdateCond
+  end subroutine ModelOperatorCleanUp
 
   ! ***************************************************************************
-  ! * UpdateFreqCond updates the frequency that is currently being use and
-  !*  conductivity values on the edges
-  subroutine UpdateFreqCond(inOmega, CondParam)
+  ! * UpdateModelData updates the frequency that is currently being used and
+  !*  conductivity values on the edges; then anything else that needs updating.
+  subroutine updateModelData(inOmega, inSigma)
 
     implicit none
-    real(kind=prec)                 :: inOmega
-    type(modelParam_t), intent(in)            :: CondParam      ! input conductivity
-    ! structure on the center of the grid
+    real(kind=prec)                 	:: inOmega
+    type(modelParam_t), intent(in)      :: inSigma
+    ! local
+    logical		:: omegaNotCurrent,sigmaNotCurrent
 
+    ! assume that omega hasn't changed; check
+    omegaNotCurrent = .false.
+    if (inOmega .ne. omega) then
+    	omegaNotCurrent = .true.
+    endif
     omega = inOmega
 
-    !  ModelParamToEdge is to be interpreted as an abstract routine
-    !    that maps from the external conductivity parameter to the
-    !    internal edge representation  ...
-    Call ModelParamToEdge(CondParam, condE)
+    ! check that the model parameter hasn't changed... it has a logical
+    ! field called "updated" that is set to true whenever any operations
+    ! are performed with the model parameter...
+    call getValueUpdated_modelParam(inSigma,sigmaNotCurrent)
 
-    Call AdiagSetUp()
-    Call DiluSetUp()
-    Call DivCorrSetUp()
+    if (sigmaNotCurrent) then
+    	!  ModelParamToEdge is to be interpreted as an abstract routine
+    	!    that maps from the external conductivity parameter to the
+    	!    internal edge representation  ...
+    	Call ModelParamToEdge(inSigma, condE)
+    endif
 
-    ! TEMPORARY; REQUIRED FOR BOUNDARY CONDITIONS
-    !  set static array for cell conductivities
-    call ModelParamToCell(CondParam,Cond3D)
+    ! need to update Adiag & Dilu if either omega or sigma are changed
+    if (omegaNotCurrent .or. sigmaNotCurrent) then
+    	Call AdiagSetUp()
+    	Call DiluSetUp()
+    endif
 
-  end subroutine UpdateFreqCond  ! UpdateFreqCond
+    ! only update divergence correction if conductivity changes...
+    if (sigmaNotCurrent) then
+    	Call DivCorrSetUp()
+    endif
+
+  end subroutine updateModelData  ! UpdateModelData
 
 !**********************************************************************
 ! Sets boundary conditions. Currently a wrapper for BC_x0_WS.
-! Uses input 3D conductivity in cells Cond3D, that has to be initialized
-! by updateCond before calling this routine. Also uses mGrid set by
-! ModelDataInit. Could use omega, which is set by updateFreq.
-  Subroutine SetBound(imode,period,E0,BC)
+! Uses 3D conductivity CondParam, which is mapped to cell centers.
+! Also uses mGrid set by ModelDataInit.
+! Could use omega, which is set by updateFreq.
+  Subroutine SetBound(imode,period,CondParam,E0,BC)
 
-    !  Input mode, period
-    integer, intent(in)		:: imode
-    real(kind=prec)	:: period
-
+    !  Input mode, period, model
+    integer, intent(in)				:: imode
+    real(kind=prec)					:: period
+    type(modelParam_t), intent(in)	:: CondParam
     ! Output electric field first guess (for iterative solver)
     type(cvector), intent(inout)	:: E0
     ! Output boundary conditions
     type(cboundary), intent(inout)	:: BC
+    ! local
+    type(rscalar)        			:: Cond3D
 
+    ! boundary conditions require conductivity array at cell centers
+    call ModelParamToCell(CondParam,Cond3D)
     call BC_x0_WS(imode,period,mGrid,Cond3D,E0,BC)
-
-    ! Cell conductivity array is no longer needed
-    ! NOT TRUE: needed for imode=2
-    ! call deall_rscalar(Cond3D)
+    call deall_rscalar(Cond3D)
 
   end subroutine SetBound
 
@@ -1356,7 +1357,7 @@ Contains
     Call create_rvector(mGrid, db1, EDGE)
     Call create_rvector(mGrid, db2, EDGE)
     Call create_rscalar(mGrid, c, CORNER)
-    ! d contains the inEerse of diagonal elements of ILU of divCgrad
+    ! d contains the inverse of diagonal elements of ILU of divCgrad
     Call create_rscalar(mGrid, d, CORNER)
     ! set top nodes to 1.0
     d%v(1,:,:) = 1.0

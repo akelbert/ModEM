@@ -55,10 +55,13 @@ module ModelParameter
      type(grid_t),pointer    :: grid
      real (kind=prec)   :: AirCond
      logical			:: allocated = .false.
-   !   necessary to avoid memory leaks; only true for function outputs
+     !  necessary to avoid memory leaks; only true for function outputs
      logical			:: temporary = .false.
-     character (len=80)		:: paramType = ''
+     !  another logical that gets set to true every time the model
+     !  parameter is modified; used by the EMsolver for updateCond
+     logical			:: updated = .false.
      !  supported paramType at present: LINEAR and LOGE
+     character (len=80)	:: paramType = ''
   end type modelParam_t
 
 
@@ -166,6 +169,8 @@ Contains
 		endif
      endif
 
+     m%updated = .true.
+
    end subroutine create_modelParam
 
   !************************************************************
@@ -246,6 +251,8 @@ Contains
 
      call zero_rscalar(m%cellCond)
 
+     m%updated = .true.
+
    end subroutine zero_modelParam
 
 !**********************************************************************
@@ -286,6 +293,7 @@ Contains
      !  we are implicitly assuming that if m1 and m2 are the same
      !   size other parameters are of the same type
      m%AirCond = m1%AirCond
+     m%updated = .true.
 
    end subroutine linComb_modelParam
 
@@ -336,6 +344,7 @@ Contains
 	 if(present(vAir)) then
 	    m%AirCond=vAir
 	 endif
+     m%updated = .true.
 
    end subroutine setValue_modelParam
 
@@ -406,6 +415,8 @@ Contains
      mOut%cellCond%v = mIn%cellCond%v
      mOut%AirCond = mIn%AirCond
 
+     ! no need to set updated to TRUE - this just makes a copy.
+     ! clean up the memory if this is used with an "=" sign.
      if(mIn%temporary) then
      	call deall_modelParam(mIn)
      endif
@@ -447,5 +458,34 @@ Contains
     grid = mIn%grid
 
   end subroutine getGrid_modelParam
+
+  !**********************************************************************
+  !  sets modelParam%updated to FALSE; this is only needed since
+  !  the attributes are private (in F2003, can declare everything private
+  !  while grid and allocated attributes could be public)
+  !  used when the model parameter is no longer considered "new",
+  !  e.g. after the updateModelData routine in EMsolver.
+
+  subroutine setValueUpdated_modelParam(m)
+
+    type (modelParam_t), intent(inout)		:: m
+
+    m%updated = .false.
+
+  end subroutine setValueUpdated_modelParam
+
+  !**********************************************************************
+  !  checks whether a modelParam is updated; this is only needed since
+  !  the attributes are private (in F2003, can declare everything private
+  !  while grid and allocated attributes could be public)
+
+  subroutine getValueUpdated_modelParam(m,updated)
+
+    type (modelParam_t), intent(in)		:: m
+    logical, intent(out)				:: updated
+
+    updated = m%updated
+
+  end subroutine getValueUpdated_modelParam
 
 end module modelParameter
