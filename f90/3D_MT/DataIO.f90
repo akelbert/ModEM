@@ -77,7 +77,7 @@ Contains
          
       read(ioDat,'(a13,a100)') temp,info_in_file
       read(ioDat,'(a17,i3)') temp,sign_in_file
-      write(6,*) 'sign_in_file ',sign_in_file
+      
        if (sign_in_file == ISIGN) then
         conjugate = .false.
       else if (abs(sign_in_file) == 1) then
@@ -88,27 +88,22 @@ Contains
 
 Reading_all_file_loop: &
    do
-             read(ioDat,'(A)', iostat=stat) line
+              read(ioDat,'(A)', iostat=stat) line
               if(stat /= 0) exit Reading_all_file_loop     !End of the file
               
               line=trim(line) 
 		      call COMPACT(line)                           !Removes spaces between arrguments of the line
 		      call parse(line,' ',args,nargs)              !Counts and finds out the arrguments and number of arrguemnts in the line
 		      
-		      if (nargs==0) then 						   ! If its an empty line---> ignor it
-		      !write(6,*) '###################'
-		        per_counter=0 
-		        cycle
-		      end if
+		      if (nargs==0) cycle						   ! If its an empty line---> ignor it
+
               !Check if it is a header line
               string_position=findstr(trim(args(1)),'#')
-              if (string_position .eq. 1 )then           !If the first character in the first argument is '#', ---> Header line (or comments line),ignor it
-              !write(6,*) '###################'
-                per_counter=0
-                cycle 
-              end if
+              if (string_position .eq. 1 )  cycle          !If the first character in the first argument is '#', ---> Header line (or comments line),ignor it
+
+              
               ! It is a line that contains data
-                      per_counter=per_counter+1
+
  		              line=trim(line) 
 				      call COMPACT(line)                           !Removes spaces between arrguments of the line
 				      call parse(line,' ',args,nargs)              !Counts and finds out the arrguments and number of arrguemnts in the line             
@@ -138,7 +133,17 @@ Reading_all_file_loop: &
 						        do j=2,8,2
 						         temp_error(j)= temp_error(j-1)	
 						        end do
-						         call  update_rxDict(siteLoc_local,stn_id_local,iRx,new_site)       
+						         call  update_rxDict(siteLoc_local,stn_id_local,iRx,new_site) 					        
+						    elseif (Data_Type_Key_word =='Off_Diagonal_Impedance') then
+							    data_type = Off_Diagonal_Impedance	
+					            nComp=typeDict(data_type)%nComp
+					            units_in_file=args(7)
+						        read(args(8:15),*)temp_data(1:4)
+						        read(args(16:19),*)(temp_error(j),j=1,4,2)
+						        do j=2,4,2
+						         temp_error(j)= temp_error(j-1)	
+						        end do
+						        call  update_rxDict(siteLoc_local,stn_id_local,iRx,new_site)       
 					        elseif (Data_Type_Key_word =='Full_Vertical_Components') then
 						        data_type = Full_Vertical_Components
 						        nComp=typeDict(data_type)%nComp
@@ -243,6 +248,9 @@ Reading_all_file_loop: &
   
   ! this here just to test the output with the old format
   units_in_file= '[V/m]/[A/m]'
+  
+ !Clean temp vectors
+ deallocate(global_data,global_error,nSite_vec,data_type_vec,stn_vec)
                          
      
    end subroutine read_Z_list_format     
