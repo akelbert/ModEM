@@ -70,8 +70,8 @@ module dataTypes
   integer, parameter   :: Full_Impedance = 1
   integer, parameter   :: Impedance_Plus_Hz = 2
   integer, parameter   :: Off_Diagonal_Impedance = 3
-  integer, parameter   :: Hz_Only = 4
-
+  integer, parameter   :: Full_Vertical_Components = 4
+  integer, parameter   :: Full_Interstation_TF = 5
 Contains
 
 
@@ -81,9 +81,9 @@ Contains
 
   	 integer     :: istat
 
-     allocate(typeDict(4),STAT=istat)
+     allocate(typeDict(5),STAT=istat)
 
-     typeDict(Full_Impedance)%name = 'Full Impedance'
+     typeDict(Full_Impedance)%name = 'Full_Impedance'
      typeDict(Full_Impedance)%isComplex = .true.
      typeDict(Full_Impedance)%calcQ     = .false.
      typeDict(Full_Impedance)%tfType    = Full_Impedance
@@ -107,7 +107,7 @@ Contains
      typeDict(Full_Impedance)%units(7) = '[V/m]/[T]'
      typeDict(Full_Impedance)%units(8) = '[V/m]/[T]'
 
-     typeDict(Impedance_Plus_Hz)%name = 'Full Impedance Plus Hz'
+     typeDict(Impedance_Plus_Hz)%name = 'Full_Impedance_Plus_Hz'
      typeDict(Impedance_Plus_Hz)%isComplex = .true.
      typeDict(Impedance_Plus_Hz)%calcQ     = .false.
      typeDict(Impedance_Plus_Hz)%tfType    = Impedance_Plus_Hz
@@ -139,7 +139,7 @@ Contains
      typeDict(Impedance_Plus_Hz)%units(11) = '[]'
      typeDict(Impedance_Plus_Hz)%units(12) = '[]'
 
-     typeDict(Off_Diagonal_Impedance)%name = 'Off Diagonal Impedance'
+     typeDict(Off_Diagonal_Impedance)%name = 'Off_Diagonal_Impedance'
      typeDict(Off_Diagonal_Impedance)%isComplex = .true.
      typeDict(Off_Diagonal_Impedance)%calcQ     = .false.
      typeDict(Off_Diagonal_Impedance)%tfType    = Off_Diagonal_Impedance
@@ -155,22 +155,47 @@ Contains
      typeDict(Off_Diagonal_Impedance)%units(3) = '[V/m]/[T]'
      typeDict(Off_Diagonal_Impedance)%units(4) = '[V/m]/[T]'
 
-     typeDict(Hz_Only)%name = 'Hz Only'
-     typeDict(Hz_Only)%isComplex = .true.
-     typeDict(Hz_Only)%calcQ     = .false.
-     typeDict(Hz_Only)%tfType    = Hz_Only
-     typeDict(Hz_Only)%nComp     = 4
-     allocate(typeDict(Hz_Only)%id(4),STAT=istat)
-     typeDict(Hz_Only)%id(1)    = 'Re(Tx)'
-     typeDict(Hz_Only)%id(2)    = 'Im(Tx)'
-     typeDict(Hz_Only)%id(3)    = 'Re(Ty)'
-     typeDict(Hz_Only)%id(4)    = 'Im(Ty)'
-     allocate(typeDict(Hz_Only)%units(4),STAT=istat)
-     typeDict(Hz_Only)%units(1) = '[]'
-     typeDict(Hz_Only)%units(2) = '[]'
-     typeDict(Hz_Only)%units(3) = '[]'
-     typeDict(Hz_Only)%units(4) = '[]'
+     typeDict(Full_Vertical_Components)%name = 'Full_Vertical_Components'
+     typeDict(Full_Vertical_Components)%isComplex = .true.
+     typeDict(Full_Vertical_Components)%calcQ     = .false.
+     typeDict(Full_Vertical_Components)%tfType    = Full_Vertical_Components
+     typeDict(Full_Vertical_Components)%nComp     = 4
+     allocate(typeDict(Full_Vertical_Components)%id(4),STAT=istat)
+     typeDict(Full_Vertical_Components)%id(1)    = 'Re(Tx)'
+     typeDict(Full_Vertical_Components)%id(2)    = 'Im(Tx)'
+     typeDict(Full_Vertical_Components)%id(3)    = 'Re(Ty)'
+     typeDict(Full_Vertical_Components)%id(4)    = 'Im(Ty)'
+     allocate(typeDict(Full_Vertical_Components)%units(4),STAT=istat)
+     typeDict(Full_Vertical_Components)%units(1) = '[]'
+     typeDict(Full_Vertical_Components)%units(2) = '[]'
+     typeDict(Full_Vertical_Components)%units(3) = '[]'
+     typeDict(Full_Vertical_Components)%units(4) = '[]'
 
+     
+     typeDict(Full_Interstation_TF)%name = 'Full_Interstation_TF'
+     typeDict(Full_Interstation_TF)%isComplex = .true.
+     typeDict(Full_Interstation_TF)%calcQ     = .false.
+     typeDict(Full_Interstation_TF)%tfType    = Full_Interstation_TF
+     typeDict(Full_Interstation_TF)%nComp     = 8
+     allocate(typeDict(Full_Interstation_TF)%id(8),STAT=istat)
+     typeDict(Full_Interstation_TF)%id(1)    = 'Re(Mxx)'
+     typeDict(Full_Interstation_TF)%id(2)    = 'Im(Mxx)'
+     typeDict(Full_Interstation_TF)%id(3)    = 'Re(Mxy)'
+     typeDict(Full_Interstation_TF)%id(4)    = 'Im(Mxy)'
+     typeDict(Full_Interstation_TF)%id(5)    = 'Re(Myx)'
+     typeDict(Full_Interstation_TF)%id(6)    = 'Im(Myx)'
+     typeDict(Full_Interstation_TF)%id(7)    = 'Re(Myy)'
+     typeDict(Full_Interstation_TF)%id(8)    = 'Im(Myy)'
+     allocate(typeDict(Full_Interstation_TF)%units(8),STAT=istat)
+     typeDict(Full_Interstation_TF)%units(1) = '[]'
+     typeDict(Full_Interstation_TF)%units(2) = '[]'
+     typeDict(Full_Interstation_TF)%units(3) = '[]'
+     typeDict(Full_Interstation_TF)%units(4) = '[]'
+     typeDict(Full_Interstation_TF)%units(5) = '[]'
+     typeDict(Full_Interstation_TF)%units(6) = '[]'
+     typeDict(Full_Interstation_TF)%units(7) = '[]'
+     typeDict(Full_Interstation_TF)%units(8) = '[]'
+     
   end subroutine setup_typeDict
 
 ! **************************************************************************
@@ -205,7 +230,6 @@ Contains
 ! 3) SI units for E/H: [V/m]/[A/m] = Ohm
 
   function ImpUnits(oldUnits,newUnits) result (SI_factor)
-
 	character(*), intent(in)    :: oldUnits, newUnits
 	real(kind=prec)             :: SI_factor
 	! local
@@ -217,36 +241,37 @@ Contains
 	   return
 	end if
 
-	! first convert the old units to [V/m]/[T]
-	if (index(oldUnits,'[V/m]/[T]')>0) then
-	   ! SI units for E/B
-	   factor1 = ONE
-	else if (index(oldUnits,'[mV/km]/[nT]')>0) then
-	   ! practical units for E/B
-	   factor1 = ONE * 1000.0
-	else if ((index(oldUnits,'[V/m]/[A/m]')>0) .or. (index(oldUnits,'Ohm')>0)) then
-	   ! SI units for E/H
-	   factor1 = ONE * 1000.0 * 10000.0/(4*PI) ! approx. 796000.0
-	else
-	   call errStop('Unknown input units in ImpUnits: '//trim(oldUnits))
-	end if
+		! first convert the old units to [V/m]/[T]
+		if (index(oldUnits,'[V/m]/[T]')>0) then
+		   ! SI units for E/B
+		   factor1 = ONE
+		else if (index(oldUnits,'[mV/km]/[nT]')>0) then
+		   ! practical units for E/B
+		   factor1 = ONE * 1000.0
+		else if ((index(oldUnits,'[V/m]/[A/m]')>0) .or. (index(oldUnits,'Ohm')>0)) then
+		   ! SI units for E/H
+		   factor1 = ONE * 1000.0 * 10000.0/(4*PI) ! approx. 796000.0
+		else
+		   call errStop('Unknown input units in ImpUnits: '//trim(oldUnits))
+		end if
+	
+		! now convert [V/m]/[T] to the new units
+		if (index(newUnits,'[V/m]/[T]')>0) then
+		   ! SI units for E/B
+		   factor2 = ONE
+		else if (index(newUnits,'[mV/km]/[nT]')>0) then
+		   ! practical units for E/B
+		   factor2 = ONE / (1000.0)
+		else if ((index(newUnits,'[V/m]/[A/m]')>0) .or. (index(newUnits,'Ohm')>0)) then
+		   ! SI units for E/H
+		   factor2 = ONE / (1000.0 * 10000.0/(4*PI))
+		else
+		   call errStop('Unknown output units in ImpUnits: '//trim(newUnits))
+		end if
+	
+		SI_factor = factor1 * factor2
 
-	! now convert [V/m]/[T] to the new units
-	if (index(newUnits,'[V/m]/[T]')>0) then
-	   ! SI units for E/B
-	   factor2 = ONE
-	else if (index(newUnits,'[mV/km]/[nT]')>0) then
-	   ! practical units for E/B
-	   factor2 = ONE / (1000.0)
-	else if ((index(newUnits,'[V/m]/[A/m]')>0) .or. (index(newUnits,'Ohm')>0)) then
-	   ! SI units for E/H
-	   factor2 = ONE / (1000.0 * 10000.0/(4*PI))
-	else
-	   call errStop('Unknown output units in ImpUnits: '//trim(newUnits))
-	end if
-
-	SI_factor = factor1 * factor2
-
+        
   end function ImpUnits
 
 !**********************************************************************
@@ -272,7 +297,7 @@ Contains
           dataType =  Impedance_Plus_Hz
        case(4)
           if (index(compids(1),'Tx')>0) then
-             dataType =  Hz_Only
+             dataType =  Full_Vertical_Components
           else
              dataType =  Off_Diagonal_Impedance
           end if
@@ -288,4 +313,56 @@ Contains
 
   end function ImpType
 
+  subroutine get_nComp_DT(DT_word,dataType,nComp)
+
+    character(*), intent(in)        :: DT_word
+	integer, intent(inout)   	 	:: dataType
+	integer, intent(inout)          :: nComp
+
+    select case (DT_word)
+       case('Full_Impedance')
+          dataType =  Full_Impedance
+          nComp    =  8
+       case('Full_Impedance_Plus_Hz')
+          dataType =  Impedance_Plus_Hz
+           nComp   =  12
+       case('Off_Diagonal_Impedance')
+          dataType =  Off_Diagonal_Impedance
+          nComp    =  4
+       case('Full_Vertical_Components')
+          dataType =  Full_Vertical_Components 
+          nComp    =  4
+       case('Full_Interstation_TF')
+          dataType =  Full_Interstation_TF 
+          nComp    =  8 
+    end select
+
+
+  end subroutine get_nComp_DT
+  
+
+  
+ subroutine check_header_order(nComp,dataType,header)
+ 	 integer, intent(in)   	 	 :: nComp
+ 	 integer, intent(in)   	 	 :: dataType
+     character(*), intent(in)    :: header    
+ 	 !Local
+ 	 character(15), allocatable  :: compids(:)
+     integer                     :: j,istat
+ 	 
+     allocate(compids(nComp),STAT=istat)
+     read(header,*) compids
+    
+
+      do j = 1,nComp
+    	if (compids(j) .ne. typeDict(dataType)%id(j)) then
+    		call errStop('Wrong order of impedance components in data header')
+    	end if
+    end do
+
+    deallocate(compids,STAT=istat)
+    
+ end   subroutine check_header_order   
+    
+  
 end module dataTypes

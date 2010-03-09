@@ -23,15 +23,20 @@ module receivers
   type :: MTrx
      ! x gives location of EM measurements;
   	 ! x(1) points North, x(2) points East, x(3) points down
+  	 
+  	 ! NM: add addtional vector to store the location of a refernace station. 
+     ! Same as x: r(1) points North, r(2) points East, r(3) points down
      real (kind=prec)                   ::  x(3)
+     real (kind=prec)                   ::  r(3)
      ! site ID used for input/output and for searching through the list
-     character(10)                      ::  id=''
+     character(20)                      ::  id=''
+     character(20)                      ::  id_ref=''
   end type MTrx
 
   ! receiver dictionary for 3D MT data will be an array of
   !  type MTrx (one element of the array for each site)
   !  Note that receiver dictionaries are only used inside the
-  !    data functional module, and can thus be private
+  !  data functional module, and can thus be private
   type (MTrx), pointer, save, public, dimension(:) :: rxDict
 
 
@@ -43,9 +48,10 @@ Contains
   ! for magnetic and electric field vector evaluation
   subroutine setup_rxDict(nSites,siteLocations,siteIDs)
 
-    integer, intent(in)	 		:: nSites
-    real(kind=prec), intent(in)	:: siteLocations(nSites,3)
+    integer, intent(in)	 				:: nSites
+    real(kind=prec), intent(in)			:: siteLocations(nSites,3)
     character(*), intent(in), optional  :: siteIDs(nSites)
+
 
     !  local variables
     integer		 :: i,istat
@@ -72,39 +78,56 @@ Contains
 ! Returns the index of the new element.
 ! This is not efficient; but this would only be used a few times, with
 ! a small number of values, so convenience is much more of an issue here!
+! NM: modified to include referance site info.
 
-  function update_rxDict(loc,id) result (iRx)
+subroutine update_rxDict(loc,id,iRx,new_receiver,loc_ref,id_ref)
 
-     character(*), intent(in)           :: id
-     real(kind=prec), intent(in)        :: loc(3)
-     integer                            :: iRx
+     character(*), intent(in)            :: id
+     real(kind=prec), intent(in)         :: loc(3)
+     real(kind=prec),intent(in),optional :: loc_ref(3)
+     character(*), intent(in),optional   :: id_ref
+     integer                             :: iRx
      ! local
-     type(MTrx)                         :: new
-     type(MTrx), pointer, dimension(:)  :: temp
-     integer                            :: nRx, istat
+     type(MTrx)                          :: new
+     type(MTrx), pointer, dimension(:)   :: temp
+     integer                             :: nRx, istat,i
+     logical,optional   				 :: new_receiver
 
      ! Create a receiver for this location
-     new%id = id
+     new%id = id  
      new%x  = loc
+ if (present(loc_ref)) then
+     new%r  = loc_ref
+     new%id_ref=id_ref
+end if
+
 
      ! If rxDict doesn't yet exist, create it
      if(.not. associated(rxDict)) then
      	allocate(rxDict(1),STAT=istat)
      	rxDict(1) = new
      	iRx = 1
+     	new_receiver=.true.
      	return
      end if
 
      nRx = size(rxDict)
 
      ! If this site isn't new, do nothing
-     do iRx = 1,nRx
-     	if (new%id .eq. rxDict(iRx)%id) then
+     do i = 1,nRx
+     	if (new%id .eq. rxDict(i)%id) then
+     	    iRx=i
+     	     if (present(loc_ref)) then
+     	      rxDict(i)%r=loc_ref
+     	      rxDict(i)%id_ref=id_ref
+     	     end if
+     	     new_receiver=.false.
      		return
      	end if
      end do
 
      ! If the site really is new, append to the end of the dictionary
+     new_receiver=.true.
      allocate(temp(nRx+1),STAT=istat)
      temp(1:nRx) = rxDict
      temp(nRx+1) = new
@@ -114,7 +137,7 @@ Contains
      deallocate(temp,STAT=istat)
      iRx = nRx+1
 
-  end function update_rxDict
+  end subroutine update_rxDict
 
   ! **************************************************************************
   ! Cleans up and deletes receiver dictionary at end of program execution

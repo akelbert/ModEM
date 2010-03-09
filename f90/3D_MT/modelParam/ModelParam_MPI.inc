@@ -1,6 +1,6 @@
 
 #ifdef MPI
-  !Create an MPI-driven dataType from modelParam_t_mpi
+  !Create an MPI dataType from modelParam_t_mpi
   subroutine create_modelParam_t_mpi(sigma_mpi)
 
     implicit none

@@ -5,13 +5,13 @@ program Mod3DMT
      use senscomp
      use main
      use nlcg
-     !use dcg
+     use DCG
      !use mtinvsetup
 
-#ifdef MPI
-     use MPI_main
+#ifdef MPI     
+     Use MPI_main 
 #endif
-
+     
      implicit none
 
      ! Character-based information specified by the user
@@ -23,20 +23,29 @@ program Mod3DMT
 	 real					:: stime, etime ! start and end times
      integer, dimension(8)	:: tarray ! utility variable
 
-#ifdef MPI
-     call  MPI_constructor
-     write(6,*)'I am a PARALLEL version'
+#ifdef MPI 
+            call  MPI_constructor 
+	        write(6,*)'I am a PARALLEL version'        	        
 #else
-     write(6,*)'I am a SERIAL version'
+			write(6,*)'I am a SERIAL version'
 #endif
+
+
+        
 
      call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
 
+          
+	          
+
+    
       call initGlobalData(cUserDef)
      ! set the grid for the numerical computations
       call setGrid(grid)
+     
+     
 
-#ifdef MPI
+#ifdef MPI 
 	if (taskid==0) then
 	        file_id=2000
 	        open(file_id,file='Nodes_Status.info')
@@ -51,21 +60,22 @@ program Mod3DMT
 	             call cleanUp()
                  call MPI_destructor
               stop
-            end if
+            end if   
         end if
-
+        	        
 #else
 			write(6,*)'I am a SERIAL version'
-#endif
-
-
+#endif      
+     
+     
+     
 #ifdef MPI
-       !call Master_job_Distribute_userdef_control(cUserDef)
+       !call Master_job_Distribute_userdef_control(cUserDef) 
        call Master_job_Distribute_Data_Size(allData,sigma0)
        call Master_job_Distribute_Data(allData)
-       call Master_job_Distribute_Model(sigma0)
+       call Master_job_Distribute_Model(sigma0)       
 #endif
-
+     
 	 ! Start the (portable) clock
 	 call date_and_time(values=tarray)
      stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
@@ -86,18 +96,18 @@ program Mod3DMT
 
      write(*,*) 'Calculating predicted data...'
 
-#ifdef MPI
-   if (write_EMsoln) then
-        call Master_job_FORWARD(allData)
+#ifdef MPI   
+   if (write_EMsoln) then 
+        call Master_job_fwdPred(sigma0,allData,eAll)
         call Master_job_Collect_eAll(allData,eAll)
    else
-        call Master_job_FORWARD(allData)
+        call Master_job_fwdPred(sigma0,allData)
    end if
-   call Master_job_STOP_MESSAGE
-#else
-   call fwdPred(sigma0,allData,eAll)
+        call Master_job_STOP_MESSAGE
+#else          
+        call fwdPred(sigma0,allData,eAll)
 #endif
-
+        
         if (write_EMsoln) then
         	! write out EM solutions
         	write(*,*) 'Saving the EM solution...'
@@ -110,41 +120,56 @@ program Mod3DMT
         write(*,*) 'Calculating the full sensitivity matrix...'
 #ifdef MPI
         !call Master_job_COMPUTE_J(allData,sigma0,sens)
-        call Master_job_STOP_MESSAGE
-#else
+        call Master_job_STOP_MESSAGE 
+#else                
         call calcSensMatrix(allData,sigma0,sens)
 #endif
         call write_sensMatrixMTX(sens,cUserDef%wFile_Sens)
 
      case (MULT_BY_J)
         write(*,*) 'Multiplying by J...'
-
-#ifdef MPI
+        
+#ifdef MPI        
             !call Master_job_Jmult(dsigma,sigma0,allData)
-            call Master_job_STOP_MESSAGE
-#else
+            call Master_job_STOP_MESSAGE  
+#else     
             call Jmult(dsigma,sigma0,allData)
 #endif
-
-
+        
+        
         call write_dataVecMTX(allData,cUserDef%wFile_Data)
 
      case (MULT_BY_J_T)
         write(*,*) 'Multiplying by J^T...'
 #ifdef MPI
          call Master_job_JmultT(sigma0,allData,dsigma)
-         call Master_job_STOP_MESSAGE
+         call Master_job_STOP_MESSAGE       
 #else
          call JmultT(sigma0,allData,dsigma)
-#endif
-
+#endif       
+        
          call write_modelParam(dsigma,cUserDef%wFile_dModel)
 
      case (INVERSE)
      	if (trim(cUserDef%search) == 'NLCG') then
         	write(*,*) 'Starting the NLCG search...'
         	call NLCGsolver(allData,cUserDef%lambda,sigma0,sigma1,cUserDef%delta)
-        else
+        
+#ifdef MPI        	
+        	call Master_job_STOP_MESSAGE
+#endif         	
+     	elseif (trim(cUserDef%search) == 'DCG') then
+        	write(*,*) 'Starting the DCG search...'
+        	call DCGsolver(allData,sigma0,sigma1)
+            call write_modelParam(sigma1,cUserDef%wFile_Model)
+        if (write_data) then
+        	call write_dataVecMTX(allData,cUserDef%wFile_Data)
+        end if
+#ifdef MPI        	
+        	call Master_job_STOP_MESSAGE
+#endif        	
+        	
+       else
         	write(*,*) 'Inverse search ',trim(cUserDef%search),' not yet implemented. Exiting...'
         	stop
         end if
@@ -164,28 +189,29 @@ program Mod3DMT
 
      end select
 
-#ifdef MPI
+#ifdef MPI       
 		close(2000)
 #endif
 
-
+         
 	 ! cleaning up
 	 call deallGlobalData()
 	 call cleanUp()
-
+	 
 #ifdef MPI
      	 call date_and_time(values=tarray)
 	     etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	     rtime = etime - stime
+	     rtime = etime - stime  
 	 	 write(0,*) ' elapsed time (mins) ',rtime/60.0
 	 call MPI_destructor
 #else
 	 call date_and_time(values=tarray)
 	 etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	 rtime = etime - stime
-	 	 write(0,*) ' elapsed time (mins) ',rtime/60.0
+	 rtime = etime - stime  
+	 	 write(0,*) ' elapsed time (mins) ',rtime/60.0	 
 #endif
-
+	 
 
 
 end program
+ 

@@ -71,15 +71,17 @@ Contains
 ! This is not efficient; but this would only be used a few times, with
 ! a small number of values, so convenience is much more of an issue here!
 
-  function update_txDict(Period,nPol) result (iTx)
+  subroutine update_txDict(Period,nPol,iTx,new_transmitter)
 
      real(kind=prec), intent(in)        :: Period
      integer, intent(in), optional		:: nPol
+	 logical, intent(out), optional		:: new_transmitter
      integer                            :: iTx
      ! local
      type(MTtx)                         :: new
      type(MTtx), pointer, dimension(:)  :: temp
-     integer                            :: nTx, istat
+     integer                            :: nTx, istat,i
+
 
      ! Create a transmitter for this period
      new%period = Period
@@ -90,27 +92,38 @@ Contains
      	new%nPol = 2
      end if
      new%iPer   = nTx + 1
+   
+
 
      ! If txDict doesn't yet exist, create it
      if(.not. associated(txDict)) then
      	allocate(txDict(1),STAT=istat)
-     	txDict(1) = new
+     	txDict(1) = new  	  
      	iTx = 1
+		new_transmitter=.true.
      	return
      end if
-
+     
+     
      nTx = size(txDict)
-
-
-     ! If this period isn't new, do nothing
-     do iTx = 1,nTx
-     	if ((abs(Period - txDict(iTx)%period) < TOL6) .and. (nPol == txDict(iTx)%nPol)) then
+       ! If this period isn't new, do nothing
+     do i = 1,nTx
+     	if ((abs(Period - txDict(i)%period) .lt. TOL6) .and. (nPol == txDict(i)%nPol)) then
+     	itx=i
+		new_transmitter=.false.
      		return
      	end if
-     end do
+     end do     
+        
+  
+     
+     
+
+
 
 
      ! If the period really is new, append to the end of the dictionary
+	 new_transmitter=.true.
      allocate(temp(nTx+1),STAT=istat)
      temp(1:nTx) = txDict
      temp(nTx+1) = new
@@ -120,7 +133,7 @@ Contains
      deallocate(temp,STAT=istat)
      iTx = nTx+1
 
-  end function update_txDict
+  end subroutine update_txDict
 
 ! **************************************************************************
 ! Cleans up and deletes transmitter dictionary at end of program execution

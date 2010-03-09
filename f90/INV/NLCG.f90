@@ -149,8 +149,7 @@ Contains
    !   also sets up forward solutions for all transmitters in eAll
    !   (which is created on the fly if it doesn't exist)
 #ifdef MPI
-        call Master_job_Distribute_Model(m)
-        call Master_job_FORWARD_INV(dHat)
+      call Master_Job_fwdPred(m,dHat,eAll)
 #else
       call fwdPred(m,dHat,eAll)
 #endif
@@ -236,8 +235,6 @@ Contains
    ! multiply by J^T
    call CdInvMult(res)
 #ifdef MPI
-        call Master_job_Distribute_Model(m)
-        call Master_job_Distribute_Data(res)
         call Master_job_JmultT(m,res,JTd,eAll)
 #else
         call JmultT(m,res,JTd,eAll)
