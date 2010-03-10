@@ -90,7 +90,11 @@ Contains
   endif
   allocate(Lz(nFunc))
   allocate(Qz(nFunc))
-
+  
+  do iFunc=1,nFunc
+	  call create_EMsparse(e0%grid,iTx,Lz(iFunc))
+	  call create_EMsparse(e0%grid,iTx,Qz(iFunc))
+  end do
   !  loop over sites
   do iSite = 1,d%nSite
      ! compute sparse vector representations of linearized
@@ -214,8 +218,15 @@ Contains
      !   for each component
      nFunc = ncomp
   endif
+  
   allocate(Lz(nFunc))
   allocate(Qz(nFunc))
+  
+  do iFunc=1,nFunc
+    call create_EMsparse(e0%grid,iTx,Lz(iFunc))
+    call create_EMsparse(e0%grid,iTx,Qz(iFunc))
+  end do
+  
 
   !  loop over sites
   do iSite = 1,d%nSite
@@ -223,6 +234,7 @@ Contains
      ! data functionals for transfer function
      ! elements at one site
      call linDataFunc(e0,Sigma0,iDT,d%rx(iSite),Lz,Qz)
+     
      iComp = 1
      do iFunc  = 1, nFunc
         if(d%isComplex) then
