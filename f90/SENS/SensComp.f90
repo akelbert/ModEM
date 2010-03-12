@@ -472,6 +472,7 @@ Contains
 	          end if  
             call linDataComb(e0,sigma0,d%data(i),comb,Qcomb)
          else
+         ! Zero comb ONLY for the first data type 
           if (firstDT) then
             call zero_EMrhs(comb)
             firstDT=.false.
