@@ -409,7 +409,7 @@ Contains
    !  local variables
    type(modelParam_t)	:: sigmaTemp, Qcomb
    integer 		:: i,j,iTx,iDT
-   logical		:: calcSomeQ, firstQ
+   logical		:: calcSomeQ, firstQ,firstDT
    logical		:: savedSolns
 
       calcSomeQ = .false.
@@ -440,7 +440,8 @@ Contains
          ! solve forward problem; result is stored in e0
          call fwdSolve(iTx,e0)
       endif
-
+      
+      firstDT=.true.
       ! now, loop over data types
       do i = 1,d%nDt
 
@@ -464,16 +465,24 @@ Contains
                firstQ = .false.
             endif
             !  BUT: linDataComb overwrites comb ... so zero this
-            !       for every transmitter
-            call zero_EMrhs(comb)
+            !       for every transmitter and for the first data type
+	          if (firstDT) then
+	            call zero_EMrhs(comb)
+	            firstDT=.false.
+	          end if  
             call linDataComb(e0,sigma0,d%data(i),comb,Qcomb)
          else
+          if (firstDT) then
             call zero_EMrhs(comb)
+            firstDT=.false.
+          end if   
             call linDataComb(e0,sigma0,d%data(i),comb)
          endif
+         
+       enddo  ! dataType's 
+       
          ! solve forward problem with source in comb
          call sensSolve(iTx,TRN,comb,e)
-
          ! map from nodes to conductivity space ... result in sigmaTemp
          !  HERE PmultT overwrites sigmaTemp
          !  NOTE: here we throw away imaginary part, even for complex
@@ -481,7 +490,7 @@ Contains
          call PmultT(e0,sigma0,e,sigmaTemp)
          call linComb_modelParam(ONE,dsigma,ONE,sigmaTemp,dsigma)
 
-      enddo  ! dataType's
+
 
 	  ! In theory, linDataComb should compute Qcomb for each transmitter
 	  ! and data type, and add it to dsigma; however, this is currently
