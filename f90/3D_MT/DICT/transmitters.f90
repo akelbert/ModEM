@@ -51,7 +51,7 @@ Contains
      ! local variables
      integer                     :: iTx,istat
 
-	 if (.not. associated(txDict)) then
+     if (.not. associated(txDict)) then
     	allocate(txDict(nTx),STAT=istat)
      end if
 
@@ -75,12 +75,13 @@ Contains
 
      real(kind=prec), intent(in)        :: Period
      integer, intent(in), optional		:: nPol
-	 logical, intent(out), optional		:: new_transmitter
+     logical, intent(out), optional		:: new_transmitter
      integer                            :: iTx
      ! local
      type(MTtx)                         :: new
      type(MTtx), pointer, dimension(:)  :: temp
      integer                            :: nTx, istat,i
+     logical							:: new_Tx
 
 
      ! Create a transmitter for this period
@@ -92,38 +93,29 @@ Contains
      	new%nPol = 2
      end if
      new%iPer   = nTx + 1
-   
-
 
      ! If txDict doesn't yet exist, create it
      if(.not. associated(txDict)) then
      	allocate(txDict(1),STAT=istat)
-     	txDict(1) = new  	  
+     	txDict(1) = new
      	iTx = 1
-		new_transmitter=.true.
+	    new_Tx = .true.
      	return
      end if
-     
-     
+
+
      nTx = size(txDict)
        ! If this period isn't new, do nothing
      do i = 1,nTx
-     	if ((abs(Period - txDict(i)%period) .lt. TOL6) .and. (nPol == txDict(i)%nPol)) then
+     	if ((abs(Period - txDict(i)%period) .lt. TOL6) .and. (new%nPol == txDict(i)%nPol)) then
      	itx=i
-		new_transmitter=.false.
-     		return
+	    new_Tx=.false.
+     	return
      	end if
-     end do     
-        
-  
-     
-     
-
-
-
+     end do
 
      ! If the period really is new, append to the end of the dictionary
-	 new_transmitter=.true.
+     new_Tx = .true.
      allocate(temp(nTx+1),STAT=istat)
      temp(1:nTx) = txDict
      temp(nTx+1) = new
@@ -133,6 +125,10 @@ Contains
      deallocate(temp,STAT=istat)
      iTx = nTx+1
 
+     if (present(new_transmitter)) then
+     	new_transmitter = new_Tx
+     end if
+
   end subroutine update_txDict
 
 ! **************************************************************************
@@ -140,7 +136,7 @@ Contains
 
   subroutine deall_txDict()
 
-	integer     :: istat
+    integer     :: istat
 
     if (associated(txDict)) then
        deallocate(txDict,STAT=istat)

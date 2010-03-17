@@ -9,7 +9,7 @@ module EMsolve3D
 					! complex vectors)
   use sg_diff_oper			 ! generic differential operators
   use sg_sparse_vector, only: add_scvector
-  use modelOperator3d       ! quasi-static Maxwell operator module
+  use modelOperator3d                   ! quasi-static Maxwell operator module
   use solver				! generic solvers
   use solnrhs
 
@@ -406,6 +406,37 @@ subroutine SdivCorr(inE,outE,phi0)
   deallocate(PCGiter%rerr, STAT = status)
 
 end subroutine SdivCorr ! SdivCorr
+
+  !**********************************************************************
+  ! Bundles the Inits that are used for an EM problem. These Inits can be
+  ! used separately as well.
+  subroutine ModelOperatorSetUp()
+
+    ! Initialize EM equation operator arrays
+    Call AdiagInit()
+    Call DiluInit()
+    Call DivCorrInit()
+
+    ! Set up model operators
+    ! Set up operator arrays that only need grid geometry information
+    ! discretization of del X del X E
+    Call CurlcurleSetUp()
+
+  end subroutine ModelOperatorSetUp
+
+  !**********************************************************************
+  ! Deallocate the model operators after an EM problem is finished
+  subroutine ModelOperatorCleanUp()
+
+    ! Deallocate EM equation operator arrays
+    call deall_Adiag()
+	call DeallocateDilu()
+	call Deallocate_DivCorr()
+
+    ! Deallocate model operators arrays
+ 	call CurlcurleCleanUp()
+
+  end subroutine ModelOperatorCleanUp
 
   !**********************************************************************
   ! setEMsolveControl sets actual solver control parameters, using info

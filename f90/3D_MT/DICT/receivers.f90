@@ -23,8 +23,8 @@ module receivers
   type :: MTrx
      ! x gives location of EM measurements;
   	 ! x(1) points North, x(2) points East, x(3) points down
-  	 
-  	 ! NM: add addtional vector to store the location of a refernace station. 
+
+  	 ! NM: add addtional vector to store the location of a refernace station.
      ! Same as x: r(1) points North, r(2) points East, r(3) points down
      real (kind=prec)                   ::  x(3)
      real (kind=prec)                   ::  r(3)
@@ -84,6 +84,7 @@ subroutine update_rxDict(loc,id,iRx,new_receiver,loc_ref,id_ref)
 
      character(*), intent(in)            :: id
      real(kind=prec), intent(in)         :: loc(3)
+     logical, intent(inout), optional    :: new_receiver
      real(kind=prec),intent(in),optional :: loc_ref(3)
      character(*), intent(in),optional   :: id_ref
      integer                             :: iRx
@@ -91,23 +92,22 @@ subroutine update_rxDict(loc,id,iRx,new_receiver,loc_ref,id_ref)
      type(MTrx)                          :: new
      type(MTrx), pointer, dimension(:)   :: temp
      integer                             :: nRx, istat,i
-     logical,optional   				 :: new_receiver
+     logical							 :: new_Rx
 
      ! Create a receiver for this location
-     new%id = id  
+     new%id = id
      new%x  = loc
- if (present(loc_ref)) then
-     new%r  = loc_ref
-     new%id_ref=id_ref
-end if
-
+     if (present(loc_ref)) then
+     	new%r  = loc_ref
+     	new%id_ref=id_ref
+     end if
 
      ! If rxDict doesn't yet exist, create it
      if(.not. associated(rxDict)) then
      	allocate(rxDict(1),STAT=istat)
      	rxDict(1) = new
      	iRx = 1
-     	new_receiver=.true.
+     	new_Rx = .true.
      	return
      end if
 
@@ -121,13 +121,13 @@ end if
      	      rxDict(i)%r=loc_ref
      	      rxDict(i)%id_ref=id_ref
      	     end if
-     	     new_receiver=.false.
+     	     new_Rx = .false.
      		return
      	end if
      end do
 
      ! If the site really is new, append to the end of the dictionary
-     new_receiver=.true.
+     new_Rx = .true.
      allocate(temp(nRx+1),STAT=istat)
      temp(1:nRx) = rxDict
      temp(nRx+1) = new
@@ -136,6 +136,10 @@ end if
      rxDict = temp
      deallocate(temp,STAT=istat)
      iRx = nRx+1
+
+     if (present(new_receiver)) then
+     	new_receiver = new_Rx
+     end if
 
   end subroutine update_rxDict
 

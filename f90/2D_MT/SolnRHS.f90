@@ -190,11 +190,18 @@ contains
        type(grid_t), intent(in)	:: grid
        integer, intent(in)		:: iTx
        type(EMsparse_t)			:: LC
-       integer, intent(in)		:: nCoeff
+       integer, optional, intent(in)	:: nCoeff
 
        ! local
        character(2)      :: mode
        character(80)     :: gridType
+       integer			 :: nc
+
+       if (present(nCoeff)) then
+          nc = nCoeff
+       else
+          nc = 0 ! will reallocate memory later in the program
+       end if
 
        mode = txDict(iTx)%mode
 
@@ -206,7 +213,7 @@ contains
           call errStop('Unknown mode in create_EMsparse')
        endif
 
-       call create_sparsevecc(grid,gridType,nCoeff,LC%L)
+       call create_sparsevecc(grid,gridType,nc,LC%L)
 
      end subroutine create_EMsparse
 

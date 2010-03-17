@@ -98,7 +98,7 @@ Contains
 
 	if (exists) then
        !  This also sets up dictionaries
-	   call read_dataVecMTX_list_format(allData,cUserDef%rFile_Data)
+	   call read_dataVecMTX(allData,cUserDef%rFile_Data)
     else
        call warning('No input data file - unable to set up dictionaries')
     end if

@@ -24,9 +24,6 @@ implicit none
 !   rhs data structures for solving forward, sensitivity probs
 type(RHS_t), save, private			:: b0
 
-!  model parameter is saved here after initSolver is called
-type(modelParam_t), save, private	:: sigma0
-
 !  initialization routines (call Fwd version if no sensitivities are
 !     are calculated).  Note that these routines are set up to
 !    automatically manage memory and to figure out which initialization
@@ -42,6 +39,9 @@ public exitSolver
 
 ! solver routines
 public fwdSolve, sensSolve
+
+logical, save, private		:: modelDataInitialized = .false.
+!  logical, save, private		:: sigmaNotCurrent = .true.
 
 Contains
 
@@ -77,11 +77,8 @@ Contains
    !  local variables
    integer		:: IER,k
    character*80 :: gridType
-   logical		:: initForSens
+   logical		:: initForSens,sigmaNotCurrent
 
-
-   !  set the saved model parameter
-   sigma0 = sigma
 
    initForSens = present(comb)
 
@@ -110,16 +107,29 @@ Contains
       enddo
    endif
 
-   !   set up all model operators, but only if they don't exist already...
-   !   to override this, run ModelOperatorCleanup()
-   call ModelOperatorSetup(grid)
+   if(.NOT.modelDataInitialized) then
+   !   Initialize modelData, setup model operators
+      call ModelDataInit(grid)
+      call ModelOperatorSetup()
+      modelDataInitialized = .true.
+   endif
 
-   !   checks that omega or sigma0 are new, and only goes through
-   !   the necessary steps to update the forward solver
-   call updateModelData(txDict(iTx)%omega,sigma0)
+!    the following needs work ... want to avoid reinitializing
+!     operator coefficients when conductivity does not change;
+!     need to have a way to reset sigmaNotCurrent to false when
+!     conductivity changes (one idea: assign a random number whenever
+!     a conductivity parameter is modified (by any of the routines in
+!     module ModelParameter); store this in the modelOperator module (which
+!     is where updateCond sits) and have updateCond compare the random key
+!     with what is stored)
+!  if(sigmaNotCurrent) then
+       call updateCond(sigma)
+!      sigmaNotCurrent = .false.
+!   endif
 
-   !   model parameter no longer new
-   call setValueUpdated_modelParam(sigma0)
+   ! This needs to be called before solving for a different frequency
+   !!!!!!!  BUT AFTER UPDATECOND !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   call UpdateFreq(txDict(iTx)%omega)
 
    end subroutine initSolver
 
@@ -143,9 +153,12 @@ Contains
       call deall_EMsoln(e)
    endif
 
-   ! cleanup/deallocation routines for model operators
-   call ModelOperatorCleanUp() ! FWD/modelOperator3D.f90
-   call deall_modelParam(sigma0)
+   if(modelDataInitialized) then
+      ! cleanup/deallocation routines for model operators
+      call ModelDataCleanUp() ! FWD/modelOperator3D.f90
+      call ModelOperatorCleanUp() ! FWD/EMsolve3D.f90
+      modelDataInitialized = .false.
+   endif
 
    end subroutine exitSolver
 
@@ -179,7 +192,7 @@ Contains
    do iMode = 1,e0%nPol
       ! compute boundary conditions for polarization iMode
       !   uses cell conductivity already set by updateCond
-      call SetBound(imode,period,sigma0,e0%pol(imode),b0%bc)
+      call SetBound(imode,period,e0%pol(imode),b0%bc)
 			write(*,'(a12,a3,a18,es12.6,a10,i2)') 'Solving the ','FWD', &
 				' problem for freq ',omega/(2*PI),' & mode # ',imode
       call FWDsolve3D(b0,omega,e0%pol(imode))

@@ -15,6 +15,13 @@ use transmitters
 
 implicit none
 
+interface assignment (=)
+   MODULE PROCEDURE copy_EMsoln
+   MODULE PROCEDURE copy_EMsolnMTX
+   MODULE PROCEDURE copy_EMsparse
+   !MODULE PROCEDURE copy_EMrhs - doesn't exist yet
+end interface
+
   type :: EMsoln_t
     !!   Generic solution type, same name must be used to allow
     !!   use of higher level inversion modules on different problems.
@@ -42,6 +49,9 @@ implicit none
     !! allocated when the EMsoln was created but not yet deallocated
     logical			:: allocated = .false.
 
+    !! avoid memory leaks: set this to true for function outputs only
+    logical			:: temporary = .false.
+
   end type EMsoln_t
 
   type :: EMsolnMTX_t
@@ -49,6 +59,7 @@ implicit none
     integer						:: nTx = 0
     type(EMsoln_t), pointer		:: solns(:)
     logical						:: allocated = .false.
+    logical						:: temporary = .false.
   end type EMsolnMTX_t
 
   type :: EMsparse_t
@@ -56,9 +67,16 @@ implicit none
     !!   use of higher level inversion modules on different problems.
     !!   Here we need nPol sparse vectors, one for each polarization
     !!    to represent linear data functionals on objects of type EMsoln
+    !!  this doesn't really need the grid... not used anywhere at the moment
+    !!  but then the generic create interface shouldn't use it either
+    !!  unless sparse vectors require the grid pointer for something.
     integer						:: nPol = 2
+    integer						:: nCoeff = 0
     type(sparsevecc), pointer	:: L(:)
     logical						:: allocated = .false.
+    logical						:: temporary = .false.
+    type(grid_t), pointer       :: grid
+    integer						:: tx = 0
   end type EMsparse_t
 
   type :: RHS_t
@@ -72,6 +90,7 @@ implicit none
      logical                    :: nonzero_Source = .false.
      logical                    :: sparse_Source = .false.
      logical			:: allocated = .false.
+    logical					:: temporary = .false.
      type (cvector) 		:: s
      type (sparsevecc) 		:: sSparse
      type (cboundary) 		:: bc
@@ -82,10 +101,14 @@ implicit none
   type :: EMrhs_t
      ! rhs data structure for multiple polarizations, the abstract
      !  full rhs used for the abstract full EMsoln
+     ! pointer to the grid needed for cleaner routines in this module.
 
      integer				:: nPol = 2
      type (RHS_t), pointer	:: b(:)
      logical				:: allocated = .false.
+     logical				:: temporary = .false.
+     type(grid_t), pointer	:: grid
+     integer				:: tx = 0
   end type EMrhs_t
 
 contains
@@ -108,8 +131,12 @@ contains
        integer				:: k,istat
 
        if (e%allocated) then
-          ! do nothing
-          return
+          if (associated(e%grid, target=grid) .and. (e%tx == iTx)) then
+             ! do nothing
+             return
+          else
+             call deall_EMsoln(e)
+          end if
        end if
 
        e%nPol = txDict(iTx)%nPol
@@ -164,12 +191,6 @@ contains
          call errStop('input EM soln not allocated yet in copy_EMsoln')
        endif
 
-       if (associated(eOut%pol)) then
-         if (eOut%nPol .ne. eIn%nPol) then
-         	call deall_EMsoln(eOut)
-         endif
-       endif
-
        call create_EMsoln(eIn%grid,eIn%tx,eOut)
 
        do k = 1,eIn%nPol
@@ -177,6 +198,10 @@ contains
        enddo
 
        eOut%allocated = eIn%allocated
+
+       !if (eIn%temporary) then
+       !   call deall_EMsoln(eIn)
+       !endif
 
      end subroutine copy_EMsoln
 
@@ -208,6 +233,15 @@ contains
       !  local variables
       integer                           :: istat
 
+      if (eAll%allocated) then
+         if (eAll%nTx == nTx) then
+            ! do nothing
+            return
+         else
+            call deall_EMsolnMTX(eAll)
+         end if
+      end if
+
       eAll%nTx = nTx
       allocate(eAll%solns(nTx), STAT=istat)
       eAll%allocated = .true.
@@ -231,6 +265,34 @@ contains
 
    end subroutine deall_EMsolnMTX
 
+   !************************************************************
+   subroutine copy_EMsolnMTX(eOut,eIn)
+
+       !  3D  version
+       implicit none
+       type (EMsolnMTX_t), intent(in)	:: eIn
+       type (EMsolnMTX_t), intent(inout)	:: eOut
+
+       ! local variables
+       integer				:: j
+
+       if (.not. eIn%allocated) then
+         call errStop('input multi-transmitter EM soln not allocated yet in copy_EMsolnMTX')
+       endif
+
+       call create_EMsolnMTX(eIn%nTx,eOut)
+
+       do j = 1,eIn%nTx
+          call copy_EMsoln(eOut%solns(j),eIn%solns(j))
+       enddo
+
+       eOut%allocated = eIn%allocated
+
+       !if (eIn%temporary) then
+       !   call deall_EMsolnMTX(eIn)
+       !endif
+
+   end subroutine copy_EMsolnMTX
 
 !**********************************************************************
 !           Basic EMsparse methods
@@ -251,15 +313,15 @@ contains
        ! local variables
        integer				:: nc,k,istat
 
-       if (LC%allocated) then
-          ! do nothing
-          return
-       end if
-
        if (present(nCoeff)) then
           nc = nCoeff
        else
           nc = 0 ! will reallocate memory later in the program
+       end if
+
+       if (LC%allocated) then
+          ! it is safest and quite efficient to reallocate sparse vectors
+          call deall_EMsparse(LC)
        end if
 
        LC%nPol = txDict(iTx)%nPol
@@ -268,6 +330,9 @@ contains
           call create_sparsevecc(nc,LC%L(k),EDGE)
        enddo
 
+       LC%nCoeff = nc
+       LC%grid => grid
+       LC%tx = iTx
 	   LC%allocated = .true.
 
     end subroutine create_EMsparse
@@ -286,10 +351,39 @@ contains
             call deall_sparsevecc(LC%L(k))
          enddo
          deallocate(LC%L, STAT=istat)
+         nullify(LC%grid)
       endif
 
    end subroutine deall_EMsparse
 
+   !************************************************************
+   subroutine copy_EMsparse(eOut,eIn)
+
+       !  3D  version
+       implicit none
+       type (EMsparse_t), intent(in)	:: eIn
+       type (EMsparse_t), intent(inout)	:: eOut
+
+       ! local variables
+       integer				:: k
+
+       if (.not. eIn%allocated) then
+         call errStop('input EM sparse vector not allocated yet in copy_EMsparse')
+       endif
+
+       call create_EMsparse(eIn%grid,eIn%tx,eOut,eIn%nCoeff)
+
+       do k = 1,eIn%nPol
+          call copy_sparsevecc(eOut%L(k),eIn%L(k))
+       enddo
+
+       eOut%allocated = eIn%allocated
+
+       !if (eIn%temporary) then
+       !   call deall_EMsparse(eIn)
+       !endif
+
+   end subroutine copy_EMsparse
 
 !**********************************************************************
 !           combined EMsoln/EMsparse methods
@@ -434,9 +528,13 @@ contains
        integer				:: k,istat
 
        if (b%allocated) then
-          ! do nothing - exit the create subroutine
-          return
-       endif
+          if (associated(b%grid, target=grid) .and. (b%tx == iTx)) then
+             ! do nothing
+             return
+          else
+             call deall_EMrhs(b)
+          end if
+       end if
 
        b%nPol = txDict(iTx)%nPol
        allocate(b%b(b%nPol), STAT=istat)
@@ -465,6 +563,50 @@ contains
        b%allocated = .false.
 
      end subroutine deall_EMrhs
+
+!     !************************************************************
+!     ! need copy_RHS for this... too complicated, will write this
+!     ! when it is needed
+!     subroutine copy_EMrhs(bOut,bIn)
+!
+!       !  3D  version
+!       implicit none
+!       type (EMrhs_t), intent(in)	:: bIn
+!       type (EMrhs_t), intent(inout)	:: bOut
+!
+!       ! local variables
+!       integer				:: k
+!
+!       if (.not. bIn%allocated) then
+!         call errStop('input EM RHS not allocated yet in copy_EMrhs')
+!       endif
+!
+!       call create_EMrhs(bIn%grid,bIn%tx,bOut)
+!
+!       do k = 1,bIn%nPol
+!          call copy_RHS(bOut%b(k),bIn%b(k))
+!       enddo
+!
+!       bOut%allocated = bIn%allocated
+!
+!       if (bIn%temporary) then
+!          call deall_EMrhs(bIn)
+!       endif
+!
+!     end subroutine copy_EMrhs
+
+     !**********************************************************************
+     subroutine zero_EMrhs(b)
+     !  zeros a EMrhs object
+
+       type(EMrhs_t), intent(inout)	:: b
+
+       integer			:: k
+
+       do k = 1,b%nPol
+          call zero_RHS(b%b(k))
+       enddo
+     end subroutine zero_EMrhs
 
      !**********************************************************************
 
@@ -507,18 +649,5 @@ contains
        call deall_sparsevecc(temp)
 
      end subroutine add_EMsparseEMrhs
-
-     !**********************************************************************
-     subroutine zero_EMrhs(b)
-     !  zeros a EMrhs object
-
-       type(EMrhs_t), intent(inout)	:: b
-
-       integer			:: k
-
-       do k = 1,b%nPol
-          call zero_RHS(b%b(k))
-       enddo
-     end subroutine zero_EMrhs
 
 end module solnrhs

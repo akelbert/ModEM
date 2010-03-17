@@ -200,7 +200,9 @@ Contains
 
       case (INVERSE) ! I
         if (narg < 4) then
-           write(0,*) 'Usage: -I NLCG rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda sigma]'
+           write(0,*) 'Usage: -I NLCG rFile_Model rFile_Data wFile_Model [wFile_Data rFile_Cov lambda delta]'
+           write(0,*) 'Here, lambda =  the initial damping parameter'
+           write(0,*) '      delta  =  the initial line search step size in the model units'
            stop
         else
            ctrl%search = temp(1)
