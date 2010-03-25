@@ -818,7 +818,7 @@ Subroutine Worker_job (sigma0,d)
    type(modelParam_t), dimension(:), pointer  	:: dsigma11
     type(modelParam_t)                      	:: dsigma
 
-   type(dataVecMTX_t) ,intent(in)    	   :: d
+   type(dataVecMTX_t) ,intent(inout)    	   :: d
    type(dataVecMTX_t)                	   :: measu_data
    type(dataVecMTX_t)                :: d_local
    type(dataVecTX_t)                 :: d_temp_TX 
@@ -852,9 +852,9 @@ if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
 ! Increasing the number of period each time the worker receives a period index from the master. 
 ! This is because we want to aviod creating eAll with all transmitters.
 per_index_counter=per_index_counter+1
-if (worker_job_task%several_Tx .eq. .TRUE.) then 
+if (worker_job_task%several_Tx) then 
      ! First, deallocate the temp. eAll structure
-   	     if (eAll_temp%allocated  == .true. ) then
+   	     if (eAll_temp%allocated) then
             call deall_EMsolnMTX(eAll_temp)
          end if
      ! Create  temp. eAll structure with the previous number of transmitters (per_index_counter-1)    
@@ -866,7 +866,7 @@ if (worker_job_task%several_Tx .eq. .TRUE.) then
 	         call copy_EMsoln(eAll_temp%solns(iTx),eAll%solns(iTx))
 	      end do
 	  ! First, deallocate the exsiting eAll structure     
-	     if (eAll%allocated  == .true. ) then
+	     if (eAll%allocated) then
             call deall_EMsolnMTX(eAll)
          end if
       ! Create  eAll structure with the new number of transmitters (per_index_counter)    
@@ -882,7 +882,7 @@ if (worker_job_task%several_Tx .eq. .TRUE.) then
       	        
 else                   
 	  ! First, deallocate the exsiting eAll structure  
-	     if (eAll%allocated  == .true. ) then
+	     if (eAll%allocated) then
             call deall_EMsolnMTX(eAll)
          end if
       ! In the first call: create  eAll structure with ONLY ONE transmitter (per_index_counter=1)     
@@ -1273,7 +1273,7 @@ subroutine create_worker_job_task_mpi
     implicit none
     include 'mpif.h'
 integer :: ii,intex,CHARACTERex
-integer(MPI_ADDRESS_KIND) address1(20)
+integer(MPI_ADDRESS_KIND) address1(0:20)
   
 
       typelist(0) = MPI_CHARACTER
@@ -1312,7 +1312,7 @@ subroutine create_userdef_control_MPI(ctrl)
     
 	type(userdef_control), intent(in)   :: ctrl
 	integer :: ii,intex,CHARACTERex
-	integer(MPI_ADDRESS_KIND) address1(20)
+	integer(MPI_ADDRESS_KIND) address1(0:20)
 	
 
       typelist(0) = MPI_CHARACTER                                                 

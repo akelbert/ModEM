@@ -19,7 +19,6 @@ integer      :: oldtypes(0:20), blockcounts(0:20),offsets(0:20) ,extent
       integer      typelist(0:21)
       
       
-      
 Integer        :: cvector_mpi_3D,gridDef3D_mpi,eAll_mpi,dvecMTX_mpi,dvec_mpi,grid_t_mpi,worker_job_task_mpi,modelParam_t_mpi,modelParam_t_mpi_sing,userdef_control_MPI
 Integer        :: dvecMTX_mpi_vec(500),dvecMTX_mpi_vec1(500),dvec_mpi_vec(500)
  
@@ -43,7 +42,7 @@ SEQUENCE
      logical       :: several_Tx=.false.
  end type define_worker_job     
       
- type(define_worker_job)    :: worker_job_task 
+ type(define_worker_job), save :: worker_job_task 
 Integer, pointer, dimension(:) ::ndata_size,nrx_size
 logical                        :: eAll_exist=.false.
 Integer                        :: eAll_location(200)
