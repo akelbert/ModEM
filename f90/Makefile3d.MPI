@@ -46,7 +46,7 @@ include Makefile.local
 OBJDIR = ./objs/3D_MT/MPIRelease
 F90 = mpif90 
 FFLAGS = -O2
-MPIFLAGS = -Bstatic  -Mipa=fast  -Mextend  -Kieee -Mpreprocess -DMPI
+MPIFLAGS = -Mipa=fast  -Mextend  -Kieee -Mpreprocess -DMPI
 MODULE = -module $(OBJDIR)
 LIBS = -L/usr/lib64 -llapack -lblas -lpgftnrtl
 

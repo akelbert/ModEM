@@ -23,8 +23,10 @@ Contains
 
 !###########################################  MPI_initialization   ############################################################
 
-Subroutine MPI_constructor
+Subroutine MPI_constructor(ctrl)
+
     implicit none
+    type(userdef_control), intent(in)   :: ctrl
     include 'mpif.h'
      
           call MPI_INIT( ierr )
@@ -33,6 +35,8 @@ Subroutine MPI_constructor
           numworkers = numtasks-1
           
 call create_worker_job_task_mpi
+call initUserCtrl(ctrl)
+call create_userdef_control_MPI(ctrl)
 
 End Subroutine MPI_constructor
 
@@ -43,12 +47,12 @@ End Subroutine MPI_constructor
 
 
 
-Subroutine Master_Job_fwdPred(sigma,d,eAll)
+Subroutine Master_Job_fwdPred(sigma,d_pred,eAll)
     
     implicit none
     include 'mpif.h'
    type(modelParam_t), intent(in)	    :: sigma   
-   type(dataVecMTX_t), intent(inout)	:: d
+   type(dataVecMTX_t), intent(inout)	:: d_pred
    type(EMsolnMTX_t), intent(inout), optional	:: eAll
    integer nTx,ndata,ndt
    logical keep_soln
@@ -57,7 +61,7 @@ Subroutine Master_Job_fwdPred(sigma,d,eAll)
    keep_soln = present(eAll)
 
    ! nTX is number of transmitters;
-   nTx = d%nTx
+   nTx = d_pred%nTx
    do iper=1,nTx
    eAll_location(iper)=0
    end do
@@ -65,15 +69,16 @@ Subroutine Master_Job_fwdPred(sigma,d,eAll)
      
      ! First, distribute the current model to all workers
        call Master_job_Distribute_Model(sigma)
+       call Master_job_Distribute_Data(d_pred)
      
-               if(.not.d%allocated) then
+               if(.not.d_pred%allocated) then
                   call errStop('data vector not allocated on input to fwdPred')
                end if
 
                if(present(eAll)) then
                   if(.not. eAll%allocated) then
                      call create_EMsolnMTX(nTx,eAll)
-                  else if(d%nTx .ne. eAll%nTx) then
+                  else if(d_pred%nTx .ne. eAll%nTx) then
                      call errStop('dimensions of eAll and d do not agree in fwdPred')
                   endif
                endif
@@ -85,7 +90,7 @@ Subroutine Master_Job_fwdPred(sigma,d,eAll)
                 per_index=0
                 worker_job_task%what_to_do='FORWARD'
                 worker_job_task%several_Tx=.false.
-                    do iper=1,d%nTx
+                    do iper=1,d_pred%nTx
                           per_index=per_index+1
                           worker_job_task%per_index= per_index 
                           worker_job_task%keep_E_soln=keep_soln           
@@ -101,7 +106,7 @@ Subroutine Master_Job_fwdPred(sigma,d,eAll)
  
 10                 continue              
                                    
-        answers_to_receive = d%nTx
+        answers_to_receive = d_pred%nTx
         received_answers = 0
         
 
@@ -116,11 +121,11 @@ Subroutine Master_Job_fwdPred(sigma,d,eAll)
                         
         ! Receive ONLY the predicted data from (who) node
 
-               do ndt=1,d%d(which_per)%ndt
-	                  ndata=size(d%d(which_per)%data(ndt)%value)                 
-	                  call MPI_RECV(d%d(which_per)%data(ndt)%value(1,1),ndata,MPI_DOUBLE_PRECISION, who, FROM_WORKER,MPI_COMM_WORLD, STATUS, ierr)      
-	                  call MPI_RECV(d%d(which_per)%data(ndt)%error(1,1),ndata,MPI_DOUBLE_PRECISION, who, FROM_WORKER,MPI_COMM_WORLD, STATUS, ierr)      
-	                  call MPI_RECV(d%d(which_per)%data(ndt)%errorBar,1,MPI_LOGICAL,  who, FROM_WORKER,MPI_COMM_WORLD, STATUS, ierr)      
+               do ndt=1,d_pred%d(which_per)%ndt
+	                  ndata=size(d_pred%d(which_per)%data(ndt)%value)                 
+	                  call MPI_RECV(d_pred%d(which_per)%data(ndt)%value(1,1),ndata,MPI_DOUBLE_PRECISION, who, FROM_WORKER,MPI_COMM_WORLD, STATUS, ierr)      
+	                  call MPI_RECV(d_pred%d(which_per)%data(ndt)%error(1,1),ndata,MPI_DOUBLE_PRECISION, who, FROM_WORKER,MPI_COMM_WORLD, STATUS, ierr)      
+	                  call MPI_RECV(d_pred%d(which_per)%data(ndt)%errorBar,1,MPI_LOGICAL,  who, FROM_WORKER,MPI_COMM_WORLD, STATUS, ierr)      
                end do
                    eAll_location(which_per)=who
 
@@ -128,7 +133,7 @@ Subroutine Master_Job_fwdPred(sigma,d,eAll)
            
         ! Check if we send all transmitters, if not then send the next transmitter to the node who is free now....
         ! This part is very important if we have less nodes than transmitters.
-                       if (Per_index .lt. d%nTx) then
+                       if (Per_index .lt. d_pred%nTx) then
                            Per_index=Per_index+1
                            worker_job_task%per_index= per_index 
                            worker_job_task%what_to_do='FORWARD'
@@ -143,7 +148,7 @@ Subroutine Master_Job_fwdPred(sigma,d,eAll)
                        received_answers=received_answers+1        
         end do             
                 
-        write(file_id,*)'FWD: Finished calculating for (', d%nTx , ') Transmitters '
+        write(file_id,*)'FWD: Finished calculating for (', d_pred%nTx , ') Transmitters '
                 
                 endtime=MPI_Wtime()
                 time_used = endtime-starttime
@@ -540,7 +545,7 @@ Subroutine Master_job_Distribute_Data(d)
    ! nTX is number of transmitters;
    nTx = d%nTx
    ! nTot total number of data points
-   nTot = countData(d) !d%Ndata 
+   nTot = countData(d)
 
         do dest=1,numworkers
             worker_job_task%what_to_do='Distribute Data'
@@ -554,9 +559,9 @@ call copy_dataVecMTX(d_temp,d)
        which_per=iper  
        do ndt=1,d_temp%d(which_per)%ndt
            ndata=size(d_temp%d(which_per)%data(ndt)%value)      
-           call MPI_BCAST(d_temp%d(which_per)%data(ndt)%value(1,1),ndata,MPI_DOUBLE_PRECISION,0, MPI_COMM_WORLD,ierr)
-           call MPI_BCAST(d_temp%d(which_per)%data(ndt)%error(1,1),ndata,MPI_DOUBLE_PRECISION,0, MPI_COMM_WORLD,ierr)
-           call MPI_BCAST(d_temp%d(which_per)%data(ndt)%errorBar,1,MPI_LOGICAL,0, MPI_COMM_WORLD,ierr)
+           call MPI_BCAST(d%d(which_per)%data(ndt)%value(1,1),ndata,MPI_DOUBLE_PRECISION,0, MPI_COMM_WORLD,ierr)
+           call MPI_BCAST(d%d(which_per)%data(ndt)%error(1,1),ndata,MPI_DOUBLE_PRECISION,0, MPI_COMM_WORLD,ierr)
+           call MPI_BCAST(d%d(which_per)%data(ndt)%errorBar,1,MPI_LOGICAL,0, MPI_COMM_WORLD,ierr)
        end do
            
  end do
@@ -666,7 +671,7 @@ Subroutine Master_job_Collect_eAll(d,eAll)
 
     
           
-    write(6,*) taskid,eAll%allocated
+
     
       if(.not. eAll%allocated) then
          call create_EMsolnMTX(d%nTx,eAll)
@@ -732,7 +737,7 @@ Subroutine Master_job_Distribute_Data_Size(d,sigma0)
 
 
 end Subroutine Master_job_Distribute_Data_Size
-!############################################## Master_job_Distribute_Data_Size #########################################################
+!############################################## Master_job_Distribute_userdef_control#########################################################
 Subroutine Master_job_Distribute_userdef_control(ctrl)
     implicit none
     include 'mpif.h'
@@ -744,9 +749,9 @@ Subroutine Master_job_Distribute_userdef_control(ctrl)
            call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                   
         end do
         
-		call create_userdef_control_MPI(ctrl)
+		!call create_userdef_control_MPI(ctrl)
 		call MPI_BCAST(ctrl,1,userdef_control_MPI,0, MPI_COMM_WORLD,ierr)
-		
+		 
 
 
 
@@ -832,7 +837,7 @@ Subroutine Worker_job (sigma0,d)
 
      real(kind=prec) :: vAir
 
-      call copy_dataVecMTX(measu_data ,d)
+      !call copy_dataVecMTX(measu_data ,d)
 
 nTx=d%nTx
 recv_loop=0
@@ -849,55 +854,24 @@ per_index_vector=0
 			end if
         
 if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
-! Increasing the number of period each time the worker receives a period index from the master. 
-! This is because we want to aviod creating eAll with all transmitters.
-per_index_counter=per_index_counter+1
-if (worker_job_task%several_Tx) then 
-     ! First, deallocate the temp. eAll structure
-   	     if (eAll_temp%allocated) then
-            call deall_EMsolnMTX(eAll_temp)
-         end if
-     ! Create  temp. eAll structure with the previous number of transmitters (per_index_counter-1)    
-         call create_EMsolnMTX(per_index_counter-1,eAll_temp)
-     ! Create  temp. eAll%solns structures with the previous number of transmitters (per_index_counter-1) 
-     ! and save the previous eAll%solns values in them.        
-	     do iTx=1,per_index_counter-1
-	         call create_EMsoln(grid,iTx,eAll_temp%solns(iTx))
-	         call copy_EMsoln(eAll_temp%solns(iTx),eAll%solns(iTx))
-	      end do
-	  ! First, deallocate the exsiting eAll structure     
-	     if (eAll%allocated) then
+
+    if (.NOT. worker_job_task%several_Tx ) then  
+         if (eAll%allocated ) then
             call deall_EMsolnMTX(eAll)
          end if
-      ! Create  eAll structure with the new number of transmitters (per_index_counter)    
-         call create_EMsolnMTX(per_index_counter,eAll)
-      ! Create  eAll%solns structures with the new number of transmitters (per_index_counter)    
-	      do iTx=1,per_index_counter
-	         call create_EMsoln(grid,iTx,eAll%solns(iTx))
-	      end do
-	  ! Get back the  previous eAll%solns  values from eAll_temp%solns.   
-	      do iTx=1,per_index_counter-1     
-	         call copy_EMsoln(eAll%solns(iTx),eAll_temp%solns(iTx))   
-	      end do
-      	        
-else                   
-	  ! First, deallocate the exsiting eAll structure  
-	     if (eAll%allocated) then
-            call deall_EMsolnMTX(eAll)
-         end if
-      ! In the first call: create  eAll structure with ONLY ONE transmitter (per_index_counter=1)     
-         call create_EMsolnMTX(per_index_counter,eAll)
-         
-       do iTx=1,per_index_counter
-         call create_EMsoln(grid,iTx,eAll%solns(iTx))
-      end do  
-end if
+         call create_EMsolnMTX(nTx,eAll)
+      do iTx=1,nTx
+         call create_EMsoln(grid,iTx,e0)
+         call copy_EMsoln(eAll%solns(iTx),e0)
+      end do
+      
+    end if
                        per_index=worker_job_task%per_index
                        pol_index=worker_job_task%pol_index
                        worker_job_task%taskid=taskid
                        
                        ! This vector is used later to identify the postions of eAll%soln in eAll
-                       per_index_vector(per_index)=per_index_counter
+                       !per_index_vector(per_index)=per_index_counter
   
 
                                
@@ -913,7 +887,7 @@ end if
 
             ! Send predicted data                    
                    do nDt=1, d_temp_TX%ndt
-                       ndata=size(d_temp_TX%data(ndt)%value)       
+                       ndata=size(d_temp_TX%data(nDt)%value)       
                        call MPI_SEND(d_temp_TX%data(nDt)%value(1,1),ndata,MPI_DOUBLE_PRECISION,0, FROM_WORKER,MPI_COMM_WORLD, ierr)
                        call MPI_SEND(d_temp_TX%data(nDt)%error(1,1),ndata,MPI_DOUBLE_PRECISION,0, FROM_WORKER,MPI_COMM_WORLD, ierr)
                        call MPI_SEND(d_temp_TX%data(nDt)%errorBar,1,MPI_LOGICAL,0, FROM_WORKER,MPI_COMM_WORLD, ierr)
@@ -924,7 +898,8 @@ end if
                       !Keep soln for this period here, later the Master will:
                       ! - Collects eAll for all transmitters, if the used requier and output of eAll (Notice: this step can be avioded if we paralellize the IO stuff)
                       ! - Sends the coressponding  per_index to the worker who has the solution for that transmitter when computing JmutT or Jmult.
-                      call copy_EMsoln(eAll%solns(per_index_counter),e0)
+                      call copy_EMsoln(eAll%solns(per_index),e0)
+                      eAll%solns(per_index)%tx=per_index
                        eAll_exist=.true.
             end if
             
@@ -978,8 +953,8 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'JmultT') then
                        worker_job_task%taskid=taskid
       
               ! Do the actual computation                       
-              if (eAll_exist) then            
-                      call JmultT_TX(sigma0,d%d(per_index),dsigma,eAll%solns(per_index_vector(per_index)))       
+              if (eAll_exist) then         
+                      call JmultT_TX(sigma0,d%d(per_index),dsigma,eAll%solns(per_index))       
               else
                       call JmultT_TX(sigma0,d%d(per_index),dsigma)      
               end if               
@@ -993,7 +968,8 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'JmultT') then
                        call MPI_SEND(sigma0,1,modelParam_t_mpi_sing,0, FROM_WORKER,MPI_COMM_WORLD, ierr)
 ! Get back sigma0                        
                        sigma0 = sigma_temp
-                             
+   per_index_vector=0     
+                        
 elseif (trim(worker_job_task%what_to_do) .eq. 'Jmult') then
                                    
 
@@ -1004,8 +980,8 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Jmult') then
           
               ! Do the actual computation                      
 
-              if (eAll_exist) then             
-                      call Jmult_TX(delSigma,sigma0,d%d(per_index),eAll%solns(per_index_vector(per_index)))       
+              if (eAll_exist) then        
+                      call Jmult_TX(delSigma,sigma0,d%d(per_index),eAll%solns(per_index))       
               else
                       call Jmult_TX(delSigma,sigma0,d%d(per_index))    
               end if               
@@ -1065,10 +1041,9 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute delSigma') then
 
 elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute userdef control') then
         
-        call initUserCtrl(ctrl)
-		call create_userdef_control_MPI(ctrl)
+        !call initUserCtrl(ctrl)
+		!call create_userdef_control_MPI(ctrl)
 		call MPI_BCAST(ctrl,1,userdef_control_MPI,0, MPI_COMM_WORLD,ierr)
-   
       call initGlobalData(ctrl)
       call setGrid(grid)
       call copy_dataVecMTX(d ,allData)
@@ -1316,7 +1291,7 @@ subroutine create_userdef_control_MPI(ctrl)
 	
 
       typelist(0) = MPI_CHARACTER                                                 
-      typelist(1) = MPI_REAL
+      typelist(1) = MPI_REAL8
       typelist(2) = MPI_CHARACTER
 
 

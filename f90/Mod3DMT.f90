@@ -23,54 +23,41 @@ program Mod3DMT
 	 real					:: stime, etime ! start and end times
      integer, dimension(8)	:: tarray ! utility variable
 
+
 #ifdef MPI 
-            call  MPI_constructor 
-	        write(6,*)'I am a PARALLEL version'        	        
+              call  MPI_constructor(cUserDef) 
+			  if (taskid==0) then
+			      write(6,*)'I am a PARALLEL version'
+			      call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef) 
+			 	  file_id=2000
+	              open(file_id,file='Nodes_Status.info')
+	              write(file_id,*) 'Total Number of nodes= ', numworkers
+			  else
+			    call Worker_job(sigma0,allData)
+	            if (trim(worker_job_task%what_to_do) .eq. 'STOPED')  then
+	               	 call deallGlobalData()
+		             call cleanUp()
+	                 call MPI_destructor
+	              stop
+	            end if  
+			 end if
+        	        
 #else
-			write(6,*)'I am a SERIAL version'
+			 write(6,*)'I am a SERIAL version'
+             call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
 #endif
-
-
-        
-
-     call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
 
           
 	          
 
-    
+
       call initGlobalData(cUserDef)
      ! set the grid for the numerical computations
       call setGrid(grid)
      
-     
-
-#ifdef MPI 
-	if (taskid==0) then
-	        file_id=2000
-	        open(file_id,file='Nodes_Status.info')
-	        write(file_id,*) 'Total Number of nodes= ', numworkers
-	end if
-	        write(6,*)'I am a PARALLEL version'
-
-        if (taskid .ne. 0 ) then
-          call Worker_job(sigma0,allData)
-            if (trim(worker_job_task%what_to_do) .eq. 'STOPED')  then
-               	 call deallGlobalData()
-	             call cleanUp()
-                 call MPI_destructor
-              stop
-            end if   
-        end if
-        	        
-#else
-			write(6,*)'I am a SERIAL version'
-#endif      
-     
-     
-     
+      
 #ifdef MPI
-       !call Master_job_Distribute_userdef_control(cUserDef) 
+       call Master_job_Distribute_userdef_control(cUserDef) 
        call Master_job_Distribute_Data_Size(allData,sigma0)
        call Master_job_Distribute_Data(allData)
        call Master_job_Distribute_Model(sigma0)       

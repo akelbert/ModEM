@@ -95,6 +95,20 @@ Contains
      !  parse command line ...  for now just uses first argument
      !   to set job
      narg = iargc()
+    if(narg .gt. 0) then
+       k=1
+       search_arg: &
+		   do
+		       k=k+1
+		       if (k .eq. narg) exit  search_arg         
+               call getarg ( k, arg )
+                if(arg(1:1).eq.'-') then
+                  narg=k-1
+                  exit  search_arg
+                end if
+          end do search_arg     
+     end if 
+
      if(narg .gt. 0) then
         call getarg(1,arg)
         if(arg(1:1).eq.'-') job = arg(2:2)
