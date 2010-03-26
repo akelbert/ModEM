@@ -46,7 +46,7 @@ Contains
    end subroutine setIterControl
 !**********************************************************************
 
-  subroutine DCGsolver(d,m0,m)
+  subroutine DCGsolver(d,m0,m,lambda)
   
   ! Subroutine to solve the inverse problem in data space using conjugate gradients (CG)  
    
@@ -56,7 +56,7 @@ Contains
    !  m is solution parameter ... on input m contains starting guess
    type(modelParam_t), intent(inout)	       ::m
    !  lambda is regularization parameter
-   real(kind=prec) 							   ::lambda
+   real(kind=prec) , intent(in)							   ::lambda
    
 !  local variables
    type(dataVecMTX_t)			:: dHat, b,dx,d_Pred,res,Nres,JmHat
@@ -87,7 +87,7 @@ call zero_dataVecMTX(b)
 ! initialize the CG control parameters
 		call setIterControl(CGiter)
    
-lambda=1
+
 ! Compute the predicted data for the current model m
 #ifdef MPI
         call Master_Job_fwdPred(m,d_Pred,eAll)
@@ -146,7 +146,7 @@ do DS_iter=1,30
 	
 	    !  Cm_mHat=multBy_Cm(mHat)	  
 	    !  Cm_mHat1= multBy_CmSqrt(mHat) 
-	      Cm_mHat=  multBy_CmSqrt(mHat) 
+	      Cm_mHat=  multBy_Cm(mHat) 
 	      mHat=Cm_mHat
 	       
 	     
@@ -301,7 +301,7 @@ lambdaP	=p
 #endif
 ! Compute  Cm  J^T  C^(-1/2) p 
             !CmJTp=multBy_Cm(JTp)
-            CmJTp= multBy_CmSqrt(JTp) 
+            CmJTp= multBy_Cm(JTp) 
             !CmJTp= multBy_CmSqrt(CmJTp)
             
 ! Compute J Cm  J^T  C^(-1/2) p = Ap 

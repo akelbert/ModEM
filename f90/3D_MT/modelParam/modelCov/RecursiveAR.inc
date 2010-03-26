@@ -3,6 +3,32 @@
 !                                                                      !
 ! Recursive autoregression.                                            !
 !----------------------------------------------------------------------!
+! *******************************************************************
+  function multBy_Cm(m) result (mhat)
+
+   ! Multiplies by the square root of the model covariance,
+   ! which is viewed as a smoothing operator. Intended
+   ! to be used to compute m = C_m^{1/2} \tilde{m} + m_0.
+   ! For efficiency, CmSqrt is a saved, private variable inside
+   ! the modelParam module. Before this routine can be called,
+   ! it has to be initialized by calling create_CmSqrt(m).
+
+    type (modelParam_t), intent(in)     :: m
+    type (modelParam_t)				    :: mhat
+
+    if (.not. CmSqrt%allocated) then
+    	call create_CmSqrt(m)
+    end if
+
+    mhat = m
+
+    call RecursiveAR(m%cellCond%v, mhat%cellCond%v,2)
+    !mhat%cellCond%v= mhat%cellCond%v**2
+    mhat%temporary = .true.
+
+  end function multBy_Cm
+
+! *******************************************************************
 
 ! *******************************************************************
   function multBy_CmSqrt(m) result (mhat)

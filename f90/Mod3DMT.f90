@@ -147,7 +147,7 @@ program Mod3DMT
 #endif         	
      	elseif (trim(cUserDef%search) == 'DCG') then
         	write(*,*) 'Starting the DCG search...'
-        	call DCGsolver(allData,sigma0,sigma1)
+        	call DCGsolver(allData,sigma0,sigma1,cUserDef%lambda)
             call write_modelParam(sigma1,cUserDef%wFile_Model)
         if (write_data) then
         	call write_dataVecMTX(allData,cUserDef%wFile_Data)

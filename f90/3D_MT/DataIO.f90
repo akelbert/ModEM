@@ -366,7 +366,7 @@ Reading_all_file_loop: &
      real(kind=prec), pointer, dimension(:,:) :: siteLoc
      real(kind=prec), pointer, dimension(:) :: SI_factor
      real(kind=prec)                        :: Period
-     logical      							:: conjugate, errorBar, isComplex
+     logical      							:: conjugate, errorBar, isComplex,new_receiver
      character(400) 						:: temp,header
      character(100)                         :: args(50)
      integer								:: nargs,refe_site_index
