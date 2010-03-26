@@ -11,10 +11,37 @@
 ! backwards scheme (see solution of the diffusion equation and      !
 ! Crank-Nicholson scheme in the Numerical Recipes for a discussion).!
 !-------------------------------------------------------------------!
+! *******************************************************************
+  function multBy_Cm(m1) result (m2)
+   ! Multiplies by the model covariance,
+   ! which is viewed as a smoothing operator. Intended
+   ! to be used to compute m = C_m^{1/2} \tilde{m} + m_0.
+   ! For efficiency, CmSqrt is a saved, private variable inside
+   ! the modelParam module. Before this routine can be called,
+   ! it has to be initialized by calling create_CmSqrt(m).
+
+    type (modelParam_t), intent(in)     :: m1
+    type (modelParam_t), intent(out)    :: m2
+    type (rscalar)                     :: logcond
+    Integer dtime
+    
+    if (.not. CmSqrt%allocated) then
+    	call create_CmSqrt(m1)
+    end if
+    m2=m1
+    
+    call getValue_modelParam(m1,LOGE,logcond)
+   
+    dtime=5
+    call solveDiff(dtime,CmSqrt,logcond)
+    call setValue_modelParam(m2,LOGE,logcond)
+
+ end function multBy_Cm
+
+! *******************************************************************
 
 ! *******************************************************************
   function multBy_CmSqrt(m1) result (m2)
-
    ! Multiplies by the square root of the model covariance,
    ! which is viewed as a smoothing operator. Intended
    ! to be used to compute m = C_m^{1/2} \tilde{m} + m_0.
@@ -23,17 +50,21 @@
    ! it has to be initialized by calling create_CmSqrt(m).
 
     type (modelParam_t), intent(in)     :: m1
-    type (modelParam_t)				    :: m2
-
+    type (modelParam_t), intent(out)    :: m2
+    type (rscalar)                     :: logcond
+    Integer dtime
     if (.not. CmSqrt%allocated) then
     	call create_CmSqrt(m1)
     end if
+    m2=m1
+    
+    call getValue_modelParam(m1,LOGE,logcond)
+   
+    dtime=5
+    call solveDiff(dtime,CmSqrt,logcond)
+    call setValue_modelParam(m2,LOGE,logcond)
 
-    m2 = m1
-    call solveDiff(CmSqrt,m2)
-    m2%temporary = .true.
-
-  end function multBy_CmSqrt
+ end function multBy_CmSqrt
 
 ! *******************************************************************
   subroutine create_CmSqrt(m,cfile)
@@ -76,20 +107,21 @@
 ! currently only contains the WS model covariance,
 !**********************************************************************
 ! Note that only the driver subroutine requires knowledge of modelParam.
-! Without it, we would only need to include sg_scalar & grid.
+! Without it, we would only need to include sg_scalar & grid3d.
 
   subroutine WScov(m)
 
 	type (modelParam_t), intent(inout) :: m
-	type (mCov_t)                      :: Cm
+	type (modelCov_t)                      :: Cm
 	type (rscalar)                     :: logcond
+	Integer dtime
 
 	call getValue_modelParam(m,LOGE,logcond)
 
-	call setup1DCM(Cm,logcond%grid)
+	call setup1DCM(logcond%grid,Cm)
 
-	dtime = 10
-	call solveDiff(dtime,logcond)
+	dtime = 5
+	call solveDiff(dtime,Cm,logcond)
 
 	call setValue_modelParam(m,LOGE,logcond)
 
@@ -106,9 +138,9 @@
 
   SUBROUTINE Setup1DCM(gd,Cm)
 
-     integer, dimension(:,:,:), intent(in)   :: PMod
+     !integer, dimension(:,:,:), intent(in)   :: PMod
      type (grid_t), intent(in)             :: gd
-     type (mCov_t), intent(out)              :: Cm
+     type (modelCov_t), intent(out)              :: Cm
 
 
      real (kind=prec), pointer, dimension(:,:)   ::  XDF
@@ -120,14 +152,19 @@
 
 	  Nx      = gd%Nx
 	  Ny      = gd%Ny
-	  NzEarth = gd%Nz - gd%Nza
+	  NzEarth = gd%Nz - gd%nzAir
 
-	  allocate(Cm%YDIF(2,Nx,Ny,NzEarth))
+	  allocate(Cm%XDIF(2,Nx,Ny,NzEarth))
 	  allocate(Cm%YDIF(2,Nx,Ny,NzEarth))
 	  allocate(Cm%ZDIF(2,Nx,Ny,NzEarth))
-	  Cm%xlen = 0.05
-	  Cm%ylen = 0.05
-	  Cm%zlen = 0.05
+
+	  allocate(XDF(2,Nx))
+	  allocate(YDF(2,Ny))
+	  allocate(ZDF(2,NzEarth))
+	  	  
+	  Cm%xlen = 0.5
+	  Cm%ylen = 0.5
+	  Cm%zlen = 0.5
 
 	  XLen = Cm%xlen
 	  YLen = Cm%ylen
@@ -138,8 +175,8 @@
         DO iy = 1,Ny
           CALL SetupXCM(Nx,XLen,XDF)
           DO ix = 1,Nx
-            XDIF(1,ix,iy,iz) = XDF(1,ix)
-            XDIF(2,ix,iy,iz) = XDF(2,ix)
+            Cm%XDIF(1,ix,iy,iz) = XDF(1,ix)
+            Cm%XDIF(2,ix,iy,iz) = XDF(2,ix)
           ENDDO ! ix
         ENDDO ! iy
       ENDDO ! iz
@@ -150,8 +187,8 @@
         DO ix = 1,Nx
           CALL SetupYCM(Ny,YLen,YDF)
           DO iy = 1,Ny
-            YDIF(1,ix,iy,iz) = YDF(1,iy)
-            YDIF(2,ix,iy,iz) = YDF(2,iy)
+            Cm%YDIF(1,ix,iy,iz) = YDF(1,iy)
+            Cm%YDIF(2,ix,iy,iz) = YDF(2,iy)
           ENDDO ! iy
         ENDDO ! ix
       ENDDO ! iz
@@ -160,14 +197,15 @@
 !>>>  Vertical Diffusion
       DO ix = 1,Nx
         DO iy = 1,Ny
-          CALL SetupZCM(Nzb,ZLen,ZDF)
+          CALL SetupZCM(NzEarth,ZLen,ZDF)
           DO iz = 1,NzEarth
-            ZDIF(1,ix,iy,iz) = ZDF(1,iz)
-            ZDIF(2,ix,iy,iz) = ZDF(2,iz)
+            Cm%ZDIF(1,ix,iy,iz) = ZDF(1,iz)
+            Cm%ZDIF(2,ix,iy,iz) = ZDF(2,iz)
           ENDDO ! iy
         ENDDO ! iy
       ENDDO ! ix
 
+     deallocate(XDF,YDF,ZDF)
 
   END SUBROUTINE Setup1DCM ! Setup1DCM
 
@@ -183,17 +221,21 @@
       real (kind=prec)  cr,cl,difxc(Nx),difxr(Nx)
 
       integer ix
+      real (kind=prec)  D0,D1
+
+      D0 = 0.
+      D1 = 1.
 
       DO ix = 1,Nx
         cr = xlen
         cl = xlen
 
-        difxc(ix) = ONE + cr + cl
+        difxc(ix) = D1 + cr + cl
         difxr(ix) = -cr
       ENDDO ! ix
 
-      CALL ConstantMatrixR8(XDF,2,Nx,2,Nx,R_ZERO)
-
+      !CALL ConstantMatrixR8(XDF,2,Nx,2,Nx,D0)
+      XDF=D0
       DO ix = 2,Nx
         XDF(1,ix) = difxr(ix-1)
       ENDDO
@@ -222,21 +264,26 @@
 
   SUBROUTINE SetupYCM(Ny,ylen,YDF)
 
-      integer Ny,info,ygd(*)
+      integer Ny,info
       real (kind=prec)  YDF(2,Ny),ylen
       real (kind=prec)  cr,cl,difyc(Ny),difyr(Ny)
       integer iy
+      real (kind=prec)  D0,D1
+
+      D0 = 0.
+      D1 = 1.
+
 
       DO iy = 1,Ny
         cr = ylen
         cl = ylen
 
-        difyc(iy) = ONE + cr + cl
+        difyc(iy) = D1 + cr + cl
         difyr(iy) = -cr
       ENDDO ! iy
 
-      CALL ConstantMatrixR8(YDF,2,Ny,2,Ny,R_ZERO)
-
+      !CALL ConstantMatrixR8(YDF,2,Ny,2,Ny,D0)
+   YDF=D0
       DO iy = 2,Ny
         YDF(1,iy) = difyr(iy-1)
       ENDDO
@@ -266,21 +313,25 @@
 
   SUBROUTINE SetupZCM(Nz,zlen,ZDF)
 
-      integer Nz,info,zgd(*)
+      integer Nz,info
       real (kind=prec)  ZDF(2,Nz),zlen
       real (kind=prec)  cr,cl,difzc(Nz),difzr(Nz)
       integer iz
+      real (kind=prec)  D0,D1
+
+      D0 = 0.
+      D1 = 1.
 
       DO iz = 1,Nz
         cr = zlen
         cl = zlen
 
-        difzc(iz) = ONE + cr + cl
+        difzc(iz) = D1 + cr + cl
         difzr(iz) = -cr
       ENDDO ! iz
 
-      CALL ConstantMatrixR8(ZDF,2,Nz,2,Nz,R_ZERO)
-
+      !CALL ConstantMatrixR8(ZDF,2,Nz,2,Nz,D0)
+ZDF=D0
       DO iz = 2,Nz
         ZDF(1,iz) = difzr(iz-1)
       ENDDO
@@ -314,7 +365,7 @@
   SUBROUTINE SolveDiff(DTime,Cm,u2)
 
       integer, intent(in)                     :: DTime
-      type (mCov_t), intent(in)               :: Cm
+      type (modelCov_t), intent(in)               :: Cm
       type (rscalar), intent(inout)           :: u2
 
 
@@ -340,7 +391,7 @@
 
   SUBROUTINE X_Diff(Cm,u2)
 
-	  type (mCov_t), intent(in)      :: Cm
+	  type (modelCov_t), intent(in)      :: Cm
 	  type (rscalar), intent(inout)  :: u2
 
 
@@ -385,7 +436,7 @@
 
   SUBROUTINE Y_Diff(Cm,u2)
 
-	  type (mCov_t), intent(in)      :: Cm
+	  type (modelCov_t), intent(in)      :: Cm
 	  type (rscalar), intent(inout)  :: u2
 
 	  real (kind=prec), allocatable, dimension(:,:)   ::  YDF
@@ -429,7 +480,7 @@
 
   SUBROUTINE Z_Diff(Cm,u2)
 
-	  type (mCov_t), intent(in)      :: Cm
+	  type (modelCov_t), intent(in)      :: Cm
 	  type (rscalar), intent(inout)  :: u2
 
 	  real (kind=prec), allocatable, dimension(:,:)   ::  ZDF
@@ -446,20 +497,20 @@
 
       DO ix = 1,Nx
         DO iy = 1,Ny
-          DO iz = 1,Nzb
+          DO iz = 1,NzEarth
             uz(iz) = u2%v(ix,iy,iz)
             ZDF(1,iz) = Cm%ZDIF(1,ix,iy,iz)
             ZDF(2,iz) = Cm%ZDIF(2,ix,iy,iz)
           ENDDO ! iy
 
-          CALL DPBTRS('U',Nzb,1,1,ZDF,2,uz,ZMAX,info)
+          CALL DPBTRS('U',NzEarth,1,1,ZDF,2,uz,NzEarth,info)
           IF (info.NE.0) THEN
             WRITE(6,*) '!!! ATTENTION, ERROR IN DECOMPOSING MATRIX'
             WRITE(6,*) 'ERROR DECOMPOSE DIFFUSION MATRIX : ZDiff',info
             STOP
           ENDIF
 
-          DO iz = 1,Nzb
+          DO iz = 1,NzEarth
             u2%v(ix,iy,iz) = uz(iz)
           ENDDO ! iz
         ENDDO ! iy
@@ -473,4 +524,4 @@
 
 !...  Copyright (C) 2006 Weerachai Siripunvaraporn. All rights reserved.
 
-end module modelCov
+!end module modelCov

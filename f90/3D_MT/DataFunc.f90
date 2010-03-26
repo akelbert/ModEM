@@ -54,15 +54,17 @@ Contains
 
   ! Definition of the impedance elements:
   !   iDT=Full_Impedance
-  ! Z(1) = Zxx; Z(2) = Zxy; Z(3) = Zyx; Z(4) = Zyy
+  ! 			Z(1) = Zxx; Z(2) = Zxy; Z(3) = Zyx; Z(4) = Zyy
   !   iDT=Impedance_Plus_Hz
-  ! Z(5) = Zzx; Z(6) = Zzy in addition
+  ! 			Z(5) = Zzx; Z(6) = Zzy in addition
   !   iDT=Off_Diagonal_Impedance
-  !  Z(1) = Zxy, Z(2) = Zyx
-  !   iDT=Hz_Only
-  !  Z(1) = Tx, Z(2) = Ty
-  !   iDT=Inter_stations_TF
-  !  Z(1) = Mxx; Z(2) = Mxy; Z(3) = Myx; Z(4) = Myy
+  !  			Z(1) = Zxy, Z(2) = Zyx
+  !   iDT=Full_Vertical_Components
+  !  			Z(1) = Tx, Z(2) = Ty
+  !   iDT=Full_Interstation_TF
+  ! 		 	Z(1) = Mxx; Z(2) = Mxy; Z(3) = Myx; Z(4) = Myy
+  !   iDT=Off_Diagonal_Rho_Phi (Added on behalf of Kristina Tietze, GFZ-Potsdam)
+  !  			Z(1) = Rhoxy , Z(2) = Phixy, Z(3) = Rhoyx, Z(4) = Phiyx
   
   !  optional argument, useful for linearized impedance
   complex(kind=prec), intent(out), optional	:: Binv(2,2)
@@ -70,6 +72,7 @@ Contains
   !  local variables
   integer			:: iMode, i,j,xyz,ij
   real(kind=prec)	:: omega,x(3),x_ref(3)
+  complex(kind=prec)    :: tempZ(2)
   complex(kind=prec)	:: BB(3,2),EE(2,2),RR(2,2)
   complex(kind=prec)	:: det,i_omega,ctemp
   type(sparsevecC)		:: Lex,Ley,Lbx,Lby,Lbz,Lrx,Lry
@@ -255,7 +258,41 @@ Contains
 			              Z(ij) = BB(i,1)*RR(1,j)+BB(i,2)*RR(2,j)
 			           enddo
 			        enddo
-                  
+       case(Off_Diagonal_Rho_Phi)
+               x     = rxDict(iRX)%x          !Local site position (x,y,z)
+		     ! First set up interpolation functionals for Ex, Ey
+			  xyz = 1
+			  call EinterpSetUp(ef%grid,x,xyz,Lex)
+			  xyz = 2
+			  call EinterpSetUp(ef%grid,x,xyz,Ley)
+			 ! Then set up interpolation functionals for Bx, By      
+			  xyz = 1
+			  call BfromESetUp(ef%grid,omega,x,xyz,Lbx)
+			  xyz = 2
+			  call BfromESetUp(ef%grid,omega,x,xyz,Lby)
+			  ! loop over modes
+			  do iMode = 1,2
+			      ! electric fields
+			      EE(1,iMode) =  dotProd_noConj_scvector_f(Lex,ef%pol(iMode))
+			      EE(2,iMode) =  dotProd_noConj_scvector_f(Ley,ef%pol(iMode))
+			      ! magnetic fields
+			      BB(1,iMode) = dotProd_noConj_scvector_f(Lbx,ef%pol(iMode))
+			      BB(2,iMode) = dotProd_noConj_scvector_f(Lby,ef%pol(iMode))
+			 end do
+			 !invert horizontal B matrix using Kramer's rule.
+			  det = BB(1,1)*BB(2,2)-BB(1,2)*BB(2,1)
+			  ctemp = BB(1,1)
+			  BB(1,1) =  BB(2,2)/det
+			  BB(2,2) =  ctemp/det
+			  BB(1,2) = -BB(1,2)/det
+			  BB(2,1) = -BB(2,1)/det
+			        
+		       tempZ(1) = EE(1,1)*BB(1,2)+EE(1,2)*BB(2,2)
+		       tempZ(2) = EE(2,1)*BB(1,1)+EE(2,2)*BB(2,1)
+		       Z(1)   = abs(tempZ(1))**2*MU_0/omega
+		       z(2)   = atan2(ISIGN*imag(tempZ(1)),real(tempZ(1)))*R2D
+		       Z(3)   = abs(tempZ(2))**2*MU_0/omega
+		       Z(4)   = atan2(ISIGN*imag(tempZ(2)),real(tempZ(2)))*R2D                
     end select
 
   if(present(Binv)) then
@@ -429,7 +466,7 @@ Contains
            !  component in x row (interstation TF)
            Call linComb_sparsevecc(Lrx,c1,L1,c2,L(n)%L(k))
         elseif(predictedComp.eq.5) then
-           !  component in x row (interstation TF)
+           !  component in y row (interstation TF)
            Call linComb_sparsevecc(Lry,c1,L1,c2,L(n)%L(k))        
         endif
      enddo

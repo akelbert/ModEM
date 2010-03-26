@@ -56,14 +56,14 @@ Contains
      real(kind=prec), pointer, dimension(:)	:: temp_data,temp_error
      character(100)                         :: args(50)
 	 Integer, pointer, dimension(:,:)		:: stn_vec
-     Integer, pointer, dimension(:)			::nSite_vec,data_type_vec
-     integer								:: nargs,ios,per_counter,data_type
+     Integer, pointer, dimension(:)			::nSite_vec,data_type_vec	 
+     integer								:: nargs,ios,per_counter
+   
+     real(kind=prec), pointer, dimension(:,:,:,:) :: global_data,global_data_temp    
+	 real(kind=prec), pointer, dimension(:,:,:,:) :: global_error,global_error_temp 
+	 type(dataVecMTX_t)                    :: allData_temp   
 
-     real(kind=prec), pointer, dimension(:,:,:,:) :: global_data,global_data_temp
-	 real(kind=prec), pointer, dimension(:,:,:,:) :: global_error,global_error_temp
-	 type(dataVecMTX_t)                    :: allData_temp
-
-
+     
           ! First, set up the data type dictionary, if it's not in existence yet
       call setup_typeDict()
 	  max_nDt=size(typeDict)
@@ -87,73 +87,75 @@ Reading_all_file_loop: &
    do
               read(ioDat,'(A)', iostat=stat) line
               if(stat /= 0) exit Reading_all_file_loop     !End of the file
-
-              line=trim(line)
+              
+              line=trim(line) 
 		      call COMPACT(line)                           !Removes spaces between arrguments of the line
 		      call parse(line,' ',args,nargs)              !Counts and finds out the arrguments and number of arrguemnts in the line
-
+		      
 		      if (nargs==0) cycle						   ! If its an empty line---> ignor it
 
               !Check if it is a header line
               string_position=findstr(trim(args(1)),'#')
               if (string_position .eq. 1 )  cycle          !If the first character in the first argument is '#', ---> Header line (or comments line),ignor it
 
-
+              
               ! It is a line that contains data
 
- 		              line=trim(line)
+ 		              line=trim(line) 
 				      call COMPACT(line)                           !Removes spaces between arrguments of the line
-				      call parse(line,' ',args,nargs)              !Counts and finds out the arrguments and number of arrguemnts in the line
+				      call parse(line,' ',args,nargs)              !Counts and finds out the arrguments and number of arrguemnts in the line             
                             Data_Type_Key_word=args(1)
 					        read(args(2),*)Period
 					        stn_id_local=args(3)
 					        read(args(4:6),*)siteLoc_local(:)
-
+					        
   					        if (Data_Type_Key_word =='Full_Interstation_TF') then
-  					            data_type = Full_Interstation_TF
-					            nComp=typeDict(data_type)%nComp
+  					            datatype = Full_Interstation_TF
+					            nComp=typeDict(datatype)%nComp
 					            stn_id_ref=args(7)
 					            read(args(8:10),*)siteLoc_ref(:)
 					            units_in_file=args(11)
 						        read(args(12:19),*)temp_data(1:8)
 						        read(args(20:23),*)(temp_error(j),j=1,8,2)
 						        do j=2,8,2
-						         temp_error(j)= temp_error(j-1)
+						         temp_error(j)= temp_error(j-1)	
 						        end do
-						        call  update_rxDict(siteLoc_local,stn_id_local,iRx,new_site,siteLoc_ref,stn_id_ref)
+						        call  update_rxDict(siteLoc_local,stn_id_local,iRx,new_site,siteLoc_ref,stn_id_ref)  					        
 					        elseif (Data_Type_Key_word =='Full_Impedance') then
-							    data_type = Full_Impedance
-					            nComp=typeDict(data_type)%nComp
+							    datatype = Full_Impedance	
+					            nComp=typeDict(datatype)%nComp
 					            units_in_file=args(7)
 						        read(args(8:15),*)temp_data(1:8)
 						        read(args(16:19),*)(temp_error(j),j=1,8,2)
 						        do j=2,8,2
-						         temp_error(j)= temp_error(j-1)
+						         temp_error(j)= temp_error(j-1)	
 						        end do
-						         call  update_rxDict(siteLoc_local,stn_id_local,iRx,new_site)
+						         call  update_rxDict(siteLoc_local,stn_id_local,iRx,new_site) 					        
 						    elseif (Data_Type_Key_word =='Off_Diagonal_Impedance') then
-							    data_type = Off_Diagonal_Impedance
-					            nComp=typeDict(data_type)%nComp
+							    datatype = Off_Diagonal_Impedance	
+					            nComp=typeDict(datatype)%nComp
 					            units_in_file=args(7)
 						        read(args(8:15),*)temp_data(1:4)
 						        read(args(16:19),*)(temp_error(j),j=1,4,2)
 						        do j=2,4,2
-						         temp_error(j)= temp_error(j-1)
+						         temp_error(j)= temp_error(j-1)	
 						        end do
-						        call  update_rxDict(siteLoc_local,stn_id_local,iRx,new_site)
+						        call  update_rxDict(siteLoc_local,stn_id_local,iRx,new_site)       
 					        elseif (Data_Type_Key_word =='Full_Vertical_Components') then
-						        data_type = Full_Vertical_Components
-						        nComp=typeDict(data_type)%nComp
+						        datatype = Full_Vertical_Components
+						        nComp=typeDict(datatype)%nComp
 					            units_in_file=args(7)
 						        read(args(8:11),*)temp_data(1:4)
 						        read(args(12:13),*)(temp_error(j),j=1,4,2)
 						        do j=2,4,2
-						         temp_error(j)= temp_error(j-1)
+						         temp_error(j)= temp_error(j-1)	
 						        end do
-						         call  update_rxDict(siteLoc_local,stn_id_local,iRx,new_site)
+							         call  update_rxDict(siteLoc_local,stn_id_local,iRx,new_site) 
 					        end if
+
                             call  update_txDict(Period,2,iTx,new_period)
 
+                            							
                              if(new_period .or. new_site ) then
 							     nTx=size(global_data,1)
 								 nRx=size(global_data,2)
@@ -166,7 +168,7 @@ Reading_all_file_loop: &
 							     if (associated (global_data))  deallocate(global_data)
 								 if (associated (global_error))  deallocate(global_error)
 							     nTx=size(txDict)
-								 nRx=size(rxDict)
+								 nRx=size(rxDict)								 
                                  allocate(global_data(nTx,nRx,max_nDt,max_nComp))
 								 allocate(global_error(nTx,nRx,max_nDt,max_nComp))
 								 global_data=0.0
@@ -184,34 +186,34 @@ Reading_all_file_loop: &
 										do j=2,nComp,2
 											temp_data(j)= - temp_data(j)
 										end do
-									 end if
-                            call get_nComp_DT(trim(Data_Type_Key_word),dataType,nComp)
-							SI_factor = ImpUnits(units_in_file,typeDict(dataType)%units(1)) !Assuming there is NO mixing in the data types: EACH DATA TYPE HAS ITS OWN UNITS
+									 end if							 
+                            !call get_nComp_DT(trim(Data_Type_Key_word),dataType,nComp)
+							SI_factor = ImpUnits(units_in_file,typeDict(datatype)%units(1)) !Assuming there is NO mixing in the data types: EACH DATA TYPE HAS ITS OWN UNITS
                             global_data(iTx,iRx,dataType,1:8)  = SI_factor*temp_data(1:8)
 							global_error(iTx,iRx,dataType,1:8) = SI_factor*temp_error(1:8)
                             if(stat /= 0) exit Reading_all_file_loop     !End of the file
 
   end do Reading_all_file_loop
     close(ioDat)
-
+	
 	nTx =size(txDict)
 	nRx= size(rxDict)
 
-
+    
 	 allocate(nSite_vec(max_nDt))
      allocate(data_type_vec(max_nDt))
 	 allocate(stn_vec(nRx,max_nDt))
-
-	call create_dataVecMTX(nTx,allData)
+	 
+	call create_dataVecMTX(nTx,allData) 
   do iTx=1,nTx
-        nDt=0
+        nDt=0 
      do iDt=1,max_nDt
         nSite_vec(iDt)=0
   		do iRx=1,nRx
  			  if( global_data(iTx,iRx,iDt,1) .ne. 0  ) then
  			   nSite_vec(iDt)=nSite_vec(iDt)+1
 			   stn_vec(nSite_vec(iDt),iDt)=iRx
- 			  end if
+ 			  end if 
  		end do
 			  if (nSite_vec(iDt) .ne. 0) then
 			  nDt=nDt+1
@@ -224,33 +226,32 @@ Reading_all_file_loop: &
 			errorBar = .true.
 			nComp=typeDict(data_type_vec(iDt))%nComp
 			nSite=nSite_vec(data_type_vec(iDt))
-		    call create_dataVec(nComp,nSite,allData%d(iTx)%data(iDt),isComplex,errorBar)
+		    call create_dataVec(nComp,nSite,allData%d(iTx)%data(iDt),isComplex,errorBar)			
 			     do iSite=1,nSite
 				    iRx=stn_vec(isite,data_type_vec(iDt))
 				    do icomp=1,nComp
 				      allData%d(iTx)%data(iDT)%value(icomp,iSite) =  global_data(iTx,iRx,data_type_vec(iDt),icomp)
 				      allData%d(iTx)%data(iDt)%error(icomp,iSite) =  global_error(iTx,iRx,data_type_vec(iDt),icomp)
-                    end do
-				   allData%d(iTx)%data(iDt)%rx(iSite) = iRx
-				 end do
+                    end do				   
+				   allData%d(iTx)%data(iDt)%rx(iSite) = iRx   
+				 end do  
 				 allData%d(iTx)%data(iDt)%dataType=data_type_vec(iDt)
 				 allData%d(iTx)%data(iDt)%tx=iTx
-
+				
              end do
-			 allData%d(iTx)%allocated = .true.
-			 allData%d(iTx)%tx=iTx
+			 allData%d(iTx)%allocated = .true.	
+			 allData%d(iTx)%tx=iTx	 
 			 allData%d(iTx)%nDt=nDt
   end do
   allData%allocated = .true.
-
+  
   ! this here just to test the output with the old format
   units_in_file= '[V/m]/[A/m]'
 
  !Clean temp vectors
- deallocate(global_data,global_error,nSite_vec,data_type_vec,stn_vec)
-
-
-   end subroutine read_Z_list_format
+ deallocate(global_data,global_error,nSite_vec,data_type_vec,stn_vec)                   
+     
+   end subroutine read_Z_list_format     
 !**********************************************************************
 ! writes impedance file in ASCII format (old format)
 
@@ -367,6 +368,10 @@ Reading_all_file_loop: &
      real(kind=prec)                        :: Period
      logical      							:: conjugate, errorBar, isComplex
      character(400) 						:: temp,header
+     character(100)                         :: args(50)
+     integer								:: nargs,refe_site_index
+     character(100)                         :: Ref_site
+     
 
       ! First, set up the data type dictionary, if it's not in existence yet
       call setup_typeDict()
@@ -377,7 +382,18 @@ Reading_all_file_loop: &
       read(ioDat,'(a7,a20)') temp,units_in_file
       read(ioDat,'(a17,i3)') temp,sign_in_file
       read(ioDat,*)
-
+!***********************************************************************************************
+       !Check if the header (the info_in_file string) contains info. about the referenace site
+      ! NOTE: this will not effect the old format.
+              Ref_site=''
+   		      call COMPACT(info_in_file)                           !Removes spaces between arrguments of the line
+		      call parse(info_in_file,' ',args,nargs)              !Counts and finds out the arrguments and number of arrguemnts in the line
+              do i=1,nargs
+               if (trim(args(i))== 'Ref_site=') then
+               Ref_site=args(i+1)
+               end if
+              end do 
+ !***********************************************************************************************     
       if (sign_in_file == ISIGN) then
         conjugate = .false.
       else if (abs(sign_in_file) == 1) then
@@ -404,14 +420,19 @@ Reading_all_file_loop: &
          read(ioDat,*) (siteLoc(j,1),j=1,nSite)
          read(ioDat,*) (siteLoc(j,2),j=1,nSite)
          read(ioDat,*) (siteLoc(j,3),j=1,nSite)
-
+         
+         read(ioDat,'(a400)') header ! header line: need to parse this
          ! create dataVec object, read in data
-         isComplex = .true.
-         errorBar = .true.
+          if (findstr(trim(header),'Rhoxy') > 0 ) then 
+            isComplex = .false.
+          else           
+            isComplex = .true.
+          end if
+             errorBar = .true.
          call create_dataVec(nComp,nSite,Data(i),isComplex,errorBar)
          nData  = nData + nComp*nSite
 
-         read(ioDat,'(a400)') header ! header line: need to parse this
+
 
          ! set data type and its SI units
          Data(i)%dataType = ImpType(nComp,header)
@@ -454,6 +475,21 @@ Reading_all_file_loop: &
          		Data(i)%rx(k) = iRx
          	end do
          end if
+    ! Update the receiver dictionary with the refernace site, if required     
+         if (Ref_site .ne. '') then
+    !First, get the refe site index in the receiver dictionary
+    refe_site_index=0
+	           do k=1,size(rxDict)
+	             if (rxDict(k)%id == Ref_site) then
+	              refe_site_index=k
+	             end if 
+	           end do
+	           do k=1,size(rxDict)
+	               call update_rxDict(rxDict(k)%x,rxDict(k)%id,iRx,new_receiver,rxDict(refe_site_index)%x,Ref_site)
+	           end do
+         end if
+           
+         
          deallocate(siteLoc,siteIDs,SI_factor,STAT=istat)
 
 	  end do

@@ -72,6 +72,8 @@ module dataTypes
   integer, parameter   :: Off_Diagonal_Impedance = 3
   integer, parameter   :: Full_Vertical_Components = 4
   integer, parameter   :: Full_Interstation_TF = 5
+  !(Added on behalf of Kristina Tietze, GFZ-Potsdam)
+  integer, parameter   :: Off_Diagonal_Rho_Phi = 6 
 Contains
 
 
@@ -81,7 +83,7 @@ Contains
 
   	 integer     :: istat
 
-     allocate(typeDict(5),STAT=istat)
+     allocate(typeDict(6),STAT=istat)
 
      typeDict(Full_Impedance)%name = 'Full_Impedance'
      typeDict(Full_Impedance)%isComplex = .true.
@@ -196,6 +198,22 @@ Contains
      typeDict(Full_Interstation_TF)%units(7) = '[]'
      typeDict(Full_Interstation_TF)%units(8) = '[]'
      
+     
+ 	 typeDict(Off_Diagonal_Rho_Phi)%name = 'Off Diagonal Rho Phi'
+     typeDict(Off_Diagonal_Rho_Phi)%isComplex = .false.
+     typeDict(Off_Diagonal_Rho_Phi)%calcQ     = .false.
+     typeDict(Off_Diagonal_Rho_Phi)%tfType     = Off_Diagonal_Rho_Phi        
+     typeDict(Off_Diagonal_Rho_Phi)%nComp     = 4
+     allocate(typeDict(Off_Diagonal_Rho_Phi)%id(4),STAT=istat)
+     typeDict(Off_Diagonal_Rho_Phi)%id(1) = 'Rhoxy'
+     typeDict(Off_Diagonal_Rho_Phi)%id(2) = 'Phixy'
+     typeDict(Off_Diagonal_Rho_Phi)%id(3) = 'Rhoyx'
+     typeDict(Off_Diagonal_Rho_Phi)%id(4) = 'Phiyx'   
+     allocate(typeDict(Off_Diagonal_Rho_Phi)%units(4),STAT=istat)
+     typeDict(Off_Diagonal_Rho_Phi)%units(1)  = '[]'
+     typeDict(Off_Diagonal_Rho_Phi)%units(2)  = '[]'
+     typeDict(Off_Diagonal_Rho_Phi)%units(3)  = '[]'
+     typeDict(Off_Diagonal_Rho_Phi)%units(4)  = '[]'   
   end subroutine setup_typeDict
 
 ! **************************************************************************
@@ -292,14 +310,20 @@ Contains
 
     select case (nComp)
        case(8)
-          dataType =  Full_Impedance
+          if (index(compids(1),'Mxx')>0) then
+             dataType =  Full_Interstation_TF
+          else
+             dataType =  Full_Impedance
+          end if       
        case(12)
           dataType =  Impedance_Plus_Hz
        case(4)
           if (index(compids(1),'Tx')>0) then
              dataType =  Full_Vertical_Components
-          else
+          elseif (index(compids(1),'Zxy')>0) then
              dataType =  Off_Diagonal_Impedance
+          elseif (index(compids(1),'Rhoxy')>0) then
+             dataType =  Off_Diagonal_Rho_Phi
           end if
     end select
 
@@ -313,6 +337,8 @@ Contains
 
   end function ImpType
 
+  
+! Maybe it is not required anymore.  
   subroutine get_nComp_DT(DT_word,dataType,nComp)
 
     character(*), intent(in)        :: DT_word
@@ -341,7 +367,7 @@ Contains
   end subroutine get_nComp_DT
   
 
-  
+ ! Maybe it is not required anymore.   
  subroutine check_header_order(nComp,dataType,header)
  	 integer, intent(in)   	 	 :: nComp
  	 integer, intent(in)   	 	 :: dataType
