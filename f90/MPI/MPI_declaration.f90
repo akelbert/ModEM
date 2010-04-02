@@ -49,6 +49,8 @@ Integer                        :: eAll_location(200)
 Integer                        :: per_index_counter=0
 Integer                        :: per_index_vector(100)
 integer                        :: prec_MPI
+real*8, pointer, dimension(:)        :: model_para_vec
+
 #endif
  end  Module MPI_declaration
   

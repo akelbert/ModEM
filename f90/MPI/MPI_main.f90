@@ -387,11 +387,16 @@ Subroutine Master_job_JmultT(sigma,d,dsigma,eAll)
                        which_pol=worker_job_task%pol_index
                         
         ! Receive dsigma_temp from who
-                  call create_modelParam_t_mpi(dsigma_temp)
-                  call MPI_RECV(dsigma_temp,1 ,modelParam_t_mpi, who, FROM_WORKER,MPI_COMM_WORLD, STATUS, ierr)  
-                  call linComb_modelParam(ONE,dsigma,ONE,dsigma_temp,dsigma)       
-                  call MPI_TYPE_FREE (modelParam_t_mpi, IERR)  
-                      
+                  !call create_modelParam_t_mpi(dsigma_temp)
+                  !call MPI_RECV(dsigma_temp,1 ,modelParam_t_mpi, who, FROM_WORKER,MPI_COMM_WORLD, STATUS, ierr)  
+                  !call linComb_modelParam(ONE,dsigma,ONE,dsigma_temp,dsigma)       
+                  !call MPI_TYPE_FREE (modelParam_t_mpi, IERR)  
+                  call create_model_param_place_holder(dsigma)
+                  m_dimension=size(model_para_vec)
+                  call MPI_RECV(model_para_vec(1),m_dimension ,MPI_REAL8, who, FROM_WORKER,MPI_COMM_WORLD, STATUS, ierr)  
+                  call set_model_para_values(dsigma_temp) 
+                  call linComb_modelParam(ONE,dsigma,ONE,dsigma_temp,dsigma)
+                     
                               
                   write(file_id,*)'JmultT: Recv. dsigma. for Per # ',which_per ,' from ', who
 
@@ -614,11 +619,15 @@ else
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
  
-        call copy_ModelParam(sigma_temp,sigma)
-        call create_modelParam_t_mpi(sigma_temp)
-               
-        call MPI_BCAST(sigma_temp,1,modelParam_t_mpi,0, MPI_COMM_WORLD,ierr)
-        call MPI_TYPE_FREE (modelParam_t_mpi, IERR)
+        call create_model_param_place_holder(sigma)
+        !call copy_ModelParam(sigma_temp,sigma)
+        !call create_modelParam_t_mpi(sigma_temp)
+         call get_model_para_values(sigma)      
+        !call MPI_BCAST(sigma_temp,1,modelParam_t_mpi,0, MPI_COMM_WORLD,ierr)
+        buffer_size=size(model_para_vec)
+        call MPI_BCAST(model_para_vec(1),buffer_size,MPI_REAL8,0, MPI_COMM_WORLD,ierr)
+
+                !call MPI_TYPE_FREE (modelParam_t_mpi, IERR)
 end if
         
      
@@ -733,7 +742,7 @@ Subroutine Master_job_Distribute_Data_Size(d,sigma0)
             worker_job_task%what_to_do='Distribute Data_Size'
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
-
+        call create_model_param_place_holder(sigma0)
 
 
 end Subroutine Master_job_Distribute_Data_Size
@@ -961,13 +970,20 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'JmultT') then
 
             ! Send Info. about the current worker.    
                       call MPI_SEND(worker_job_task,1,worker_job_task_mpi, 0,FROM_WORKER, MPI_COMM_WORLD, ierr) 
+
+                     
+                     call create_model_param_place_holder(dsigma)
+                     m_dimension=size(model_para_vec)  
+                     call get_model_para_values(dsigma)
+                     call MPI_SEND(model_para_vec(1),m_dimension,MPI_REAL8,0, FROM_WORKER,MPI_COMM_WORLD, ierr)
+                     !sigma0 = sigma_temp
 !Keep a copy of sigma0
-                        sigma_temp = sigma0
-                        sigma0     = dsigma                  
+                        !sigma_temp = sigma0
+                        !sigma0     = dsigma                  
 ! Send sigma0, which is now dsigma11, to the Master
-                       call MPI_SEND(sigma0,1,modelParam_t_mpi_sing,0, FROM_WORKER,MPI_COMM_WORLD, ierr)
+                       !call MPI_SEND(sigma0,1,modelParam_t_mpi_sing,0, FROM_WORKER,MPI_COMM_WORLD, ierr)
 ! Get back sigma0                        
-                       sigma0 = sigma_temp
+                       !sigma0 = sigma_temp
    per_index_vector=0     
                         
 elseif (trim(worker_job_task%what_to_do) .eq. 'Jmult') then
@@ -1027,9 +1043,11 @@ call copy_dataVecMTX(d ,d_local)
 elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute Model') then
   
 !Get the recent model from Master and save it in sigma0
-
-   call MPI_BCAST(sigma0,1,modelParam_t_mpi_sing,0, MPI_COMM_WORLD,ierr)
-   
+m_dimension=size(model_para_vec)
+   !call MPI_BCAST(sigma0,1,modelParam_t_mpi_sing,0, MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(model_para_vec(1),m_dimension,MPI_REAL8,0, MPI_COMM_WORLD,ierr) 
+    call set_model_para_values(sigma0) 
+     
 elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute delSigma') then
   
 !Get delsigma from master
@@ -1043,7 +1061,7 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute userdef control') then
         
         !call initUserCtrl(ctrl)
 		!call create_userdef_control_MPI(ctrl)
-		call MPI_BCAST(ctrl,1,userdef_control_MPI,0, MPI_COMM_WORLD,ierr)
+	  call MPI_BCAST(ctrl,1,userdef_control_MPI,0, MPI_COMM_WORLD,ierr)
       call initGlobalData(ctrl)
       call setGrid(grid)
       call copy_dataVecMTX(d ,allData)
@@ -1059,9 +1077,10 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute Data_Size') then
 !When sending /receiving the model parameter to/from the Master, use modelParam_t_mpi as an MPI derived
 !data type. However, the model parameter that must be transfered must be first copied to sigma0, since
 !"modelParam_t_mpi" is created using sigma0.  
-   
-        call create_modelParam_t_mpi(sigma0)
-        modelParam_t_mpi_sing=modelParam_t_mpi      
+        call create_model_param_place_holder(sigma0)
+        
+        !call create_modelParam_t_mpi(sigma0)
+        !modelParam_t_mpi_sing=modelParam_t_mpi      
 
                                                 
 elseif (trim(worker_job_task%what_to_do) .eq. 'Send eAll to Master' ) then 
@@ -1302,9 +1321,13 @@ subroutine create_userdef_control_MPI(ctrl)
       
       
       call MPI_Address(ctrl,                	address1(0), ierr)
+
       call MPI_Address(ctrl%job,             	address1(1), ierr)
+
       call MPI_Address(ctrl%lambda,          	address1(2), ierr)
+
       call MPI_Address(ctrl%rFile_Cov,        	address1(3), ierr)
+
       !call MPI_GET_ADDRESS(worker_job_task%what_to_do, address1(1), ierr) 
 
 

@@ -57,10 +57,10 @@ program Mod3DMT
      
       
 #ifdef MPI
-       call Master_job_Distribute_userdef_control(cUserDef) 
+       call Master_job_Distribute_userdef_control(cUserDef)
        call Master_job_Distribute_Data_Size(allData,sigma0)
        call Master_job_Distribute_Data(allData)
-       call Master_job_Distribute_Model(sigma0)       
+       call Master_job_Distribute_Model(sigma0)     
 #endif
      
 	 ! Start the (portable) clock
@@ -175,7 +175,7 @@ program Mod3DMT
         write(0,*) 'No job ',trim(cUserDef%job),' defined.'
 
      end select
-
+9999 continue
 #ifdef MPI       
 		close(2000)
 #endif
