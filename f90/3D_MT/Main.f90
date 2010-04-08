@@ -27,8 +27,6 @@ module Main
   ! forward solver control defined in EMsolve3D
   type(EMsolve_control)  :: solverParams
 
-  integer, save                                             :: output_level
-
   ! this is used to set up the numerical grid in SensMatrix
   type(grid_t), save	        :: grid
 
@@ -73,6 +71,10 @@ Contains
 	logical                                     :: exists
 	character(80)                               :: paramtype,header
 	integer                                     :: nTx
+
+	!--------------------------------------------------------------------------
+	! Set global output level stored with the file units
+	output_level = cUserDef%output_level
 
 	!--------------------------------------------------------------------------
 	! Check whether model parametrization file exists and read it, if exists
@@ -123,6 +125,20 @@ Contains
        else
           call create_CmSqrt(sigma0)
        end if
+	   inquire(FILE=cUserDef%rFile_dModel,EXIST=exists)
+	   if (exists) then
+	      call deall_grid(grid)
+	   	  call read_modelParam(grid,dsigma,cUserDef%rFile_dModel)
+	      if (output_level > 0) then
+	        write(0,*) 'Using the initial model perturbations from file ',trim(cUserDef%rFile_dModel)
+	      endif
+	   else
+	      dsigma = sigma0
+	      call zero_modelParam(dsigma)
+	      if (output_level > 0) then
+	        write(0,*) 'Starting search from the prior model ',trim(cUserDef%rFile_Model)
+	      endif
+	   end if
        select case (cUserDef%search)
        case ('NLCG')
        case ('DCG')
@@ -145,42 +161,17 @@ Contains
     end select
 
 	!--------------------------------------------------------------------------
-	!  Set the level of output based on the user input
-	select case (cUserDef%verbose)
-	case ('debug')
-	  print *,'Output all information including debugging lines.'
-	  output_level = 5
-	case ('full')
-	  print *,'Output full information to screen and to files.'
-	  output_level = 4
-	case ('regular')
-	  print *,'Output information to files, and progress report to screen (default).'
-	  output_level = 3
-	case ('compact')
-	  print *,'Output information to files, and compact summary to screen.'
-	  output_level = 2
-	case ('result')
-	  print *,'Output information to files, and result to screen.'
-	  output_level = 1
-	case ('none')
-	  print *,'Output nothing at all except result to screen and to files.'
-	  output_level = 0
-	case default
-	  output_level = 3
-	end select
-
-	!--------------------------------------------------------------------------
 	!  Only write out these files if the output file names are specified
     write_model = .false.
-    if (len_trim(cUserDef%wFile_Model)>0) then
+    if (len_trim(cUserDef%wFile_Model)>1) then
        write_model = .true.
     end if
     write_data = .false.
-    if (len_trim(cUserDef%wFile_Data)>0) then
+    if (len_trim(cUserDef%wFile_Data)>1) then
        write_data = .true.
     end if
     write_EMsoln = .false.
-    if (len_trim(cUserDef%wFile_EMsoln)>0) then
+    if (len_trim(cUserDef%wFile_EMsoln)>1) then
        write_EMsoln = .true.
     end if
 

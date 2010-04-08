@@ -83,8 +83,10 @@ program Mod2DMT
 
      case (INVERSE)
      	if (trim(cUserDef%search) == 'NLCG') then
+            ! sigma1 contains mHat on input (zero = starting from the prior)
         	write(*,*) 'Starting the NLCG search...'
-        	call NLCGsolver(allData,cUserDef%lambda,sigma0,sigma1,cUserDef%delta)
+        	sigma1 = dsigma
+        	call NLCGsolver(allData,cUserDef%lambda,sigma0,sigma1,cUserDef%rFile_invCtrl)
         else
         	write(*,*) 'Inverse search ',trim(cUserDef%search),' not yet implemented. Exiting...'
         	stop

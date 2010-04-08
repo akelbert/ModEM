@@ -28,6 +28,8 @@ public  :: NLCGsolver
      real (kind=prec)	:: rmsTol
      ! the condition to identify when the inversion stalls
      real (kind=prec)   :: fdiffTol
+     ! initial value of lambda (will not override the NLCG input argument)
+     real (kind=prec)   :: lambda
      ! exit if lambda < lambdaTol approx. 1e-4
      real (kind=prec)   :: lambdaTol
      ! set lambda_i = k * lambda_{i-1} when the inversion stalls
@@ -72,6 +74,8 @@ Contains
      iterControl%rmsTol  = 1.05
      ! inversion stalls when abs(rms - rmsPrev) < fdiffTol (2e-3 works well)
      iterControl%fdiffTol = 2.0e-3
+     ! initial value of lambda (will not override the NLCG input argument)
+     iterControl%lambda = 1.0
      ! exit if lambda < lambdaTol approx. 1e-4
      iterControl%lambdaTol = 1.0e-4
      ! set lambda_i = k * lambda_{i-1} when the inversion stalls
@@ -87,11 +91,59 @@ Contains
      ! optional relaxation parameter (Renormalised Steepest Descent algorithm)
      iterControl%gamma = 0.99
      ! model and data output file name
-     iterControl%fname = 'ModEM'
+     iterControl%fname = 'Modular'
      ! fid for output files (in the future will not need this)
      iterControl%fid = 30
 
    end subroutine set_NLCGiterControl
+
+
+   ! ***************************************************************************
+   ! * read_NLCGiterControl reads the inverse solver configuration from file
+
+   subroutine read_NLCGiterControl(rFile,iterControl,fileExists)
+
+    character(*), intent(in)		        :: rFile
+	type(NLCGiterControl_t), intent(inout)	:: iterControl
+	logical, intent(out), optional          :: fileExists
+    integer									:: ios
+	logical                             	:: exists
+	character(20)							:: string
+
+    ! Initialize inverse solver configuration
+
+    call set_NLCGiterControl(iterControl)
+
+    inquire(FILE=rFile,EXIST=exists)
+    if (present(fileExists)) then
+       fileExists = exists
+    end if
+
+    if (.not. exists) then
+       return
+    else
+       write(*,*) 'Reading inverse configuration from file ',trim(rFile)
+    end if
+
+    open (unit=ioInvCtrl,file=rFile,status='old',iostat=ios)
+
+    if(ios/=0) then
+       write(0,*) 'Error opening file: ', rFile
+    end if
+
+    ! This is the list of options specified in the startup file
+
+    read (ioInvCtrl,'(a36,a80)') string,iterControl%fname;
+    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%lambda;
+    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%startdm;
+    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%fdiffTol;
+    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%rmsTol;
+    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%lambdaTol;
+    read (ioInvCtrl,'(a36,i4)') string,iterControl%maxIter;
+
+    close(ioInvCtrl)
+
+   end subroutine read_NLCGiterControl
 
 
 !**********************************************************************
@@ -347,7 +399,7 @@ Contains
    end subroutine CmSqrtMult
 
 !**********************************************************************
-   subroutine NLCGsolver(d,lambda,m0,m,startdm)
+   subroutine NLCGsolver(d,lambda,m0,m,fname)
 
    ! computes inverse solution minimizing penalty functional
    !   for fixed value of regularization parameter, using
@@ -372,10 +424,11 @@ Contains
    type(modelParam_t), intent(in)		       :: m0
    !  m is solution parameter ... on input m contains starting guess
    type(modelParam_t), intent(inout)	       :: m
-   !  initial step size in the line search direction in model units
-   real(kind=prec), intent(inout), optional  :: startdm
    !  flavor is a string that specifies the algorithm to use
-   ! character(80), intent(in)               :: flavor
+   character(*), intent(in), optional        :: fname
+   !  initial step size in the line search direction in model units
+   real(kind=prec)                           :: startdm
+   !  flavor is a string that specifies the algorithm to use
    character(80)                           :: flavor = 'Cubic'
 
    !  local variables
@@ -385,26 +438,35 @@ Contains
    real(kind=prec)		:: value, valuePrev, rms, rmsPrev, alpha, beta, gnorm, mNorm
    real(kind=prec)      :: grad_dot_h, g_dot_g, g_dot_gPrev, gPrev_dot_gPrev, g_dot_h
    integer				:: iter, nCG, nLS, nfunc
+   logical              :: ok
    character(3)         :: iterChar
-   character(100)       :: modelFile, gradFile, dataFile, resFile
+   character(100)       :: mFile, mHatFile, gradFile, dataFile, resFile
    type(EMsolnMTX_t)      :: eAll
 
-   call set_NLCGiterControl(iterControl)
+   if (present(fname)) then
+      call read_NLCGiterControl(fname,iterControl,ok)
+      if (ok) then
+         lambda = iterControl%lambda
+      end if
+   else
+      call set_NLCGiterControl(iterControl)
+   end if
 
    ! initialize the line search
    alpha = iterControl%alpha_1
+   startdm = iterControl%startdm
 
-   !if (.not.present(flavor)) flavor = 'Cubic'
-
-   if (.not.present(startdm)) then
-      startdm = iterControl%startdm
-   end if
+   write(*,'(a41,es7.0)') 'The initial damping parameter lambda is ',lambda
    write(*,'(a55,f9.6)') 'The initial line search step size (in model units) is ',startdm
 
+
    ! starting from the prior hardcoded by setting mHat = 0 and m = m0
-   m = m0
-   mHat = m0
-   call zero(mHat)
+   ! m = m0
+   ! mHat = m0
+   ! call zero(mHat)
+
+   ! starting model contains the rough deviations from the prior
+   mHat = m
 
    !  compute the penalty functional and predicted data
    call func(lambda,d,m0,mHat,value,mNorm,dHat,eAll,rms)
@@ -414,8 +476,10 @@ Contains
    ! compute gradient of the full penalty functional
    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
    write(iterChar,'(i3.3)') 0
-   gradFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.grt'
-   call write_modelParam(grad,trim(gradFile))
+   if (output_level > 4) then
+     gradFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.grt'
+     call write_modelParam(grad,trim(gradFile))
+   end if
 
    ! update the initial value of alpha if necessary
    gnorm = sqrt(dotProd(grad,grad))
@@ -475,16 +539,26 @@ Contains
       call CmSqrtMult(mHat,m_minus_m0)
    	  call linComb(ONE,m_minus_m0,ONE,m0,m)
    	  write(iterChar,'(i3.3)') iter
-   	  modelFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.cpr'
-      call write_modelParam(m,trim(modelFile))
-   	  dataFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.imp'
-      call write_dataVecMTX(dHat,trim(dataFile))
+   	  if (output_level > 1) then
+   	    mFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.rho'
+        call write_modelParam(m,trim(mFile))
+      end if
+   	  if (output_level > 2) then
+   	    mHatFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.prm'
+        call write_modelParam(mHat,trim(mHatFile))
+      end if
+   	  if (output_level > 2) then
+   	    dataFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.imp'
+        call write_dataVecMTX(dHat,trim(dataFile))
+      end if
       ! compute residual for output: res = (d-dHat)/err
-      res = d
-      call linComb(ONE,d,MinusONE,dHat,res)
-      call normalize_dataVecMTX(res,1)
-   	  resFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.res'
-      call write_dataVecMTX(res,trim(resFile))
+   	  if (output_level > 2) then
+        res = d
+        call linComb(ONE,d,MinusONE,dHat,res)
+        call normalize_dataVecMTX(res,1)
+   	    resFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.res'
+        call write_dataVecMTX(res,trim(resFile))
+      end if
 
 	  ! if alpha is too small, we are not making progress: update lambda
       if (abs(rmsPrev - rms) < iterControl%fdiffTol) then

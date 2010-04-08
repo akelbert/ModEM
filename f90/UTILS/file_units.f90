@@ -4,6 +4,9 @@ module file_units
 
   implicit none
 
+  ! User-defined parameter that sets the level of output
+  integer, save									:: output_level=0
+
   ! Startup and control files
   integer, parameter							:: ioStartup=101
   integer, parameter							:: ioFwdCtrl=105

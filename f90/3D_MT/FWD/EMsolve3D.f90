@@ -52,9 +52,9 @@ module EMsolve3D
   ! number of QMR iterations for each call to divergence correction:
   integer, parameter    ::              IterPerDivCorDef = 20
   ! maximum number of divergence correction calls allowed
-  integer, parameter    ::              MaxDivCorDef = 50
+  integer, parameter    ::              MaxDivCorDef = 100
   ! maximum number of PCG iterations for divergence correction
-  integer, parameter    ::              MaxIterDivCorDef = 30
+  integer, parameter    ::              MaxIterDivCorDef = 50
   ! misfit tolerance for convergence of EMsolve algorithm
   real(kind=prec), parameter       ::      tolEMDef = 1E-7
   ! misfit tolerance for convergence of divergence correction solver
@@ -281,7 +281,7 @@ Contains
 
     end do loop
 
-    write (0, *) 'finished solving:', nIterTotal, EMrelErr(nIterTotal)
+    write (*,*) 'finished solving:', nIterTotal, EMrelErr(nIterTotal)
 
     !  After solving symetrized system, need to do different things for
     !   transposed, standard cases

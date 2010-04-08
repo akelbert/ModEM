@@ -228,7 +228,7 @@ Contains
    do iMode = 1,e%nPol
       comb%b(imode)%adj = FWDorADJ
 			write(*,'(a12,a3,a18,es12.6,a10,i2)') 'Solving the ',FWDorADJ, &
-				' problem for freq ',omega/(2*PI),' & mode # ',imode
+				' problem for period ',(2*PI)/omega,' secs & mode # ',imode
       call FWDsolve3d(comb%b(imode),omega,e%pol(imode))
    enddo
 
