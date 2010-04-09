@@ -87,12 +87,13 @@ Contains
        ! Finish setting up the grid (if that is not done in the read subroutine)
        call setup_grid(grid)
 
-       !  set solver control (currently using defaults)
-       solverParams%UseDefaults= .true.
-       call setEMsolveControl(solverParams)
 	else
 	  call warning('No input model parametrization')
 	end if
+
+	!--------------------------------------------------------------------------
+    !  Read forward solver control in EMsolve3D (or use defaults)
+    call readEMsolveControl(solverParams,cUserDef%rFile_fwdCtrl,exists,cUserDef%eps)
 
 	!--------------------------------------------------------------------------
 	!  Read in data file (only a template on input--periods/sites)

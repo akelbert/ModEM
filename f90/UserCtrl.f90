@@ -27,9 +27,6 @@ module UserCtrl
 	! File to set up forward solver controls
 	character(80)       :: rFile_fwdCtrl
 
-	! File to set up forward solver controls for gradient computations
-	character(80)       :: rFile_gradCtrl
-
 	! Input files
 	character(80)       :: rFile_Grid, rFile_Model, rFile_Data
 	character(80)       :: rFile_dModel
@@ -42,8 +39,8 @@ module UserCtrl
 	! Specify damping parameter for the inversion
 	real(8)             :: lambda
 
-	! Initial step size parameter for inversions
-	real(8)             :: delta
+	! Misfit tolerance for the forward solver
+	real(8)             :: eps
 
 	! Specify covariance configuration
 	character(80)       :: rFile_Cov
@@ -69,7 +66,6 @@ Contains
   	ctrl%job = ''
   	ctrl%rFile_invCtrl = 'n'
   	ctrl%rFile_fwdCtrl = 'n'
-  	ctrl%rFile_gradCtrl = 'n'
   	ctrl%rFile_Grid = 'n'
   	ctrl%wFile_Grid = 'n'
   	ctrl%rFile_Model = 'n'
@@ -81,7 +77,7 @@ Contains
   	ctrl%wFile_EMsoln = 'n'
   	ctrl%wFile_Sens = 'n'
   	ctrl%lambda = 1
-  	ctrl%delta = 1
+  	ctrl%eps = 1.0e-7
   	ctrl%rFile_Cov = 'n'
   	ctrl%search = 'NLCG'
   	ctrl%output_level = 3
@@ -174,15 +170,18 @@ Contains
         write(*,*) ' -T  rFile_Model rFile_Data wFile_dModel [rFile_fwdCtrl]'
         write(*,*) '  Multiplies a data vector by J^T to create a model'
         write(*,*) '[INVERSE]'
-        write(*,*) ' -I NLCG rFile_Model rFile_Data [rFile_Cov lambda]'
-        write(*,*) '  Runs an inverse search to yield an inverse model at every iteration'
-        write(*,*) '  Here, lambda is the initial damping parameter'
+        write(*,*) ' -I NLCG rFile_Model rFile_Data [lambda eps]'
+        write(*,*) '  Here, lambda = the initial damping parameter for inversion'
+        write(*,*) '           eps = misfit tolerance for the forward solver'
         write(*,*) 'OR'
-        write(*,*) ' -I NLCG rFile_Model rFile_Data [rFile_Cov rFile_invCtrl rFile_dModel]'
-        write(*,*) '  Here, rFile_invCtrl is the inversion control file'
-        write(*,*) '        rFile_dModel  is the starting model parameter perturbation'
+        write(*,*) ' -I NLCG rFile_Model rFile_Data [rFile_invCtrl rFile_fwdCtrl]'
+        write(0,*) '  Optionally, may also supply'
+        write(0,*) '      the model covariance configuration file   [rFile_Cov]'
+        write(0,*) '      the starting model parameter perturbation [rFile_dModel]'
+        write(*,*) '  Runs an inverse search to yield an inverse model at every iteration'
         write(*,*) '[TEST_COV]'
         write(*,*) ' -C  rFile_Model wFile_Model [rFile_Cov]'
+        write(*,*) '  Applies the model covariance to produce a smooth model output'
         write(*,*)
         write(*,*) 'Optional final argument -v [debug|full|regular|compact|result|none]'
         write(*,*) 'indicates the desired level of output to screen and to files.'
@@ -229,6 +228,16 @@ Contains
       case (FORWARD) !F
         if (narg < 3) then
            write(0,*) 'Usage: -F  rFile_Model rFile_Data wFile_Data [wFile_EMsoln rFile_fwdCtrl]'
+           write(0,*)
+           write(0,*) 'Here, rFile_fwdCtrl is the forward solver control file in the format'
+           write(0,*)
+           write(0,*) 'Number of QMR iters per divergence correction : 40'
+           write(0,*) 'Maximum number of divergence correction calls : 20'
+           write(0,*) 'Maximum number of divergence correction iters : 100'
+           write(0,*) 'Misfit tolerance for EM forward solver        : 1.0e-7'
+           write(0,*) 'Misfit tolerance for EM adjoint solver        : 1.0e-7'
+           write(0,*) 'Misfit tolerance for divergence correction    : 1.0e-5'
+           write(0,*)
            stop
         else
 	       ctrl%rFile_Model = temp(1)
@@ -272,12 +281,14 @@ Contains
 
       case (INVERSE) ! I
         if (narg < 3) then
-           write(0,*) 'Usage: -I NLCG rFile_Model rFile_Data [rFile_Cov lambda rFile_dModel]'
-           write(0,*) 'Here, lambda is the initial damping parameter'
-           write(0,*) '      rFile_dModel  is the starting rough model parameter perturbation'
+           write(0,*) 'Usage: -I NLCG rFile_Model rFile_Data [lambda eps]'
+           write(0,*)
+           write(0,*) 'Here, lambda = the initial damping parameter for inversion'
+           write(0,*) '         eps = misfit tolerance for the forward solver'
            write(0,*) 'OR'
-           write(0,*) 'Usage: -I NLCG rFile_Model rFile_Data [rFile_Cov rFile_invCtrl rFile_dModel]'
-           write(0,*) 'Here, rFile_invCtrl is the inversion control file in the format'
+           write(0,*) 'Usage: -I NLCG rFile_Model rFile_Data [rFile_invCtrl rFile_fwdCtrl]'
+           write(0,*)
+           write(0,*) 'Here, rFile_invCtrl = the inversion control file in the format'
            write(0,*)
            write(0,*) 'Model and data output file name    : Example'
            write(0,*) 'Initial damping factor lambda      : 1.0'
@@ -287,7 +298,20 @@ Contains
            write(0,*) 'Exit when lambda is less than      : 1.0e-4'
            write(0,*) 'Maximum number of iterations       : 120'
            write(0,*)
-           write(0,*) 'Optionally, may also supply rFile_fwdCtrl and rFile_gradCtrl configurations.'
+           write(0,*) '      rFile_fwdCtrl = the forward solver control file in the format'
+           write(0,*)
+           write(0,*) 'Number of QMR iters per divergence correction : 40'
+           write(0,*) 'Maximum number of divergence correction calls : 20'
+           write(0,*) 'Maximum number of divergence correction iters : 100'
+           write(0,*) 'Misfit tolerance for EM forward solver        : 1.0e-7'
+           write(0,*) 'Misfit tolerance for EM adjoint solver        : 1.0e-7'
+           write(0,*) 'Misfit tolerance for divergence correction    : 1.0e-5'
+           write(0,*)
+           write(0,*) 'Optionally, may also supply'
+           write(0,*)
+           write(0,*) '      rFile_Cov     = the model covariance configuration file'
+           write(0,*) '      rFile_dModel  = the starting model parameter perturbation'
+           write(0,*)
            stop
         else
            ctrl%search = temp(1)
@@ -302,48 +326,41 @@ Contains
 	       ctrl%rFile_Data = temp(3)
 	    end if
 	    if (narg > 3) then
-	       ctrl%rFile_Cov = temp(4)
-	    end if
-	    if (narg > 4) then
-          read(temp(5),*,iostat=istat) ctrl%lambda
+          read(temp(4),*,iostat=istat) ctrl%lambda
           if (istat .ne. 0) then
-            ! check for configuration file
-            ctrl%rFile_invCtrl = temp(5)
+            ! check for the inverse solver configuration file
+            ctrl%rFile_invCtrl = temp(4)
             inquire(FILE=ctrl%rFile_invCtrl,EXIST=exists)
             if (.not. exists) then
             	! problem - invalid argument
-				write(0,*) 'Please specify lambda or a valid inverse control file'
+				write(0,*) 'Please specify a valid inverse control file or damping parameter'
 				stop
             end if
           end if
         end if
-        if (narg > 5) then
+        if (narg > 4) then
+          read(temp(5),*,iostat=istat) ctrl%eps
+          if (istat .ne. 0) then
+            ! check for the forward solver configuration file
+            ctrl%rFile_fwdCtrl = temp(5)
+            inquire(FILE=ctrl%rFile_fwdCtrl,EXIST=exists)
+            if (.not. exists) then
+            	! problem - invalid argument
+				write(0,*) 'Please specify a valid forward solver control file or misfit tolerance'
+				stop
+            end if
+          end if
+        end if
+	    if (narg > 5) then
+	       ctrl%rFile_Cov = temp(6)
+	    end if
+        if (narg > 6) then
             ! check for the optional starting model file
-            ctrl%rFile_dModel = temp(6)
+            ctrl%rFile_dModel = temp(7)
             inquire(FILE=ctrl%rFile_dModel,EXIST=exists)
             if (.not. exists) then
             	! problem - invalid argument
 				write(0,*) 'Please specify a valid starting model file'
-				stop
-            end if
-        end if
-        if (narg > 6) then
-            ! check for the optional starting model file
-            ctrl%rFile_fwdCtrl = temp(7)
-            inquire(FILE=ctrl%rFile_fwdCtrl,EXIST=exists)
-            if (.not. exists) then
-            	! problem - invalid argument
-				write(0,*) 'Please specify a valid forward solver control file'
-				stop
-            end if
-        end if
-        if (narg > 7) then
-            ! check for the optional starting model file
-            ctrl%rFile_gradCtrl = temp(8)
-            inquire(FILE=ctrl%rFile_gradCtrl,EXIST=exists)
-            if (.not. exists) then
-            	! problem - invalid argument
-				write(0,*) 'Please specify a valid adjoint solver control file'
 				stop
             end if
         end if

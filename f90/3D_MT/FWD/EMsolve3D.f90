@@ -25,7 +25,7 @@ module EMsolve3D
     !  idea is that this is the public access version of this info, which is
     !   copied into private version for actual solver control
     integer                   ::      IterPerDivCor, MaxDivCor, MaxIterDivCor
-    real(kind = 8)            ::      tolEM, tolDivCor
+    real(kind = 8)            ::      tolEMfwd, tolEMadj, tolDivCor
     logical                   ::      E0fromFile
     logical                   ::      UseDefaults
     integer                   ::      ioE0
@@ -50,11 +50,11 @@ module EMsolve3D
 
   ! Default solver control parameters
   ! number of QMR iterations for each call to divergence correction:
-  integer, parameter    ::              IterPerDivCorDef = 20
+  integer, parameter    ::              IterPerDivCorDef = 40
   ! maximum number of divergence correction calls allowed
-  integer, parameter    ::              MaxDivCorDef = 100
+  integer, parameter    ::              MaxDivCorDef = 20
   ! maximum number of PCG iterations for divergence correction
-  integer, parameter    ::              MaxIterDivCorDef = 50
+  integer, parameter    ::              MaxIterDivCorDef = 100
   ! misfit tolerance for convergence of EMsolve algorithm
   real(kind=prec), parameter       ::      tolEMDef = 1E-7
   ! misfit tolerance for convergence of divergence correction solver
@@ -66,7 +66,7 @@ module EMsolve3D
   !  of em_solve; are saved between calls, private to this module
   integer,  private        ::      IterPerDivCor, MaxDivCor, MaxIterDivCor
   integer,  private        ::      MaxIterTotal ! = MaxDivCor*IterPerDivCor
-  real(kind=prec), private   ::      tolEM, tolDivCor
+  real(kind=prec), private   ::      tolEMfwd, tolEMadj, tolDivCor
 
   ! EMsolve diagnostics: these are computed during execution of em_solve
   !   can be retrieved by call to getEmsolveDiag
@@ -232,7 +232,11 @@ Contains
     nDivCor = 0
 
     ! Initialize iteration control/diagnostic structure for QMR, PCG
-    QMRiter%tol = tolEM
+    if (trans) then
+       QMRiter%tol = tolEMadj
+    else
+       QMRiter%tol = tolEMfwd
+    end if
     QMRiter%niter = 0
     QMRiter%maxIt = IterPerDivCor
     allocate(QMRiter%rerr(IterPerDivCor), STAT=status)
@@ -281,7 +285,9 @@ Contains
 
     end do loop
 
-    write (*,*) 'finished solving:', nIterTotal, EMrelErr(nIterTotal)
+    if (output_level > 1) then
+       write (*,*) 'finished solving:', nIterTotal, EMrelErr(nIterTotal)
+    end if
 
     !  After solving symetrized system, need to do different things for
     !   transposed, standard cases
@@ -379,6 +385,10 @@ subroutine SdivCorr(inE,outE,phi0)
   Call PCG(phiRHS,phiSol,PCGiter)
   DivCorRelErr(:,nDivCor) = PCGiter%rerr
 
+  if (output_level > 2) then
+     write (*,*) 'finished divergence correction:', PCGiter%niter, PCGiter%rerr(PCGiter%niter)
+  end if
+
   ! compute gradient of phiSol (Divergence correction for inE)
   Call Grad(phiSol,outE)
 
@@ -397,8 +407,11 @@ subroutine SdivCorr(inE,outE,phi0)
   ! (using the dot product)
   divJ(2,nDivCor) = sqrt(dotProd(phiRHS,phiRHS))
 
-  ! write(0,*) 'Divergence of currents before SdivCorr: ', divJ(1, nDivCor)
-  ! write(0,*) 'Divergence of currents after SdivCorr:  ',divJ(2, nDivCor)
+  ! output level defined in basic file_units module
+  if (output_level > 3) then
+     write(*,*) 'Divergence of currents before SdivCorr: ', divJ(1, nDivCor)
+     write(*,*) 'Divergence of currents after SdivCorr:  ',divJ(2, nDivCor)
+  end if
 
   ! deallocate the temporary work arrays
   Call deall(phiSol)
@@ -441,24 +454,32 @@ end subroutine SdivCorr ! SdivCorr
   !**********************************************************************
   ! setEMsolveControl sets actual solver control parameters, using info
   !  in structure solverControl, and allocates diagnostic arrays
-  subroutine setEMsolveControl(solverControl)
+  subroutine setEMsolveControl(solverControl,tolEM)
 
      type (emsolve_control), intent(in)	::	solverControl
+     real (8), intent(in), optional     ::  tolEM
 
      if(solverControl%UseDefaults) then
         IterPerDivCor = IterPerDivCorDef
         MaxDivCor = MaxDivCorDef
         MaxIterTotal = MaxDivCor*IterPerDivCor
-	MaxIterDivCor = MaxIterDivCorDef
-        tolEM = tolEMDef
+        MaxIterDivCor = MaxIterDivCorDef
+        tolEMfwd = tolEMDef
+        tolEMadj = tolEMDef
         tolDivCor = tolDivCorDef
      else
         IterPerDivCor = solverControl%IterPerDivCor
         MaxDivCor = solverControl%MaxDivCor
         MaxIterTotal = MaxDivCor*IterPerDivCor
-	MaxIterDivCor = solverControl%MaxIterDivCor
-        tolEM = solverControl%tolEM
+        MaxIterDivCor = solverControl%MaxIterDivCor
+        tolEMfwd = solverControl%tolEMfwd
+        tolEMadj = solverControl%tolEMadj
         tolDivCor = solverControl%tolDivCor
+     endif
+
+     if (present(tolEM)) then
+        tolEMfwd = tolEM
+        tolEMadj = tolEM
      endif
 
      !  first check to see if diagnostic arrays are allocated
@@ -478,6 +499,59 @@ end subroutine SdivCorr ! SdivCorr
      allocate(DivCorRelErr(MaxIterDivCor,MaxDivCor))
 
   end subroutine setEMsolveControl
+
+   ! ***************************************************************************
+   ! * readEMsolveControl reads the EM solver configuration from file
+   subroutine readEMsolveControl(solverControl,rFile,fileExists,tolEM)
+
+	type(emsolve_control), intent(inout)	:: solverControl
+    character(*), intent(in)		        :: rFile
+	logical, intent(out), optional          :: fileExists
+	real(8), intent(in), optional           :: tolEM
+    integer									:: ios
+	logical                             	:: exists
+	character(20)							:: string
+
+    ! Initialize inverse solver configuration
+
+    inquire(FILE=rFile,EXIST=exists)
+    if (present(fileExists)) then
+       fileExists = exists
+    end if
+
+    if (.not. exists) then
+       solverControl%UseDefaults = .true.
+       if (present(tolEM)) then
+          call setEMsolveControl(solverControl,tolEM)
+       else
+          call setEMsolveControl(solverControl)
+       end if
+       return
+    else
+       solverControl%UseDefaults = .false.
+       write(*,*) 'Reading EM solver configuration from file ',trim(rFile)
+    end if
+
+    open (unit=ioFwdCtrl,file=rFile,status='old',iostat=ios)
+
+    if(ios/=0) then
+       write(0,*) 'Error opening file: ', rFile
+    end if
+
+    ! This is the list of options specified in the startup file
+
+    read (ioFwdCtrl,'(a47,i5)') string,solverControl%IterPerDivCor;
+    read (ioFwdCtrl,'(a47,i5)') string,solverControl%MaxDivCor;
+    read (ioFwdCtrl,'(a47,i5)') string,solverControl%MaxIterDivCor;
+    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolEMfwd;
+    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolEMadj;
+    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolDivCor;
+
+    close(ioFwdCtrl)
+
+    call setEMsolveControl(solverControl)
+
+   end subroutine readEMsolveControl
 
   !**********************************************************************
   !   deallEMsolveControl deallocate

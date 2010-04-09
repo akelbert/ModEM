@@ -101,10 +101,10 @@ Contains
    ! ***************************************************************************
    ! * read_NLCGiterControl reads the inverse solver configuration from file
 
-   subroutine read_NLCGiterControl(rFile,iterControl,fileExists)
+   subroutine read_NLCGiterControl(iterControl,rFile,fileExists)
 
-    character(*), intent(in)		        :: rFile
 	type(NLCGiterControl_t), intent(inout)	:: iterControl
+    character(*), intent(in)		        :: rFile
 	logical, intent(out), optional          :: fileExists
     integer									:: ios
 	logical                             	:: exists
@@ -444,7 +444,7 @@ Contains
    type(EMsolnMTX_t)      :: eAll
 
    if (present(fname)) then
-      call read_NLCGiterControl(fname,iterControl,ok)
+      call read_NLCGiterControl(iterControl,fname,ok)
       if (ok) then
          lambda = iterControl%lambda
       end if

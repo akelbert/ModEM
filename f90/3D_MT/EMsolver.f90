@@ -193,8 +193,8 @@ Contains
       ! compute boundary conditions for polarization iMode
       !   uses cell conductivity already set by updateCond
       call SetBound(imode,period,e0%pol(imode),b0%bc)
-			write(*,'(a12,a3,a18,es12.6,a10,i2)') 'Solving the ','FWD', &
-				' problem for freq ',omega/(2*PI),' & mode # ',imode
+			write(*,'(a12,a3,a20,es12.6,a15,i2)') 'Solving the ','FWD', &
+				' problem for period ',(2*PI)/omega,' secs & mode # ',imode
       call FWDsolve3D(b0,omega,e0%pol(imode))
    enddo
 
@@ -227,7 +227,7 @@ Contains
    call zero_EMsoln(e)
    do iMode = 1,e%nPol
       comb%b(imode)%adj = FWDorADJ
-			write(*,'(a12,a3,a18,es12.6,a10,i2)') 'Solving the ',FWDorADJ, &
+			write(*,'(a12,a3,a20,es12.6,a15,i2)') 'Solving the ',FWDorADJ, &
 				' problem for period ',(2*PI)/omega,' secs & mode # ',imode
       call FWDsolve3d(comb%b(imode),omega,e%pol(imode))
    enddo
