@@ -3,11 +3,21 @@ module utilities
 	use math_constants
 	implicit none
 
-	!character(80)  :: msg
+  ! Variables required for storing the date and time in SECONDS. If used
+  ! throughout the program, these make the routine profiling easier
+  type  :: timer_t
+
+    private
+	real					:: rtime = 0.0 ! run time
+	real					:: stime, etime ! start and end times
+
+  end type timer_t
+
+  !character(80)  :: msg
 
 Contains
 
-  !*****************************************************************************
+  ! **************************************************************************
   subroutine errStop(msg)
 
     character(*), intent(in)  :: msg
@@ -17,7 +27,7 @@ Contains
 
   end subroutine errStop
 
-  !*****************************************************************************
+  ! **************************************************************************
   subroutine warning(msg)
 
     character(*), intent(in)  :: msg
@@ -25,6 +35,66 @@ Contains
     write(0,*) trim(msg)
 
   end subroutine warning
+
+  ! **************************************************************************
+  ! timer utilities: set timer
+  subroutine reset_time(timer)
+
+    type(timer_t), intent(inout) :: timer
+    ! utility variable
+    integer, dimension(8)	     :: tarray
+
+ 	! Restart the (portable) clock
+	call date_and_time(values=tarray)
+    timer%stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+
+  end subroutine reset_time
+
+  ! **************************************************************************
+  ! timer utilities: compute elapsed run time in seconds
+  function elapsed_time(timer) result (rtime)
+
+    type(timer_t), intent(inout) :: timer
+    real                         :: rtime ! run time
+    ! utility variable
+    integer, dimension(8)	     :: tarray
+
+	call date_and_time(values=tarray)
+    timer%etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+    rtime = timer%etime - timer%stime
+
+    ! Update total run time
+    timer%rtime = timer%rtime + rtime
+
+  end function elapsed_time
+
+  ! **************************************************************************
+  ! timer utilities: sum up the elapsed run times in seconds
+  function saved_time(timer) result (rtime)
+
+    type(timer_t), intent(inout) :: timer
+    real                         :: rtime
+
+    rtime = timer%rtime
+
+  end function saved_time
+
+  ! **************************************************************************
+  ! timer utilities: clear saved timing information
+  subroutine clear_time(timer)
+
+    type(timer_t), intent(inout) :: timer
+    ! utility variable
+    integer, dimension(8)	     :: tarray
+
+ 	! Restart the (portable) clock
+	call date_and_time(values=tarray)
+    timer%stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+
+    ! Clear saved run time
+    timer%rtime = 0.0
+
+  end subroutine clear_time
 
   ! **************************************************************************
   function clean(x)
@@ -272,10 +342,10 @@ Contains
   end function isnan
 
   ! Some Fortran Character String Utilities:
-  ! See http://gbenthien.net/strings/Strings.pdf  for more information and addtional subroutines 
+  ! See http://gbenthien.net/strings/Strings.pdf  for more information and addtional subroutines
   !#############################################################################################
   subroutine compact(str)
-	
+
 	! Converts multiple spaces and tabs to single spaces; deletes control characters;
 	! removes initial spaces.
 	character(len=*):: str
@@ -291,23 +361,23 @@ Contains
 	do i=1,lenstr
 	  ch=str(i:i)
 	  ich=iachar(ch)
-	  
+
 	  select case(ich)
-	  
+
 	    case(9,32)     ! space or tab character
 	      if(isp==0) then
 	        k=k+1
 	        outstr(k:k)=' '
 	      end if
 	      isp=1
-	      
+
 	    case(33:)      ! not a space, quote, or control character
 	      k=k+1
 	      outstr(k:k)=ch
 	      isp=0
-	      
+
 	  end select
-	  
+
 	end do
 
 	str=adjustl(outstr)
@@ -330,18 +400,18 @@ subroutine parse(str,delims,args,nargs)
 	na=size(args)
 	do i=1,na
 	  args(i)=' '
-	end do  
+	end do
 	nargs=0
 	lenstr=len_trim(str)
 	if(lenstr==0) return
 	k=0
-	
+
 	do
 	   if(len_trim(str) == 0) exit
 	   nargs=nargs+1
 	   call split(str,delims,args(nargs))
 	   call removebksl(args(nargs))
-	end do   
+	end do
 	str=strsav
 
 end subroutine parse
@@ -352,9 +422,9 @@ subroutine split(str,delims,before,sep)
 ! Routine finds the first instance of a character from 'delims' in the
 ! the string 'str'. The characters before the found delimiter are
 ! output in 'before'. The characters after the found delimiter are
-! output in 'str'. The optional output character 'sep' contains the 
-! found delimiter. A delimiter in 'str' is treated like an ordinary 
-! character if it is preceded by a backslash (\). If the backslash 
+! output in 'str'. The optional output character 'sep' contains the
+! found delimiter. A delimiter in 'str' is treated like an ordinary
+! character if it is preceded by a backslash (\). If the backslash
 ! character is desired in 'str', then precede it with another backslash.
 
 	character(len=*) :: str,delims,before
@@ -383,7 +453,7 @@ subroutine split(str,delims,before,sep)
 	      ibsl=1
 	      cycle
 	   end if
-	   ipos=index(delims,ch)         
+	   ipos=index(delims,ch)
 	   if(ipos == 0) then          ! character is not a delimiter
 	      k=k+1
 	      before(k:k)=ch
@@ -428,7 +498,7 @@ subroutine removebksl(str)
 	outstr=' '
 	k=0
 	ibsl=0                        ! backslash initially inactive
-	
+
 	do i=1,lenstr
 	  ch=str(i:i)
 	  if(ibsl == 1) then          ! backslash active
@@ -444,8 +514,8 @@ subroutine removebksl(str)
 	  k=k+1
 	  outstr(k:k)=ch              ! non-backslash with backslash inactive
 	end do
-	
+
 	str=adjustl(outstr)
 
-end subroutine removebksl 
+end subroutine removebksl
 end module utilities

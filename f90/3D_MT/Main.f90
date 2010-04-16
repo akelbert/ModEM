@@ -131,13 +131,13 @@ Contains
 	      call deall_grid(grid)
 	   	  call read_modelParam(grid,dsigma,cUserDef%rFile_dModel)
 	      if (output_level > 0) then
-	        write(0,*) 'Using the initial model perturbations from file ',trim(cUserDef%rFile_dModel)
+	        write(*,*) 'Using the initial model perturbations from file ',trim(cUserDef%rFile_dModel)
 	      endif
 	   else
 	      dsigma = sigma0
 	      call zero_modelParam(dsigma)
 	      if (output_level > 0) then
-	        write(0,*) 'Starting search from the prior model ',trim(cUserDef%rFile_Model)
+	        write(*,*) 'Starting search from the prior model ',trim(cUserDef%rFile_Model)
 	      endif
 	   end if
        select case (cUserDef%search)

@@ -46,7 +46,7 @@ module EMsolve3D
     real(kind = 8), pointer, dimension(:,:)    ::      DivCorRelErr
   end type emsolve_diag
 
-
+  type(timer_t), save, private :: timer
 
   ! Default solver control parameters
   ! number of QMR iterations for each call to divergence correction:
@@ -230,6 +230,7 @@ Contains
     ! resetting
     nIterTotal = 0
     nDivCor = 0
+    call reset_time(timer)
 
     ! Initialize iteration control/diagnostic structure for QMR, PCG
     if (trans) then
@@ -287,6 +288,7 @@ Contains
 
     if (output_level > 1) then
        write (*,*) 'finished solving:', nIterTotal, EMrelErr(nIterTotal)
+	   write (*,*) ' time taken (mins) ', elapsed_time(timer)/60.0
     end if
 
     !  After solving symetrized system, need to do different things for
@@ -409,8 +411,8 @@ subroutine SdivCorr(inE,outE,phi0)
 
   ! output level defined in basic file_units module
   if (output_level > 3) then
-     write(*,*) 'Divergence of currents before SdivCorr: ', divJ(1, nDivCor)
-     write(*,*) 'Divergence of currents after SdivCorr:  ',divJ(2, nDivCor)
+     write(*,*) 'divergence of currents before correction: ', divJ(1, nDivCor)
+     write(*,*) 'divergence of currents  after correction: ', divJ(2, nDivCor)
   end if
 
   ! deallocate the temporary work arrays
@@ -510,7 +512,7 @@ end subroutine SdivCorr ! SdivCorr
 	real(8), intent(in), optional           :: tolEM
     integer									:: ios
 	logical                             	:: exists
-	character(20)							:: string
+	character(80)							:: string
 
     ! Initialize inverse solver configuration
 
@@ -540,12 +542,32 @@ end subroutine SdivCorr ! SdivCorr
 
     ! This is the list of options specified in the startup file
 
-    read (ioFwdCtrl,'(a47,i5)') string,solverControl%IterPerDivCor;
-    read (ioFwdCtrl,'(a47,i5)') string,solverControl%MaxDivCor;
-    read (ioFwdCtrl,'(a47,i5)') string,solverControl%MaxIterDivCor;
-    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolEMfwd;
-    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolEMadj;
-    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolDivCor;
+    read (ioFwdCtrl,'(a47,i5)') string,solverControl%IterPerDivCor
+    if (output_level > 2) then
+       write (*,*)
+       write (*,'(a47,i5)') string,solverControl%IterPerDivCor
+    end if
+    read (ioFwdCtrl,'(a47,i5)') string,solverControl%MaxDivCor
+    if (output_level > 2) then
+       write (*,'(a47,i5)') string,solverControl%MaxDivCor
+    end if
+    read (ioFwdCtrl,'(a47,i5)') string,solverControl%MaxIterDivCor
+    if (output_level > 2) then
+       write (*,'(a47,i5)') string,solverControl%MaxIterDivCor
+    end if
+    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolEMfwd
+    if (output_level > 2) then
+       write (*,'(a47,g15.7)') string,solverControl%tolEMfwd
+    end if
+    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolEMadj
+    if (output_level > 2) then
+       write (*,'(a47,g15.7)') string,solverControl%tolEMadj
+    end if
+    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolDivCor
+    if (output_level > 2) then
+       write (*,'(a47,g15.7)') string,solverControl%tolDivCor
+       write (*,*)
+    end if
 
     close(ioFwdCtrl)
 

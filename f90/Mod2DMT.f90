@@ -19,11 +19,8 @@ program Mod2DMT
      ! Character-based information specified by the user
      type (userdef_control)	:: cUserDef
 
-     ! Variables required for storing the date and time
-	 real					:: rtime  ! run time
-	 real					:: ftime  ! run time per frequency
-	 real					:: stime, etime ! start and end times
-     integer, dimension(8)	:: tarray ! utility variable
+     ! Variable required for storing the date and time
+     type (timer_t)         :: timer
 
      integer                :: nData
 !     integer (kind=4) :: Nzb, IER, i, iy,iz,iPer,nSigma,nTx
@@ -40,8 +37,7 @@ program Mod2DMT
      call setGrid(grid)
 
 	 ! Start the (portable) clock
-	 call date_and_time(values=tarray)
-     stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+	 call reset_time(timer)
 
      select case (cUserDef%job)
 
@@ -107,9 +103,6 @@ program Mod2DMT
 
 	 call cleanUp()
 
-	 call date_and_time(values=tarray)
-	 etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	 rtime = etime - stime
-	 write(0,*) ' elapsed time (mins) ',rtime/60.0
+	 write(0,*) ' elapsed time (mins) ',elapsed_time(timer)/60.0
 
 end program

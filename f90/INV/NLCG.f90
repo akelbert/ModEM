@@ -108,7 +108,7 @@ Contains
 	logical, intent(out), optional          :: fileExists
     integer									:: ios
 	logical                             	:: exists
-	character(20)							:: string
+	character(80)							:: string
 
     ! Initialize inverse solver configuration
 
@@ -133,13 +133,36 @@ Contains
 
     ! This is the list of options specified in the startup file
 
-    read (ioInvCtrl,'(a36,a80)') string,iterControl%fname;
-    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%lambda;
-    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%startdm;
-    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%fdiffTol;
-    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%rmsTol;
-    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%lambdaTol;
-    read (ioInvCtrl,'(a36,i4)') string,iterControl%maxIter;
+    read (ioInvCtrl,'(a36,a80)') string,iterControl%fname
+    if (output_level > 2) then
+       write (*,*)
+       write (*,'(a36,a80)') string,iterControl%fname
+    end if
+    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%lambda
+    if (output_level > 2) then
+       write (*,'(a36,g15.7)') string,iterControl%lambda
+    end if
+    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%startdm
+    if (output_level > 2) then
+       write (*,'(a36,g15.7)') string,iterControl%startdm
+    end if
+    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%fdiffTol
+    if (output_level > 2) then
+       write (*,'(a36,g15.7)') string,iterControl%fdiffTol
+    end if
+    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%rmsTol
+    if (output_level > 2) then
+       write (*,'(a36,g15.7)') string,iterControl%rmsTol
+    end if
+    read (ioInvCtrl,'(a36,g15.7)') string,iterControl%lambdaTol
+    if (output_level > 2) then
+       write (*,'(a36,g15.7)') string,iterControl%lambdaTol
+    end if
+    read (ioInvCtrl,'(a36,i4)') string,iterControl%maxIter
+    if (output_level > 2) then
+       write (*,'(a36,i4)') string,iterControl%maxIter
+       write (*,*)
+    end if
 
     close(ioInvCtrl)
 
