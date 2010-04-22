@@ -58,7 +58,7 @@ module EMsolve3D
   ! misfit tolerance for convergence of EMsolve algorithm
   real(kind=prec), parameter       ::      tolEMDef = 1E-7
   ! misfit tolerance for convergence of divergence correction solver
-  real(kind=prec), parameter       ::      tolDivCorDef = 1E-7
+  real(kind=prec), parameter       ::      tolDivCorDef = 1E-5
 
   save
   ! Actual values of control parameters must be set before first use,

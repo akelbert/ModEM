@@ -247,6 +247,9 @@ Contains
 	    if (narg > 3) then
 	       ctrl%wFile_EMsoln = temp(4)
 	    end if
+	    if (narg > 4) then
+	       ctrl%rFile_fwdCtrl = temp(5)
+	    end if
 
       case (COMPUTE_J) ! J
         if (narg < 3) then
@@ -256,6 +259,9 @@ Contains
 	       ctrl%rFile_Model = temp(1)
 	       ctrl%rFile_Data = temp(2)
 	       ctrl%wFile_Sens = temp(3)
+	    end if
+	    if (narg > 3) then
+	       ctrl%rFile_fwdCtrl = temp(4)
 	    end if
 
       case (MULT_BY_J) ! M
@@ -268,6 +274,9 @@ Contains
 	       ctrl%rFile_Data = temp(3)
 	       ctrl%wFile_Data = temp(4)
 	    end if
+	    if (narg > 4) then
+	       ctrl%rFile_fwdCtrl = temp(5)
+	    end if
 
       case (MULT_BY_J_T) ! T
         if (narg < 3) then
@@ -277,6 +286,9 @@ Contains
 	       ctrl%rFile_Model = temp(1)
 	       ctrl%rFile_Data = temp(2)
 	       ctrl%wFile_dModel = temp(3)
+	    end if
+	    if (narg > 3) then
+	       ctrl%rFile_fwdCtrl = temp(4)
 	    end if
 
       case (INVERSE) ! I
