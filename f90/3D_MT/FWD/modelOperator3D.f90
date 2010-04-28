@@ -441,9 +441,9 @@ Contains
        if ((inE%gridType == outE%gridType)) then
 
           ! Apply difference equation to compute Ex (only on interior nodes)
-          do ix = 1, inE%nx
+          do iz = 2, inE%nz
              do iy = 2, inE%ny
-                do iz = 2, inE%nz
+                do ix = 1, inE%nx
 
                    outE%x(ix,iy,iz) = xY(ix,iy)*(inE%y(ix+1,iy,iz)-&
                   	inE%y(ix,iy,iz)-inE%y(ix+1,iy-1,iz)&
@@ -461,9 +461,9 @@ Contains
           enddo
 
           ! Apply difference equation to compute Ey (only on interior nodes)
-          do ix = 2, inE%nx
+          do iz = 2, inE%nz
              do iy = 1, inE%ny
-                do iz = 2, inE%nz
+                do ix = 2, inE%nx
 
                    outE%y(ix,iy,iz) = yZ(iy,iz)*(inE%z(ix,iy+1,iz)-&
                   	inE%z(ix,iy,iz)-inE%z(ix,iy+1,iz-1)+inE%z(ix,iy,iz-1))&
@@ -480,9 +480,9 @@ Contains
           enddo
 
           ! Apply difference equation to compute Ez (only on interior nodes)
-          do ix = 2, inE%nx
+          do iz = 1, inE%nz
              do iy = 2, inE%ny
-                do iz = 1, inE%nz
+                do ix = 2, inE%nx
 
                    outE%z(ix,iy,iz) = zX(ix,iz)*(inE%x(ix,iy,iz+1)-&
                   	inE%x(ix,iy,iz)-inE%x(ix-1,iy,iz+1)+inE%x(ix-1,iy,iz))&
@@ -639,9 +639,9 @@ Contains
           ! Apply difference equation to compute Ex (only on interior nodes)
           ! the diagonal nodes have the imaginary component added
           !$OMP DO SCHEDULE(STATIC)
-	  do ix = 1, inE%nx
+	      do iz = 2, inE%nz
              do iy = 2, inE%ny
-                do iz = 2, inE%nz
+                do ix = 1, inE%nx
                    outE%x(ix,iy,iz) = xY(ix,iy)*(inE%y(ix+1,iy,iz)-&
                   	inE%y(ix,iy,iz)-inE%y(ix+1,iy-1,iz)&
                         +inE%y(ix,iy-1,iz))+&
@@ -658,11 +658,11 @@ Contains
           !$OMP END DO NOWAIT
 
           ! Apply difference equation to compute Ey (only on interior nodes)
-	  ! the diagonal nodes have the imaginary component added
+	      ! the diagonal nodes have the imaginary component added
           !$OMP DO SCHEDULE(STATIC)
-          do ix = 2, inE%nx
+          do iz = 2, inE%nz
              do iy = 1, inE%ny
-                do iz = 2, inE%nz
+                do ix = 2, inE%nx
                    outE%y(ix,iy,iz) = yZ(iy,iz)*(inE%z(ix,iy+1,iz)-&
                   	inE%z(ix,iy,iz)-inE%z(ix,iy+1,iz-1)+inE%z(ix,iy,iz-1))&
                   	+yX(ix,iy)*(inE%x(ix,iy+1,iz)-inE%x(ix,iy,iz)&
@@ -678,11 +678,11 @@ Contains
           !$OMP END DO NOWAIT
 
           ! Apply difference equation to compute Ey (only on interior nodes)
-	  ! the diagonal nodes have the imaginary component added
+	      ! the diagonal nodes have the imaginary component added
           !$OMP DO SCHEDULE(STATIC)
-          do ix = 2, inE%nx
+          do iz = 1, inE%nz
              do iy = 2, inE%ny
-                do iz = 1, inE%nz
+                do ix = 2, inE%nx
                    outE%z(ix,iy,iz) = zX(ix,iz)*(inE%x(ix,iy,iz+1)-&
                   	inE%x(ix,iy,iz)-inE%x(ix-1,iy,iz+1)+inE%x(ix-1,iy,iz))&
                   	+zY(iy,iz)*(inE%y(ix,iy,iz+1)-inE%y(ix,iy,iz)&
@@ -1114,9 +1114,13 @@ Contains
 	     ! adjoint = .false.
              Call diagDiv(inE, volE, outE)
 
+             ! ... note that we only parallelize the outer loops
+             !$OMP PARALLEL DEFAULT(SHARED)
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(ix)
              do ix = 1, inE%nx
-                do iy = 2, inE%ny
-                   do iz = 2, inE%nz
+                !$OMP ORDERED
+                do iz = 2, inE%nz
+                   do iy = 2, inE%ny
 
                       outE%x(ix, iy, iz) = (outE%x(ix, iy, iz) - &
                            outE%x(ix, iy-1, iz)*xXY(iy, 1) - &
@@ -1125,11 +1129,16 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
+             !$OMP END DO
 
+
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(iy)
              do iy = 1, inE%ny
-                do ix = 2, inE%nx
-                   do iz = 2, inE%nz
+                !$OMP ORDERED
+                do iz = 2, inE%nz
+                   do ix = 2, inE%nx
 
                       outE%y(ix, iy, iz) = (outE%y(ix, iy, iz) - &
                            outE%y(ix, iy, iz-1)*yYZ(iz, 1) - &
@@ -1138,11 +1147,15 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
+             !$OMP END DO
 
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(iz)
              do iz = 1, inE%nz
-                do ix = 2, inE%nx
-                   do iy = 2, inE%ny
+                !$OMP ORDERED
+                do iy = 2, inE%ny
+                   do ix = 2, inE%nx
 
                       outE%z(ix, iy, iz) = (outE%z(ix, iy, iz) - &
                            outE%z(ix-1, iy, iz)*zZX(ix, 1) - &
@@ -1151,13 +1164,19 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
-
+             !$OMP END DO
+             !$OMP END PARALLEL
              ! adjoint = .true.
           else
 
+             ! ... note that we only parallelize the outer loops
+             !$OMP PARALLEL DEFAULT(SHARED)
              ! the coefficients for x are only for the interior nodes
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(ix)
              do ix = 1, inE%nx
+                !$OMP ORDERED
                 do iy = inE%ny, 2, -1
                    do iz = inE%nz, 2, -1
 
@@ -1168,10 +1187,14 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
+             !$OMP END DO
 
              ! the coefficients for y are only for the interior nodes
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(iy)
              do iy = 1, inE%ny
+                !$OMP ORDERED
                 do ix = inE%nx, 2, -1
                    do iz = inE%nz, 2, -1
 
@@ -1182,9 +1205,13 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
+             !$OMP END DO
 
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(iz)
              do iz = 1, inE%nz
+                !$OMP ORDERED
                 do ix = inE%nx, 2, -1
                    do iy = inE%ny, 2, -1
 
@@ -1195,7 +1222,10 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
+             !$OMP END DO
+             !$OMP END PARALLEL
 
              Call diagDiv(outE, volE, outE)
 
@@ -1245,9 +1275,13 @@ Contains
           if (.not.adjt) then
              ! for standard upper triangular solution
 
+             ! ... note that we only parallelize the outer loops
+             !$OMP PARALLEL DEFAULT(SHARED)
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(ix)
              do ix = 1, inE%nx
-                do iy = inE%ny, 2, -1
-                   do iz = inE%nz, 2, -1
+                !$OMP ORDERED
+                do iz = inE%nz, 2, -1
+                   do iy = inE%ny, 2, -1
 
                       outE%x(ix, iy, iz) = inE%x(ix, iy, iz) - &
                            ( outE%x(ix, iy+1, iz)*xXY(iy, 2) &
@@ -1256,11 +1290,15 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
+             !$OMP END DO
 
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(iy)
              do iy = 1, inE%ny
-                do ix = inE%nx, 2, -1
-                   do iz = inE%nz, 2, -1
+                !$OMP ORDERED
+                do iz = inE%nz, 2, -1
+                   do ix = inE%nx, 2, -1
 
                       outE%y(ix, iy, iz) = inE%y(ix, iy, iz) - &
                            ( outE%y(ix, iy, iz+1)*yYZ(iz, 2) &
@@ -1269,11 +1307,15 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
+             !$OMP END DO
 
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(iz)
              do iz = 1, inE%nz
-                do ix = inE%nx, 2, -1
-                   do iy = inE%ny, 2, -1
+                !$OMP ORDERED
+                do iy = inE%ny, 2, -1
+                   do ix = inE%nx, 2, -1
 
                       outE%z(ix, iy, iz) = inE%z(ix, iy, iz) - &
                            ( outE%z(ix+1, iy, iz)*zZX(ix, 2) &
@@ -1282,14 +1324,20 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
-
+             !$OMP END DO
+             !$OMP END PARALLEL
           ! adjoint = .true.
           else
 
+             ! ... note that we only parallelize the outer loops
+             !$OMP PARALLEL DEFAULT(SHARED)
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(ix)
              do ix = 1, inE%nx
-                do iy = 2, inE%ny
-                   do iz = 2, inE%nz
+                !$OMP ORDERED
+                do iz = 2, inE%nz
+                   do iy = 2, inE%ny
 
                       outE%x(ix, iy, iz) = inE%x(ix, iy, iz) &
                            - outE%x(ix, iy-1, iz)*xXY(iy-1, 2) &
@@ -1299,11 +1347,15 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
+             !$OMP END DO
 
-             do ix = 2, inE%nx
-                do iy = 1, inE%ny
-                   do iz = 2, inE%nz
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(iy)
+             do iy = 1, inE%ny
+                !$OMP ORDERED
+                do iz = 2, inE%nz
+                   do ix = 2, inE%nx
 
                       outE%y(ix, iy, iz) = inE%y(ix, iy, iz) &
                            - outE%y(ix, iy, iz-1)*yYZ(iz-1, 2) &
@@ -1313,11 +1365,15 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
+             !$OMP END DO
 
-             do ix = 2, inE%nx
+             !$OMP DO ORDERED SCHEDULE(STATIC) PRIVATE(iz)
+             do iz = 1, inE%nz
+                !$OMP ORDERED
                 do iy = 2, inE%ny
-                   do iz = 1, inE%nz
+                   do ix = 2, inE%nx
 
                       outE%z(ix, iy, iz) = inE%z(ix, iy, iz) &
                            - outE%z(ix-1, iy, iz)*zZX(ix-1, 2) &
@@ -1327,7 +1383,10 @@ Contains
 
                    enddo
                 enddo
+                !$OMP END ORDERED
              enddo
+             !$OMP END DO
+             !$OMP END PARALLEL
           end if
 
        else
@@ -1416,9 +1475,9 @@ Contains
 
     ! conductivity of air is modified for computing divergence correction
     ! operator coefficients ...
-    do ix = 1, mGrid%nx
+    do iz = 1, mGrid%nzAir
        do iy = 1, mGrid%ny
-          do iz = 1, mGrid%nzAir
+          do ix = 1, mGrid%nx
              condE%x(ix, iy, iz) = SIGMA_AIR
              condE%y(ix, iy, iz) = SIGMA_AIR
              condE%z(ix, iy, iz) = SIGMA_AIR
@@ -1429,9 +1488,9 @@ Contains
     ! the coefficients are only for the interior nodes
     ! these coefficients have not been multiplied by volume elements
     ! yet
-    do ix = 2, mGrid%nx
+    do iz = 2, mGrid%nz
        do iy = 2, mGrid%ny
-          do iz = 2, mGrid%nz
+          do ix = 2, mGrid%nx
 
              db1%x(ix, iy, iz) = condE%x(ix-1, iy, iz)/ &
                   (mGrid%dx(ix-1)*mGrid%delX(ix))
@@ -1458,9 +1517,9 @@ Contains
     enddo
 
     ! change conductivity of air back to zero
-    do ix = 1, mGrid%nx
+    do iz = 1, mGrid%nzAir
        do iy = 1, mGrid%ny
-          do iz = 1, mGrid%nzAir
+          do ix = 1, mGrid%nx
              condE%x(ix, iy, iz) = R_ZERO
              condE%y(ix, iy, iz) = R_ZERO
              condE%z(ix, iy, iz) = R_ZERO
@@ -1469,9 +1528,9 @@ Contains
     enddo
 
     ! Multiply by corner volume elements to make operator symmetric
-    do ix = 2, mGrid%nx
+    do iz = 2, mGrid%nz
        do iy = 2, mGrid%ny
-          do iz = 2, mGrid%nz
+          do ix = 2, mGrid%nx
 
              db1%x(ix, iy, iz) = db1%x(ix, iy, iz)*volC%v(ix, iy, iz)
 	     db1%y(ix, iy, iz) = db1%y(ix, iy, iz)*volC%v(ix, iy, iz)
@@ -1500,9 +1559,9 @@ Contains
     d%v(1,:,:) = 1.0
     d%v(:,1,:) = 1.0
     d%v(:,:,1) = 1.0
-    do ix = 2, mGrid%nx
+    do iz = 2, mGrid%nz
        do iy = 2, mGrid%ny
-          do iz = 2, mGrid%nz
+          do ix = 2, mGrid%nx
 
              d%v(ix, iy, iz) = c%v(ix, iy, iz) - &
                   db1%x(ix,iy,iz)*db2%x(ix-1,iy,iz)*d%v(ix-1,iy,iz)-&
@@ -1566,9 +1625,9 @@ Contains
              outPhi%v = 0.0
              ! forward substitution (Solve lower triangular system)
              ! the coefficients are only for the interior nodes
-             do ix = 2, inPhi%nx
+             do iz = 2, inPhi%nz
                 do iy = 2, inPhi%ny
-                   do iz = 2, inPhi%nz
+                   do ix = 2, inPhi%nx
 
                       outPhi%v(ix, iy, iz) = inPhi%v(ix, iy, iz) &
                            - outPhi%v(ix-1,iy,iz)*db1%x(ix,iy,iz)&
@@ -1584,9 +1643,9 @@ Contains
 
              ! backward substitution (Solve upper triangular system)
              ! the coefficients are only for the interior nodes
-             do ix = inPhi%nx,2,-1
+             do iz = inPhi%nz,2,-1
                 do iy = inPhi%ny,2,-1
-                   do iz = inPhi%nz,2,-1
+                   do ix = inPhi%nx,2,-1
 
                       outPhi%v(ix, iy, iz) = (outPhi%v(ix, iy, iz)  &
                            - outPhi%v(ix+1, iy, iz)*db2%x(ix, iy, iz)  &
@@ -1645,9 +1704,9 @@ Contains
 
              ! the coefficients are only for interior nodes
              !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(ix,iy,iz)
-             do ix = 2, inPhi%nx
+             do iz = 2, inPhi%nz
                 do iy = 2, inPhi%ny
-                   do iz = 2, inPhi%nz
+                   do ix = 2, inPhi%nx
 
                       outPhi%v(ix,iy,iz) = inPhi%v(ix+1,iy,iz)&
                            *db2%x(ix,iy,iz)+&
