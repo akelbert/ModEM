@@ -634,8 +634,11 @@ Contains
              diag_sign = ISIGN
           end if
 
+          !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(ix,iy,iz)
+
           ! Apply difference equation to compute Ex (only on interior nodes)
           ! the diagonal nodes have the imaginary component added
+          !$OMP DO SCHEDULE(STATIC)
 	  do ix = 1, inE%nx
              do iy = 2, inE%ny
                 do iz = 2, inE%nz
@@ -652,9 +655,11 @@ Contains
                 enddo
              enddo
           enddo
+          !$OMP END DO NOWAIT
 
           ! Apply difference equation to compute Ey (only on interior nodes)
 	  ! the diagonal nodes have the imaginary component added
+          !$OMP DO SCHEDULE(STATIC)
           do ix = 2, inE%nx
              do iy = 1, inE%ny
                 do iz = 2, inE%nz
@@ -670,9 +675,11 @@ Contains
                 enddo
              enddo
           enddo
+          !$OMP END DO NOWAIT
 
           ! Apply difference equation to compute Ey (only on interior nodes)
 	  ! the diagonal nodes have the imaginary component added
+          !$OMP DO SCHEDULE(STATIC)
           do ix = 2, inE%nx
              do iy = 2, inE%ny
                 do iz = 1, inE%nz
@@ -688,6 +695,9 @@ Contains
                 enddo
              enddo
           enddo
+          !$OMP END DO NOWAIT
+
+          !$OMP END PARALLEL
 
        else
           write (0, *) ' Maxwell: not compatible usage for existing data types'
@@ -1634,6 +1644,7 @@ Contains
           if (inPhi%gridType == outPhi%gridType) then
 
              ! the coefficients are only for interior nodes
+             !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(ix,iy,iz)
              do ix = 2, inPhi%nx
                 do iy = 2, inPhi%ny
                    do iz = 2, inPhi%nz
@@ -1650,6 +1661,7 @@ Contains
                    enddo
                 enddo
              enddo
+             !$OMP END PARALLEL DO
 
           else
              write (0, *) 'DivCgrad: not compatible existing data types'

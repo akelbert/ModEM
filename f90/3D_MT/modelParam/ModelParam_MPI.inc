@@ -94,7 +94,7 @@
     else if(sigma_mpi%cellCond%gridType == CELL_EARTH) then
        dimension1=(nx1*ny1*nzEarth)
     end if
-         if(allocated(model_para_vec)) then
+         if(associated(model_para_vec)) then
              deallocate(model_para_vec)
          end if
        allocate(model_para_vec(dimension1))

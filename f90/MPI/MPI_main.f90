@@ -26,7 +26,7 @@ Contains
 Subroutine MPI_constructor(ctrl)
 
     implicit none
-    type(userdef_control), intent(in)   :: ctrl
+    type(userdef_control), intent(inout)   :: ctrl
     include 'mpif.h'
      
           call MPI_INIT( ierr )
