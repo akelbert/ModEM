@@ -207,12 +207,12 @@ Contains
 
 	!---------------------------------------------------------------------------
 	! Important output to file; this will be a separate subroutine in output.f90
-	call initFileWrite(cUserDef%fn_misfit, ioOut)
+	call initFileWrite(cUserDef%fn_misfit, ioWRITE)
 
-	write(ioOut,'(a10)',advance='no') 'MISFIT = '
-	write (ioOut,'(g17.9)') v1+v2
+	write(ioWRITE,'(a10)',advance='no') 'MISFIT = '
+	write (ioWRITE,'(g17.9)') v1+v2
 
-	close(ioOut)
+	close(ioWRITE)
 	!---------------------------------------------------------------------------
 
 	! Output derivative summary
@@ -283,30 +283,30 @@ Contains
 
 	!---------------------------------------------------------------------------
 	! Important output to file; this will be a separate subroutine in output.f90
-	call initFileWrite(cUserDef%fn_gradient, ioOut)
+	call initFileWrite(cUserDef%fn_gradient, ioWRITE)
 
-	write(ioOut,'(a15)',advance='no') 'DERIVATIVE = '
+	write(ioWRITE,'(a15)',advance='no') 'DERIVATIVE = '
 	do l=1,param%nc
 	  if(grad(l)%frozen) then
 		cycle
 	  end if
-	  write (ioOut,'(g17.9)',advance='no') grad(l)%value
+	  write (ioWRITE,'(g17.9)',advance='no') grad(l)%value
 	end do
 
-	close(ioOut)
+	close(ioWRITE)
 	!---------------------------------------------------------------------------
 	! Important output to file; this will be a separate subroutine in output.f90
-	call initFileWrite(cUserDef%fn_point, ioOut)
+	call initFileWrite(cUserDef%fn_point, ioWRITE)
 
-	write(ioOut,'(i1)') 1
+	write(ioWRITE,'(i1)') 1
 	do l=1,param%nc
 	  if(point(l)%frozen) then
 		cycle
 	  end if
-	  write (ioOut,'(g17.9)',advance='no') point(l)%value
+	  write (ioWRITE,'(g17.9)',advance='no') point(l)%value
 	end do
 
-	close(ioOut)
+	close(ioWRITE)
 	!---------------------------------------------------------------------------
 	! Free memory
 	call deall_modelParam(dparam)

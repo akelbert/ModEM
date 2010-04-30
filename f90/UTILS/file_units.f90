@@ -33,11 +33,22 @@ module file_units
   integer, parameter	  				        :: ioE=11
   integer, parameter	  				        :: ioJ=12
 
-  ! Others, as necessary
-  integer, parameter							:: ioShell=28
+  ! Fields in x,y,z directions
+  integer, parameter	  				        :: ioHx=20
+  integer, parameter	  				        :: ioHy=30
+  integer, parameter	  				        :: ioHz=40
+  integer, parameter	  				        :: ioEx=21
+  integer, parameter	  				        :: ioEy=31
+  integer, parameter	  				        :: ioEz=41
 
+  ! Others, as necessary
+  integer, parameter					        :: ioSens=27
+
+  integer, parameter							:: ioShell=28
+  integer, parameter							:: ioBound=29
   integer, parameter							:: ioRad=15
-  integer, parameter					        :: ioSens=22
+  integer, parameter							:: ioResp=25
   integer, parameter                            :: ioC=23, ioD=24
+  integer, parameter                            :: ioAvgC=33, ioAvgD=34
 
 end module file_units

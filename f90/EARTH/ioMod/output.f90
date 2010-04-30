@@ -47,10 +47,10 @@ Contains
 	fn_output = trim(cUserDef%modelname)//'_'//trim(freq%code)//'.'//trim(echar)
 	!print *, "Output solution to ",fn_output
 
-	open(ioOut,file=fn_output,status='unknown',form='formatted',iostat=ios)
-	write(ioOut,'(a33,f0.3,a6)') "# Full H-field output for period ",freq%period," days."
-	call write_cvector(ioOut,H)
-	close(ioOut)
+	open(ioWRITE,file=fn_output,status='unknown',form='formatted',iostat=ios)
+	write(ioWRITE,'(a33,f0.3,a6)') "# Full H-field output for period ",freq%period," days."
+	call write_cvector(ioWRITE,H)
+	close(ioWRITE)
 
   end subroutine outputField	! outputField
 
@@ -85,9 +85,9 @@ Contains
 	fn_output = trim(cUserDef%modelname)//'_'//trim(freq%code)//'.'//trim(echar)
 	!print *, "Output solution to ",fn_output
 
-	open(ioOut,file=fn_output,status='unknown',form='formatted',iostat=ios)
-	write(ioOut,'(a85)') "#Radius ij_code GM_Lon GM_Lat rho(i,j,k) rho(i,j,k-1) Hx Hy Hz C_ratio D_ratio (km)";
-	write(ioOut,'(a8,f0.3,a6,i6,a4,i6,a4,i6)') &
+	open(ioWRITE,file=fn_output,status='unknown',form='formatted',iostat=ios)
+	write(ioWRITE,'(a85)') "#Radius ij_code GM_Lon GM_Lat rho(i,j,k) rho(i,j,k-1) Hx Hy Hz C_ratio D_ratio (km)";
+	write(ioWRITE,'(a8,f0.3,a6,i6,a4,i6,a4,i6)') &
 	  ' period=',freq%period,' nrad=',slices%n,' nx=',grid%nx,' ny=',grid%ny
 
 	do n = 1,slices%n
@@ -105,7 +105,7 @@ Contains
 		  Hx = Hij%x(i,j)
 		  Hy = Hij%y(i,j)
 		  Hz = Hij%z(i,j)
-		  write(ioOut,'(f12.3,a10,14g15.7)') &
+		  write(ioWRITE,'(f12.3,a10,14g15.7)') &
 			  obs%rad,trim(obs%code),&
 			  obs%lon,obs%lat,&
 			  rho(i,j,k),rho(i,j,k-1),&
@@ -116,7 +116,7 @@ Contains
 	  end do
 	end do
 
-	close(ioOut)
+	close(ioWRITE)
 
 	! Deallocate solution
 	deallocate(Hij%x,Hij%y,Hij%z,STAT=istat)
@@ -256,12 +256,12 @@ Contains
 
         fn_misfit = cUserDef%fn_misfit
 
-	call initFileWrite(fn_misfit, ioOut)
+	call initFileWrite(fn_misfit, ioWRITE)
 
-	write(ioOut,'(a10)',advance='no') 'MISFIT = '
-	write (ioOut,'(g15.7)') dot_product(misfit%weight,misfitValue)
+	write(ioWRITE,'(a10)',advance='no') 'MISFIT = '
+	write (ioWRITE,'(g15.7)') dot_product(misfit%weight,misfitValue)
 
-	close(ioOut)
+	close(ioWRITE)
 
   end subroutine outputMisfit ! outputMisfit
 
@@ -280,15 +280,15 @@ Contains
 
         fn_misfit = cUserDef%fn_gradient
 
-	call initFileWrite(fn_misfit, ioOut)
+	call initFileWrite(fn_misfit, ioWRITE)
 
-	write(ioOut,'(a15)',advance='no') 'DERIVATIVE = '
+	write(ioWRITE,'(a15)',advance='no') 'DERIVATIVE = '
 	do l=1,param%nc
-	  !write (ioOut,'(g15.7)',advance='no') misfitInfo%d%c(j,i)%value
-	  write (ioOut,'(g15.7)',advance='no') dot_product(misfit%weight,dmisfitValue(:,l))
+	  !write (ioWRITE,'(g15.7)',advance='no') misfitInfo%d%c(j,i)%value
+	  write (ioWRITE,'(g15.7)',advance='no') dot_product(misfit%weight,dmisfitValue(:,l))
 	end do
 
-	close(ioOut)
+	close(ioWRITE)
 
   end subroutine outputDerivative ! outputDerivative
 
@@ -313,10 +313,10 @@ Contains
 	fname = outFiles%fn_residuals
 
 	if (i == 1) then
-	  open(ioOut,file=fname,status='unknown',form='formatted',iostat=ios)
-	  write(ioOut,'(a40)') 'ifreq,ifunc,code,res,err,res/err = ';
+	  open(ioWRITE,file=fname,status='unknown',form='formatted',iostat=ios)
+	  write(ioWRITE,'(a40)') 'ifreq,ifunc,code,res,err,res/err = ';
 	else
-	  open(ioOut,file=fname,position='append', form='formatted',iostat=ios)
+	  open(ioWRITE,file=fname,position='append', form='formatted',iostat=ios)
 	end if
 
 	do j = 1,TFList%n
@@ -330,7 +330,7 @@ Contains
 		ival = dimag(res%v(i,j,k)%resp%value)
 		error = res%v(i,j,k)%resp%err
 
-  		write(ioOut,'(2i5,a10,5g15.7)') i,j,&
+  		write(ioWRITE,'(2i5,a10,5g15.7)') i,j,&
 		  adjustr(trim(res%v(i,j,k)%obs%code)),&
 		  rval,ival,error,rval/error,ival/error
 
@@ -355,9 +355,9 @@ Contains
 
         fn_misfit = 'info.out'
 
-	call initFileWrite(fn_misfit, ioOut)
+	call initFileWrite(fn_misfit, ioWRITE)
 
-	write(ioOut,*) '# ifreq,ifunc,ilayer,icoeff,code,coeff,misfit,derivative:'
+	write(ioWRITE,*) '# ifreq,ifunc,ilayer,icoeff,code,coeff,misfit,derivative:'
 	do ifreq=1,freqList%n
 	  do ifunc=1,TFList%n
 		do ilayer=1,param%nL
@@ -370,7 +370,7 @@ Contains
 			misfitValue = misfitInfo(ifreq,ifunc)%v/(2*misfitInfo(ifreq,ifunc)%n)
 			dmisfitValue = misfitInfo(ifreq,ifunc)%d%c(ilayer,icoeff)%value
 
-			write(ioOut,*) ifreq,ifunc,ilayer,icoeff,param%c(ilayer,icoeff)%code,&
+			write(ioWRITE,*) ifreq,ifunc,ilayer,icoeff,param%c(ilayer,icoeff)%code,&
 					   param%c(ilayer,icoeff)%value,&
 					   misfitValue,dmisfitValue
 
@@ -431,9 +431,9 @@ Contains
 
 	  Resp(:) = psi%v(i,j,:)%resp%value
 
-          open(ioJac,file=fn_jacobian,status='unknown',form='formatted',iostat=ios)
-          !write(ioJac,*) "#Full Jacobian, output of earth3d (for ",freqList%n," frequency values)";
-          !write(ioJac,*) "#Period Code GM_Lon GM_Lat Layer Coeff.code Coeff.value Re(psi) Im(psi) Re(dpsi) Im(dpsi)";
+          open(ioSens,file=fn_jacobian,status='unknown',form='formatted',iostat=ios)
+          !write(ioSens,*) "#Full Jacobian, output of earth3d (for ",freqList%n," frequency values)";
+          !write(ioSens,*) "#Period Code GM_Lon GM_Lat Layer Coeff.code Coeff.value Re(psi) Im(psi) Re(dpsi) Im(dpsi)";
 
           do k=1,size(Resp)
             if (.not.obsList%info(k)%defined) then
@@ -446,7 +446,7 @@ Contains
                    cycle
                 end if
 
-                write(ioJac,'(f8.3,a12,2g15.7,i4,a12,g15.7,2g15.7,2g15.7)',advance='yes') &
+                write(ioSens,'(f8.3,a12,2g15.7,i4,a12,g15.7,2g15.7,2g15.7)',advance='yes') &
                      freqList%info(i)%period,&
                      trim(obsList%info(k)%code),&
                      obsList%info(k)%lon,obsList%info(k)%lat,&
@@ -456,7 +456,7 @@ Contains
 
             end do
           end do
-	  close(ioJac)
+	  close(ioSens)
 
 	end do
 

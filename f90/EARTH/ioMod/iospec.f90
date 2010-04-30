@@ -2,17 +2,18 @@
 module iospec
   ! for i/o, the file names have numbers; initialize them here before using
 
+  use file_units
   implicit none
 
-  integer, parameter	  				:: ioHx=8, ioHy=9, ioHz=10
-  integer, parameter					:: ioJ=11, ioH=12, ioERR=7, ioC=13, ioD=14
-  integer, parameter					:: ioAvgC=33, ioAvgD=34, ioBV=2, ioJac=25
-  integer, parameter					:: ioMdl=20, ioResp=21, ioOut=22, ioEarth=23
+  !integer, parameter	  				:: ioHx=8, ioHy=9, ioHz=10
+  !integer, parameter					:: ioJ=11, ioH=12, ioERR=7, ioC=13, ioD=14
+  !integer, parameter					:: ioAvgC=33, ioAvgD=34, ioBV=2, ioJac=25
+  !integer, parameter					:: ioMdl=20, ioResp=21, ioOut=22, ioEarth=23
 
   logical								:: opened ! for I/O inquiries
 
   ! indicates the required level of output
-  integer, save							:: output_level
+  ! integer, save							:: output_level
 
 
 Contains
@@ -49,7 +50,7 @@ Contains
 	end if
 
   end subroutine initFileWrite ! initFileWrite
-  
+
   ! ***************************************************************************
   ! * closeOutFiles is called by the main program before exiting completely
   subroutine closeOutFiles()
@@ -57,7 +58,7 @@ Contains
 	close(ioC); close(ioD); close(ioH); close(ioJ)
 	close(ioHx); close(ioHy); close(ioHz)
 	close(ioAvgC); close(ioAvgD)
-	close(ioERR); close(ioBV); close(ioOut)
+	close(ioERR); close(ioWRITE)
 
   end subroutine closeOutFiles	! closeOutFiles
 

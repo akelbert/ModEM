@@ -18,13 +18,13 @@ module input
   !integer, parameter							:: ioGrd=2
   !integer, parameter							:: ioShell=3
   !integer, parameter							:: ioPrm=4
-  integer, parameter							:: ioPt=32
-  integer, parameter							:: ioPer=31
-  integer, parameter							:: ioCtrl=16
-  integer, parameter							:: ioCond=23
+  !integer, parameter							:: ioPt=32
+  !integer, parameter							:: ioPer=31
+  !integer, parameter							:: ioCtrl=16
+  !integer, parameter							:: ioCond=23
   !integer, parameter							:: ioDat=17
-  integer, parameter							:: ioObs=18
-  integer, parameter							:: ioFunc=19
+  !integer, parameter							:: ioObs=18
+  !integer, parameter							:: ioFunc=19
   !integer, parameter							:: ioRad=15
 
   logical										:: exists ! for I/O inquiries
@@ -71,6 +71,7 @@ Contains
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_coords;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_func;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_ctrl;
+    read (ioStartup,'(a17,a80)') string,cUserDef%fn_invctrl;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_slices;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_param0;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_param;
@@ -81,8 +82,6 @@ Contains
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_point;
 
     close(ioStartup)
-
-	cUserDef%step_size = 1.0d0
 
   end subroutine readStartFile  ! readStartFile
 
@@ -271,25 +270,25 @@ Contains
     real(8), dimension(:), allocatable				        :: value,days
     character(80)                                                       :: basename
 
-    open(ioPer,file=cUserDef%fn_period,status='old',form='formatted',iostat=ios)
+    open(ioTX,file=cUserDef%fn_period,status='old',form='formatted',iostat=ios)
 
     write(6,*) 'Reading from the periods file ',trim(cUserDef%fn_period)
-    read(ioPer,'(a)') label
+    read(ioTX,'(a)') label
     ! write(6,*) label
 
-	read(ioPer,*) num
+	read(ioTX,*) num
 	allocate(value(num),days(num))
 	do i=1,num
-      read(ioPer,*) days(i) ! reading period in *days*
+      read(ioTX,*) days(i) ! reading period in *days*
 	  value(i)=1/(days(i)*24*60*60)	! turn into freq.
 	  value(i)=clean(value(i))
 	end do
 
-!        read(ioPer,*) value(i) ! reading frequency value
+!        read(ioTX,*) value(i) ! reading frequency value
 !	  days(i)=(1/value(i))/(24*60*60)	! turn into period
 !	end do
 
-	close(ioPer)
+	close(ioTX)
 
 	! sort the values in ascending order
     do i=1,num
@@ -325,13 +324,13 @@ Contains
           write (myfreq%info(i)%code,'(i3.3)') i
        end do
     else
-       open(ioPer,file=trim(basename)//'.codes',status='old',form='formatted',iostat=ios)
-       read(ioPer,'(a)') label
-       read(ioPer,*) num !should be the same as number of frequencies
+       open(ioTX,file=trim(basename)//'.codes',status='old',form='formatted',iostat=ios)
+       read(ioTX,'(a)') label
+       read(ioTX,*) num !should be the same as number of frequencies
        do i=1,num
-          read(ioPer,*) myfreq%info(i)%code
+          read(ioTX,*) myfreq%info(i)%code
        end do
-       close(ioPer)
+       close(ioTX)
     end if
 
     return
@@ -352,23 +351,23 @@ Contains
     integer				                                    :: num
     integer				                                    :: i,j,ios=0
 
-    open(ioObs,file=cUserDef%fn_coords,status='old',form='formatted',iostat=ios)
+    open(ioRX,file=cUserDef%fn_coords,status='old',form='formatted',iostat=ios)
 
     write(6,*) 'Reading from the coordinates file ',trim(cUserDef%fn_coords)
-    read(ioObs,'(a)') label
+    read(ioRX,'(a)') label
     ! write(6,*) label
 
-	read(ioObs,*) num
+	read(ioRX,*) num
 	allocate(myobs%info(num))
 	do i=1,num
 
-      read(ioObs,*) myobs%info(i)%code,myobs%info(i)%colat,myobs%info(i)%lon
+      read(ioRX,*) myobs%info(i)%code,myobs%info(i)%colat,myobs%info(i)%lon
 	  myobs%info(i)%lat = 90.0d0 - myobs%info(i)%colat
 	  myobs%info(i)%defined = .TRUE.
 
 	end do
 
-	close(ioObs)
+	close(ioRX)
 
 	myobs%n = num
 
@@ -388,20 +387,20 @@ Contains
 	type (TF_List), intent(out)								:: TFList
     integer				                                    :: num,i,ios
 
-    open(ioFunc,file=cUserDef%fn_func,status='old',form='formatted',iostat=ios)
+    open(ioDT,file=cUserDef%fn_func,status='old',form='formatted',iostat=ios)
 
     write(6,*) 'Reading from the transfer functions file ',trim(cUserDef%fn_func)
-    read(ioFunc,'(a)') label
+    read(ioDT,'(a)') label
 
-	read(ioFunc,*) num
+	read(ioDT,*) num
 	allocate(TFList%info(num))
 	do i=1,num
 
-      read(ioFunc,*) TFList%info(i)%name,TFList%info(i)%nComp,TFList%info(i)%w
+      read(ioDT,*) TFList%info(i)%name,TFList%info(i)%nComp,TFList%info(i)%w
 
 	end do
 
-	close(ioFunc)
+	close(ioDT)
 
 	TFList%n = num
 
@@ -1139,16 +1138,16 @@ Contains
 	type (input_info), intent(in)						:: cUserDef
 	type (fwdCtrl_t), intent(out)						:: fwdCtrls
 
-	  open(ioCtrl,file=cUserDef%fn_ctrl,form='formatted',status='old')
+	  open(ioFwdCtrl,file=cUserDef%fn_ctrl,form='formatted',status='old')
 
       write(6,*) 'Reading from the forward solver controls file ',trim(cUserDef%fn_ctrl)
-      read(ioCtrl,*) fwdCtrls%ipotloopmax
-      read(ioCtrl,*) fwdCtrls%errend
-      read(ioCtrl,*) fwdCtrls%nrelmax
-      read(ioCtrl,*) fwdCtrls%n_reldivh
-      read(ioCtrl,*) fwdCtrls%ipot0,fwdCtrls%ipotint,fwdCtrls%ipot_max
+      read(ioFwdCtrl,*) fwdCtrls%ipotloopmax
+      read(ioFwdCtrl,*) fwdCtrls%errend
+      read(ioFwdCtrl,*) fwdCtrls%nrelmax
+      read(ioFwdCtrl,*) fwdCtrls%n_reldivh
+      read(ioFwdCtrl,*) fwdCtrls%ipot0,fwdCtrls%ipotint,fwdCtrls%ipot_max
 
-      close(ioCtrl)
+      close(ioFwdCtrl)
 
   end subroutine initControls	! initControls
 
