@@ -598,20 +598,21 @@ Subroutine Master_job_Distribute_Model(sigma,delSigma)
             worker_job_task%what_to_do='Distribute delSigma'
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
- 
-        call copy_ModelParam(sigma_temp,delSigma)
-        call create_modelParam_t_mpi(sigma_temp)
-               
-        call MPI_BCAST(sigma_temp,1,modelParam_t_mpi,0, MPI_COMM_WORLD,ierr)
+         call create_model_param_place_holder(delSigma)
+         call get_model_para_values(delSigma)      
+         buffer_size=size(model_para_vec)
+         call MPI_BCAST(model_para_vec(1),buffer_size,MPI_REAL8,0, MPI_COMM_WORLD,ierr)
+        
  
         do dest=1,numworkers
             worker_job_task%what_to_do='Distribute Model'
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
  
-        call copy_ModelParam(sigma_temp,sigma)              
-        call MPI_BCAST(sigma_temp,1,modelParam_t_mpi,0, MPI_COMM_WORLD,ierr)
-        call MPI_TYPE_FREE (modelParam_t_mpi, IERR)
+         call create_model_param_place_holder(sigma)
+         call get_model_para_values(sigma)      
+         buffer_size=size(model_para_vec)
+         call MPI_BCAST(model_para_vec(1),buffer_size,MPI_REAL8,0, MPI_COMM_WORLD,ierr)
 
 else
         do dest=1,numworkers
@@ -620,20 +621,11 @@ else
         end do
  
         call create_model_param_place_holder(sigma)
-        !call copy_ModelParam(sigma_temp,sigma)
-        !call create_modelParam_t_mpi(sigma_temp)
          call get_model_para_values(sigma)      
-        !call MPI_BCAST(sigma_temp,1,modelParam_t_mpi,0, MPI_COMM_WORLD,ierr)
         buffer_size=size(model_para_vec)
         call MPI_BCAST(model_para_vec(1),buffer_size,MPI_REAL8,0, MPI_COMM_WORLD,ierr)
-
-                !call MPI_TYPE_FREE (modelParam_t_mpi, IERR)
 end if
-        
-     
-   
-   
-   call deall_modelParam(sigma_temp)  
+  
 end Subroutine Master_job_Distribute_Model
 
 
@@ -752,8 +744,14 @@ Subroutine Master_job_Distribute_userdef_control(ctrl)
     include 'mpif.h'
     
     type(userdef_control), intent(in)		:: ctrl
-
-       do dest=1,numworkers
+       write(6,*)'MASTER: ctrl%wFile_Sens',trim(ctrl%wFile_Sens) 
+       write(6,*)'MASTER: ctrl%lambda',(ctrl%lambda)      
+       write(6,*)'MASTER: ctrl%eps',(ctrl%eps)    
+       write(6,*)'MASTER: ctrl%rFile_Cov',trim(ctrl%rFile_Cov)
+       write(6,*)'MASTER: ctrl%search',trim(ctrl%search)
+       write(6,*)'MASTER: ctrl%output_level',ctrl%output_level
+      
+        do dest=1,numworkers
            worker_job_task%what_to_do='Distribute userdef control'
            call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                   
         end do
@@ -859,7 +857,7 @@ per_index_vector=0
           call MPI_RECV(worker_job_task,1,worker_job_task_mpi,0, FROM_MASTER,MPI_COMM_WORLD, STATUS, ierr)
 
 			if (taskid==1) then
-			write(6,*) taskid,' TODO: ',trim(worker_job_task%what_to_do)
+			write(6,*) taskid,' TODO: ',trim(worker_job_task%what_to_do),(worker_job_task%keep_E_soln),worker_job_task%several_Tx
 			end if
         
 if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
@@ -908,8 +906,8 @@ if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
                       ! - Collects eAll for all transmitters, if the used requier and output of eAll (Notice: this step can be avioded if we paralellize the IO stuff)
                       ! - Sends the coressponding  per_index to the worker who has the solution for that transmitter when computing JmutT or Jmult.
                       call copy_EMsoln(eAll%solns(per_index),e0)
-                      eAll%solns(per_index)%tx=per_index
-                       eAll_exist=.true.
+                      !eAll%solns(per_index)%tx=per_index
+                      eAll_exist=.true.
             end if
             
              
@@ -1051,10 +1049,11 @@ m_dimension=size(model_para_vec)
 elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute delSigma') then
   
 !Get delsigma from master
-
-   call MPI_BCAST(sigma0,1,modelParam_t_mpi_sing,0, MPI_COMM_WORLD,ierr) 
-   call copy_ModelParam(delSigma,sigma0)
-        
+m_dimension=size(model_para_vec)
+   !call MPI_BCAST(sigma0,1,modelParam_t_mpi_sing,0, MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(model_para_vec(1),m_dimension,MPI_REAL8,0, MPI_COMM_WORLD,ierr) 
+    call copy_ModelParam(delSigma,sigma0)
+    call set_model_para_values(delSigma)         
 
 
 elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute userdef control') then
@@ -1062,6 +1061,15 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute userdef control') then
         !call initUserCtrl(ctrl)
 		!call create_userdef_control_MPI(ctrl)
 	  call MPI_BCAST(ctrl,1,userdef_control_MPI,0, MPI_COMM_WORLD,ierr)
+	  if (taskid==1 ) then
+       write(6,*)'WORKER: ctrl%wFile_Sens',trim(ctrl%wFile_Sens) 
+	   write(6,*)'WORKER: ctrl%lambda',(ctrl%lambda)      
+       write(6,*)'WORKER: ctrl%eps',(ctrl%eps)    
+       write(6,*)'WORKER: ctrl%rFile_Cov',trim(ctrl%rFile_Cov)
+       write(6,*)'WORKER: ctrl%search',trim(ctrl%search)
+       write(6,*)'WORKER: ctrl%output_level',ctrl%output_level
+	  end if
+	  
       call initGlobalData(ctrl)
       call setGrid(grid)
       call copy_dataVecMTX(d ,allData)
@@ -1268,7 +1276,27 @@ subroutine create_worker_job_task_mpi
     include 'mpif.h'
 integer :: ii,intex,CHARACTERex
 integer(MPI_ADDRESS_KIND) address1(0:20)
-  
+
+
+   offsets(0) = 0
+   oldtypes(0) = MPI_CHARACTER
+   blockcounts(0) =  80
+
+   call MPI_TYPE_EXTENT(MPI_CHARACTER, extent, ierr)
+   offsets(1) = (80* extent)+offsets(0)
+   oldtypes(1) = MPI_INTEGER
+   blockcounts(1) = 5
+   		
+   call MPI_TYPE_EXTENT(MPI_INTEGER, extent, ierr)
+   offsets(2) = (5* extent)+offsets(1)
+   oldtypes(2) = MPI_LOGICAL
+   blockcounts(2) = 2
+   
+       call MPI_TYPE_STRUCT(3, blockcounts, offsets, oldtypes,worker_job_task_mpi, ierr)
+       call MPI_TYPE_COMMIT(worker_job_task_mpi, ierr)
+      
+   
+     
 
       typelist(0) = MPI_CHARACTER
       typelist(1) = MPI_INTEGER
@@ -1291,8 +1319,8 @@ integer(MPI_ADDRESS_KIND) address1(0:20)
        displacements(ii) = address1(ii+1) - address1(0)
      end do   
      
-      call MPI_TYPE_STRUCT(3, block_lengths, displacements,typelist, worker_job_task_mpi, ierr)   
-      call MPI_TYPE_COMMIT(worker_job_task_mpi, ierr) 
+      !call MPI_TYPE_STRUCT(3, block_lengths, displacements,typelist, worker_job_task_mpi, ierr)   
+      !call MPI_TYPE_COMMIT(worker_job_task_mpi, ierr) 
      
 
 
@@ -1305,38 +1333,59 @@ subroutine create_userdef_control_MPI(ctrl)
     include 'mpif.h'
     
 	type(userdef_control), intent(in)   :: ctrl
-	integer :: ii,intex,CHARACTERex
+	integer :: ii,intex,CHARACTERex,sum1
 	integer(MPI_ADDRESS_KIND) address1(0:20)
-	
 
+	
+   offsets(0) = 0
+   oldtypes(0) = MPI_CHARACTER
+   blockcounts(0) =  80*13
+
+   call MPI_TYPE_EXTENT(MPI_CHARACTER, extent, ierr)
+   offsets(1) = (80*13 * extent)+offsets(0)
+   oldtypes(1) = MPI_REAL8
+   blockcounts(1) = 2
+   		
+   call MPI_TYPE_EXTENT(MPI_REAL8, extent, ierr)
+   offsets(2) = (2* extent)+offsets(1)
+   oldtypes(2) = MPI_CHARACTER
+   blockcounts(2) = 80*2
+   
+   call MPI_TYPE_EXTENT(MPI_CHARACTER, extent, ierr)
+   offsets(3) = (80*2* extent)+offsets(2)
+   oldtypes(3) = MPI_INTEGER
+   blockcounts(3) = 1
+   
+     call MPI_TYPE_STRUCT(4, blockcounts, offsets, oldtypes,userdef_control_MPI, ierr)
+     call MPI_TYPE_COMMIT(userdef_control_MPI, ierr)
+    
+
+      
+   
       typelist(0) = MPI_CHARACTER                                                 
       typelist(1) = MPI_REAL8
       typelist(2) = MPI_CHARACTER
-
+      typelist(3) = MPI_INTEGER
 
       
       block_lengths(0) = 80*13 
       block_lengths(1) = 2  
-      block_lengths(2) = 80*3
-      
+      block_lengths(2) = 80*2
+      block_lengths(3) = 1
       
       call MPI_Address(ctrl,                	address1(0), ierr)
-
       call MPI_Address(ctrl%job,             	address1(1), ierr)
-
       call MPI_Address(ctrl%lambda,          	address1(2), ierr)
-
       call MPI_Address(ctrl%rFile_Cov,        	address1(3), ierr)
+      call MPI_Address(ctrl%output_level,       address1(4), ierr)
 
-      !call MPI_GET_ADDRESS(worker_job_task%what_to_do, address1(1), ierr) 
 
-
-     do ii=0,2
+     do ii=0,3
        displacements(ii) = address1(ii+1) - address1(0)
      end do   
      
-      call MPI_TYPE_STRUCT(3, block_lengths, displacements,typelist, userdef_control_MPI, ierr)   
-      call MPI_TYPE_COMMIT(userdef_control_MPI, ierr) 
+     !call MPI_TYPE_STRUCT(4, block_lengths, displacements,typelist, userdef_control_MPI, ierr)   
+     ! call MPI_TYPE_COMMIT(userdef_control_MPI, ierr) 
 
 
 

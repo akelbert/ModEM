@@ -29,8 +29,8 @@ module receivers
      real (kind=prec)                   ::  x(3)
      real (kind=prec)                   ::  r(3)
      ! site ID used for input/output and for searching through the list
-     character(20)                      ::  id=''
-     character(20)                      ::  id_ref=''
+     character(50)                      ::  id=''
+     character(50)                      ::  id_ref=''
   end type MTrx
 
   ! receiver dictionary for 3D MT data will be an array of

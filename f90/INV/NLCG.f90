@@ -816,7 +816,11 @@ Contains
    if (starting_guess) then
    	alpha = alpha_1
    	dHat = dHat_1
+#ifdef MPI
+#else   	
    	eAll = eAll_1
+#endif
+   	
    	mHat = mHat_1
    	rms = rms_1
    	f = f_1
@@ -958,7 +962,10 @@ Contains
 	starting_guess = .true.
   	alpha = alpha_1
    	dHat = dHat_1
+#ifdef MPI
+#else   	
    	eAll = eAll_1
+#endif
    	mHat = mHat_1
    	rms = rms_1
    	f = f_1
@@ -990,7 +997,10 @@ Contains
    		starting_guess = .true.
    		alpha = alpha_1
    		dHat = dHat_1
-   		eAll = eAll_1
+#ifdef MPI
+#else   	
+     	eAll = eAll_1
+#endif
    		mHat = mHat_1
    		rms = rms_1
    		f = f_1
@@ -1071,7 +1081,10 @@ Contains
    if (starting_guess) then
    	alpha = alpha_1
    	dHat = dHat_1
+#ifdef MPI
+#else   	
    	eAll = eAll_1
+#endif
    	mHat = mHat_1
    	rms = rms_1
    	f = f_1
