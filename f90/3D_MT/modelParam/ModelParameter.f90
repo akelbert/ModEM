@@ -105,8 +105,8 @@ end interface
 
 ! definitions for CmSqrt: must be consistent with the include file below
 
-!#include "modelCov/RecursiveAR.hd"
-#include "modelCov/Diffusion.hd"
+#include "modelCov/RecursiveAR.hd"
+!#include "modelCov/Diffusion.hd"
 Contains
 
 ! *****************************************************************************
@@ -116,8 +116,8 @@ Contains
 #include "ModelMap.inc"
 
 !  The included file must contain subroutines create_CmSqrt, deall_CmSqrt, multBy...
-!#include "modelCov/RecursiveAR.inc"
-#include "modelCov/Diffusion.inc"
+#include "modelCov/RecursiveAR.inc"
+!#include "modelCov/Diffusion.inc"
 !  I/O choices
 #include "modelParamIO/Binary.inc"
 #include "modelParamIO/Mackie.inc"
