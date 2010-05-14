@@ -101,6 +101,10 @@ my  $DMPI = 0;
 while (@ARGV){
 
   $arg=shift;
+  if ($arg =~ /^-win$/){
+    $WIN = 1;
+    print STDERR "# Creating a Windows style makefile\n";
+  }
   if ($arg =~ /^-p$/){
     $spath=shift;
     print STDERR "# Using search path from cmd line:\n $spath\n";
@@ -220,12 +224,14 @@ print "OBJDIR = $linkdir\n";
 print "F90 = $f90 \n";
 print "FFLAGS = $optim\n";
 print "MPIFLAGS = $mpiflags\n";
-if ($f90 =~ /^g95$/){
+if ($WIN) {
+	print "MODULE = \n";
+} elsif ($f90 =~ /^g95$/){
 	print "MODULE = -fmod=\$(OBJDIR)\n";
 } elsif ($f90 =~ /^gfortran$/){
 	print "MODULE = --sysroot=\$(OBJDIR)\n";	
 } else {
-	print "MODULE = -module \$(OBJDIR)\n";	
+	print "MODULE = -module \$(OBJDIR)\n";
 }
 print "LIBS = $linkopts\n";
 
@@ -240,8 +246,13 @@ print "\nall: $execfile \n";
 # Generate makefile entry for the Link step
 print "\n# Here is the link step \n";
 
-print "$execfile: \$(OBJDIR) \$(OBJ) \n";
-print "\t \$(F90) -o \$(OUTDIR)/$execfile \$(OBJ) \$(LIBS) \n";
+if ($WIN) {
+	print "$execfile: \$(OBJDIR) \$(OBJ) \n";
+	print "\t \$(F90) /link \$(OUTDIR)/$execfile \$(OBJ) \$(LIBS) \n";
+} else {
+	print "$execfile: \$(OBJDIR) \$(OBJ) \n";
+	print "\t \$(F90) -o \$(OUTDIR)/$execfile \$(OBJ) \$(LIBS) \n";
+}
 # print "\trm -f *.mod \n";
 
 print "\n# Here are the compile steps \n\n";
@@ -369,12 +380,23 @@ sub process_fsource {
   print STDERR "Couldn't find source file for module $module\n";
 }
 
-# name of file we want to make
-$objfile=$mainprogfile;
-# replace source file name with .o
-$objfile=~s/\.${sftag}/\.o/;
-# strip path so object files go in current dir
-$objfile=~s|.*/||;
+if ($WIN) {
+	$mainprogfile=~s/\//\\/g;
+	# name of file we want to make
+	$objfile=$mainprogfile;
+	# replace source file name with .o
+	$objfile=~s/\.${sftag}/\.obj/;
+	# strip path so object files go in current dir
+	$objfile=~s|.*\\||;
+} else {
+	# name of file we want to make
+	$objfile=$mainprogfile;
+	# replace source file name with .o
+	$objfile=~s/\.${sftag}/\.o/;
+	# strip path so object files go in current dir
+	$objfile=~s|.*/||;
+}
+
 # now add the user-defined path to the object files
 $objfile="\$(OBJDIR)/$objfile";
 @global_objlist=(@global_objlist,$objfile);
@@ -383,7 +405,11 @@ $objfile="\$(OBJDIR)/$objfile";
 foreach  $mf (@modfiles) { 
   $obj=$mf;
   # replace source file name with .o
-  $obj=~s/\.${sftag}/\.o/;
+  if ($WIN) {
+  	$obj=~s/\.${sftag}/\.obj/;
+  } else {
+  	$obj=~s/\.${sftag}/\.o/;
+  }
   # strip path so object files go in current dir
   $obj=~s|.*/||;
   # now add the user-defined path to the object file
@@ -392,8 +418,11 @@ foreach  $mf (@modfiles) {
 }
 
 @global_outlines=(@global_outlines,"\n$objfile:$mainprogfile @objlist @includelist\n");
-@global_outlines=(@global_outlines,"\t \$(F90) -c \$(MODULE) \$(FFLAGS) \$(MPIFLAGS) $mainprogfile -o $objfile\n");
-
+if ($WIN){
+	@global_outlines=(@global_outlines,"\t \$(F90) -c \$(MODULE) \$(FFLAGS) \$(MPIFLAGS) \"$mainprogfile\" /link $objfile\n");
+} else {
+	@global_outlines=(@global_outlines,"\t \$(F90) -c \$(MODULE) \$(FFLAGS) \$(MPIFLAGS) $mainprogfile -o $objfile\n");
+}
 #if (@includelist > 0) {
 #	@global_outlines=(@global_outlines,"\n$mainprogfile: @includelist \n");
 #}
