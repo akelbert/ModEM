@@ -62,6 +62,10 @@ Subroutine Master_Job_fwdPred(sigma,d_pred,eAll)
 
    ! nTX is number of transmitters;
    nTx = d_pred%nTx
+   if(associated(eAll_location)) then
+             deallocate(eAll_location)
+   end if
+   allocate(eAll_location(nTx))
    do iper=1,nTx
    eAll_location(iper)=0
    end do
@@ -835,7 +839,7 @@ Subroutine Worker_job (sigma0,d)
    type(dataVecMTX_t)                :: d_local
    type(dataVecTX_t)                 :: d_temp_TX 
       
-   type(EMsolnMTX_t)              :: eAll_local,eAll_local1  
+   type(EMsolnMTX_t)              :: eAll_local,eAll1  
    type(EMsolnMTX_t)              :: eAll,eAll_temp
    type(EMsoln_t)           		:: e0  
    type(userdef_control)          :: ctrl
@@ -863,13 +867,13 @@ per_index_vector=0
 if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
 
     if (.NOT. worker_job_task%several_Tx ) then  
-         if (eAll%allocated ) then
-            call deall_EMsolnMTX(eAll)
+         if (eAll1%allocated ) then
+            call deall_EMsolnMTX(eAll1)
          end if
-         call create_EMsolnMTX(nTx,eAll)
+         call create_EMsolnMTX(nTx,eAll1)
       do iTx=1,nTx
          call create_EMsoln(grid,iTx,e0)
-         call copy_EMsoln(eAll%solns(iTx),e0)
+         call copy_EMsoln(eAll1%solns(iTx),e0)
       end do
       
     end if
@@ -905,7 +909,7 @@ if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
                       !Keep soln for this period here, later the Master will:
                       ! - Collects eAll for all transmitters, if the used requier and output of eAll (Notice: this step can be avioded if we paralellize the IO stuff)
                       ! - Sends the coressponding  per_index to the worker who has the solution for that transmitter when computing JmutT or Jmult.
-                      call copy_EMsoln(eAll%solns(per_index),e0)
+                      call copy_EMsoln(eAll1%solns(per_index),e0)
                       !eAll%solns(per_index)%tx=per_index
                       eAll_exist=.true.
             end if
@@ -959,9 +963,10 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'JmultT') then
                        per_index=worker_job_task%per_index
                        worker_job_task%taskid=taskid
       
-              ! Do the actual computation                       
+              ! Do the actual computation  
+              
               if (eAll_exist) then         
-                      call JmultT_TX(sigma0,d%d(per_index),dsigma,eAll%solns(per_index))       
+                      call JmultT_TX(sigma0,d%d(per_index),dsigma,eAll1%solns(per_index))       
               else
                       call JmultT_TX(sigma0,d%d(per_index),dsigma)      
               end if               
@@ -1063,7 +1068,7 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute userdef control') then
 	  call MPI_BCAST(ctrl,1,userdef_control_MPI,0, MPI_COMM_WORLD,ierr)
 	  if (taskid==1 ) then
        write(6,*)'WORKER: ctrl%wFile_Sens',trim(ctrl%wFile_Sens) 
-	   write(6,*)'WORKER: ctrl%lambda',(ctrl%lambda)      
+       write(6,*)'WORKER: ctrl%lambda',(ctrl%lambda)      
        write(6,*)'WORKER: ctrl%eps',(ctrl%eps)    
        write(6,*)'WORKER: ctrl%rFile_Cov',trim(ctrl%rFile_Cov)
        write(6,*)'WORKER: ctrl%search',trim(ctrl%search)
@@ -1076,6 +1081,7 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute userdef control') then
       call copy_dataVecMTX(measu_data ,d)
 
 nTx=d%nTx
+
                         
 elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute Data_Size') then
    
@@ -1120,7 +1126,7 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Clean memory' ) then
          call deall_dataVecMTX(d_local)
          call deall_dataVecMTX(d_local)
          
-         call deall_EMsolnMTX(eAll_local1)    
+         !call deall_EMsolnMTX(eAll_local1)    
          call deall_EMsolnMTX(eAll)
          call deall_EMsolnMTX(eAll_local)
          
@@ -1134,7 +1140,7 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'STOP' ) then
                              worker_job_task%what_to_do='STOPED'
                              worker_job_task%taskid=taskid
                              call MPI_SEND(worker_job_task,1,worker_job_task_mpi, 0,FROM_WORKER, MPI_COMM_WORLD, ierr) 
-                             call MPI_TYPE_FREE (modelParam_t_mpi_sing, IERR)
+                             !call MPI_TYPE_FREE (modelParam_t_mpi_sing, IERR)
                              exit
 
 end if

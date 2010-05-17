@@ -44,11 +44,11 @@
 # ------------------Macro-Defs---------------------
 include Makefile.local
 OBJDIR = ./objs/3D_MT/Release
-F90 = xlf90_r #mpxlf95 
-FFLAGS = -O4 -qstrict -qreport=hotlist -qsmp -qreport=smplist
+F90 = mpxlf95 
+FFLAGS = -O3 -qstrict
 MPIFLAGS = -qsuffix=cpp=f90
-MODULE = -qmoddir=$(OBJDIR) -I $(OBJDIR) #-WF,-DMPI
-LIBS = -L/usr/local/lib -llapack -lblas -O4 -qstrict -qsmp
+MODULE = -qmoddir=$(OBJDIR) -I $(OBJDIR) -WF,-DMPI
+LIBS = -L/usr/local/lib -llapack -lblas 
 
 # -------------------End-macro-Defs---------------------------
 OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/GridDef.o $(OBJDIR)/file_units.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/MPI_declaration.o $(OBJDIR)/ModelParameter.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/transmitters.o $(OBJDIR)/SolnRHS.o $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o $(OBJDIR)/DataFunc.o $(OBJDIR)/ModelSens.o $(OBJDIR)/DataSens.o $(OBJDIR)/sg_diff_oper.o $(OBJDIR)/GridCalc.o $(OBJDIR)/WSfwd2Dpar.o $(OBJDIR)/WSutils.o $(OBJDIR)/WSfwd1Dmod.o $(OBJDIR)/WSfwd2Dmod.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/boundary_ws.o $(OBJDIR)/modelOperator3D.o $(OBJDIR)/solver.o $(OBJDIR)/EMsolve3D.o $(OBJDIR)/EMsolver.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/SensComp.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o $(OBJDIR)/Main.o $(OBJDIR)/MPI_sub.o $(OBJDIR)/MPI_main.o $(OBJDIR)/NLCG.o $(OBJDIR)/DCG.o $(OBJDIR)/Mod3DMT.o 

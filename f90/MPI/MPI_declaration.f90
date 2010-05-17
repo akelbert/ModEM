@@ -45,7 +45,7 @@ SEQUENCE
  type(define_worker_job), save :: worker_job_task 
 Integer, pointer, dimension(:) ::ndata_size,nrx_size
 logical                        :: eAll_exist=.false.
-Integer                        :: eAll_location(200)
+Integer , pointer, dimension(:) :: eAll_location
 Integer                        :: per_index_counter=0
 Integer                        :: per_index_vector(100)
 integer                        :: prec_MPI

@@ -86,10 +86,10 @@ end interface
 
      character*3		:: adj = ''
      character*2		:: polName ! Ex or Ey
-     logical                    :: nonzero_BC
+     logical                    :: nonzero_BC     = .false.
      logical                    :: nonzero_Source = .false.
-     logical                    :: sparse_Source = .false.
-     logical			:: allocated = .false.
+     logical                    :: sparse_Source  = .false.
+     logical			:: allocated      = .false.
     logical					:: temporary = .false.
      type (cvector) 		:: s
      type (sparsevecc) 		:: sSparse
