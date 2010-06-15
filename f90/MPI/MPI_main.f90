@@ -707,7 +707,7 @@ Subroutine Master_job_Collect_eAll(d,eAll)
                    call create_eAll_mpi(eAll_local)
                    call MPI_RECV(eAll_local%solns(1),1,eAll_mpi ,who, FROM_WORKER,MPI_COMM_WORLD,STATUS, ierr)
                    call copy_EMsoln(eAll%solns(iper),eAll_local%solns(1))
-                  call MPI_TYPE_FREE (eAll_mpi, IERR)
+                   call MPI_TYPE_FREE (eAll_mpi, IERR)
         
       end do
       
@@ -1112,7 +1112,7 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Send eAll to Master' ) then
 
                       which_per=1
                       call create_eAll_mpi(eAll_local)
-                      call copy_EMsoln(eAll_local%solns(1),eAll%solns(per_index_vector(per_index)))                     
+                      call copy_EMsoln(eAll_local%solns(1),eAll1%solns(per_index))                     
                       call MPI_SEND(eAll_local%solns(which_per),1,eAll_mpi,0, FROM_WORKER,MPI_COMM_WORLD, ierr)
                       call MPI_TYPE_FREE (eAll_mpi, IERR)
                        
