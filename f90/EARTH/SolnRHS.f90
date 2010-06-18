@@ -161,6 +161,7 @@ Contains
 	open(ioREAD,file=fname,status='unknown',form='formatted',iostat=ios)
 	read(ioREAD,'(a35)',iostat=istat,advance='no') comment
 	read(ioREAD,*,iostat=istat) nTx
+	print *, 'Number of transmitters: ',nTx
     call create_EMsolnMTX(nTx,E,grid)
 	do j = 1,nTx
 		read(ioREAD,'(i3)',iostat=istat) E%tx(j)

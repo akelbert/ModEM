@@ -688,7 +688,7 @@ Contains
       do k = 1,Nz+1
       	do j = 1,Ny+1
       		do i = 1,Nx+1
-      			read(fid,'(3i5,3es13.5)',iostat=istat) ii,jj,kk,x(i,j,k),y(i,j,k),z(i,j,k)
+      			read(fid,*,iostat=istat) ii,jj,kk,x(i,j,k),y(i,j,k),z(i,j,k)
       		end do
       	end do
       end do
@@ -729,6 +729,7 @@ Contains
       integer 		                    :: Nx, Ny, Nz
       character(80)						:: gridType
       integer                           :: i, j, k, ii, jj, kk, istat
+      real (kind(E%x))                  :: xr, xi, yr, yi, zr, zi
       complex (kind(E%x)), allocatable, dimension(:,:,:)  :: x, y, z
 
       read(fid,*,iostat=istat) Nx,Ny,Nz,gridType
@@ -756,7 +757,11 @@ Contains
       do k = 1,Nz+1
       	do j = 1,Ny+1
       		do i = 1,Nx+1
-      			read(fid,'(3i5,6es13.5)',iostat=istat) ii,jj,kk,x(i,j,k),y(i,j,k),z(i,j,k)
+      		    ! makes the acceptable formatting more flexible
+      			read(fid,*,iostat=istat) ii,jj,kk,xr,xi,yr,yi,zr,zi
+      			x(i,j,k) = cmplx(xr,xi)
+      			y(i,j,k) = cmplx(yr,yi)
+      			z(i,j,k) = cmplx(zr,zi)
       		end do
       	end do
       end do

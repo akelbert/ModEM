@@ -510,7 +510,7 @@ Contains
       call errStop('Problem with your gradient computations: first gradient is zero')
    else if (alpha * gnorm > startdm) then
       alpha = startdm / gnorm
-      ! write(*,'(a39,es12.6)') 'The initial value of alpha updated to ',alpha
+      write(*,'(a39,es12.6)') 'The initial value of alpha updated to ',alpha
    end if
 
    ! initialize CG: g = - grad; h = g
@@ -817,10 +817,10 @@ Contains
    	alpha = alpha_1
    	dHat = dHat_1
 #ifdef MPI
-#else   	
+#else
    	eAll = eAll_1
 #endif
-   	
+
    	mHat = mHat_1
    	rms = rms_1
    	f = f_1
@@ -963,7 +963,7 @@ Contains
   	alpha = alpha_1
    	dHat = dHat_1
 #ifdef MPI
-#else   	
+#else
    	eAll = eAll_1
 #endif
    	mHat = mHat_1
@@ -998,7 +998,7 @@ Contains
    		alpha = alpha_1
    		dHat = dHat_1
 #ifdef MPI
-#else   	
+#else
      	eAll = eAll_1
 #endif
    		mHat = mHat_1
@@ -1082,7 +1082,7 @@ Contains
    	alpha = alpha_1
    	dHat = dHat_1
 #ifdef MPI
-#else   	
+#else
    	eAll = eAll_1
 #endif
    	mHat = mHat_1

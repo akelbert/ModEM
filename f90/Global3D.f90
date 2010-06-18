@@ -660,7 +660,7 @@ end program earth
 	  call outputSolution(freq,Hj,slices,grid,cUserDef,rho,'h')
 
 	  ! output full H-field cvector
-	  if (output_level > 4) then
+	  if (output_level > 3) then
 	  	call outputField(freq,Hj,cUserDef,'field')
 	  end if
 

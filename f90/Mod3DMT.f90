@@ -91,13 +91,14 @@ program Mod3DMT
         call fwdPred(sigma0,allData,eAll)
 #endif
 
+        ! write out all impedances
+        call write_dataVecMTX(allData,cUserDef%wFile_Data)
+
         if (write_EMsoln) then
         	! write out EM solutions
         	write(*,*) 'Saving the EM solution...'
         	call write_EMsolnMTX(fidWrite,cUserDef%wFile_EMsoln,eAll)
         end if
-        ! write out all impedances
-        call write_dataVecMTX(allData,cUserDef%wFile_Data)
 
      case (COMPUTE_J)
         write(*,*) 'Calculating the full sensitivity matrix...'

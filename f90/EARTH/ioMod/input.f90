@@ -215,6 +215,7 @@ Contains
 	end if
 
 	call read_EMsolnMTX(cUserDef%fn_field,H,mygrid)
+	call write_EMsolnMTX('test.field',H)
 
   end subroutine initField	! initField
 

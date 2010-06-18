@@ -172,7 +172,7 @@ Contains
 	! Helpful output
 	call print_modelParam(p0_input,output_level-1,"Prior model m_0 = ")
 	call print_modelParam(p_input,output_level-1,"Input model \hat{m} = ")
-	call print_modelParam(param,output_level,"Final model m = ")
+	call print_modelParam(param,output_level-1,"Final model m = ")
 	!--------------------------------------------------------------------------
 
 	! If this information is required, initialize data functionals
