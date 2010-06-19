@@ -12,6 +12,9 @@ module file_units
   integer, parameter							:: ioFwdCtrl=105
   integer, parameter							:: ioInvCtrl=106
 
+  ! Log file
+  integer, parameter							:: ioLog=111
+
   ! Grid, model, data
   integer, parameter							:: ioPrm=1
   integer, parameter							:: ioGrd=2

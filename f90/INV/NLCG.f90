@@ -52,8 +52,6 @@ public  :: NLCGsolver
      real (kind=prec)   :: gamma
      ! model and data output file name
      character(80)              :: fname
-     ! fid for output files (in the future will not need this)
-     integer                    :: fid
   end type NLCGiterControl_t
 
   type(NLCGiterControl_t), private, save :: iterControl
@@ -92,8 +90,6 @@ Contains
      iterControl%gamma = 0.99
      ! model and data output file name
      iterControl%fname = 'Modular'
-     ! fid for output files (in the future will not need this)
-     iterControl%fid = 30
 
    end subroutine set_NLCGiterControl
 
@@ -170,21 +166,40 @@ Contains
 
 
 !**********************************************************************
-   subroutine printf(comment,lambda,alpha,f,mNorm,rms)
+   subroutine printf(comment,lambda,alpha,f,mNorm,rms,logfile)
 
    ! Compute the full penalty functional F
    ! Also output the predicted data and the EM solution
    ! that can be used for evaluating the gradient
 
-	 character(*), intent(in)               :: comment
-   real(kind=prec), intent(in)  :: lambda, alpha, f, mNorm, rms
+    character(*), intent(in)               :: comment
+    real(kind=prec), intent(in)  :: lambda, alpha, f, mNorm, rms
+    character(*), intent(in), optional	:: logfile
+    integer  :: io_unit, ios
+    logical  :: opened
 
-		write(*,'(a10)',advance='no') trim(comment)//':'
-		write(*,'(a3,es12.6)',advance='no') ' f=',f
-		write(*,'(a4,es12.6)',advance='no') ' m2=',mNorm
-		write(*,'(a5,f11.6)',advance='no') ' rms=',rms
-		write(*,'(a8,es7.0)',advance='no') ' lambda=',lambda
-		write(*,'(a7,es12.6)') ' alpha=',alpha
+    if (present(logfile)) then
+    	io_unit = ioLog
+    	inquire(file=logfile,opened=opened)
+    	if (.not. opened) then
+    		open (unit=ioLog,file=logfile,status='unknown',position='append',iostat=ios)
+    	end if
+    else
+    	io_unit = 6
+    end if
+
+	write(io_unit,'(a10)',advance='no') trim(comment)//':'
+	write(io_unit,'(a3,es12.6)',advance='no') ' f=',f
+	write(io_unit,'(a4,es12.6)',advance='no') ' m2=',mNorm
+	write(io_unit,'(a5,f11.6)',advance='no') ' rms=',rms
+	write(io_unit,'(a8,es7.0)',advance='no') ' lambda=',lambda
+	write(io_unit,'(a7,es12.6)') ' alpha=',alpha
+
+	! flush(io_unit): this has the effect of flushing the buffer
+	if (present(logfile)) then
+		close(io_unit)
+		open (unit=ioLog,file=logfile,status='old',position='append',iostat=ios)
+	end if
 
    end subroutine printf
 
@@ -460,10 +475,10 @@ Contains
    !type(NLCGiterControl_t)			:: iterControl
    real(kind=prec)		:: value, valuePrev, rms, rmsPrev, alpha, beta, gnorm, mNorm
    real(kind=prec)      :: grad_dot_h, g_dot_g, g_dot_gPrev, gPrev_dot_gPrev, g_dot_h
-   integer				:: iter, nCG, nLS, nfunc
+   integer				:: iter, nCG, nLS, nfunc, ios
    logical              :: ok
    character(3)         :: iterChar
-   character(100)       :: mFile, mHatFile, gradFile, dataFile, resFile
+   character(100)       :: mFile, mHatFile, gradFile, dataFile, resFile, logFile
    type(EMsolnMTX_t)      :: eAll
 
    if (present(fname)) then
@@ -475,12 +490,19 @@ Contains
       call set_NLCGiterControl(iterControl)
    end if
 
+   ! initialize the output to log file
+   logFile = trim(iterControl%fname)//'_NLCG.log'
+   open (unit=ioLog,file=logFile,status='unknown',position='append',iostat=ios)
+
    ! initialize the line search
    alpha = iterControl%alpha_1
    startdm = iterControl%startdm
 
    write(*,'(a41,es7.0)') 'The initial damping parameter lambda is ',lambda
    write(*,'(a55,f9.6)') 'The initial line search step size (in model units) is ',startdm
+
+   write(ioLog,'(a41,es7.0)') 'The initial damping parameter lambda is ',lambda
+   write(ioLog,'(a55,f9.6)') 'The initial line search step size (in model units) is ',startdm
 
 
    ! starting from the prior hardcoded by setting mHat = 0 and m = m0
@@ -494,6 +516,7 @@ Contains
    !  compute the penalty functional and predicted data
    call func(lambda,d,m0,mHat,value,mNorm,dHat,eAll,rms)
    call printf('START',lambda,alpha,value,mNorm,rms)
+   call printf('START',lambda,alpha,value,mNorm,rms,logFile)
 	 nfunc = 1
 
    ! compute gradient of the full penalty functional
@@ -511,6 +534,7 @@ Contains
    else if (alpha * gnorm > startdm) then
       alpha = startdm / gnorm
       write(*,'(a39,es12.6)') 'The initial value of alpha updated to ',alpha
+      write(ioLog,'(a39,es12.6)') 'The initial value of alpha updated to ',alpha
    end if
 
    ! initialize CG: g = - grad; h = g
@@ -555,8 +579,10 @@ Contains
 	  ! adjust the starting step to ensure superlinear convergence properties
 	  alpha = min(ONE,(ONE+0.01)*alpha)
 	  write(*,'(a25,i5)') 'Completed NLCG iteration ',iter
+	  write(ioLog,'(a25,i5)') 'Completed NLCG iteration ',iter
 	  mNorm = dotProd(mHat,mHat)
       call printf('with',lambda,alpha,value,mNorm,rms)
+      call printf('with',lambda,alpha,value,mNorm,rms,logFile)
 
       ! write out the intermediate model solution and responses
       call CmSqrtMult(mHat,m_minus_m0)
@@ -605,6 +631,8 @@ Contains
 	  	! restart
 			write(*,'(a55)') 'Restarting NLCG with the damping parameter updated'
 			call printf('to',lambda,alpha,value,mNorm,rms)
+			write(ioLog,'(a55)') 'Restarting NLCG with the damping parameter updated'
+			call printf('to',lambda,alpha,value,mNorm,rms,logFile)
 	  	h = g
 	  	nCG = 0
 	  	cycle
@@ -629,6 +657,7 @@ Contains
 	  else
    	    ! restart
 		write(*,'(a45)') 'Restarting NLCG to restore orthogonality'
+		write(ioLog,'(a45)') 'Restarting NLCG to restore orthogonality'
         h = g
         nCG = 0
    	  end if
@@ -640,6 +669,8 @@ Contains
    call linComb(ONE,m_minus_m0,ONE,m0,m)
    d = dHat
    write(*,'(a25,i5,a25,i5)') 'NLCG iterations:',iter,' function evaluations:',nfunc
+   write(ioLog,'(a25,i5,a25,i5)') 'NLCG iterations:',iter,' function evaluations:',nfunc
+   close(ioLog,iostat=ios)
 
    ! cleaning up
    call deall_dataVecMTX(dHat)
@@ -721,11 +752,13 @@ Contains
    type(modelParam_t)                        :: mHat_0,mHat_1
    type(dataVecMTX_t)                           :: dHat_1
    type(EMsolnMTX_t)                         :: eAll_1
+   character(100)							:: logFile
 
    ! parameters
    c = iterControl%c
    !k = iterControl%alpha_k
    !eps = iterControl%alpha_tol
+   logFile = trim(iterControl%fname)//'_NLCG.log'
 
    ! initialize the line search
    niter = 0
@@ -760,6 +793,7 @@ Contains
    !  compute the penalty functional and predicted data at mHat_1
    call func(lambda,d,m0,mHat_1,f_1,mNorm_1,dHat_1,eAll_1,rms_1)
    call printf('STARTLS',lambda,alpha,f_1,mNorm_1,rms_1)
+   call printf('STARTLS',lambda,alpha,f_1,mNorm_1,rms_1,logFile)
    niter = niter + 1
 
    if (f_1 - f_0 >= LARGE_REAL) then
@@ -790,6 +824,7 @@ Contains
     call linComb(ONE,mHat_0,alpha,h,mHat)
     call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
     call printf('QUADLS',lambda,alpha,f,mNorm,rms)
+    call printf('QUADLS',lambda,alpha,f,mNorm,rms,logFile)
     niter = niter + 1
     ! check whether the solution satisfies the sufficient decrease condition
     if (f < f_0 + c * alpha * g_0) then
@@ -831,6 +866,7 @@ Contains
    		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
     	call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
    		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms,logFile)
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, line search finished'
@@ -911,11 +947,13 @@ Contains
    type(modelParam_t)                        :: mHat_0,mHat_1
    type(dataVecMTX_t)                           :: dHat_1
    type(EMsolnMTX_t)                         :: eAll_1
+   character(100)							:: logFile
 
    ! parameters
    c = iterControl%c
    !k = iterControl%alpha_k
    !eps = iterControl%alpha_tol
+   logFile = trim(iterControl%fname)//'_NLCG.log'
 
    ! initialize the line search
    niter = 0
@@ -946,6 +984,7 @@ Contains
    call linComb(ONE,mHat_0,alpha_1,h,mHat_1)
    call func(lambda,d,m0,mHat_1,f_1,mNorm_1,dHat_1,eAll_1,rms_1)
    call printf('STARTLS',lambda,alpha,f_1,mNorm_1,rms_1)
+   call printf('STARTLS',lambda,alpha,f_1,mNorm_1,rms_1,logFile)
    niter = niter + 1
 
 	 if (f_1 - f_0 >= LARGE_REAL) then
@@ -974,6 +1013,7 @@ Contains
    		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
     	call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
    		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms,logFile)
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, exiting line search'
@@ -989,6 +1029,7 @@ Contains
    call linComb(ONE,mHat_0,alpha,h,mHat)
    call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
    call printf('QUADLS',lambda,alpha,f,mNorm,rms)
+   call printf('QUADLS',lambda,alpha,f,mNorm,rms,logFile)
    niter = niter + 1
    ! check whether the solution satisfies the sufficient decrease condition
    if (f < f_0 + c * alpha * g_0) then
@@ -1010,6 +1051,7 @@ Contains
    		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
     	call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
    		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms,logFile)
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, exiting line search'
@@ -1056,6 +1098,7 @@ Contains
     call linComb(ONE,mHat_0,alpha,h,mHat)
     call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
     call printf('CUBICLS',lambda,alpha,f,mNorm,rms)
+    call printf('CUBICLS',lambda,alpha,f,mNorm,rms,logFile)
     niter = niter + 1
     ! check whether the solution satisfies the sufficient decrease condition
     if (f < f_0 + c * alpha * g_0) then
@@ -1095,6 +1138,7 @@ Contains
    		call linComb(ONE,mHat_0,gamma*alpha,h,mHat)
     	call func(lambda,d,m0,mHat,f,mNorm,dHat,eAll,rms)
    		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms)
+   		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms,logFile)
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, line search finished'
