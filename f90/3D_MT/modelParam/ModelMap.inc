@@ -15,7 +15,7 @@
 !       Note that the functionality is always needed, but names can be
 !        flexible ... these routines are called by the interpolation
 !        routines in EMfieldInterp* (for the latter two only), by the forward
-!        modeling codes (the non-linear mapping only), and by ModelSens
+!        modeling codes (the non-linear mapping only), and by SolverSens/DataSens
 !        (the linearized mappings and adjoint) and thus names/interfaces
 !        need to be kept consistent with what is used in these routines.
 !        Note that for 2D MT different mapping routines are used for

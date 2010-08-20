@@ -1,4 +1,4 @@
-module solnrhs
+module SolnSpace
 !   higher level module to define EM solution and EMrhs objects
 !   plus basic methods, linear algebra, dot products
 !
@@ -361,4 +361,4 @@ contains
        endif
      end subroutine zero_EMrhs
 
-end module solnrhs
+end module SolnSpace

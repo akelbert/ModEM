@@ -22,7 +22,7 @@ module dataFunc
   !     to implement data functionals for other problems
 
   use emfieldinterp
-  use solnrhs
+  use SolnSpace
   use receivers
   use transmitters
   use datatypes

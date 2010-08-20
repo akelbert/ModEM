@@ -11,7 +11,7 @@ module EMsolve3D
   use sg_sparse_vector, only: add_scvector
   use modelOperator3d                   ! quasi-static Maxwell operator module
   use solver				! generic solvers
-  use solnrhs
+  use solnspace
 
   implicit none
   public	:: FWDSolve3D ,ModelOperatorSetup, ModelOperatorCleanup

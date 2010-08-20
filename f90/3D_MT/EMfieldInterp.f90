@@ -6,7 +6,7 @@ module EMfieldInterp
 
   use utilities
   use sg_sparse_vector
-  use modelparameter, sigC => ModelParamToOneEdge
+  use ModelSpace, sigC => ModelParamToOneEdge
 
   implicit none
 

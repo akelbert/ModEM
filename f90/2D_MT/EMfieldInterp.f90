@@ -11,7 +11,7 @@ module EMfieldInterp
 
   use math_constants
   use utilities
-  use modelparameter, rhoC => ModelParamToOneCell
+  use ModelSpace, rhoC => ModelParamToOneCell
 
   implicit none
   public				:: NodeInterpSetup2D

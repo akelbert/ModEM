@@ -25,7 +25,7 @@ module transmitters
 
    ! transmitter dictionary txDict for 3D-MT data will be an array of
    ! type MTtx (one element  for each frequency)
-   ! Perhaps this should be moved to EMsolver module (and be private
+   ! Perhaps this should be moved to ForwardSolver module (and be private
    !    to that module?)
    ! NOTE: could have multiple transmitter dictionaries, each of which
    !    could constist of elements of different types; nothing about

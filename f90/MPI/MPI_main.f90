@@ -4,9 +4,9 @@ module MPI_main
   
   use math_constants
   use utilities
-  use datasens	 !!!!  inherits : dataspace, dataFunc, solnrhs
-  use modelsens  !!!  inherits : modelspace, soln2d
-  use emsolver
+  use datasens	 !!!!  inherits : dataspace, dataFunc, SolnSpace
+  use SolverSens  !!!  inherits : modelspace, soln2d
+  use ForwardSolver
   use sensComp
   use MPI_declaration
   use MPI_sub

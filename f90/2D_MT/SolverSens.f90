@@ -13,10 +13,10 @@
 !        conductivity parameterization
 
 !
-module ModelSens
+module SolverSens
    use math_constants
    use utilities
-   use datafunc 	!!!! inherit: soln2d modelparameter
+   use datafunc 	!!!! inherit: soln2d ModelSpace
    use dataspace
    use transmitters
    use datatypes
@@ -430,4 +430,4 @@ module ModelSens
   end subroutine QaddT
 
    !**********************************************************************
-end module ModelSens
+end module SolverSens

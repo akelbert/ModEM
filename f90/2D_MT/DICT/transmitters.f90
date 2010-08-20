@@ -25,7 +25,7 @@ module transmitters
 
    ! transmitter dictionary for MT data will be an array of
    ! type mt_forcing (one element  for each frequency)
-   ! Perhaps this should be moved to EMsolver module (and be private
+   ! Perhaps this should be moved to ForwardSolver module (and be private
    !    to this module)
    type (MTtx), pointer, save, public, dimension (:)   :: txDict
 

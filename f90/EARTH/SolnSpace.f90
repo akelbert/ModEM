@@ -1,4 +1,4 @@
-module solnrhs
+module SolnSpace
 !   higher level module to define EM solution and RHS objects
 !   plus basic methods, linear algebra, dot products
 !   EARTH version
@@ -172,4 +172,4 @@ Contains
 
   end subroutine read_EMsolnMTX ! read_EMsolnMTX
 
-end module solnrhs
+end module SolnSpace

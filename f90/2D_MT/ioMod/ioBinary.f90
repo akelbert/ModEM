@@ -5,7 +5,7 @@ module ioBinary
    use math_constants
    use emfield
    use dataspace
-   use emsolver
+   use ForwardSolver
    use utilities
    use transmitters
    use receivers

@@ -1,4 +1,4 @@
-module emsolver
+module ForwardSolver
 
 !  High level interface/control module used by top level routines
 !   for initializing and using the solver.  The key public routines
@@ -14,6 +14,7 @@ module emsolver
 use math_constants
 use datafunc
 use dataspace
+use solnspace
 use emsolve3d
 use transmitters
 
@@ -119,7 +120,7 @@ Contains
 !     need to have a way to reset sigmaNotCurrent to false when
 !     conductivity changes (one idea: assign a random number whenever
 !     a conductivity parameter is modified (by any of the routines in
-!     module ModelParameter); store this in the modelOperator module (which
+!     module ModelSpace); store this in the modelOperator module (which
 !     is where updateCond sits) and have updateCond compare the random key
 !     with what is stored)
 !  if(sigmaNotCurrent) then
@@ -238,4 +239,4 @@ Contains
    end subroutine sensSolve
 
 
-end module emsolver
+end module ForwardSolver

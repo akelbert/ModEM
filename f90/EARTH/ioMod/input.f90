@@ -9,7 +9,7 @@ module input
   use modeldef
   use datadef
   use dataspace
-  use solnrhs
+  use SolnSpace
   use iotypes
   implicit none
 

@@ -11,7 +11,7 @@ use dataio
 #endif
 
 
-   ! inherits datasens,  dataspace, dataFunc, solnrhs,
+   ! inherits datasens,  dataspace, dataFunc, SolnSpace,
    !            modelspace, soln2d
 
 implicit none

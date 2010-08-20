@@ -1,4 +1,4 @@
-module ModelParameter
+module ModelSpace
 
 ! Defines the modelParam_t and modelCov_t abstract data types.
 ! Both have private attributes, to force coding of other modules
@@ -58,7 +58,7 @@ module ModelParameter
      !  necessary to avoid memory leaks; only true for function outputs
      logical			:: temporary = .false.
      !  another logical that gets set to true every time the model
-     !  parameter is modified; used by the EMsolver for updateCond
+     !  parameter is modified; used by the ForwardSolver for updateCond
      logical			:: updated = .false.
      !  supported paramType at present: LINEAR and LOGE
      character (len=80)	:: paramType = ''
@@ -464,7 +464,7 @@ Contains
   !  the attributes are private (in F2003, can declare everything private
   !  while grid and allocated attributes could be public)
   !  used when the model parameter is no longer considered "new",
-  !  e.g. after the updateModelData routine in EMsolver.
+  !  e.g. after the updateModelData routine in ForwardSolver.
 
   subroutine setValueUpdated_modelParam(m)
 
@@ -488,4 +488,4 @@ Contains
 
   end subroutine getValueUpdated_modelParam
 
-end module modelParameter
+end module ModelSpace

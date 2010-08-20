@@ -4,7 +4,7 @@ module sensMatrix
   use file_units
   use utilities
   use dataspace
-  use modelparameter
+  use ModelSpace
 
   implicit none
 

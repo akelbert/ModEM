@@ -2,10 +2,10 @@
 module Main
 	! These subroutines are called from the main program only
 
-  use modelparameter
+  use ModelSpace
   use dataspace ! dataVecMTX_t
   use datafunc ! to deallocate rxDict, typeDict
-  use emsolver ! txDict, EMsolnMTX
+  use ForwardSolver ! txDict, EMsolnMTX
   use sensmatrix
   use userctrl
   use ioascii

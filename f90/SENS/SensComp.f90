@@ -2,9 +2,9 @@ module sensComp
 
   use math_constants
   use utilities
-  use datasens	 !!!!  inherits : dataspace, dataFunc, solnrhs
-  use modelsens  !!!  inherits : modelspace, soln2d
-  use emsolver
+  use datasens	 !!!!  inherits : dataspace, dataFunc, SolnSpace
+  use SolverSens  !!!  inherits : modelspace, soln2d
+  use ForwardSolver
   use sensmatrix
 
   implicit none
@@ -679,7 +679,7 @@ Contains
    !   all computations in this module;
    !   This is not a pointer target.
    !  Might also have to run exitSolver at this point, if we are updating
-   !   the grid during an inversion; that restarts the EMsolver module.
+   !   the grid during an inversion; that restarts the ForwardSolver module.
 
    type(grid_t), intent(in)     :: newgrid
 

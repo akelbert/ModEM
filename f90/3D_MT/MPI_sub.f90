@@ -4,7 +4,7 @@ module MPI_sub
 
 use math_constants
 use utilities
-use emsolver
+use ForwardSolver
 use MPI_declaration
 
 
@@ -17,7 +17,7 @@ Contains
 subroutine create_eAll_mpi(eAll)
 use math_constants
 use utilities 
-use emsolver
+use ForwardSolver
 
 
 

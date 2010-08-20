@@ -1,4 +1,4 @@
-module emsolver
+module ForwardSolver
 
 !  High level interface/control module used by top level routines
 !   for initializing and using the solver.  The key public routines
@@ -11,11 +11,11 @@ module emsolver
 
 use math_constants
 use utilities
-use datafunc ! inherit solnrhs soln2d modelparameter
+use datafunc ! inherit SolnSpace soln2d ModelSpace
 use dataspace
 use fwdtemod
 use fwdtmmod
-use solnrhs
+use SolnSpace
 use transmitters
 
 implicit none
@@ -278,4 +278,4 @@ Contains
 
    end subroutine sensSolve
 
-end module emsolver
+end module ForwardSolver

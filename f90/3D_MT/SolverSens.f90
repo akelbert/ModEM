@@ -10,7 +10,7 @@
 !	 ModelParam.  This module has no dependence on the specific
 !        conductivity parameterization
 !
-module ModelSens
+module SolverSens
    use math_constants
    use utilities
    use datafunc
@@ -194,4 +194,4 @@ module ModelSens
   end subroutine QaddT
 
    !**********************************************************************
-end module ModelSens
+end module SolverSens

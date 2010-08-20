@@ -35,7 +35,7 @@ module ioBinary
   use emsolve3d
   use dataspace
   use datafunc
-  use emsolver, only: EMsolnMTX
+  use ForwardSolver, only: EMsolnMTX
   use transmitters
   use receivers
   use datatypes

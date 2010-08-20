@@ -31,11 +31,11 @@ module datafunc
   use emfieldinterp     !  basic interpolation routines for 2D TE and TM
                         !    solution grids; allow computation of both E and B
                         !    at an arbitrary point in either grid
-  use modelparameter, only:	rhoC => ModelParamToOneCell	!  model parameterization
+  use ModelSpace, only:	rhoC => ModelParamToOneCell	!  model parameterization
 					!  dependent function needed
 					!  for TM mode data
 					!  functionals
-  use solnrhs
+  use SolnSpace
   use transmitters
   use receivers
   use datatypes

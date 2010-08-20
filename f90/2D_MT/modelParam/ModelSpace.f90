@@ -1,4 +1,4 @@
-module ModelParameter
+module ModelSpace
 
 ! Defines the modelParam_t and modelCov_t abstract data types.
 ! Both have private attributes, to force coding of other modules
@@ -386,4 +386,4 @@ Contains
 
   end subroutine getGrid_modelParam
 
-end module ModelParameter
+end module ModelSpace

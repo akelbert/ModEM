@@ -1,4 +1,4 @@
-module solnrhs
+module SolnSpace
 !   higher level module to define EM solution and RHS objects
 !   plus basic methods, linear algebra, dot products
 !   3D MT version
@@ -650,4 +650,4 @@ contains
 
      end subroutine add_EMsparseEMrhs
 
-end module solnrhs
+end module SolnSpace

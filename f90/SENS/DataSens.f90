@@ -20,10 +20,10 @@ module DataSens
 use math_constants
 use utilities
 use dataspace
-use modelparameter
-use solnrhs
+use ModelSpace
+use SolnSpace
 use dataFunc
-use modelSens
+use SolverSens
 
 implicit none
 

@@ -18,8 +18,8 @@
 module fwdtmmod
    use math_constants
    use wsfwd2d
-   use solnrhs
-   use modelparameter
+   use SolnSpace
+   use ModelSpace
 
    implicit none
 

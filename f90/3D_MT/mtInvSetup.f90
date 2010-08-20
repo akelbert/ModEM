@@ -9,7 +9,7 @@ module mtinvsetup
   use math_constants		! math/ physics constants
   use utilities
   use emsolve3d
-  use modelparameter
+  use ModelSpace
   use ioascii
   
 

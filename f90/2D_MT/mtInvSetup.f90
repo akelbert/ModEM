@@ -6,7 +6,7 @@ module mtinvsetup
 
   use math_constants
   use utilities
-  use modelparameter
+  use ModelSpace
   
   implicit none
 

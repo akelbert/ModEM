@@ -35,7 +35,7 @@ module ioAscii
   use emsolve3d
   use dataspace
   use datafunc ! for data types
-  use emsolver, only: EMsolnMTX_t
+  use ForwardSolver, only: EMsolnMTX_t
   use transmitters
   use receivers
   use datatypes

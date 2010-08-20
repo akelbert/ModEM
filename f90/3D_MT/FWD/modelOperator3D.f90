@@ -20,7 +20,7 @@ module modelOperator3D
   use gridcalc             ! staggered grid definitions
   use sg_vector            ! generic routines for vector operations on the
   use sg_boundary
-  use modelParameter
+  use ModelSpace
   use boundary_ws          ! sets the boundary conditions
   implicit none
 

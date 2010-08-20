@@ -10,7 +10,7 @@ module sensComp
   use dataMisfit
   use boundaries
   use dataspace
-  use solnrhs
+  use SolnSpace
 
   implicit none
 
