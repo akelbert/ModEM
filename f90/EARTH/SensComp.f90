@@ -48,7 +48,7 @@ Contains
    !
    !   d is the input data vector, here just used to identify
    !     receiver transmitter pairs to compute sensitivities for
-   type(dataVecMTX_t), intent(in)	:: d
+   type(dataVectorMTX_t), intent(in)	:: d
    !   sigma0 is background conductivity parameter
    type(modelParam_t), intent(in)	:: sigma0
    !   dsigma is the output array of data sensitivities,
@@ -76,8 +76,8 @@ Contains
    type(modelParam_t), intent(in)	:: dsigma
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
-   type(dataVecMTX_t), intent(inout)		:: d
-   type(EMsolnMTX_t), intent(inout), optional	:: eAll
+   type(dataVectorMTX_t), intent(inout)		:: d
+   type(solnVectorMTX_t), intent(inout), optional	:: eAll
 
 
 
@@ -104,10 +104,10 @@ Contains
    type(modelParam_t), intent(in)	:: m0
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
-   type(dataVecMTX_t), intent(in)		:: d
+   type(dataVectorMTX_t), intent(in)		:: d
    !   dsigma is the output conductivity parameter
    type(modelParam_t), intent(out)  	:: dm
-   type(EMsolnMTX_t), intent(in), optional	:: H
+   type(solnVectorMTX_t), intent(in), optional	:: H
    type(sensMatrix_t), intent(inout), optional :: dR
 
     integer	                                :: errflag	! internal error flag
@@ -285,7 +285,7 @@ Contains
    !**********************************************************************
    subroutine fwdPred(m,d,H)
 
-   !  Calculate predicted data for dataVecMTX object d
+   !  Calculate predicted data for dataVectorMTX object d
    !    and for conductivity parameter sigma
    !  Optionally returns array of EM solutions eAll, one for
    !    each transmitter (if eAll is present)
@@ -298,10 +298,10 @@ Contains
    type(modelParam_t), intent(in)	:: m
    !   d is the computed (output) data vector, also used to identify
    !     receiver/transmitter
-   type(dataVecMTX_t), intent(inout)	:: d
+   type(dataVectorMTX_t), intent(inout)	:: d
    !  structure containing array of solution vectors (should be
    !   allocated before calling)
-   type(EMsolnMTX_t), intent(inout), optional	:: H
+   type(solnVectorMTX_t), intent(inout), optional	:: H
    ! local variables
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
@@ -315,7 +315,7 @@ Contains
 	logical									:: adjoint,delta
 	character(1)							:: cfunc
 	character(80)							:: fn_err
-	type(dataVecMTX_t)                      :: dat,psi
+	type(dataVectorMTX_t)                      :: dat,psi
 	integer                                 :: nfreq,nfunc,nobs
 
     if(.not.d%allocated) then
@@ -324,7 +324,7 @@ Contains
 
     if(present(H)) then
        if(.not. H%allocated) then
-          call create_EMsolnMTX(d%nTx,H,grid)
+          call create_solnVectorMTX(d%nTx,H,grid)
        else if(d%nTx .ne. H%nTx) then
           call errStop('dimensions of H and d do not agree in fwdPred')
        end if
@@ -397,8 +397,8 @@ Contains
 
 	d = psi
 
-	call deall_dataVecMTX(dat)
-	call deall_dataVecMTX(psi)
+	call deall_dataVectorMTX(dat)
+	call deall_dataVectorMTX(psi)
 	call deall_rscalar(rho)
 	call deall_cvector(Hj)
 	call deall_cvector(B)

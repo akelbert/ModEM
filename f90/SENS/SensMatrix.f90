@@ -82,7 +82,7 @@ Contains
 
   subroutine create_sensMatrix(d, sigma0, sens)
 
-    type (dataVecTX_t), intent(in)		 :: d
+    type (dataVector_t), intent(in)		 :: d
     type (modelParam_t), intent(in)		 :: sigma0
     type (sensMatrix_t), intent(inout)   :: sens
     ! local
@@ -176,7 +176,7 @@ Contains
 
   subroutine create_sensMatrixMTX(d, sigma0, sens)
 
-    type (dataVecMTX_t), intent(in)  	:: d
+    type (dataVectorMTX_t), intent(in)  	:: d
     type (modelParam_t), intent(in)  	:: sigma0
     type (sensMatrix_t), pointer		:: sens(:)
     ! local

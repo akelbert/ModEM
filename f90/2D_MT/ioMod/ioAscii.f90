@@ -6,7 +6,7 @@
 !  and output of the model and the grid, and Naser Meqbel's
 !  format for the data files.
 !
-!  The ascii input and output routines for cvector and EMsoln
+!  The ascii input and output routines for cvector and solnVector
 !  have not yet been created, so the binary versions are used
 !  instead.
 
@@ -25,7 +25,7 @@ module ioAscii
    private	::  read_cvector,write_cvector, &
 		read_grid, write_grid
 
-   public   :: write_Z, read_Z, write_EMsolnMTX
+   public   :: write_Z, read_Z, write_solnVectorMTX
 
 
    Contains
@@ -159,7 +159,7 @@ module ioAscii
       end subroutine write_cvector
 
      !******************************************************************
-      subroutine write_EMsolnMTX(fid,cfile,eAll)
+      subroutine write_solnVectorMTX(fid,cfile,eAll)
 
       !  open cfile on unit fid, writes out object of
       !   type cvector in standard format (readable by matlab
@@ -170,7 +170,7 @@ module ioAscii
 
       integer, intent(in)		:: fid
       character*80, intent(in)		:: cfile
-      type(EMsolnMTX_t), intent(in)		:: eAll
+      type(solnVectorMTX_t), intent(in)		:: eAll
 
       integer		:: j
 
@@ -184,7 +184,7 @@ module ioAscii
       enddo
       close(fid)
       return
-      end subroutine write_EMsolnMTX
+      end subroutine write_solnVectorMTX
 
      !**********************************************************************
       subroutine write_Z(fid,cfile,nTx,periods,modes,nSites,sites,units,allData)
@@ -200,14 +200,14 @@ module ioAscii
       real(kind=8),intent(in)   :: periods(nTx)
       character*2, intent(in)	:: modes(nTx)
       real(kind=8),intent(in)   :: sites(2,nSites)
-      type(dataVecMTX_t), intent(in)      :: allData
+      type(dataVectorMTX_t), intent(in)      :: allData
       real(kind=8), dimension(:,:), allocatable :: siteTemp
       character(80)   :: info,units
       integer   :: nComp = 2
       complex*8  temp
 
       ! local variables
-      type(dataVec_t) :: data
+      type(dataBlock_t) :: data
       integer   :: nSite,iTx,iDt,k,j,isite,icomp
       character(10) :: siteid, tab='           '
       character(80) :: header
@@ -285,7 +285,7 @@ module ioAscii
       enddo
       close(fid)
 
-      call deall_dataVec(data)
+      call deall_dataBlock(data)
 
       ! Calculating apparent resistivities and phases
       !temp=dcmplx(data%value(1,k),data%value(2,k))
@@ -309,7 +309,7 @@ module ioAscii
       real(kind=8),dimension(:), pointer     :: periods
       real(kind=8),dimension(:,:), pointer   :: sites
       character*2, dimension(:), pointer	:: modes
-      type(dataVecMTX_t), intent(inout)   :: allData
+      type(dataVectorMTX_t), intent(inout)   :: allData
 
      ! local variables
       integer   :: nComp = 2
@@ -383,7 +383,7 @@ module ioAscii
 	         ! create dataVec object, read in data
 	         isComplex = .true.
 	         errorBar = .true.
-	         call create_dataVec(nComp,nSite,allData%d(iTx)%data(iDt),isComplex,errorBar)
+	         call create_dataBlock(nComp,nSite,allData%d(iTx)%data(iDt),isComplex,errorBar)
 	         Ndata  = Ndata + nComp*nSite
 
 	         allData%d(iTx)%data(iDt)%tx = iTx

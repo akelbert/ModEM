@@ -12,7 +12,7 @@ module data_vectors
   ! * storing data and transfer functions, dim(nfreq,nfunc,nobs)
   ! * Keep in mind that in general nobs(ifreq) <= nobs; use logical indicators.
   !type (dataValue_t), allocatable, dimension(:,:,:)	:: dat,psi,res,wres
-  type (dataVecMTX_t), save				:: dat,psi,res,wres
+  type (dataVectorMTX_t), save				:: dat,psi,res,wres
 
   ! ***************************************************************************
   ! * storing data misfit for each freq and func, dim(nfreq,nfunc)

@@ -46,7 +46,6 @@ module EMsolve3D
     real(kind = 8), pointer, dimension(:,:)    ::      DivCorRelErr
   end type emsolve_diag
 
-  type(timer_t), save, private :: timer
 
   ! Default solver control parameters
   ! number of QMR iterations for each call to divergence correction:
@@ -61,6 +60,9 @@ module EMsolve3D
   real(kind=prec), parameter       ::      tolDivCorDef = 1E-5
 
   save
+
+  type(timer_t), private :: timer
+
   ! Actual values of control parameters must be set before first use,
   !     by call to setEMsolveControl
   !  of em_solve; are saved between calls, private to this module

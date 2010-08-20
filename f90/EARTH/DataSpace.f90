@@ -10,67 +10,67 @@ module DataSpace
   implicit none
 
   interface assignment (=)
-     MODULE PROCEDURE copy_dataVecMTX
+     MODULE PROCEDURE copy_dataVectorMTX
   end interface
 
   interface create
-     MODULE PROCEDURE create_dataVecMTX
+     MODULE PROCEDURE create_dataVectorMTX
   end interface
 
   interface deall
-     MODULE PROCEDURE deall_dataVecMTX
+     MODULE PROCEDURE deall_dataVectorMTX
   end interface
 
   interface compare
-     MODULE PROCEDURE compare_dataVecMTX_f
+     MODULE PROCEDURE compare_dataVectorMTX_f
   end interface
 
   interface zero
-     MODULE PROCEDURE zero_dataVecMTX
+     MODULE PROCEDURE zero_dataVectorMTX
   end interface
 
   interface linComb
-     MODULE PROCEDURE linComb_dataVecMTX
+     MODULE PROCEDURE linComb_dataVectorMTX
   end interface
 
   interface operator (*) ! interface to linComb
-     MODULE PROCEDURE scMult_dataVecMTX_f
+     MODULE PROCEDURE scMult_dataVectorMTX_f
   end interface
 
   interface scMultAdd ! interface to linComb
-     MODULE PROCEDURE scMultAdd_dataVecMTX
+     MODULE PROCEDURE scMultAdd_dataVectorMTX
   end interface
 
   interface dotProd
-     MODULE PROCEDURE dotProd_dataVecMTX_f
+     MODULE PROCEDURE dotProd_dataVectorMTX_f
   end interface
 
   interface normalizeData
-     MODULE PROCEDURE normalize_dataVecMTX
+     MODULE PROCEDURE normalize_dataVectorMTX
   end interface
 
   interface countData
-     MODULE PROCEDURE count_dataVecMTX_f
+     MODULE PROCEDURE count_dataVectorMTX_f
   end interface
 
   interface countDataVec
-     MODULE PROCEDURE countVec_dataVecMTX_f
+     MODULE PROCEDURE countVec_dataVectorMTX_f
   end interface
 
 
   ! basic operators for all dataVec types
-  public			:: create_dataVecMTX
-  public            :: deall_dataVecMTX
-  public            :: compare_dataVecMTX_f
-  public            :: zero_dataVecMTX
-  public			:: copy_dataVecMTX
-  public			:: linComb_dataVecMTX
-  public            :: scMult_dataVecMTX_f
-  public            :: scMultAdd_dataVecMTX
-  public			:: dotProd_dataVecMTX_f
-  public            :: normalize_dataVecMTX
+  public			:: create_dataVectorMTX
+  public            :: deall_dataVectorMTX
+  public            :: compare_dataVectorMTX_f
+  public            :: zero_dataVectorMTX
+  public			:: copy_dataVectorMTX
+  public			:: linComb_dataVectorMTX
+  public            :: scMult_dataVectorMTX_f
+  public            :: scMultAdd_dataVectorMTX
+  public			:: dotProd_dataVectorMTX_f
+  public            :: normalize_dataVectorMTX
   ! additional operators needed for the upper level code
-  public			:: count_dataVecMTX_f, countVec_dataVecMTX_f
+  public			:: count_dataVectorMTX_f, countVec_dataVectorMTX_f
 
   ! ***************************************************************************
   ! * type response_t contains the full information about a single response at a
@@ -100,7 +100,7 @@ module DataSpace
 
 
   ! ***************************************************************************
-  ! * type dataVecMTX_t contains the 3-D array of all data functionals we define;
+  ! * type dataVectorMTX_t contains the 3-D array of all data functionals we define;
   ! * it should be considered an ordered three-dimensional list of data
   ! * For some observatories data "do not exist" - either because they were
   ! * not physically present in the input data file, or since the observatory
@@ -110,7 +110,7 @@ module DataSpace
   ! * The variable n is the number of "existing" data values for a given freq.
   ! * and functional type. It can also be computed by count(v(i,j,:)%resp%exists);
   ! * however, it is handy to have these values at hand.
-  type :: dataVecMTX_t
+  type :: dataVectorMTX_t
 
 	type (dataValue_t), pointer, dimension(:,:,:) :: v	!nfreq,nfunc,nobs
 	integer, pointer, dimension(:,:)			  :: n	!nfreq,nfunc
@@ -120,30 +120,30 @@ module DataSpace
     ! needed to avoid memory leaks for temporary function outputs
     logical										  :: temporary = .false.
 
-  end type dataVecMTX_t
+  end type dataVectorMTX_t
 
 Contains
 
 !-----------------------------!
-! Basic operators: dataVecMTX !
+! Basic operators: dataVectorMTX !
 !-----------------------------!
 
   ! **********************************************************************
-  ! creates an object of type dataVecTX:
+  ! creates an object of type dataVector:
   ! a vector containing data for a single transmitter and all dataType's.
   ! note that this only allocates space for the dataVec's; after running
   ! this, need to run create_dataVec to fill it in. d%allocated is only
   ! set to .true. when all of the dataVec's are also allocated
 
-  subroutine create_dataVecMTX(nTx, nDt, nRx, d)
+  subroutine create_dataVectorMTX(nTx, nDt, nRx, d)
 
     integer, intent(in)			        :: nTx, nDt, nRx
-    type (dataVecMTX_t), intent(inout)  :: d
+    type (dataVectorMTX_t), intent(inout)  :: d
     ! local
     integer                             :: istat
 
     if(d%allocated) then
-        call errStop('input data vector already allocated in create_dataVecMTX')
+        call errStop('input data vector already allocated in create_dataVectorMTX')
     endif
 
     d%ntx = nTx
@@ -154,14 +154,14 @@ Contains
 
     d%allocated = .true.
 
-  end subroutine create_dataVecMTX
+  end subroutine create_dataVectorMTX
 
   !**********************************************************************
-  ! deallocates all memory and reinitializes dataVecMTX object d
+  ! deallocates all memory and reinitializes dataVectorMTX object d
 
-  subroutine deall_dataVecMTX(d)
+  subroutine deall_dataVectorMTX(d)
 
-    type (dataVecMTX_t)	:: d
+    type (dataVectorMTX_t)	:: d
     ! local
     integer             :: j,istat
 
@@ -172,31 +172,31 @@ Contains
 
     d%allocated = .false.
 
-  end subroutine deall_dataVecMTX
+  end subroutine deall_dataVectorMTX
 
   !**********************************************************************
   ! set the data values and error bars to zero; a function would make
   ! more sense, but d = zero(d) might create trouble, so make this a
   ! subroutine instead - much less error-prone
 
-  subroutine zero_dataVecMTX(d)
+  subroutine zero_dataVectorMTX(d)
 
-    type (dataVecMTX_t), intent(inout)	:: d
+    type (dataVectorMTX_t), intent(inout)	:: d
     ! local
     integer                             :: j
 
 	d%v(:,:,:)%resp%value = C_ZERO
 
-  end subroutine zero_dataVecMTX
+  end subroutine zero_dataVectorMTX
 
   !**********************************************************************
   ! check whether the two inputs are of compatible size & nature
   ! for basic arithmetic operations
 
-  function compare_dataVecMTX_f(d1,d2) result (status)
+  function compare_dataVectorMTX_f(d1,d2) result (status)
 
-    type (dataVecMTX_t), intent(in)	    :: d1
-    type (dataVecMTX_t), intent(in)     :: d2
+    type (dataVectorMTX_t), intent(in)	    :: d1
+    type (dataVectorMTX_t), intent(in)     :: d2
     logical								:: status
     ! local
     integer                             :: nTx1, nTx2
@@ -221,24 +221,24 @@ Contains
       status = .true.
     endif
 
-  end function compare_dataVecMTX_f
+  end function compare_dataVectorMTX_f
 
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...
   ! interface to =
   ! check for size consistency, reallocate output if needed
 
-  subroutine copy_dataVecMTX(d2, d1)
+  subroutine copy_dataVectorMTX(d2, d1)
 
-    type (dataVecMTX_t), intent(in)		:: d1
-    type (dataVecMTX_t), intent(inout)	:: d2
+    type (dataVectorMTX_t), intent(in)		:: d1
+    type (dataVectorMTX_t), intent(inout)	:: d2
     ! local variables
     integer								:: nTx, nDt, nRx
     integer                             :: i, j, k
 
     ! check to see if RHS (d1) is allocated
     if (.not. d1%allocated) then
-       call errStop('RHS not allocated yet for copy_dataVecMTX')
+       call errStop('RHS not allocated yet for copy_dataVectorMTX')
     endif
 
     nTx = size(d1%v,1)
@@ -247,10 +247,10 @@ Contains
 
     ! check to see whether the LHS (d2) is allocated
     if (d2%allocated) then
-    	call deall_dataVecMTX(d2)
+    	call deall_dataVectorMTX(d2)
     endif
 
-    call create_dataVecMTX(nTx, nDt, nRx, d2)
+    call create_dataVectorMTX(nTx, nDt, nRx, d2)
 
     ! now copy the components
     d2%n = d1%n
@@ -271,45 +271,45 @@ Contains
     d2%allocated = .true.
 
     if (d1%temporary) then
-    	call deall_dataVecMTX(d1)
+    	call deall_dataVectorMTX(d1)
     endif
 
-  end subroutine copy_dataVecMTX
+  end subroutine copy_dataVectorMTX
 
   ! **********************************************************************
-  ! calculates linear combination of two dataVecMTX objects a*d1 + b*d2
+  ! calculates linear combination of two dataVectorMTX objects a*d1 + b*d2
   ! Note that the error bars are allocated and the errorBar variable
   ! initialized in create_dataVec and linComb_dataVec
   !
   ! output can safely overwrite input, but output has to be allocated
 
-  subroutine linComb_dataVecMTX(a,d1,b,d2,dOut)
+  subroutine linComb_dataVectorMTX(a,d1,b,d2,dOut)
 
-    type (dataVecMTX_t), intent(in)			:: d1, d2
+    type (dataVectorMTX_t), intent(in)			:: d1, d2
     real (kind=prec), intent(in)	        :: a, b
-    type (dataVecMTX_t), intent(inout)		:: dOut
+    type (dataVectorMTX_t), intent(inout)		:: dOut
     ! local variables
     integer									:: nTx, nDt, nRx
     integer                                 :: i, j, k
 
     ! check to see if inputs (d1, d2) are both allocated
     if ((.not. d1%allocated) .or. (.not. d2%allocated)) then
-       call errStop('inputs not allocated on call to linComb_dataVecMTX')
+       call errStop('inputs not allocated on call to linComb_dataVectorMTX')
     endif
 
     ! check to see if inputs are of compatible sizes
     if (.not. compare(d1,d2)) then
-       call errStop('input sizes not consistent in linComb_dataVecMTX')
+       call errStop('input sizes not consistent in linComb_dataVectorMTX')
     endif
 
     ! create the output vector that is consistent with inputs
     if (.not. dOut%allocated) then
-       call errStop('output structure has to be allocated before calling linComb_dataVecMTX')
+       call errStop('output structure has to be allocated before calling linComb_dataVectorMTX')
     end if
 
     ! check to see that output is of compatible size
     if (.not. compare(d1,dOut)) then
-       call errStop('output size not consistent in linComb_dataVecMTX')
+       call errStop('output size not consistent in linComb_dataVectorMTX')
     endif
 
     nTx = size(d1%v,1)
@@ -330,45 +330,45 @@ Contains
 
     dOut%allocated = d1%allocated .and. d2%allocated
 
-  end subroutine linComb_dataVecMTX
+  end subroutine linComb_dataVectorMTX
 
   ! **********************************************************************
-  !  computes dOut = a * dIn for dataVecMTX objects dIn and dOut
+  !  computes dOut = a * dIn for dataVectorMTX objects dIn and dOut
   !  and real scalar a
-  function scMult_dataVecMTX_f(a,dIn) result (dOut)
+  function scMult_dataVectorMTX_f(a,dIn) result (dOut)
 
     real (kind=prec), intent(in)		:: a
-    type (dataVecMTX_t), intent(in)	    :: dIn
-    type (dataVecMTX_t)                 :: dOut
+    type (dataVectorMTX_t), intent(in)	    :: dIn
+    type (dataVectorMTX_t)                 :: dOut
 
     dOut = dIn
 
-	call linComb_dataVecMTX(R_ZERO,dIn,a,dIn,dOut)
+	call linComb_dataVectorMTX(R_ZERO,dIn,a,dIn,dOut)
 
 	dOut%temporary = .true.
 
-  end function scMult_dataVecMTX_f
+  end function scMult_dataVectorMTX_f
 
   ! **********************************************************************
-  !  computes d2+a*d1 for dataVecMTX objects d1, d2 and real scalar a,
+  !  computes d2+a*d1 for dataVectorMTX objects d1, d2 and real scalar a,
   !   overwriting d2 (is this really needed?)
-  subroutine scMultAdd_dataVecMTX(a, d1, d2)
+  subroutine scMultAdd_dataVectorMTX(a, d1, d2)
 
-    type (dataVecMTX_t), intent(in)			:: d1
+    type (dataVectorMTX_t), intent(in)			:: d1
     real (kind=prec), intent(in)	        :: a
-    type (dataVecMTX_t), intent(inout)		:: d2
+    type (dataVectorMTX_t), intent(inout)		:: d2
 
-    call linComb_dataVecMTX(a,d1,ONE,d2,d2)
+    call linComb_dataVectorMTX(a,d1,ONE,d2,d2)
 
-  end subroutine scMultAdd_dataVecMTX
+  end subroutine scMultAdd_dataVectorMTX
 
   ! **********************************************************************
-  ! dot product of two dataVecMTX objects r  = <d1,d2>
+  ! dot product of two dataVectorMTX objects r  = <d1,d2>
   ! note this is the *real* dot product NOT complex
 
-  function dotProd_dataVecMTX_f(d1, d2) result(r)
+  function dotProd_dataVectorMTX_f(d1, d2) result(r)
 
-    type (dataVecMTX_t), intent(in)		:: d1, d2
+    type (dataVectorMTX_t), intent(in)		:: d1, d2
     real (kind=prec)		            :: r
     ! local variables
     integer				                :: nTx, nDt, nRx
@@ -377,12 +377,12 @@ Contains
 
     ! check to see if inputs (d1, d2) are allocated
     if ((.not. d1%allocated) .or. (.not. d2%allocated)) then
-       call errStop('inputs not allocated yet for dotProd_dataVecMTX_f')
+       call errStop('inputs not allocated yet for dotProd_dataVectorMTX_f')
     endif
 
     ! check to see if inputs are of compatible sizes
     if (.not. compare(d1,d2)) then
-       call errStop('input sizes not consistent in dotProd_dataVecMTX_f')
+       call errStop('input sizes not consistent in dotProd_dataVectorMTX_f')
     endif
 
     nTx = size(d1%v,1)
@@ -406,26 +406,26 @@ Contains
     	enddo
     enddo
 
-  end function dotProd_dataVecMTX_f
+  end function dotProd_dataVectorMTX_f
 
   !**********************************************************************
-  ! normalizes a dataVecMTX object using error bars from dataVec's
+  ! normalizes a dataVectorMTX object using error bars from dataVec's
   ! (Add attribute "normalized" to all of the dataVec objects)
   ! --> if a copy of the original vector is needed, make a copy before
   !     calling this subroutine
   ! --> the optional argument N is 1 to divide by the errors,
   !     2 to divide by the error squared; default is of course 1
 
-  subroutine normalize_dataVecMTX(d,N)
+  subroutine normalize_dataVectorMTX(d,N)
 
-   type(dataVecMTX_t),intent(inout)          :: d
+   type(dataVectorMTX_t),intent(inout)          :: d
    integer, intent(in), optional             :: N
 
    !  local variables
    integer      			:: nn, i, j, k, nTx, nDt, nRx
 
    if (.not. d%allocated) then
-      call errStop('data vector not allocated in normalize_dataVecMTX')
+      call errStop('data vector not allocated in normalize_dataVectorMTX')
    endif
 
    if (present(N)) then
@@ -450,36 +450,36 @@ Contains
     	enddo
     enddo
 
-  end subroutine normalize_dataVecMTX
+  end subroutine normalize_dataVectorMTX
 
 !----------------------------------!
-! Additional operators: dataVecMTX !
+! Additional operators: dataVectorMTX !
 !----------------------------------!
 
   !**********************************************************************
-  ! count all real data values in the full data vector dataVecMTX
+  ! count all real data values in the full data vector dataVectorMTX
 
-  function count_dataVecMTX_f(d) result(ndata)
+  function count_dataVectorMTX_f(d) result(ndata)
 
-   type(dataVecMTX_t), intent(in)		:: d
+   type(dataVectorMTX_t), intent(in)		:: d
    integer				:: ndata
 
    ndata = 2 * sum(d%n)
 
-  end function count_dataVecMTX_f
+  end function count_dataVectorMTX_f
 
   !**********************************************************************
-  ! count the number of data vectors in the full data vector dataVecMTX.
+  ! count the number of data vectors in the full data vector dataVectorMTX.
   ! there should be one for each transmitter and data type
 
-  function countVec_dataVecMTX_f(d) result(nvec)
+  function countVec_dataVectorMTX_f(d) result(nvec)
 
-   type(dataVecMTX_t), intent(in)		:: d
+   type(dataVectorMTX_t), intent(in)		:: d
    integer				:: nvec
 
    nvec = count(d%n > 0)
 
-  end function countVec_dataVecMTX_f
+  end function countVec_dataVectorMTX_f
 
 
 end module DataSpace

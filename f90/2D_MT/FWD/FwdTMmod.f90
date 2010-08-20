@@ -119,7 +119,7 @@ module fwdtmmod
       !   for boundary conditions specified in HXB, and does not allow for
       !   forcing.  Need to modify to allow specification of source terms.
       !   HXB can be generated in the proper format by a call to setBound2D_TM
-      type (EMrhs_t), intent(in)   :: b
+      type (rhsVector_t), intent(in)   :: b
 
       !  The solution is returned in array Hsol ...
       !  could make a derived data type to carry soln and info

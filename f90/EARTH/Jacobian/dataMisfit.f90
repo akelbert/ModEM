@@ -21,8 +21,8 @@ Contains
 	!uses: TFList,obsList
 
 	type (transmitter_t), intent(in)		:: freq
-	type (dataVecMTX_t), intent(in)			:: dat
-	type (dataVecMTX_t), intent(inout)		:: psi
+	type (dataVectorMTX_t), intent(in)			:: dat
+	type (dataVectorMTX_t), intent(inout)		:: psi
 	type (cvector), intent(in)				:: H
 	integer									:: i,j,k
 
@@ -73,8 +73,8 @@ Contains
   subroutine calcResiduals(freq,dat,psi,res,weighted)
 
 	type (transmitter_t), intent(in)			:: freq
-	type (dataVecMTX_t), intent(in)				:: dat,psi
-	type (dataVecMTX_t), intent(inout)			:: res
+	type (dataVectorMTX_t), intent(in)				:: dat,psi
+	type (dataVectorMTX_t), intent(inout)			:: res
 	logical, intent(in), optional				:: weighted
 	integer										:: i,j,k
 	complex(8)									:: value
@@ -129,7 +129,7 @@ Contains
 
 	type (transmitter_t), intent(in)				:: freq
 	type (misfit_t), intent(inout)			:: misfit
-	type (dataVecMTX_t), intent(in)				:: res
+	type (dataVectorMTX_t), intent(in)				:: res
 	character(80), intent(in)					:: name
 	real(8)										:: rval,ival,error
 	integer										:: i,j,k
@@ -176,7 +176,7 @@ Contains
 	use iospec
 	! uses: TFList,p_input,param
 	type (misfit_t), intent(inout)			  :: misfit
-	type (dataVecMTX_t), intent(in)				  :: res
+	type (dataVectorMTX_t), intent(in)				  :: res
 	type (modelParam_t)							  :: dparam,weighted_norm
   	real(8), dimension(:), intent(out)			  :: misfitValue  !nfunc
 	real(8), dimension(:,:), intent(out),optional :: dmisfitValue !nfunc,ncoeff

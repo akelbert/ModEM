@@ -59,7 +59,7 @@ Contains
   !   This now creates the required sparse vectors
   !      (either for TE or TM, as appropriate) for impedance evaluation
 
-  type (EMsoln_t), intent(in)			:: ef
+  type (solnVector_t), intent(in)			:: ef
   ! model parameter used to computed ef
   type (modelParam_t), intent(in)   :: Sigma
   ! indicies into data type and receiver dictionaries
@@ -132,8 +132,8 @@ Contains
   !     number nFunc of complex data functionals that will
   !     be returned by data functional routines could be > 1)
 
-  !  electric field solutions are stored as type EMsoln
-  type (EMsoln_t), intent(in)		:: e0
+  !  electric field solutions are stored as type solnVector
+  type (solnVector_t), intent(in)		:: e0
   ! model parameter used to computed e0
   type (modelParam_t), intent(in)   :: Sigma0
   ! indicies into data type and receiver dictionaries
@@ -143,7 +143,7 @@ Contains
   !    be treated as arrays here, even if there is only one element.
   !   As an example: to add tippers to TE mode, dimension on LZ will
   !    have to be changed to 2.
-  type(EMsparse_t), intent(inout)		:: Lz(1), Qz(1)
+  type(sparseVector_t), intent(inout)		:: Lz(1), Qz(1)
 
   !  local variables
   complex (kind=prec)		:: B,E,c_E,c_B
@@ -182,7 +182,7 @@ Contains
   c_E = C_ONE/B
   c_B = -E/(B*B)
   !  Nominally, Lz = c_E*Le + c_B*Lb
-  ! However, note that Lz is of type EMsparse (here just a wrapped
+  ! However, note that Lz is of type sparseVector (here just a wrapped
   !    version of a sparsevecc object)
   call linComb_sparsevecc(Le,c_E,Lb,c_B,Lz(1)%L)
 

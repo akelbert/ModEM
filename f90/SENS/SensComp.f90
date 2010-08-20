@@ -21,8 +21,8 @@ module sensComp
 
   ! temporary EM fields, that are saved for efficiency - to avoid
   !  memory allocation & deallocation for each transmitter
-  type(EMsoln_t), save, private		:: e,e0
-  type(EMrhs_t) , save, private		:: comb
+  type(solnVector_t), save, private		:: e,e0
+  type(rhsVector_t) , save, private		:: comb
 
 
 Contains
@@ -51,7 +51,7 @@ Contains
    !   sigma0 is background conductivity parameter
    type(modelParam_t), intent(in)	:: sigma0
    !   to use this routine, need to first supply background EM soln
-   type(EMsoln_t), intent(in)  		:: emsoln
+   type(solnVector_t), intent(in)  		:: emsoln
    !   dsigma is the output array of data sensitivities,
    !   one for each element in the data array.  Each sensitivity
    !    is an element of type modelParam, an abstract
@@ -59,9 +59,9 @@ Contains
    type(modelParam_t), pointer   	:: dsigma(:)
 
    !  local variables
-   type(dataVec_t)  :: dVec
+   type(dataBlock_t)  :: dVec
    integer 		:: i,j,k,istat,nTot,ii,nFunc,nComp,iFunc
-   type(EMsparse_t), pointer	:: L(:),Q(:)
+   type(sparseVector_t), pointer	:: L(:),Q(:)
    logical 		:: calcQ
 
    nComp = typeDict(iDt)%nComp
@@ -89,7 +89,7 @@ Contains
    !  manage any necessary initialization for this transmitter
    call initSolver(iTx,sigma0,grid,e0,e,comb)
 
-   !  store the provided emsoln in e0
+   !  store the provided solnVector in e0
    e0 = emsoln
 
    calcQ = typeDict(iDt)%calcQ
@@ -125,8 +125,8 @@ Contains
    do iFunc = 1,nFunc
 
       ! solve forward problem for each of nFunc functionals
-      call zero_EMrhs(comb)
-      call add_EMsparseEMrhs(C_ONE,L(iFunc),comb)
+      call zero_rhsVector(comb)
+      call add_sparseVrhsV(C_ONE,L(iFunc),comb)
 
       call sensSolve(iTx,TRN,comb,e)
 
@@ -146,8 +146,8 @@ Contains
       endif
 
       ! deallocate temporary sparse vectors
-      call deall_EMsparse(L(iFunc))
-      call deall_EMsparse(Q(iFunc))
+      call deall_sparseVector(L(iFunc))
+      call deall_sparseVector(Q(iFunc))
 
    enddo  ! iFunc
 
@@ -177,7 +177,7 @@ Contains
    !
    !   d is the input data vector, here just used to identify
    !     receiver transmitter pairs to compute sensitivities for
-   type(dataVecMTX_t), intent(in)	:: d
+   type(dataVectorMTX_t), intent(in)	:: d
    !   sigma0 is background conductivity parameter
    type(modelParam_t), intent(in)	:: sigma0
    !   dsigma is the output array of data sensitivities,
@@ -188,7 +188,7 @@ Contains
 
    !  local variables
    type(modelParam_t), pointer   :: dsigma(:)
-   type(dataVec_t)  :: dVec
+   type(dataBlock_t)  :: dVec
    integer 		:: i,j,nTx,k,nSite,nTot,ii,iTx, &
 				iDT,nfunc,ncomp,iRx,iFunc,iComp,istat
 
@@ -251,7 +251,7 @@ Contains
       enddo  ! dataType's
    enddo  ! tx
 
-   call deall_dataVec(dvec)
+   call deall_dataBlock(dvec)
    do j = 1,nComp
       call deall_modelParam(dsigma(j))
    enddo
@@ -278,8 +278,8 @@ Contains
    type(modelParam_t), intent(in)	:: dsigma
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
-   type(dataVecTX_t), intent(inout)		:: d
-   type(EMsoln_t), intent(inout), optional	:: emsoln
+   type(dataVector_t), intent(inout)		:: d
+   type(solnVector_t), intent(inout), optional	:: emsoln
 
    !  local variables
    integer 		:: i,j,iTx,iDT
@@ -292,7 +292,7 @@ Contains
          endif
       endif
 
-      !   get index into transmitter dictionary for this dataVecTX
+      !   get index into transmitter dictionary for this dataVector
       iTx = d%tx
 
       !  manage any necessary initilization for this transmitter
@@ -300,7 +300,7 @@ Contains
 
       if(savedSolns) then
          ! e0 = emsoln
-         call copy_EMsoln(e0,emsoln)
+         call copy_solnVector(e0,emsoln)
       else
          ! solve forward problem; result is stored in e0
          call fwdSolve(iTx,e0)
@@ -348,8 +348,8 @@ Contains
    type(modelParam_t), intent(in)	:: dsigma
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
-   type(dataVecMTX_t), intent(inout)		:: d
-   type(EMsolnMTX_t), intent(inout), optional	:: eAll
+   type(dataVectorMTX_t), intent(inout)		:: d
+   type(solnVectorMTX_t), intent(inout), optional	:: eAll
 
    !  local variables
    integer 		:: j
@@ -401,10 +401,10 @@ Contains
    type(modelParam_t), intent(in)	:: sigma0
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
-   type(dataVecTX_t), intent(in)		:: d
+   type(dataVector_t), intent(in)		:: d
    !   dsigma is the output conductivity parameter
    type(modelParam_t), intent(inout)  	:: dsigma
-   type(EMsoln_t), intent(in), optional	:: emsoln
+   type(solnVector_t), intent(in), optional	:: emsoln
 
    !  local variables
    type(modelParam_t)	:: sigmaTemp, Qcomb
@@ -427,7 +427,7 @@ Contains
       sigmaTemp = sigma0
       call zero(sigmaTemp)
 
-      !   get index into transmitter dictionary for this dataVecTX
+      !   get index into transmitter dictionary for this dataVector
       iTx = d%tx
 
       !  manage any necessary initilization for this transmitter
@@ -435,12 +435,12 @@ Contains
 
       if(savedSolns) then
          ! e0 = e1
-         call copy_EMsoln(e0,emsoln)
+         call copy_solnVector(e0,emsoln)
       else
          ! solve forward problem; result is stored in e0
          call fwdSolve(iTx,e0)
       endif
-      
+
       firstDT=.true.
       ! now, loop over data types
       do i = 1,d%nDt
@@ -467,21 +467,21 @@ Contains
             !  BUT: linDataComb overwrites comb ... so zero this
             !       for every transmitter and for the first data type
 	          if (firstDT) then
-	            call zero_EMrhs(comb)
+	            call zero_rhsVector(comb)
 	            firstDT=.false.
-	          end if  
+	          end if
             call linDataComb(e0,sigma0,d%data(i),comb,Qcomb)
          else
-         ! Zero comb ONLY for the first data type 
+         ! Zero comb ONLY for the first data type
           if (firstDT) then
-            call zero_EMrhs(comb)
+            call zero_rhsVector(comb)
             firstDT=.false.
-          end if   
+          end if
             call linDataComb(e0,sigma0,d%data(i),comb)
          endif
-         
-       enddo  ! dataType's 
-       
+
+       enddo  ! dataType's
+
          ! solve forward problem with source in comb
          call sensSolve(iTx,TRN,comb,e)
          ! map from nodes to conductivity space ... result in sigmaTemp
@@ -530,10 +530,10 @@ Contains
    type(modelParam_t), intent(in)	:: sigma0
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
-   type(dataVecMTX_t), intent(in)		:: d
+   type(dataVectorMTX_t), intent(in)		:: d
    !   dsigma is the output conductivity parameter
    type(modelParam_t), intent(out)  	:: dsigma
-   type(EMsolnMTX_t), intent(in), optional	:: eAll
+   type(solnVectorMTX_t), intent(in), optional	:: eAll
 
    !  local variables
    type(modelParam_t)	:: sigmaTemp
@@ -574,7 +574,7 @@ Contains
   !**********************************************************************
   subroutine fwdPred_TX(sigma,d,emsoln)
 
-   !  Calculate predicted data for single-transmitter dataVecTX object d
+   !  Calculate predicted data for single-transmitter dataVector object d
    !    and for conductivity parameter sigma
    !  Also returns the EM solution e for this transmitter
    !
@@ -585,10 +585,10 @@ Contains
    type(modelParam_t), intent(in)	:: sigma
    !   d is the computed (output) data vector, also used to identify
    !     receiver/transmitter
-   type(dataVecTX_t), intent(inout)	:: d
+   type(dataVector_t), intent(inout)	:: d
    !  structure containing array of solution vectors (should be
    !   allocated before calling)
-   type(EMsoln_t), intent(inout)	:: emsoln
+   type(solnVector_t), intent(inout)	:: emsoln
 
    ! local variables
    integer				:: iTx,i,j
@@ -597,7 +597,7 @@ Contains
          call errStop('data vector not allocated on input to fwdPred')
       end if
 
-      ! get index into transmitter dictionary for this dataVecTX
+      ! get index into transmitter dictionary for this dataVector
       iTx = d%tx
 
       !  do any necessary initialization for transmitter iTx
@@ -624,7 +624,7 @@ Contains
   !**********************************************************************
   subroutine fwdPred(sigma,d,eAll)
 
-   !  Calculate predicted data for dataVecMTX object d
+   !  Calculate predicted data for dataVectorMTX object d
    !    and for conductivity parameter sigma
    !  Optionally returns array of EM solutions eAll, one for
    !    each transmitter (if eAll is present)
@@ -637,10 +637,10 @@ Contains
    type(modelParam_t), intent(in)	:: sigma
    !   d is the computed (output) data vector, also used to identify
    !     receiver/transmitter
-   type(dataVecMTX_t), intent(inout)	:: d
+   type(dataVectorMTX_t), intent(inout)	:: d
    !  structure containing array of solution vectors (should be
    !   allocated before calling)
-   type(EMsolnMTX_t), intent(inout), optional	:: eAll
+   type(solnVectorMTX_t), intent(inout), optional	:: eAll
 
    ! local variables
    integer				:: j
@@ -651,7 +651,7 @@ Contains
 
    if(present(eAll)) then
       if(.not. eAll%allocated) then
-         call create_EMsolnMTX(d%nTx,eAll)
+         call create_solnVectorMTX(d%nTx,eAll)
       else if(d%nTx .ne. eAll%nTx) then
          call errStop('dimensions of eAll and d do not agree in fwdPred')
       endif
@@ -664,7 +664,7 @@ Contains
       call fwdPred_TX(sigma,d%d(j),e0)
 
       if(present(eAll)) then
-         call copy_EMsoln(eAll%solns(j),e0)
+         call copy_solnVector(eAll%solns(j),e0)
       endif
 
    enddo

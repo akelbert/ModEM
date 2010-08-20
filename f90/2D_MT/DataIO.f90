@@ -14,16 +14,16 @@ module DataIO
 
   private
 
-  interface read_dataVecMTX
+  interface read_dataVectorMTX
 	MODULE PROCEDURE read_Z
   end interface
 
-  interface write_dataVecMTX
+  interface write_dataVectorMTX
 	MODULE PROCEDURE write_Z
   end interface
 
 
-  public     :: read_dataVecMTX, write_dataVecMTX
+  public     :: read_dataVectorMTX, write_dataVectorMTX
 
 
   character(100), private, save :: info_in_file
@@ -39,9 +39,9 @@ Contains
    subroutine write_Z(allData,cfile)
 
       character(*), intent(in)					:: cfile
-      type(dataVecMTX_t), intent(in)			:: allData
+      type(dataVectorMTX_t), intent(in)			:: allData
       ! local variables
-      type(dataVec_t)                           :: data
+      type(dataBlock_t)                           :: data
       character(400)                            :: info
       integer									:: i,j,k,istat
       integer                                   :: nBlocks,iTx,iDt
@@ -122,7 +122,7 @@ Contains
          enddo
       enddo
       close(ioDat)
-      call deall_dataVec(data)
+      call deall_dataBlock(data)
 
    end subroutine write_Z
 
@@ -133,9 +133,9 @@ Contains
    subroutine read_Z(allData,cfile)
 
      character(*), intent(in)  				:: cfile
-     type(dataVecMTX_t), intent(inout)   	:: allData
+     type(dataVectorMTX_t), intent(inout)   	:: allData
      ! local variables
-     type(dataVec_t), dimension(:), pointer :: Data
+     type(dataBlock_t), dimension(:), pointer :: Data
      integer      							:: nBlocks,nTx,nDt,nSite,nComp,nData
      integer                                :: iTx,iRx,iDt,i,j,k,istat
      character(10), pointer,dimension(:)    :: siteIDs
@@ -189,7 +189,7 @@ Contains
          ! create dataVec object, read in data
          isComplex = .true.
          errorBar = .true.
-         call create_dataVec(nComp,nSite,Data(i),isComplex,errorBar)
+         call create_dataBlock(nComp,nSite,Data(i),isComplex,errorBar)
          nData  = nData + nComp*nSite
 
          read(ioDat,'(a400)') header ! header line: need to parse this
@@ -236,7 +236,7 @@ Contains
 
 	  ! Finally, set up allData
 	  nTx = size(txDict)
-      call create_dataVecMTX(nTx,allData)
+      call create_dataVectorMTX(nTx,allData)
       do iTx = 1,nTx
          ! count number of data types for this transmitter
          nDt = 0
@@ -246,7 +246,7 @@ Contains
          	end if
          end do
          ! initialize the data vectors for each
-         call create_dataVecTX(nDt,allData%d(iTx))
+         call create_dataVector(nDt,allData%d(iTx))
          allData%d(iTx)%tx = iTx
          iDt = 1
          do i = 1,nBlocks
@@ -261,7 +261,7 @@ Contains
 
       ! Deallocate the temporary Data array
 	  do i = 1,nBlocks
-	     call deall_dataVec(Data(i))
+	     call deall_dataBlock(Data(i))
 	  end do
 	  deallocate(Data,STAT=istat)
 
@@ -270,7 +270,7 @@ Contains
 
 
 !**********************************************************************
-  subroutine setError_dataVec(err,d)
+  subroutine setError_dataBlock(err,d)
    !  whether error bars exist or not, sets new error bars
 	 !  according to the input parameter err, which specifies the
 	 !  fractional error in the output; any errors stored in d
@@ -278,7 +278,7 @@ Contains
 	 ! TEMPORARY - need to be replaced with something data type specific
 
    real (kind=prec), intent(in) :: err
-   type(dataVec_t),intent(inout)             :: d
+   type(dataBlock_t),intent(inout)             :: d
 
    !  local variables
    integer      			:: nComp, nSite
@@ -301,32 +301,32 @@ Contains
 
 	 d%error = err * abs(d%value)
 
-  end subroutine setError_dataVec
+  end subroutine setError_dataBlock
 
 !**********************************************************************
-  subroutine setError_dataVecMTX(err,d)
+  subroutine setError_dataVectorMTX(err,d)
    !  whether error bars exist or not, sets new error bars
 	 !  according to the input parameter err, which specifies the
 	 !  fractional error in the output; any errors stored in d
 	 !  are overwritten
 
 	 real (kind=prec), intent(in) :: err
-   type(dataVecMTX_t),intent(inout)          :: d
+   type(dataVectorMTX_t),intent(inout)          :: d
 
    !  local variables
    integer      			:: nTx, nData, j, k
 
    if(.not.d%allocated) then
-      call errStop('data vector in setError_dataVecMTX not allocated')
+      call errStop('data vector in setError_dataVectorMTX not allocated')
    endif
 
    do j = 1, d%nTx
      do k = 1, d%d(j)%nDt
-        call setError_dataVec(err,d%d(j)%data(k))
+        call setError_dataBlock(err,d%d(j)%data(k))
      enddo
    enddo
 
- end subroutine setError_dataVecMTX
+ end subroutine setError_dataVectorMTX
 
 
 end module DataIO

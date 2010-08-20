@@ -513,7 +513,7 @@ end program earth
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
-	type (EMsolnMTX_t)                      :: H
+	type (solnVectorMTX_t)                      :: H
     !type (cvector)							:: H,B,F
 	!type (sparsevecc)						:: Hb
 	!type (functional_t)						:: dataType
@@ -561,7 +561,7 @@ end program earth
 	!call outputMisfit(param,misfit,misfitValue,cUserDef)
 
 	continue
-	call deall_EMsolnMTX(H)
+	call deall_solnVectorMTX(H)
 
 	call date_and_time(values=tarray)
 	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
@@ -598,7 +598,7 @@ end program earth
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
-	type (EMsolnMTX_t)						:: H1D
+	type (solnVectorMTX_t)						:: H1D
 	type (cvector)                     	    :: Hj, Bj, dH, F
 	type (rvector)							:: drhoF
 	type (rscalar)							:: rho1D, drho
@@ -708,7 +708,7 @@ end program earth
 	call deall_rscalar(drho)
 	call deall_rscalar(rho1D)
 	call deall_modelParam(param1D)
-	call deall_EMsolnMTX(H1D)
+	call deall_solnVectorMTX(H1D)
 
 	call date_and_time(values=tarray)
 	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
@@ -745,7 +745,7 @@ end program earth
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
-	type (EMsolnMTX_t)                      :: H
+	type (solnVectorMTX_t)                      :: H
     !type (cvector)							:: H,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero,dR
 	!type (rvector)							:: dE_real
 	!type (rscalar)							:: drho
@@ -858,7 +858,7 @@ end program earth
 
 	continue
 	call deall_sensMatrix(dR)
-	call deall_EMsolnMTX(H)
+	call deall_solnVectorMTX(H)
 	call deall_modelParam(dmisfit)
 	call deall_modelParam(dmisfitSmooth)
 

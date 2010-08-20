@@ -45,7 +45,7 @@ program Mod2DMT
         if (write_model .and. write_data) then
         	write(*,*) 'Writing model and data files and exiting...'
         	call write_modelParam(sigma0,cUserDef%wFile_Model)
-        	call write_dataVecMTX(allData,cUserDef%wFile_Data)
+        	call write_dataVectorMTX(allData,cUserDef%wFile_Data)
 		else if (write_model) then
         	write(*,*) 'Writing model and exiting...'
         	call write_modelParam(sigma0,cUserDef%wFile_Model)
@@ -57,10 +57,10 @@ program Mod2DMT
         if (write_EMsoln) then
         	! write out EM solutions
         	write(*,*) 'Saving the EM solution...'
-        	call write_EMsolnMTX(fidWrite,cUserDef%wFile_EMsoln,eAll)
+        	call write_solnVectorMTX(fidWrite,cUserDef%wFile_EMsoln,eAll)
         end if
         ! write out all impedances
-        call write_dataVecMTX(allData,cUserDef%wFile_Data)
+        call write_dataVectorMTX(allData,cUserDef%wFile_Data)
 
      case (COMPUTE_J)
         write(*,*) 'Calculating the full sensitivity matrix...'
@@ -70,7 +70,7 @@ program Mod2DMT
      case (MULT_BY_J)
         write(*,*) 'Multiplying by J...'
         call Jmult(dsigma,sigma0,allData)
-        call write_dataVecMTX(allData,cUserDef%wFile_Data)
+        call write_dataVectorMTX(allData,cUserDef%wFile_Data)
 
      case (MULT_BY_J_T)
         write(*,*) 'Multiplying by J^T...'
@@ -89,7 +89,7 @@ program Mod2DMT
         end if
         call write_modelParam(sigma1,cUserDef%wFile_Model)
         if (write_data) then
-        	call write_dataVecMTX(allData,cUserDef%wFile_Data)
+        	call write_dataVectorMTX(allData,cUserDef%wFile_Data)
         end if
 
      case default

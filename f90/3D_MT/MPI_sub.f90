@@ -25,7 +25,7 @@ use ForwardSolver
 
 
 
-      type(EMsolnMTX_t), intent(in)	:: eAll
+      type(solnVectorMTX_t), intent(in)	:: eAll
       integer :: nx1,ny1,nz1,ii
       
      write(6,*) taskid,eAll%solns(1)%grid%nx

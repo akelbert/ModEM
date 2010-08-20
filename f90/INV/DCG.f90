@@ -26,7 +26,7 @@ implicit none
 
 
 public  :: DCGsolver
-   ! type(EMsolnMTX_t),save    :: eAll
+   ! type(solnVectorMTX_t),save    :: eAll
 
 Contains
 
@@ -50,7 +50,7 @@ Contains
   
   ! Subroutine to solve the inverse problem in data space using conjugate gradients (CG)  
    
-   type(dataVecMTX_t), intent(inout)		       ::d
+   type(dataVectorMTX_t), intent(inout)		       ::d
    !  m0 is prior model parameter
    type(modelParam_t), intent(in)		       ::m0
    !  m is solution parameter ... on input m contains starting guess
@@ -59,7 +59,7 @@ Contains
    real(kind=prec) , intent(in)							   ::lambda
    
 !  local variables
-   type(dataVecMTX_t)			:: dHat, b,dx,d_Pred,res,Nres,JmHat
+   type(dataVectorMTX_t)			:: dHat, b,dx,d_Pred,res,Nres,JmHat
    type(modelParam_t)			:: mHat,CmJTd,Cm_mHat,Cm_mHat1
    real(kind=prec)		  		:: rms,value,rms_old
    integer						:: iter, ndata,DS_iter,CG_iter,i,j,k,iDt
@@ -81,8 +81,8 @@ call zero(mHat)
    d_Pred	=d
    res		=d
    Nres		=d
-call zero_dataVecMTX(JmHat)
-call zero_dataVecMTX(b)
+call zero_dataVectorMTX(JmHat)
+call zero_dataVectorMTX(b)
 
 ! initialize the CG control parameters
 		call setIterControl(CGiter)
@@ -99,7 +99,7 @@ call zero_dataVecMTX(b)
 
       ! normalize residuals with the error and compute rms
         Nres=res
-        call normalize_dataVecMTX(Nres,2)
+        call normalize_dataVectorMTX(Nres,2)
         Ndata = countData(d)
         rms = sqrt(dotProd(res,Nres)/Ndata)
         write(iterChar,'(i3.3)') DS_iter
@@ -112,7 +112,7 @@ do DS_iter=1,30
 	        if (DS_iter .gt. 1 )then	    
 #ifdef MPI
             JmHat=d
-            call zero_dataVecMTX(JmHat)
+            call zero_dataVectorMTX(JmHat)
 	        call Master_job_Jmult(mHat,m,JmHat,eAll) 
 #else
 	        call Jmult(mHat,m,JmHat,eAll)
@@ -121,11 +121,11 @@ do DS_iter=1,30
 	        end if
 	        
 	        call linComb(ONE,res,ONE,JmHat,b)
-	        call normalize_dataVecMTX(b,1)   
+	        call normalize_dataVectorMTX(b,1)   
 	        call CG_DS(b,dx,m,d,lambda,CGiter)
 	
 	
-	        !call normalize_dataVecMTX(dx,2)
+	        !call normalize_dataVectorMTX(dx,2)
 	            do i=1,dx%nTx
 	             do iDt=1,dx%d(i)%nDt
 	              do j=1,dx%d(i)%data(iDt)%nSite
@@ -167,13 +167,13 @@ rms_old=rms
 	
 	      ! normalize residuals with the error and compute rms
 	        Nres=res
-	        call normalize_dataVecMTX(Nres,2)
+	        call normalize_dataVectorMTX(Nres,2)
 	        Ndata = countData(d)
 	        rms = sqrt(dotProd(res,Nres)/Ndata)
 	        write(iterChar,'(i3.3)') DS_iter
 	        call printf('DCG_Iter: '//iterChar,lambda,rms)
     	   dataFile ='DCG_FWD_'//iterChar//'.imp'
-           call write_dataVecMTX(d_Pred,trim(dataFile))
+           call write_dataVectorMTX(d_Pred,trim(dataFile))
 
 
            
@@ -187,16 +187,16 @@ end subroutine DCGsolver
 subroutine CG_DS(b,x,m,d,lambda,CGiter)
 
 
-  type (dataVecMTX_t), intent(in)	 	::b
-  type (dataVecMTX_t), intent(inout) 	::x
+  type (dataVectorMTX_t), intent(in)	 	::b
+  type (dataVectorMTX_t), intent(inout) 	::x
   type(modelParam_t),  intent(in)       ::m
-  type (dataVecMTX_t), intent(in)	    ::d
+  type (dataVectorMTX_t), intent(in)	    ::d
   real(kind=prec),     intent(in)       ::lambda
   type(iterControl_t), intent(inout)	:: CGiter
   character(3)         					::iterChar
   
   !Local
-    type (dataVecMTX_t)              	:: r,p,Ap
+    type (dataVectorMTX_t)              	:: r,p,Ap
     real(kind=prec)					 	::alpha,beta,r_norm_pre,r_norm,b_norm,error,delta_new,delta_zero,delta_old
     integer                          	::cg_iter,i,j,k,ii,iDt
     
@@ -206,7 +206,7 @@ r=b
 p=r
 Ap=d
 b_norm=dotProd(b,b)
-call zero_dataVecMTX(x)
+call zero_dataVectorMTX(x)
 r_norm=dotProd(r,r)
 
 ii = 1
@@ -232,10 +232,10 @@ loop: do while ((CGiter%rerr(ii).gt.CGiter%tol).and.(ii.lt.CGiter%maxIt))
        alpha = r_norm/dotProd(p,Ap)
        
 ! Compute new x: x = x + alpha*p         
-       Call scMultAdd_dataVecMTX(alpha,p,x)  
+       Call scMultAdd_dataVectorMTX(alpha,p,x)  
                                  
 ! Compute new r: r = r - alpha*Ap   
-       Call scMultAdd_dataVecMTX(-alpha,Ap,r) 
+       Call scMultAdd_dataVectorMTX(-alpha,Ap,r) 
 
         
                 
@@ -255,22 +255,22 @@ loop: do while ((CGiter%rerr(ii).gt.CGiter%tol).and.(ii.lt.CGiter%maxIt))
 CGiter%niter = ii
 
 ! deallocate the help vectors
-    call deall_dataVecMTX(r)
-    call deall_dataVecMTX(p)
-    call deall_dataVecMTX(Ap)
+    call deall_dataVectorMTX(r)
+    call deall_dataVectorMTX(p)
+    call deall_dataVectorMTX(Ap)
     
 end subroutine CG_DS
 
 !###################################################################################
 subroutine MultA(p,m,d,lambda,Ap)
-   type(dataVecMTX_t), intent(in)          ::p
-   type(dataVecMTX_t), intent(out)         ::Ap
+   type(dataVectorMTX_t), intent(in)          ::p
+   type(dataVectorMTX_t), intent(out)         ::Ap
    type(modelParam_t), intent(in)          ::m
-   type (dataVecMTX_t), intent(in)	       ::d
+   type (dataVectorMTX_t), intent(in)	       ::d
    real(kind=prec), intent(in)             ::lambda
 !Local parameters
    type(modelParam_t)                      ::JTp,CmJTp,CmJTp1
-   type(dataVecMTX_t)                      ::lambdaP,p_temp
+   type(dataVectorMTX_t)                      ::lambdaP,p_temp
    integer                                 ::i,j,k,iDt
 
 JTp		=m
@@ -280,7 +280,7 @@ p_temp	=p
 lambdaP	=p
 
 
-           !call normalize_dataVecMTX(p,1)
+           !call normalize_dataVectorMTX(p,1)
 !  Mult C^(-1/2) p              
           do i=1,p_temp%nTx
             do iDt=1,p_temp%d(i)%nDt
@@ -312,7 +312,7 @@ Ap=d
             call Jmult(CmJTp,m,Ap,eAll)
 #endif
 
-            call scMult_dataVecMTX(lambda,p,lambdaP)
+            call scMult_dataVectorMTX(lambda,p,lambdaP)
             
 !Normalize: C^(-1/2)*Ap
          do i=1,Ap%nTx
@@ -332,14 +332,14 @@ Ap=d
             
          end do
           
-           call linComb_dataVecMTX(ONE,Ap,ONE,lambdaP,Ap)      
+           call linComb_dataVectorMTX(ONE,Ap,ONE,lambdaP,Ap)      
         
         
 !Deallocate help vectors
     call deall_modelParam(CmJTp)
     call deall_modelParam(CmJTp1)
-    call deall_dataVecMTX(p_temp)
-    call deall_dataVecMTX(lambdaP)
+    call deall_dataVectorMTX(p_temp)
+    call deall_dataVectorMTX(lambdaP)
     
     
                 

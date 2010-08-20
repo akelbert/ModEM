@@ -3,9 +3,9 @@ module Main
 	! These subroutines are called from the main program only
 
   use ModelSpace
-  use dataspace ! dataVecMTX_t
+  use dataspace ! dataVectorMTX_t
   use datafunc ! to deallocate rxDict, typeDict
-  use ForwardSolver ! txDict, EMsolnMTX
+  use ForwardSolver ! txDict, solnVectorMTX
   use sensmatrix
   use userctrl
   use ioascii
@@ -28,7 +28,7 @@ module Main
   type(grid_t), save	        :: grid
 
   ! impedance data structure
-  type(dataVecMTX_t), save		:: allData
+  type(dataVectorMTX_t), save		:: allData
 
   !  storage for the "background" conductivity parameter
   type(modelParam_t), save		:: sigma0
@@ -41,7 +41,7 @@ module Main
   type(sensMatrix_t), pointer, dimension(:), save	:: sens
 
   !  storage for EM solutions
-  type(EMsolnMTX_t), save            :: eAll
+  type(solnVectorMTX_t), save            :: eAll
 
   logical                   :: write_model, write_data, write_EMsoln
 
@@ -98,7 +98,7 @@ Contains
 
 	if (exists) then
        !  This also sets up dictionaries
-	   call read_dataVecMTX(allData,cUserDef%rFile_Data)
+	   call read_dataVectorMTX(allData,cUserDef%rFile_Data)
     else
        call warning('No input data file - unable to set up dictionaries')
     end if
@@ -174,12 +174,12 @@ Contains
 	if (output_level > 3) then
 	   write(0,*) 'Cleaning up data...'
 	endif
-	call deall_dataVecMTX(allData)
+	call deall_dataVectorMTX(allData)
 
 	if (output_level > 3) then
 	   write(0,*) 'Cleaning up EM soln...'
 	endif
-	call deall_EMsolnMTX(eAll)
+	call deall_solnVectorMTX(eAll)
 
 	if (output_level > 3) then
 	   write(0,*) 'Cleaning up models...'

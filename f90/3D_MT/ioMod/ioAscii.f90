@@ -35,7 +35,7 @@ module ioAscii
   use emsolve3d
   use dataspace
   use datafunc ! for data types
-  use ForwardSolver, only: EMsolnMTX_t
+  use ForwardSolver, only: solnVectorMTX_t
   use transmitters
   use receivers
   use datatypes
@@ -48,7 +48,7 @@ module ioAscii
   public                   :: EfileRead, EfileWrite
   public                   :: DfileWrite
   public                   :: ZfileRead, ZfileWrite
-  public                   :: write_EMsolnMTX
+  public                   :: write_solnVectorMTX
 
 Contains
 
@@ -470,7 +470,7 @@ Contains
 !*******************************************************************************
 
 !******************************************************************
-      subroutine write_EMsolnMTX(fid,cfile,eAll)
+      subroutine write_solnVectorMTX(fid,cfile,eAll)
 
       !  open cfile on unit fid, writes out object of
       !   type cvector in standard format (readable by matlab
@@ -481,7 +481,7 @@ Contains
 
       integer, intent(in)               :: fid
       character(*), intent(in)          :: cfile
-      type(EMsolnMTX_t), intent(in)               :: eAll
+      type(solnVectorMTX_t), intent(in)               :: eAll
 
       !   local variables
       integer           :: j,k,nMode = 2, ios
@@ -502,6 +502,6 @@ Contains
          enddo
       enddo
       close(fid)
-      end subroutine write_EMsolnMTX
+      end subroutine write_solnVectorMTX
 
 end module ioAscii

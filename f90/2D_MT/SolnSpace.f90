@@ -1,8 +1,8 @@
 module SolnSpace
-!   higher level module to define EM solution and EMrhs objects
-!   plus basic methods, linear algebra, dot products
+!   higher level module to define solution vector and RHS vector objects
+!   for the forward solver; plus basic methods, linear algebra, dot products
 !
-! Defines: EMsoln, EMsparse, EMrhs
+! Defines: solnVector, sparseVector, rhsVector
 ! Uses: EMfield
 
 use emfield
@@ -11,7 +11,7 @@ use transmitters
 implicit none
 
 
- type :: EMsoln_t
+ type :: solnVector_t
     !!   Generic solution type, same name must be used to allow
     !!   use of higher level inversion modules on different problems.
     !!
@@ -27,23 +27,23 @@ implicit none
     type(grid_t), pointer		:: grid
     integer 				:: tx = 0
     logical                 :: allocated = .false.
-  end type EMsoln_t
+  end type solnVector_t
 
-  type :: EMsolnMTX_t
+  type :: solnVectorMTX_t
     !! Generic solution type for storing solutions from multiple transmitters
     integer			:: nTx = 0
-    type(EMsoln_t), pointer		:: solns(:)
+    type(solnVector_t), pointer		:: solns(:)
     logical			:: allocated = .false.
-  end type EMsolnMTX_t
+  end type solnVectorMTX_t
 
-  type :: EMsparse_t
+  type :: sparseVector_t
     !!   Generic solution type, same name must be used to allow
     !!   use of higher level inversion modules on different problems.
     type(sparsevecc)			:: L
-  end type EMsparse_t
+  end type sparseVector_t
 
 
-  type :: EMrhs_t
+  type :: rhsVector_t
      !!   right hand side for solving both TE and TM mode equations,
      !!   forward or adjoint problems (mode & omega stored in txDict)
      character*3			:: adj = ''
@@ -54,15 +54,15 @@ implicit none
      complex(kind=prec), pointer, dimension(:)	:: bc
      type(grid_t), pointer		:: grid
      integer                :: tx = 0
-  end type EMrhs_t
+  end type rhsVector_t
 
 contains
 
 !**********************************************************************
-!           Basic EMsoln methods
+!           Basic solnVector methods
 !**********************************************************************
-     subroutine create_EMsoln(grid,iTx,e)
-       ! no need to pass the mode to create_EMsoln:
+     subroutine create_solnVector(grid,iTx,e)
+       ! no need to pass the mode to create_solnVector:
        ! we now get it from the transmitter dict.
        ! now the interface is generic,
        ! and could be used as such
@@ -70,7 +70,7 @@ contains
        implicit none
        type(grid_t), intent(in), target	:: grid
        integer, intent(in)              :: iTx
-       type (EMsoln_t), intent(inout)	:: e
+       type (solnVector_t), intent(inout)	:: e
 
        ! local
        character(2)      :: mode
@@ -83,7 +83,7 @@ contains
        else if(mode .eq. 'TM') then
           gridType = NODE_EARTH
        else
-          call errStop('Unknown mode in create_EMsoln')
+          call errStop('Unknown mode in create_solnVector')
        endif
 
        call create_cvector(grid,gridType,e%vec)
@@ -91,12 +91,12 @@ contains
        e%grid => grid
        e%allocated = .true.
 
-     end subroutine create_EMsoln
+     end subroutine create_solnVector
 
      !************************************************************
-     subroutine deall_EMsoln(e)
+     subroutine deall_solnVector(e)
        implicit none
-       type (EMsoln_t), intent(inout)   :: e
+       type (solnVector_t), intent(inout)   :: e
 
        call deall_cvector(e%vec)
        if(associated(e%grid)) then
@@ -104,14 +104,14 @@ contains
        endif
        e%allocated = .false.
 
-     end subroutine deall_EMsoln
+     end subroutine deall_solnVector
 
      !************************************************************
-     subroutine copy_EMsoln(eOut,eIn)
+     subroutine copy_solnVector(eOut,eIn)
 
        implicit none
-       type (EMsoln_t), intent(in)	:: eIn
-       type (EMsoln_t), intent(inout)	:: eOut
+       type (solnVector_t), intent(in)	:: eIn
+       type (solnVector_t), intent(inout)	:: eOut
 
        !  should have some error checking for eIn ...
        call copy_cvector(eOut%vec,eIn%vec)
@@ -120,76 +120,76 @@ contains
        eOut%grid => eIn%grid
        eOut%allocated = eIn%allocated
 
-     end subroutine copy_EMsoln
+     end subroutine copy_solnVector
 
      !**********************************************************************
-     function dotProd_EMsoln(e1,e2,conj_Case) result(c)
+     function dotProd_solnVector(e1,e2,conj_Case) result(c)
      !   dot product of two solution space objects
-       type(EMsoln_t), intent(in)		:: e1,e2
+       type(solnVector_t), intent(in)		:: e1,e2
        logical, intent(in)		:: conj_case
        complex(kind=prec)	:: c
 
        c = dotProd_cvector(e1%vec,e2%vec,conj_case)
 
-     end function dotProd_EMsoln
+     end function dotProd_solnVector
 
      !**********************************************************************
-     subroutine zero_EMsoln(e)
+     subroutine zero_solnVector(e)
      !  zeros a solution space object
 
-       type(EMsoln_t), intent(inout)	:: e
+       type(solnVector_t), intent(inout)	:: e
 
        e%vec%v = C_ZERO
 
-     end subroutine zero_EMsoln
+     end subroutine zero_solnVector
 
 
 !**********************************************************************
-!           Basic EMsolnMTX methods
+!           Basic solnVectorMTX methods
 !**********************************************************************
 
-   subroutine create_EMsolnMTX(nTx,eAll)
+   subroutine create_solnVectorMTX(nTx,eAll)
 
       integer, intent(in)               :: nTx
-      type(EMsolnMTX_t), intent(inout)  :: eAll
+      type(solnVectorMTX_t), intent(inout)  :: eAll
 
       ! local variables
       integer      :: istat
 
-      call deall_EMsolnMTX(eAll)
+      call deall_solnVectorMTX(eAll)
 
       eAll%nTx = nTx
       allocate(eAll%solns(nTx), STAT=istat)
       eAll%allocated = .true.
 
-   end subroutine create_EMsolnMTX
+   end subroutine create_solnVectorMTX
 
    !**********************************************************************
-   subroutine deall_EMsolnMTX(eAll)
+   subroutine deall_solnVectorMTX(eAll)
 
-      type(EMsolnMTX_t), intent(inout)     :: eAll
+      type(solnVectorMTX_t), intent(inout)     :: eAll
 
       !  local variables
       integer                           :: j, istat
 
 	  do j = 1,eAll%nTx
-	  	call deall_EMsoln(eAll%solns(j))
+	  	call deall_solnVector(eAll%solns(j))
 	  end do
 
       if (associated(eAll%solns)) deallocate(eAll%solns, STAT=istat)
       eAll%allocated = .false.
 
-   end subroutine deall_EMsolnMTX
+   end subroutine deall_solnVectorMTX
 
 !**********************************************************************
-!           Basic EMsparse methods
+!           Basic sparseVector methods
 !**********************************************************************
 
-     subroutine create_EMsparse(grid,iTx,LC,nCoeff)
+     subroutine create_sparseVector(grid,iTx,LC,nCoeff)
 
        type(grid_t), intent(in)	:: grid
        integer, intent(in)		:: iTx
-       type(EMsparse_t)			:: LC
+       type(sparseVector_t)			:: LC
        integer, optional, intent(in)	:: nCoeff
 
        ! local
@@ -210,69 +210,69 @@ contains
        else if(mode .eq. 'TM') then
           gridType = NODE_EARTH
        else
-          call errStop('Unknown mode in create_EMsparse')
+          call errStop('Unknown mode in create_sparseVector')
        endif
 
        call create_sparsevecc(grid,gridType,nc,LC%L)
 
-     end subroutine create_EMsparse
+     end subroutine create_sparseVector
 
      !************************************************************
-     subroutine deall_EMsparse(LC)
+     subroutine deall_sparseVector(LC)
 
-       type (EMsparse_t), intent(inout)   	:: LC
+       type (sparseVector_t), intent(inout)   	:: LC
 
        call deall_sparsevecc(LC%L)
 
-     end subroutine deall_EMsparse
+     end subroutine deall_sparseVector
 
      !**********************************************************************
-     subroutine linComb_EMsparse(Lin1,c1,Lin2,c2,Lout)
-       ! linear combination of two EMsparse objects
+     subroutine linComb_sparseVector(Lin1,c1,Lin2,c2,Lout)
+       ! linear combination of two sparseVector objects
 
-       type (EMsparse_t), intent(in)		:: Lin1,Lin2
+       type (sparseVector_t), intent(in)		:: Lin1,Lin2
        complex (kind=prec), intent(in)	:: c1,c2
-       type (EMsparse_t), intent(inout)		:: Lout
+       type (sparseVector_t), intent(inout)		:: Lout
 
        call linComb_sparsevecc(Lin1%L,c1,Lin2%L,c2,Lout%L)
 
-     end subroutine linComb_EMsparse
+     end subroutine linComb_sparseVector
 
 !**********************************************************************
-!           combined EMsoln/EMsparse methods
+!           combined solnVector/sparseVector methods
 !**********************************************************************
-     function dotProd_EMsparseEMsoln(SV,FV,Conj_Case) result(c)
+     function dotProd_sparseVsolnV(SV,FV,Conj_Case) result(c)
 
-       type (EMsparse_t), intent(in)             :: SV  ! sparse vector
-       type (EMsoln_t), intent(in)               :: FV  ! full vector
+       type (sparseVector_t), intent(in)             :: SV  ! sparse vector
+       type (solnVector_t), intent(in)               :: FV  ! full vector
        logical, intent(in)                     :: conj_Case ! = .true.
        complex(kind=prec)		:: c
 
        c = dotProd_scvector(SV%L,FV%vec,Conj_Case)
 
-     end function dotProd_EMsparseEMsoln
+     end function dotProd_sparseVsolnV
 
      !**********************************************************************
-     subroutine add_EMsparseEMsoln(cs,SV,FV)
+     subroutine add_sparseVsolnV(cs,SV,FV)
 
         complex(kind=prec), intent(in)	:: cs
-        type (EMsparse_t), intent(in)	:: SV  ! sparse vector
-        type (EMsoln_t), intent(inout)	:: FV  ! full vector
+        type (sparseVector_t), intent(in)	:: SV  ! sparse vector
+        type (solnVector_t), intent(inout)	:: FV  ! full vector
 
        call add_scvector(cs,SV%L,FV%vec)
 
-     end subroutine add_EMsparseEMsoln
+     end subroutine add_sparseVsolnV
 
 !**********************************************************************
-!           EMrhs methods
+!           rhsVector methods
 !**********************************************************************
      !  allocates and initializes arrays for the "rhs" structure
      !   set pointer to grid + mode/source fields of rhs before calling
-     subroutine create_EMrhs(grid,iTx,b)
+     subroutine create_rhsVector(grid,iTx,b)
 
        type(grid_t), intent(in),target	:: grid
        integer, intent(in)              :: iTx
-       type (EMrhs_t), intent(inout)   	:: b
+       type (rhsVector_t), intent(inout)   	:: b
 
        !  local variables
        character(2)     :: mode
@@ -292,7 +292,7 @@ contains
           gridType = NODE_EARTH
           Nzi = Nz-Nza
        else
-          call errStop('Unknown mode in create_EMrhs')
+          call errStop('Unknown mode in create_rhsVector')
        endif
 
        nBC = 2*(Ny+1)+2*(Nzi+1)
@@ -311,12 +311,12 @@ contains
        b%grid => grid
        b%allocated = .true.
 
-     end subroutine create_EMrhs
+     end subroutine create_rhsVector
 
     !************************************************************
-     subroutine deall_EMrhs(b)
+     subroutine deall_rhsVector(b)
 
-       type (EMrhs_t), intent(inout)   :: b
+       type (rhsVector_t), intent(inout)   :: b
 
        if (.not.(b%allocated)) then
          return
@@ -332,25 +332,25 @@ contains
        endif
        b%allocated = .false.
 
-     end subroutine deall_EMrhs
+     end subroutine deall_rhsVector
 
      !**********************************************************************
-     subroutine add_EMsparseEMrhs(cs,SV,FV)
+     subroutine add_sparseVrhsV(cs,SV,FV)
 
         complex(kind=prec), intent(in)	:: cs
-        type (EMsparse_t), intent(in)		:: SV  ! sparse vector
-        type (EMrhs_t), intent(inout)		:: FV  ! full vector
+        type (sparseVector_t), intent(in)		:: SV  ! sparse vector
+        type (rhsVector_t), intent(inout)		:: FV  ! full vector
 
        call add_scvector(cs,SV%L,FV%source)
        FV%nonzero_source = .true.
 
-     end subroutine add_EMsparseEMrhs
+     end subroutine add_sparseVrhsV
 
      !**********************************************************************
-     subroutine zero_EMrhs(e)
+     subroutine zero_rhsVector(e)
      !  zeros a solution space object
 
-       type(EMrhs_t), intent(inout)	:: e
+       type(rhsVector_t), intent(inout)	:: e
 
        if(e%nonzero_source .and. e%allocated) then
           e%source%v = C_ZERO
@@ -359,6 +359,6 @@ contains
              e%bc = C_ZERO
           endif
        endif
-     end subroutine zero_EMrhs
+     end subroutine zero_rhsVector
 
 end module SolnSpace

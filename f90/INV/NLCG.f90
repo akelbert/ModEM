@@ -212,16 +212,16 @@ Contains
    ! that can be used for evaluating the gradient
 
    real(kind=prec), intent(in)  :: lambda
-   type(dataVecMTX_t), intent(in)              :: d
+   type(dataVectorMTX_t), intent(in)              :: d
    type(modelParam_t), intent(in)           :: m0
    type(modelParam_t), intent(in)           :: mHat
    real(kind=prec), intent(out) :: F, mNorm
-   type(dataVecMTX_t), optional, intent(out)   :: dHat
-   type(EMsolnMTX_t), optional, intent(out) :: eAll
+   type(dataVectorMTX_t), optional, intent(out)   :: dHat
+   type(solnVectorMTX_t), optional, intent(out) :: eAll
    real(kind=prec), optional, intent(out) :: RMS
 
    !  local variables
-   type(dataVecMTX_t)    :: res,Nres
+   type(dataVectorMTX_t)    :: res,Nres
    type(modelParam_t) :: m,JTd
    real(kind=prec) :: SS
    integer :: Ndata
@@ -269,8 +269,8 @@ Contains
    	RMS = sqrt(SS/Ndata)
    end if
 
-   call deall_dataVecMTX(res)
-   call deall_dataVecMTX(Nres)
+   call deall_dataVectorMTX(res)
+   call deall_dataVectorMTX(Nres)
    call deall_modelParam(m)
    call deall_modelParam(JTd)
 
@@ -290,16 +290,16 @@ Contains
    !  call fwdPred(m,dHat,eAll)
 
    real(kind=prec), intent(in)  :: lambda
-   type(dataVecMTX_t), intent(in)              :: d
+   type(dataVectorMTX_t), intent(in)              :: d
    type(modelParam_t), intent(in)           :: m0
    type(modelParam_t), intent(in)           :: mHat
    type(modelParam_t), intent(out)          :: grad
-   type(dataVecMTX_t), intent(in)              :: dHat
-   type(EMsolnMTX_t), intent(in)            :: eAll
+   type(dataVectorMTX_t), intent(in)              :: dHat
+   type(solnVectorMTX_t), intent(in)            :: eAll
 
    !  local variables
    real(kind=prec)       :: Ndata
-   type(dataVecMTX_t)    :: res
+   type(dataVectorMTX_t)    :: res
    type(modelParam_t) :: m,JTd,CmJTd
 
    ! integer :: j, Ny, NzEarth
@@ -339,7 +339,7 @@ Contains
    ! and add the gradient of the model norm
    call linComb(MinusTWO,CmJTd,TWO*lambda,mHat,grad)
 
-   call deall_dataVecMTX(res)
+   call deall_dataVectorMTX(res)
    call deall_modelParam(m)
    call deall_modelParam(JTd)
    call deall_modelParam(CmJTd)
@@ -389,15 +389,15 @@ Contains
    ! operator. Divides by the variances (squared error bars)
    ! and scales by the number of data (degrees of freedom).
 
-   type(dataVecMTX_t), intent(inout)           :: d_in
-   type(dataVecMTX_t), optional, intent(out)   :: d_out
-   type(dataVecMTX_t)                          :: d
+   type(dataVectorMTX_t), intent(inout)           :: d_in
+   type(dataVectorMTX_t), optional, intent(out)   :: d_out
+   type(dataVectorMTX_t)                          :: d
    !integer                                :: Ndata
 
     d = d_in
 
     ! divide each data component by its variance
-    call normalize_dataVecMTX(d,2)
+    call normalize_dataVectorMTX(d,2)
 
     ! divide by the number of data
     !Ndata = countData(d)
@@ -455,7 +455,7 @@ Contains
    !  start with the result of a previous search.
 
    !  d is data; on output it contains the responses for the inverse model
-   type(dataVecMTX_t), intent(inout)		   :: d
+   type(dataVectorMTX_t), intent(inout)		   :: d
    !  lambda is regularization parameter
    real(kind=prec), intent(inout)  :: lambda
    !  m0 is prior model parameter
@@ -470,7 +470,7 @@ Contains
    character(80)                           :: flavor = 'Cubic'
 
    !  local variables
-   type(dataVecMTX_t)			:: dHat, res
+   type(dataVectorMTX_t)			:: dHat, res
    type(modelParam_t)			:: mHat, m_minus_m0, grad, g, h, gPrev
    !type(NLCGiterControl_t)			:: iterControl
    real(kind=prec)		:: value, valuePrev, rms, rmsPrev, alpha, beta, gnorm, mNorm
@@ -479,7 +479,7 @@ Contains
    logical              :: ok
    character(3)         :: iterChar
    character(100)       :: mFile, mHatFile, gradFile, dataFile, resFile, logFile
-   type(EMsolnMTX_t)      :: eAll
+   type(solnVectorMTX_t)      :: eAll
 
    if (present(fname)) then
       call read_NLCGiterControl(iterControl,fname,ok)
@@ -559,7 +559,7 @@ Contains
 
 	  ! at the end of line search, set mHat to the new value
 	  ! mHat = mHat + alpha*h  and evaluate gradient at new mHat
-	  ! data and EMsoln only needed for output
+	  ! data and solnVector only needed for output
 	  write(*,*) 'Starting line search...'
 	  select case (flavor)
 	  case ('Cubic')
@@ -598,15 +598,15 @@ Contains
       end if
    	  if (output_level > 2) then
    	    dataFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.imp'
-        call write_dataVecMTX(dHat,trim(dataFile))
+        call write_dataVectorMTX(dHat,trim(dataFile))
       end if
       ! compute residual for output: res = (d-dHat)/err
    	  if (output_level > 2) then
         res = d
         call linComb(ONE,d,MinusONE,dHat,res)
-        call normalize_dataVecMTX(res,1)
+        call normalize_dataVectorMTX(res,1)
    	    resFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.res'
-        call write_dataVecMTX(res,trim(resFile))
+        call write_dataVectorMTX(res,trim(resFile))
       end if
 
 	  ! if alpha is too small, we are not making progress: update lambda
@@ -673,15 +673,15 @@ Contains
    close(ioLog,iostat=ios)
 
    ! cleaning up
-   call deall_dataVecMTX(dHat)
-   call deall_dataVecMTX(res)
+   call deall_dataVectorMTX(dHat)
+   call deall_dataVectorMTX(res)
    call deall_modelParam(mHat)
    call deall_modelParam(m_minus_m0)
    call deall_modelParam(grad)
    call deall_modelParam(g)
    call deall_modelParam(h)
    call deall_modelParam(gPrev)
-   call deall_EMsolnMTX(eAll)
+   call deall_solnVectorMTX(eAll)
 
    end subroutine NLCGsolver
 
@@ -728,7 +728,7 @@ Contains
    ! To the best of my knowledge, it is not useful for NLCG.
 
    real(kind=prec), intent(in)     :: lambda
-   type(dataVecMTX_t), intent(in)		       :: d
+   type(dataVectorMTX_t), intent(in)		       :: d
    type(modelParam_t), intent(in)		       :: m0
    type(modelParam_t), intent(in)            :: h  ! search direction
    real(kind=prec), intent(inout)  :: alpha ! step size
@@ -737,8 +737,8 @@ Contains
    type(modelParam_t), intent(inout)         :: grad
    real(kind=prec), intent(out)    :: rms
    integer,intent(out)                     :: niter
-   type(dataVecMTX_t), intent(out)         :: dHat
-   type(EMsolnMTX_t), intent(out)          :: eAll
+   type(dataVectorMTX_t), intent(out)         :: dHat
+   type(solnVectorMTX_t), intent(out)          :: eAll
 
    ! optionally add relaxation (e.g. for Renormalised Steepest Descent)
    real(kind=prec), intent(in), optional :: gamma
@@ -750,8 +750,8 @@ Contains
    real(kind=prec)                 :: eps,k,c,a,b
    real(kind=prec)                 :: g_0,f_0,f_1,f_i,rms_1,mNorm_1
    type(modelParam_t)                        :: mHat_0,mHat_1
-   type(dataVecMTX_t)                           :: dHat_1
-   type(EMsolnMTX_t)                         :: eAll_1
+   type(dataVectorMTX_t)                           :: dHat_1
+   type(solnVectorMTX_t)                         :: eAll_1
    character(100)							:: logFile
 
    ! parameters
@@ -871,10 +871,10 @@ Contains
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, line search finished'
 
-   call deall_dataVecMTX(dHat_1)
+   call deall_dataVectorMTX(dHat_1)
    call deall_modelParam(mHat_0)
    call deall_modelParam(mHat_1)
-   call deall_EMsolnMTX(eAll_1)
+   call deall_solnVectorMTX(eAll_1)
 
   end subroutine lineSearchQuadratic
 
@@ -923,7 +923,7 @@ Contains
    ! To the best of my knowledge, it is not useful for NLCG.
 
    real(kind=prec), intent(in)     :: lambda
-   type(dataVecMTX_t), intent(in)		       :: d
+   type(dataVectorMTX_t), intent(in)		       :: d
    type(modelParam_t), intent(in)		       :: m0
    type(modelParam_t), intent(in)            :: h  ! search direction
    real(kind=prec), intent(inout)  :: alpha ! step size
@@ -932,8 +932,8 @@ Contains
    type(modelParam_t), intent(inout)         :: grad
    real(kind=prec), intent(out)    :: rms
    integer, intent(out)                    :: niter
-   type(dataVecMTX_t), intent(out)         :: dHat
-   type(EMsolnMTX_t), intent(out)          :: eAll
+   type(dataVectorMTX_t), intent(out)         :: dHat
+   type(solnVectorMTX_t), intent(out)          :: eAll
 
    ! optionally add relaxation (e.g. for Renormalised Steepest Descent)
    real(kind=prec), intent(in), optional :: gamma
@@ -945,8 +945,8 @@ Contains
    real(kind=prec)                 :: eps,k,c,a,b,q1,q2,q3
    real(kind=prec)                 :: g_0,f_0,f_1,f_i,f_j,rms_1,mNorm_1
    type(modelParam_t)                        :: mHat_0,mHat_1
-   type(dataVecMTX_t)                           :: dHat_1
-   type(EMsolnMTX_t)                         :: eAll_1
+   type(dataVectorMTX_t)                           :: dHat_1
+   type(solnVectorMTX_t)                         :: eAll_1
    character(100)							:: logFile
 
    ! parameters
@@ -1017,10 +1017,10 @@ Contains
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, exiting line search'
-	call deall_dataVecMTX(dHat_1)
+	call deall_dataVectorMTX(dHat_1)
 	call deall_modelParam(mHat_0)
 	call deall_modelParam(mHat_1)
-	call deall_EMsolnMTX(eAll_1)
+	call deall_solnVectorMTX(eAll_1)
    	return
    end if
 
@@ -1055,10 +1055,10 @@ Contains
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, exiting line search'
-	call deall_dataVecMTX(dHat_1)
+	call deall_dataVectorMTX(dHat_1)
 	call deall_modelParam(mHat_0)
 	call deall_modelParam(mHat_1)
-	call deall_EMsolnMTX(eAll_1)
+	call deall_solnVectorMTX(eAll_1)
    	return
    end if
 
@@ -1069,10 +1069,10 @@ Contains
    if (f > f_0) then
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Unable to fit a quadratic due to bad gradient estimate, exiting line search'
-	call deall_dataVecMTX(dHat_1)
+	call deall_dataVectorMTX(dHat_1)
 	call deall_modelParam(mHat_0)
 	call deall_modelParam(mHat_1)
-	call deall_EMsolnMTX(eAll_1)
+	call deall_solnVectorMTX(eAll_1)
    	return
    end if
 
@@ -1143,10 +1143,10 @@ Contains
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, line search finished'
 
-   call deall_dataVecMTX(dHat_1)
+   call deall_dataVectorMTX(dHat_1)
    call deall_modelParam(mHat_0)
    call deall_modelParam(mHat_1)
-   call deall_EMsolnMTX(eAll_1)
+   call deall_solnVectorMTX(eAll_1)
 
   end subroutine lineSearchCubic
 

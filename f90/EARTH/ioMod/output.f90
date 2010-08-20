@@ -139,8 +139,8 @@ Contains
   subroutine outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
 
 	type (transmitter_t), intent(in)					:: freq
-	type (dataVecMTX_t), intent(in)					:: psi
-	type (dataVecMTX_t), intent(in), optional		    :: dat
+	type (dataVectorMTX_t), intent(in)					:: psi
+	type (dataVectorMTX_t), intent(in), optional		    :: dat
 	type (TF_List), intent(in)						:: TFList
 	type (Obs_List), intent(in)						:: obsList
 	type (Freq_List), intent(in)					:: freqList
@@ -300,7 +300,7 @@ Contains
   subroutine outputResiduals(freq,res,TFList,obsList,outFiles)
 
 	type (transmitter_t), intent(in)					:: freq
-	type (dataVecMTX_t), intent(in)					:: res
+	type (dataVectorMTX_t), intent(in)					:: res
 	type (TF_List), intent(in)						:: TFList
 	type (Obs_List), intent(in)						:: obsList
 	type (output_info), intent(in)					:: outFiles
@@ -391,7 +391,7 @@ Contains
 
 	type (transmitter_t), intent(in)					:: freq
         type (sensitivity_t), intent(in)                                  :: sens
-	type (dataVecMTX_t), intent(in)					:: psi
+	type (dataVectorMTX_t), intent(in)					:: psi
 	type (modelParam_t), intent(in), optional		    :: param
 	type (TF_List), intent(in)						:: TFList
 	type (Obs_List), intent(in)						:: obsList

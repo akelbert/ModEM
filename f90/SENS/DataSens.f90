@@ -8,7 +8,7 @@ module DataSens
 !     problems (in particular, 2D and 3D MT).  Much of the code in these
 !     routines is for handling two general efficiency issues that arise
 !     with frequency domain EM data: Even at a single site there can be multiple
-!     components that can be evaluated from a single EMsoln object: e.g.,
+!     components that can be evaluated from a single solnVector object: e.g.,
 !     in 2D MT, TE mode impedance and Tipper; or for 3D 4 components of
 !     impedance tensor; and data can be complex or real.  These modules
 !     handle these different cases efficiently, so that these details
@@ -37,12 +37,12 @@ Contains
   ! evaluate linearized data functionals for all sites represented
   !  in a dataVec object.
 
-  !  electric field solutions are stored as type EMsoln
-  type (EMsoln_t), intent(in)			:: ef,e0
+  !  electric field solutions are stored as type solnVector
+  type (solnVector_t), intent(in)			:: ef,e0
   ! d provides indices into receiver dictionary on
   ! input.  Predicted impedances are computed using
   ! these and the input electric field solutions
-  type (dataVec_t), intent(inout)            	:: d
+  type (dataBlock_t), intent(inout)            	:: d
   !  background model parameter
   type (modelParam_t), intent(in)	        :: Sigma0
   !  optional input of conductivity perturbation dSigma used to
@@ -53,7 +53,7 @@ Contains
 
   !  local variables
   complex(kind=prec)	:: Z
-  type(EMsparse_t), pointer	:: Lz(:), Qz(:)
+  type(sparseVector_t), pointer	:: Lz(:), Qz(:)
   logical               	:: Conj_Case = .false.
   logical               	:: calcQ
   integer               	:: iSite, ncomp, itx, &
@@ -90,10 +90,10 @@ Contains
   endif
   allocate(Lz(nFunc))
   allocate(Qz(nFunc))
-  
+
   do iFunc=1,nFunc
-	  call create_EMsparse(e0%grid,iTx,Lz(iFunc))
-	  call create_EMsparse(e0%grid,iTx,Qz(iFunc))
+	  call create_sparseVector(e0%grid,iTx,Lz(iFunc))
+	  call create_sparseVector(e0%grid,iTx,Qz(iFunc))
   end do
   !  loop over sites
   do iSite = 1,d%nSite
@@ -115,7 +115,7 @@ Contains
      endif
      iComp = 1
      do iFunc  = 1, nFunc
-        Z = dotProd_EMsparseEMsoln(Lz(iFunc),ef,Conj_Case)
+        Z = dotProd_sparseVsolnV(Lz(iFunc),ef,Conj_Case)
         if(d%isComplex) then
            d%value(iComp,iSite) = real(Z)
            iComp = iComp + 1
@@ -144,9 +144,9 @@ Contains
   enddo
   !  deallocate local arrays
   do iFunc = 1,nFunc
-     call deall_EMSparse(Lz(iFunc))
+     call deall_sparseVector(Lz(iFunc))
      if(calcQ) then
-        call deall_EMSparse(Qz(iFunc))
+        call deall_sparseVector(Qz(iFunc))
         call deall_modelParam(sigmaQreal)
         if(d%isComplex) then
            call deall_modelParam(sigmaQimag)
@@ -182,14 +182,14 @@ Contains
 
   ! background model parameter
   type (modelParam_t), intent(in)  :: Sigma0
-  !  electric field solutions are stored as type EMsoln
-  type (EMsoln_t), intent(in)     :: e0
+  !  electric field solutions are stored as type solnVector
+  type (solnVector_t), intent(in)     :: e0
   ! d provides indices into receiver dictionary on
   ! input.  Predicted impedances are computed using
   ! these and the input electric field solutions
-  type (dataVec_t), intent(in)               	:: d
+  type (dataBlock_t), intent(in)               	:: d
   ! Output
-  type (EMrhs_t), intent(inout)          		:: comb
+  type (rhsVector_t), intent(inout)          		:: comb
   ! Optional output
   type (modelParam_t), intent(inout),optional	:: Qcomb
 
@@ -198,7 +198,7 @@ Contains
 					 nFunc, iComp, iFunc
   complex(kind=prec)		:: Z
   logical               		:: calcQ
-  type(EMsparse_t),pointer    	:: Lz(:),Qz(:)
+  type(sparseVector_t),pointer    	:: Lz(:),Qz(:)
 
   itx = d%tx
   iDT = d%dataType
@@ -218,15 +218,15 @@ Contains
      !   for each component
      nFunc = ncomp
   endif
-  
+
   allocate(Lz(nFunc))
   allocate(Qz(nFunc))
-  
+
   do iFunc=1,nFunc
-    call create_EMsparse(e0%grid,iTx,Lz(iFunc))
-    call create_EMsparse(e0%grid,iTx,Qz(iFunc))
+    call create_sparseVector(e0%grid,iTx,Lz(iFunc))
+    call create_sparseVector(e0%grid,iTx,Qz(iFunc))
   end do
-  
+
 
   !  loop over sites
   do iSite = 1,d%nSite
@@ -234,7 +234,7 @@ Contains
      ! data functionals for transfer function
      ! elements at one site
      call linDataFunc(e0,Sigma0,iDT,d%rx(iSite),Lz,Qz)
-     
+
      iComp = 1
      do iFunc  = 1, nFunc
         if(d%isComplex) then
@@ -247,7 +247,7 @@ Contains
            Z = cmplx(d%value(iComp,iSite),0.0,8)
            iComp = iComp+1
         endif
-        call add_EMsparseEMrhs(Z,Lz(iFunc),comb)
+        call add_sparseVrhsV(Z,Lz(iFunc),comb)
         if(calcQ) then
            ! adds to input Qcomb (type modelParam)
            call QaddT(Z,Qz(iFunc),Sigma0,Qcomb)
@@ -257,9 +257,9 @@ Contains
 
   !  deallocate local arrays
   do iFunc = 1,nFunc
-     call deall_EMSparse(Lz(iFunc))
+     call deall_sparseVector(Lz(iFunc))
      if(calcQ) then
-        call deall_EMSparse(Qz(iFunc))
+        call deall_sparseVector(Qz(iFunc))
      endif
   enddo
   deallocate(Lz)
@@ -275,11 +275,11 @@ Contains
   !   using dictionary indices stored in d%dataType
   !   Calls nonLinDataFunc to do the actual impedance calculation
 
-  type (EMsoln_t), intent(in)     :: ef
+  type (solnVector_t), intent(in)     :: ef
   ! d provides indices into receiver dictionary on
   ! input. Predicted impedances are computed using
   ! these and the input electric field solutions
-  type (dataVec_t), intent(inout)    :: d
+  type (dataBlock_t), intent(inout)    :: d
   ! model parameter used to compute ef
   type (modelParam_t), intent(in)  :: Sigma
 

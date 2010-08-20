@@ -13,7 +13,7 @@ module ioBinary
    implicit none
 
    !  routines that are public
-   public	::  read_cvector,write_cvector,write_EMsolnMTX, &
+   public	::  read_cvector,write_cvector,write_solnVectorMTX, &
 		read_grid, write_Z, read_Z
 
    Contains
@@ -147,7 +147,7 @@ module ioBinary
       end subroutine write_cvector
 
      !******************************************************************
-      subroutine write_EMsolnMTX(fid,cfile,eAll)
+      subroutine write_solnVectorMTX(fid,cfile,eAll)
 
       !  open cfile on unit fid, writes out object of
       !   type cvector in standard format (readable by matlab
@@ -158,7 +158,7 @@ module ioBinary
 
       integer, intent(in)		:: fid
       character*80, intent(in)		:: cfile
-      type(EMsolnMTX_t), intent(in)		:: eAll
+      type(solnVectorMTX_t), intent(in)		:: eAll
 
       integer		:: j
 
@@ -172,7 +172,7 @@ module ioBinary
       enddo
       close(fid)
       return
-      end subroutine write_EMsolnMTX
+      end subroutine write_solnVectorMTX
 
      !**********************************************************************
       subroutine read_grid(fid,cfile,grid)
@@ -212,7 +212,7 @@ module ioBinary
       real(kind =8),intent(in)   :: periods(nTx)
       character*2, intent(in)	:: modes(nTx)
       real(kind = 8),intent(in)   :: sites(2,nSites)
-      type(dataVecMTX_t), intent(in)      :: allData
+      type(dataVectorMTX_t), intent(in)      :: allData
       real(kind = 8), dimension(:,:), allocatable :: siteTemp
 
      ! local variables
@@ -250,7 +250,7 @@ module ioBinary
       real(kind = 8),dimension(:), pointer     :: periods
       real(kind = 8),dimension(:,:), pointer   :: sites
       character*2, dimension(:), pointer	:: modes
-      type(dataVecMTX_t), intent(inout)   :: allData
+      type(dataVectorMTX_t), intent(inout)   :: allData
 
      ! local variables
       integer   :: nComp = 2
@@ -276,7 +276,7 @@ module ioBinary
          read(fid) siteTemp
          ! create dataVec object, read in data
          allData%d(iTx)%errorBar = .true.
-         call create_dataVec(nComp,ns,allData%d(iTx))
+         call create_dataBlock(nComp,ns,allData%d(iTx))
          Ndata  = Ndata + nComp*ns
          allData%d(iTx)%tx = iTx
 	 if(modes(iTx) .eq. 'TM') then

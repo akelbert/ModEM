@@ -52,11 +52,11 @@ Subroutine Master_Job_fwdPred(sigma,d_pred,eAll)
     implicit none
     include 'mpif.h'
    type(modelParam_t), intent(in)	    :: sigma   
-   type(dataVecMTX_t), intent(inout)	:: d_pred
-   type(EMsolnMTX_t), intent(inout), optional	:: eAll
+   type(dataVectorMTX_t), intent(inout)	:: d_pred
+   type(solnVectorMTX_t), intent(inout), optional	:: eAll
    integer nTx,ndata,ndt
    logical keep_soln
-   type(dataVecTX_t)                 :: d_temp_TX
+   type(dataVector_t)                 :: d_temp_TX
    
    keep_soln = present(eAll)
 
@@ -81,7 +81,7 @@ Subroutine Master_Job_fwdPred(sigma,d_pred,eAll)
 
                if(present(eAll)) then
                   if(.not. eAll%allocated) then
-                     call create_EMsolnMTX(nTx,eAll)
+                     call create_solnVectorMTX(nTx,eAll)
                   else if(d_pred%nTx .ne. eAll%nTx) then
                      call errStop('dimensions of eAll and d do not agree in fwdPred')
                   endif
@@ -167,7 +167,7 @@ Subroutine Master_Job_Compute_J(d,sigma,dsigma)
     implicit none
     include 'mpif.h'
     
-   type(dataVecMTX_t), intent(inout)	:: d
+   type(dataVectorMTX_t), intent(inout)	:: d
    type(modelParam_t), intent(in)	:: sigma
    type(modelParam_t), pointer  :: dsigma(:)
    
@@ -323,17 +323,17 @@ Subroutine Master_job_JmultT(sigma,d,dsigma,eAll)
     include 'mpif.h'
     
    type(modelParam_t), intent(in)	:: sigma
-   type(dataVecMTX_t), intent(in)		:: d
+   type(dataVectorMTX_t), intent(in)		:: d
    type(modelParam_t), intent(Out)  	:: dsigma
-   type(EMsolnMTX_t), intent(in), optional	:: eAll
+   type(solnVectorMTX_t), intent(in), optional	:: eAll
    type(modelParam_t)                   	:: dsigma_temp
    !type(modelParam_t), dimension(:), pointer 	:: Qcomb_matrix_temp
    type(modelParam_t)                       	:: Qcomb
    integer nTx,nTot,m_dimension,iDT,iTx
    logical savedSolns
    logical		:: calcSomeQ, firstQ
-   type(EMsoln_t)		:: e,e0
-   type(EMrhs_t) 		:: comb
+   type(solnVector_t)		:: e,e0
+   type(rhsVector_t) 		:: comb
    character(3)         :: iterChar
    character*2          			:: mode
    savedSolns = present(eAll)
@@ -445,9 +445,9 @@ Subroutine Master_job_Jmult(mHat,m,d,eAll)
     implicit none
     include 'mpif.h'
     
-   type(dataVecMTX_t), intent(inout)		:: d
+   type(dataVectorMTX_t), intent(inout)		:: d
    type(modelParam_t), intent(in)			:: mHat,m
-   type(EMsolnMTX_t), intent(in), optional	:: eAll
+   type(solnVectorMTX_t), intent(in), optional	:: eAll
    
    integer nTx,nTot,m_dimension,iDT,iTx,ndata,ndt
    logical savedSolns
@@ -546,8 +546,8 @@ end Subroutine Master_job_Jmult
 Subroutine Master_job_Distribute_Data(d)
     implicit none
     include 'mpif.h'
-    type(dataVecMTX_t), intent(in)		:: d
-    type(dataVecMTX_t)           		:: d_temp
+    type(dataVectorMTX_t), intent(in)		:: d
+    type(dataVectorMTX_t)           		:: d_temp
     integer nTx,nTot,ndata
     DOUBLE PRECISION ,pointer:: buffer(:)
      integer buffer_size,ndt
@@ -561,7 +561,7 @@ Subroutine Master_job_Distribute_Data(d)
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
 
-call copy_dataVecMTX(d_temp,d)
+call copy_dataVectorMTX(d_temp,d)
 
 
   do iper=1,d%nTx
@@ -578,7 +578,7 @@ call copy_dataVecMTX(d_temp,d)
          
 
  
-  call deall_dataVecMTX(d_temp)
+  call deall_dataVectorMTX(d_temp)
   
 end Subroutine Master_job_Distribute_Data
 
@@ -637,8 +637,8 @@ end Subroutine Master_job_Distribute_Model
 Subroutine Master_job_Distribute_eAll(d,eAll)
     implicit none
     include 'mpif.h'
-   type(dataVecMTX_t), intent(in)		:: d
-   type(EMsolnMTX_t), intent(in)  	:: eAll
+   type(dataVectorMTX_t), intent(in)		:: d
+   type(solnVectorMTX_t), intent(in)  	:: eAll
        integer nTx,nTot
        
        
@@ -663,13 +663,13 @@ end Subroutine Master_job_Distribute_eAll
 Subroutine Master_job_Collect_eAll(d,eAll)
     implicit none
     include 'mpif.h'
-   type(dataVecMTX_t), intent(in)		:: d
-   type(dataVecMTX_t)            		:: d_local
+   type(dataVectorMTX_t), intent(in)		:: d
+   type(dataVectorMTX_t)            		:: d_local
 
-   type(EMsolnMTX_t)              	:: eAll_local
-   type(EMsolnMTX_t)              	:: eAll_temp
-   type(EMsolnMTX_t), intent(inout)	:: eAll
-   type(EMsoln_t)           		:: e0 
+   type(solnVectorMTX_t)              	:: eAll_local
+   type(solnVectorMTX_t)              	:: eAll_temp
+   type(solnVectorMTX_t), intent(inout)	:: eAll
+   type(solnVector_t)           		:: e0 
    integer nTx,nTot,iTx
        
     nTx = d%nTx
@@ -679,21 +679,21 @@ Subroutine Master_job_Collect_eAll(d,eAll)
 
     
       if(.not. eAll%allocated) then
-         call create_EMsolnMTX(d%nTx,eAll)
+         call create_solnVectorMTX(d%nTx,eAll)
       else if(d%nTx .ne. eAll%nTx) then
          call errStop('dimensions of eAll and d do not agree in Master_job_Collect_eAll')
       endif
      
       do iTx=1,nTx
-         call create_EMsoln(grid,iTx,e0)
-         call copy_EMsoln(eAll%solns(iTx),e0)
+         call create_solnVector(grid,iTx,e0)
+         call copy_solnVector(eAll%solns(iTx),e0)
       end do
       
             
 
-                      call create_EMsolnMTX(1,eAll_local)
-                      call create_EMsoln(grid,1,e0)
-                      call copy_EMsoln(eAll_local%solns(1),e0)
+                      call create_solnVectorMTX(1,eAll_local)
+                      call create_solnVector(grid,1,e0)
+                      call copy_solnVector(eAll_local%solns(1),e0)
 
       do iper=1,d%nTx
             worker_job_task%what_to_do='Send eAll to Master'
@@ -706,7 +706,7 @@ Subroutine Master_job_Collect_eAll(d,eAll)
                    call MPI_SEND(worker_job_task,1,worker_job_task_mpi,who, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
                    call create_eAll_mpi(eAll_local)
                    call MPI_RECV(eAll_local%solns(1),1,eAll_mpi ,who, FROM_WORKER,MPI_COMM_WORLD,STATUS, ierr)
-                   call copy_EMsoln(eAll%solns(iper),eAll_local%solns(1))
+                   call copy_solnVector(eAll%solns(iper),eAll_local%solns(1))
                    call MPI_TYPE_FREE (eAll_mpi, IERR)
         
       end do
@@ -722,7 +722,7 @@ Subroutine Master_job_Distribute_Data_Size(d,sigma0)
     implicit none
     include 'mpif.h'
     
-    type(dataVecMTX_t), intent(in)		:: d
+    type(dataVectorMTX_t), intent(in)		:: d
     type(modelParam_t), intent(in) 	:: sigma0
    integer nTx,nTot
    logical savedSolns
@@ -834,21 +834,21 @@ Subroutine Worker_job (sigma0,d)
    type(modelParam_t), dimension(:), pointer  	:: dsigma11
     type(modelParam_t)                      	:: dsigma
 
-   type(dataVecMTX_t) ,intent(inout)    	   :: d
-   type(dataVecMTX_t)                	   :: measu_data
-   type(dataVecMTX_t)                :: d_local
-   type(dataVecTX_t)                 :: d_temp_TX 
+   type(dataVectorMTX_t) ,intent(inout)    	   :: d
+   type(dataVectorMTX_t)                	   :: measu_data
+   type(dataVectorMTX_t)                :: d_local
+   type(dataVector_t)                 :: d_temp_TX 
       
-   type(EMsolnMTX_t)              :: eAll_local,eAll1  
-   type(EMsolnMTX_t)              :: eAll,eAll_temp
-   type(EMsoln_t)           		:: e0  
+   type(solnVectorMTX_t)              :: eAll_local,eAll1  
+   type(solnVectorMTX_t)              :: eAll,eAll_temp
+   type(solnVector_t)           		:: e0  
    type(userdef_control)          :: ctrl
    Integer nTx,m_dimension,ndata,itx,ndt              
      character(80) 		  :: paramType
 
      real(kind=prec) :: vAir
 
-      !call copy_dataVecMTX(measu_data ,d)
+      !call copy_dataVectorMTX(measu_data ,d)
 
 nTx=d%nTx
 recv_loop=0
@@ -868,12 +868,12 @@ if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
 
     if (.NOT. worker_job_task%several_Tx ) then  
          if (eAll1%allocated ) then
-            call deall_EMsolnMTX(eAll1)
+            call deall_solnVectorMTX(eAll1)
          end if
-         call create_EMsolnMTX(nTx,eAll1)
+         call create_solnVectorMTX(nTx,eAll1)
       do iTx=1,nTx
-         call create_EMsoln(grid,iTx,e0)
-         call copy_EMsoln(eAll1%solns(iTx),e0)
+         call create_solnVector(grid,iTx,e0)
+         call copy_solnVector(eAll1%solns(iTx),e0)
       end do
       
     end if
@@ -888,8 +888,8 @@ if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
                                
 
  
-                      call  copy_dataVecTX(d_temp_TX ,measu_data%d(per_index))       
-                      call  create_EMsoln(grid,1,e0)
+                      call  copy_dataVector(d_temp_TX ,measu_data%d(per_index))       
+                      call  create_solnVector(grid,1,e0)
          
             ! Do the actual computation
                       call fwdPred_TX(sigma0,d_temp_TX,e0)
@@ -909,7 +909,7 @@ if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
                       !Keep soln for this period here, later the Master will:
                       ! - Collects eAll for all transmitters, if the used requier and output of eAll (Notice: this step can be avioded if we paralellize the IO stuff)
                       ! - Sends the coressponding  per_index to the worker who has the solution for that transmitter when computing JmutT or Jmult.
-                      call copy_EMsoln(eAll1%solns(per_index),e0)
+                      call copy_solnVector(eAll1%solns(per_index),e0)
                       !eAll%solns(per_index)%tx=per_index
                       eAll_exist=.true.
             end if
@@ -924,7 +924,7 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'COMPUTE_J') then
                        stn_index=worker_job_task%stn_index
                        worker_job_task%taskid=taskid
       
-                      call copy_dataVecMTX(d_local ,d)        
+                      call copy_dataVectorMTX(d_local ,d)        
                       d_local%nTx           = 1
                       !d_local%Ndata         = 2
                       d_local%d(1)%data(1)%nSite    = 1
@@ -1019,8 +1019,8 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Jmult') then
    
                                              
 elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute Data') then
-call copy_dataVecMTX(d_local ,d) 
-call copy_dataVecMTX(d ,d_local) 
+call copy_dataVectorMTX(d_local ,d) 
+call copy_dataVectorMTX(d ,d_local) 
               do iper=1,d%nTx
                       which_per=iper
                     do ndt=1,d%d(which_per)%ndt                   
@@ -1034,7 +1034,7 @@ call copy_dataVecMTX(d ,d_local)
 !write(6,*)taskid,'reciev data'
    elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute eAll') then
 
-   call create_EMsolnMTX(nTx,eAll)
+   call create_solnVectorMTX(nTx,eAll)
               do iper=1,d%nTx
                   which_per=iper
                   call create_eAll_mpi(eAll)
@@ -1077,8 +1077,8 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute userdef control') then
 	  
       call initGlobalData(ctrl)
       call setGrid(grid)
-      call copy_dataVecMTX(d ,allData)
-      call copy_dataVecMTX(measu_data ,d)
+      call copy_dataVectorMTX(d ,allData)
+      call copy_dataVectorMTX(measu_data ,d)
 
 nTx=d%nTx
 
@@ -1105,14 +1105,14 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Send eAll to Master' ) then
                        worker_job_task%taskid=taskid
       
 
-                      call create_EMsolnMTX(1,eAll_local)
-                      call create_EMsoln(grid,1,e0)
-                      call copy_EMsoln(eAll_local%solns(1),e0)
+                      call create_solnVectorMTX(1,eAll_local)
+                      call create_solnVector(grid,1,e0)
+                      call copy_solnVector(eAll_local%solns(1),e0)
                       
 
                       which_per=1
                       call create_eAll_mpi(eAll_local)
-                      call copy_EMsoln(eAll_local%solns(1),eAll1%solns(per_index))                     
+                      call copy_solnVector(eAll_local%solns(1),eAll1%solns(per_index))                     
                       call MPI_SEND(eAll_local%solns(which_per),1,eAll_mpi,0, FROM_WORKER,MPI_COMM_WORLD, ierr)
                       call MPI_TYPE_FREE (eAll_mpi, IERR)
                        
@@ -1123,12 +1123,12 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Clean memory' ) then
          deallocate (dsigma11)
          call deall_modelParam(sigma_temp)
          
-         call deall_dataVecMTX(d_local)
-         call deall_dataVecMTX(d_local)
+         call deall_dataVectorMTX(d_local)
+         call deall_dataVectorMTX(d_local)
          
-         !call deall_EMsolnMTX(eAll_local1)    
-         call deall_EMsolnMTX(eAll)
-         call deall_EMsolnMTX(eAll_local)
+         !call deall_solnVectorMTX(eAll_local1)    
+         call deall_solnVectorMTX(eAll)
+         call deall_solnVectorMTX(eAll_local)
          
          worker_job_task%what_to_do='Cleaned Memory and Waiting'
          worker_job_task%taskid=taskid
@@ -1161,7 +1161,7 @@ subroutine create_dvecMTX_mpi(d)
     implicit none
 
     !include 'mpif.h'    
-     type(dataVecMTX_t), intent(in)	:: d
+     type(dataVectorMTX_t), intent(in)	:: d
      integer ii,I1,extent_int,extent_real,extent_logic,extent,ndata
      
         
@@ -1228,7 +1228,7 @@ subroutine create_dvec_mpi(d)
     implicit none
 
     !include 'mpif.h'    
-     type(dataVecMTX_t), intent(in)	:: d
+     type(dataVectorMTX_t), intent(in)	:: d
      integer ii,I1,extent_int,extent_real,extent_logic,ndata
      
         

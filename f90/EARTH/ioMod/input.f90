@@ -201,7 +201,7 @@ Contains
 
     type (input_info), intent(in)					:: cUserDef
     type (grid_t) , intent(in)						:: mygrid
-    type (EMsolnMTX_t) , intent(inout)				:: H
+    type (solnVectorMTX_t) , intent(inout)				:: H
     ! local
     integer				                            :: ios,istat,i
 
@@ -210,12 +210,12 @@ Contains
 	inquire(FILE=cUserDef%fn_field,EXIST=exists)
 	if(.not.exists) then
       write(6,*) 'Field solution will not be initialized: ',trim(cUserDef%fn_field)," not found"
-	  call deall_EMsolnMTX(H)
+	  call deall_solnVectorMTX(H)
 	  return
 	end if
 
-	call read_EMsolnMTX(cUserDef%fn_field,H,mygrid)
-	call write_EMsolnMTX('test.field',H)
+	call read_solnVectorMTX(cUserDef%fn_field,H,mygrid)
+	call write_solnVectorMTX('test.field',H)
 
   end subroutine initField	! initField
 
@@ -453,7 +453,7 @@ Contains
   subroutine initMisfit(misfitType,TFList,freqList,dat,misfit)
 
 	type (misfitDef_t), intent(in)						:: misfitType
-	type (dataVecMTX_t), intent(in)						:: dat
+	type (dataVectorMTX_t), intent(in)						:: dat
 	type (Freq_List), intent(in)						:: freqList
 	type (TF_List), intent(in)							:: TFList
 	type (misfit_t), intent(out)						:: misfit
@@ -510,7 +510,7 @@ Contains
 
 	implicit none
     type (input_info), intent(in)							:: cUserDef
-	type (dataVecMTX_t), intent(inout)						:: mydat
+	type (dataVectorMTX_t), intent(inout)						:: mydat
 	type (Obs_List), target, intent(inout)					:: myobs
 	type (Freq_List), target, intent(inout)					:: myfreq
 	type (TF_List), target, intent(in)						:: myfunc

@@ -69,11 +69,11 @@ Contains
    type(grid_t), intent(in), target         :: grid
    !  following structures are initialized
    !	solution vector for forward problem
-   type(EMsoln_t), intent(inout)			:: e0
+   type(solnVector_t), intent(inout)			:: e0
    !	solution vector for sensitivity
-   type(EMsoln_t), intent(inout), optional	:: e
+   type(solnVector_t), intent(inout), optional	:: e
    !	forcing for sensitivity
-   type(EMrhs_t), intent(inout), optional		:: comb
+   type(rhsVector_t), intent(inout), optional		:: comb
 
    !  local variables
    integer		:: IER,k
@@ -83,7 +83,7 @@ Contains
 
    initForSens = present(comb)
 
-   !  allocate for scratch EMrhs structure for background, sensitivity
+   !  allocate for scratch rhsVector structure for background, sensitivity
    b0%nonzero_Source = .false.
    b0%nonzero_bc = .true.
    b0%adj = 'FWD'
@@ -91,12 +91,12 @@ Contains
    call create_RHS(grid,iTx,b0)
 
    !  allocate for background solution
-   call create_EMsoln(grid,iTx,e0)
+   call create_solnVector(grid,iTx,e0)
 
    if(initForSens) then
       !  allocate for sensitivity solution, RHS
-      call create_EMsoln(grid,iTx,e)
-      call create_EMrhs(grid,iTx,comb)
+      call create_solnVector(grid,iTx,e)
+      call create_rhsVector(grid,iTx,comb)
       do k = 1,comb%nPol
         comb%b(k)%nonzero_source = .true.
         comb%b(k)%nonzero_bc = .false.
@@ -137,9 +137,9 @@ Contains
    !**********************************************************************
    subroutine exitSolver(e0,e,comb)
    !   deallocates b0, comb, e0, e and solver arrays
-   type(EMsoln_t), intent(inout)			:: e0
-   type(EMsoln_t), intent(inout), optional	::e
-   type(EMrhs_t), intent(inout), optional		::comb
+   type(solnVector_t), intent(inout)			:: e0
+   type(solnVector_t), intent(inout), optional	::e
+   type(rhsVector_t), intent(inout), optional		::comb
 
    ! local variables
    logical			:: initForSens
@@ -147,11 +147,11 @@ Contains
    initForSens = present(comb)
 
    call deall_RHS(b0)
-   call deall_EMsoln(e0)
+   call deall_solnVector(e0)
 
    if(initForSens) then
-      call deall_EMrhs(comb)
-      call deall_EMsoln(e)
+      call deall_rhsVector(comb)
+      call deall_solnVector(e)
    endif
 
    if(modelDataInitialized) then
@@ -175,7 +175,7 @@ Contains
    !   initialization of solver for a particular frequency.
 
    integer, intent(in)		:: iTx
-   type(EMsoln_t), intent(inout)	:: e0
+   type(solnVector_t), intent(inout)	:: e0
 
    ! local variables
    real(kind=prec)	:: period, omega
@@ -199,7 +199,7 @@ Contains
       call FWDsolve3D(b0,omega,e0%pol(imode))
    enddo
 
-   ! update pointer to the transmitter in EMsoln
+   ! update pointer to the transmitter in solnVector
    e0%tx = iTx
 
    end subroutine fwdSolve
@@ -215,8 +215,8 @@ Contains
 
    integer, intent(in)          	:: iTx
    character*3, intent(in)		:: FWDorADJ
-   type(EMrhs_t), intent(inout)		:: comb
-   type(EMsoln_t), intent(inout)		:: e
+   type(rhsVector_t), intent(inout)		:: comb
+   type(solnVector_t), intent(inout)		:: e
 
    ! local variables
    integer      			:: IER,iMode
@@ -225,7 +225,7 @@ Contains
    omega = txDict(iTx)%omega
    period = txDict(iTx)%period
    !  zero starting solution, solve for all modes
-   call zero_EMsoln(e)
+   call zero_solnVector(e)
    do iMode = 1,e%nPol
       comb%b(imode)%adj = FWDorADJ
 			write(*,'(a12,a3,a20,es12.6,a15,i2)') 'Solving the ',FWDorADJ, &
@@ -233,7 +233,7 @@ Contains
       call FWDsolve3d(comb%b(imode),omega,e%pol(imode))
    enddo
 
-   ! update pointer to the transmitter in EMsoln
+   ! update pointer to the transmitter in solnVector
    e%tx = iTx
 
    end subroutine sensSolve

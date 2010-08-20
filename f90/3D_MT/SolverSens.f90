@@ -34,10 +34,10 @@ module SolverSens
    !    e is output ... used for forcing, created before calling
    !    this routine
 
-   type(EMsoln_t), intent(in)		    :: e0
+   type(solnVector_t), intent(in)		    :: e0
    type(modelParam_t), intent(in)	:: sigma0 ! used to compute e0
    type(modelParam_t), intent(in)	:: dsigma
-   type(EMrhs_t), intent(inout)		:: e
+   type(rhsVector_t), intent(inout)		:: e
 
    !  local variables
    complex(kind=prec)		:: minus_i_omega_mu
@@ -69,9 +69,9 @@ module SolverSens
    !       the adjoint mapping returns separate data structures
    !        for real and imaginary parts; imaginary output is optional ...
 
-   type(EMsoln_t), intent(in)			:: e0
+   type(solnVector_t), intent(in)			:: e0
    type(modelParam_t), intent(in)	:: sigma0 ! used to compute e0
-   type(EMsoln_t), intent(in)			:: e
+   type(solnVector_t), intent(in)			:: e
    type(modelParam_t), intent(inout)		:: dsigmaReal
    type(modelParam_t), intent(inout),optional	:: dsigmaImag
 
@@ -121,10 +121,10 @@ module SolverSens
    ! a dummy routine at present:
    ! outputs zero data vector when Q doesn't exist
 
-   type(EMsoln_t), intent(in)             :: e0
+   type(solnVector_t), intent(in)             :: e0
    type(modelParam_t), intent(in)	    :: sigma0 ! used to compute e0
    type(modelParam_t), intent(in)		:: dsigma
-   type(dataVec_t), intent(inout)          	:: d
+   type(dataBlock_t), intent(inout)          	:: d
 
    call zero(d)
 
@@ -135,9 +135,9 @@ module SolverSens
    !  a dummy routine at present:
    !  outputs zero vectors when Q doesn't exist
 
-   type(EMsoln_t), intent(in)             :: e0
+   type(solnVector_t), intent(in)             :: e0
    type(modelParam_t), intent(in)	    :: sigma0 ! used to compute e0
-   type(dataVec_t), intent(in)             :: d
+   type(dataBlock_t), intent(in)             :: d
    type(modelParam_t), intent(inout)               :: dsigmaReal
    type(modelParam_t), intent(inout),optional      :: dsigmaImag
 
@@ -154,7 +154,7 @@ module SolverSens
   !****************************************************************************
   subroutine QaddT(cs,dpsiT,sigma0,dsigmaReal,dsigmaImag)
 
-   !   QaddT (formerly EMsparseQtoModelParam)
+   !   QaddT (formerly sparseVectorQtoModelParam)
    !   Maps the input sparse vector to the model space by multiplying it with
    !   (d\pi/dm)^T. This is different from QmultT in that the latter acts on
    !   a data vector to obtain a model vector. Thus, QmultT is used to multiply
@@ -162,7 +162,7 @@ module SolverSens
    !   matrix. In practice, used to make Q_J^T = (d\pi/dm)^T * (d\psi_j/d\pi)^T,
    !   then add cs*Q_j^T to (dsigmaReal,dSigmaImag)
    !   cs is a complex constant, Q is a sparse scalar field defined on
-   !     grid cells (but represented with EMsparse data object ... the
+   !     grid cells (but represented with sparseVector data object ... the
    !     xyz component indicators are ignored).  dsigmaReal/dsigmaImag
    !     are used to collect sums of real and imaginary parts; dsigmaImag
    !     is optional.
@@ -170,7 +170,7 @@ module SolverSens
    !   This is a dummy routine that makes and adds a zero model parameter.
 
    complex(kind=prec),intent(in)	:: cs
-   type (EMsparse_t), intent(in)                  :: dpsiT
+   type (sparseVector_t), intent(in)                  :: dpsiT
    type (modelParam_t), intent(in)                :: sigma0
    type (modelParam_t), intent(inout)             :: dsigmaReal
    type (modelParam_t), intent(inout),optional    :: dsigmaImag

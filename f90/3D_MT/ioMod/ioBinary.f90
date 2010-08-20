@@ -35,7 +35,7 @@ module ioBinary
   use emsolve3d
   use dataspace
   use datafunc
-  use ForwardSolver, only: EMsolnMTX
+  use ForwardSolver, only: solnVectorMTX
   use transmitters
   use receivers
   use datatypes
@@ -469,7 +469,7 @@ Contains
 !*******************************************************************************
 !*******************************************************************************
 
-!   Routines to read and write dataVecMTX objects; these are generalized
+!   Routines to read and write dataVectorMTX objects; these are generalized
 !   versions of write_Z and read_Z from Modular2D  ...
 !    BUT NOTE: we still have to work on a more generic way to deal with
 !    IO of dataVec objects (issue is meta-data, which is stored in transmitter
@@ -490,7 +490,7 @@ Contains
       integer, intent(in)			:: nTx,nSites
       real(kind=prec),intent(in)	:: periods(nTx)
       real(kind=prec),intent(in)	:: sites(3,nSites)
-      type(dataVecMTX_t),intent(in)			:: allData
+      type(dataVectorMTX_t),intent(in)			:: allData
       real(kind=prec), dimension(:,:), pointer :: siteTemp
 
      ! local variables
@@ -528,7 +528,7 @@ Contains
       integer, intent(out)      			:: nTx,nSites
       real(kind=prec),dimension(:), pointer     :: periods
       real(kind=prec),dimension(:,:), pointer   :: sites
-      type(dataVecMTX_t), intent(inout)   			:: allData
+      type(dataVectorMTX_t), intent(inout)   			:: allData
 
      ! local variables
       integer   	:: nComp,ns,iTx,k,l,j,Ndata
@@ -556,7 +556,7 @@ Contains
          read(fid) siteTemp
          ! create dataVec object, read in data
          allData%d(iTx)%errorBar = .true.
-         call create_dataVec(nComp,ns,allData%d(iTx))
+         call create_dataBlock(nComp,ns,allData%d(iTx))
          Ndata  = Ndata + nComp*ns
          allData%d(iTx)%tx = iTx
 
@@ -615,7 +615,7 @@ Contains
       end subroutine read_Z
 
 !******************************************************************
-      subroutine write_EMsolnMTX(fid,cfile,eAll)
+      subroutine write_solnVectorMTX(fid,cfile,eAll)
 
       !  open cfile on unit fid, writes out object of
       !   type cvector in standard format (readable by matlab
@@ -626,7 +626,7 @@ Contains
 
       integer, intent(in)               :: fid
       character(*), intent(in)          :: cfile
-      type(EMsolnMTX_t), intent(in)               :: eAll
+      type(solnVectorMTX_t), intent(in)               :: eAll
 
       !   local variables
       integer           :: j,k,nMode = 2, ios
@@ -647,6 +647,6 @@ Contains
          enddo
       enddo
       close(fid)
-      end subroutine write_EMsolnMTX
+      end subroutine write_solnVectorMTX
 
 end module ioBinary

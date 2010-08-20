@@ -23,7 +23,7 @@ implicit none
 !    keep data structures used only by
 !    routines in this module private
 !   rhs data structures for solving forward, sensitivity probs
-type(EMrhs_t), save, private		:: b0
+type(rhsVector_t), save, private		:: b0
 !    keep track of which mode was solved for most recently
 !    (to minimize reinitialization ... not clear this is needed!)
 character*2, save, public		:: currentMode = '  '
@@ -74,11 +74,11 @@ Contains
    type(grid_t), intent(in), target         :: grid
    !  following structures are initialized/created in this routine
    !	solution vector for forward problem
-   type(EMsoln_t), intent(inout)			:: e0
+   type(solnVector_t), intent(inout)			:: e0
    !	solution vector for sensitivity
-   type(EMsoln_t), intent(inout), optional	:: e
+   type(solnVector_t), intent(inout), optional	:: e
    !	forcing for sensitivity
-   type(EMrhs_t), intent(inout), optional		:: comb
+   type(rhsVector_t), intent(inout), optional		:: comb
 
    !  local variables
    integer					:: IER
@@ -97,11 +97,11 @@ Contains
          !  sensitivity calculated: will need to reinitialize
          !  solver + rhs/soln arrays ... first deallocate from
          !  previous mode
-         call deall_EMrhs(b0)
-         call deall_EMsoln(e0)
+         call deall_rhsVector(b0)
+         call deall_solnVector(e0)
          if(initForSens) then
-            call deall_EMrhs(comb)
-            call deall_EMsoln(e)
+            call deall_rhsVector(comb)
+            call deall_solnVector(e)
          endif
          select case(currentMode)
             case('TE')
@@ -133,18 +133,18 @@ Contains
       b0%nonzero_source = .false.
       b0%nonzero_bc = .true.
       b0%adj = 'FWD'
-      call create_EMrhs(grid,iTx,b0)
+      call create_rhsVector(grid,iTx,b0)
 
       !  allocate for background solution
-      call create_EMsoln(grid,iTx,e0)
+      call create_solnVector(grid,iTx,e0)
 
       if(initForSens) then
          !  allocate for sensitivity solution, RHS
-         call create_EMsoln(grid,iTx,e)
+         call create_solnVector(grid,iTx,e)
          comb%nonzero_source = .true.
          comb%nonzero_bc = .false.
          comb%adj = ''
-         call create_EMrhs(grid,iTx,comb)
+         call create_rhsVector(grid,iTx,comb)
       endif
    endif
 
@@ -164,21 +164,21 @@ Contains
    !**********************************************************************
    subroutine exitSolver(e0,e,comb)
    !   deallocates rhs0, rhs and solver arrays
-   type(EMsoln_t), intent(inout)			:: e0
-   type(EMsoln_t), intent(inout), optional	::e
-   type(EMrhs_t), intent(inout), optional		::comb
+   type(solnVector_t), intent(inout)			:: e0
+   type(solnVector_t), intent(inout), optional	::e
+   type(rhsVector_t), intent(inout), optional		::comb
 
    ! local variables
    logical			:: initForSens
 
    initForSens = present(comb)
 
-   call deall_EMrhs(b0)
-   call deall_EMsoln(e0)
+   call deall_rhsVector(b0)
+   call deall_solnVector(e0)
 
    if(initForSens) then
-      call deall_EMrhs(comb)
-      call deall_EMsoln(e)
+      call deall_rhsVector(comb)
+      call deall_solnVector(e)
    endif
 
    select case(currentMode)
@@ -203,7 +203,7 @@ Contains
    !   time FOR EACH DATA TYPE/TRANSMITTER
 
    integer, intent(in)		:: iTx
-   type(EMsoln_t), intent(inout)	:: e0
+   type(solnVector_t), intent(inout)	:: e0
 
    ! local variables
    real(kind=prec)	:: period,omega
@@ -238,7 +238,7 @@ Contains
       case default
    end select
 
-   ! update pointer to the transmitter in EMsoln
+   ! update pointer to the transmitter in solnVector
    e0%tx = iTx
 
    end subroutine fwdSolve
@@ -253,8 +253,8 @@ Contains
 
    integer, intent(in)          	:: iTx
    character*3, intent(in)		    :: FWDorADJ
-   type(EMrhs_t), intent(inout)		:: comb
-   type(EMsoln_t), intent(inout)		:: e
+   type(rhsVector_t), intent(inout)		:: comb
+   type(solnVector_t), intent(inout)		:: e
 
    ! local variables
    integer      :: IER
@@ -273,7 +273,7 @@ Contains
        endif
    endif
 
-   ! update pointer to the transmitter in EMsoln
+   ! update pointer to the transmitter in solnVector
    e%tx = iTx
 
    end subroutine sensSolve

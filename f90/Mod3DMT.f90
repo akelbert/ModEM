@@ -69,7 +69,7 @@ program Mod3DMT
         if (write_model .and. write_data) then
         	write(*,*) 'Writing model and data files and exiting...'
         	call write_modelParam(sigma0,cUserDef%wFile_Model)
-        	call write_dataVecMTX(allData,cUserDef%wFile_Data)
+        	call write_dataVectorMTX(allData,cUserDef%wFile_Data)
 		else if (write_model) then
         	write(*,*) 'Writing model and exiting...'
         	call write_modelParam(sigma0,cUserDef%wFile_Model)
@@ -92,12 +92,12 @@ program Mod3DMT
 #endif
 
         ! write out all impedances
-        call write_dataVecMTX(allData,cUserDef%wFile_Data)
+        call write_dataVectorMTX(allData,cUserDef%wFile_Data)
 
         if (write_EMsoln) then
         	! write out EM solutions
         	write(*,*) 'Saving the EM solution...'
-        	call write_EMsolnMTX(fidWrite,cUserDef%wFile_EMsoln,eAll)
+        	call write_solnVectorMTX(fidWrite,cUserDef%wFile_EMsoln,eAll)
         end if
 
      case (COMPUTE_J)
@@ -121,7 +121,7 @@ program Mod3DMT
 #endif
 
 
-        call write_dataVecMTX(allData,cUserDef%wFile_Data)
+        call write_dataVectorMTX(allData,cUserDef%wFile_Data)
 
      case (MULT_BY_J_T)
         write(*,*) 'Multiplying by J^T...'
@@ -149,7 +149,7 @@ program Mod3DMT
         	call DCGsolver(allData,sigma0,sigma1,cUserDef%lambda)
             call write_modelParam(sigma1,cUserDef%wFile_Model)
         if (write_data) then
-        	call write_dataVecMTX(allData,cUserDef%wFile_Data)
+        	call write_dataVectorMTX(allData,cUserDef%wFile_Data)
         end if
 #ifdef MPI
         	call Master_job_STOP_MESSAGE
@@ -161,7 +161,7 @@ program Mod3DMT
         end if
         call write_modelParam(sigma1,cUserDef%wFile_Model)
         if (write_data) then
-        	call write_dataVecMTX(allData,cUserDef%wFile_Data)
+        	call write_dataVectorMTX(allData,cUserDef%wFile_Data)
         end if
 
      case (TEST_COV)

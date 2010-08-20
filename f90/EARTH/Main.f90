@@ -183,16 +183,16 @@ Contains
 	! If this information is required, initialize data functionals
 	if (cUserDef%calculate == 'original') then
 	else
-	  call create_dataVecMTX(nfreq,nfunc,nobs,dat)
-	  call create_dataVecMTX(nfreq,nfunc,nobs,psi)
-	  call create_dataVecMTX(nfreq,nfunc,nobs,res)
+	  call create_dataVectorMTX(nfreq,nfunc,nobs,dat)
+	  call create_dataVectorMTX(nfreq,nfunc,nobs,psi)
+	  call create_dataVectorMTX(nfreq,nfunc,nobs,res)
 	  allocate(ndat(nfreq,nfunc),STAT=istat)
 	  allocate(misfitValue(nfunc))
 	  call initData(cUserDef,dat,obsList,freqList,TFList)
 	  call initMisfit(misfitType,TFList,freqList,dat,misfit)
 	  if (cUserDef%calculate /= 'responses') then
 		allocate(dmisfitValue(nfunc,ncoeff))
-		call create_dataVecMTX(nfreq,nfunc,nobs,wres) ! weighted residuals
+		call create_dataVectorMTX(nfreq,nfunc,nobs,wres) ! weighted residuals
 		allocate(misfit%dRda(nfreq,nfunc,ncoeff),STAT=istat)
 		call create_rscalar(grid,sens%drho_real,CENTER)
 		call create_rscalar(grid,sens%drho_imag,CENTER)
@@ -248,10 +248,10 @@ Contains
 	deallocate(sens%da,STAT=istat)
 	call deall_rscalar(sens%drho_real)
 	call deall_rscalar(sens%drho_imag)
-	call deall_dataVecMTX(dat)
-	call deall_dataVecMTX(psi)
-	call deall_dataVecMTX(res)
-	call deall_dataVecMTX(wres)
+	call deall_dataVectorMTX(dat)
+	call deall_dataVectorMTX(psi)
+	call deall_dataVectorMTX(res)
+	call deall_dataVectorMTX(wres)
 
 	do i = 1,obsList%n
 	    call deall_sparsevecc(obsList%info(i)%Lx)

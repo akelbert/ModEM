@@ -3,7 +3,7 @@ module SolnSpace
 !   plus basic methods, linear algebra, dot products
 !   EARTH version
 !
-! Defines: EMsoln, EMsparse, EMrhs
+! Defines: solnVector, sparseVector, rhsVector
 ! Uses: EMfield
 
 use math_constants
@@ -15,7 +15,7 @@ use sg_sparse_vector
 
 implicit none
 
-  type :: EMsolnMTX_t
+  type :: solnVectorMTX_t
     !! Generic solution type for storing solutions from multiple transmitters
     integer			:: nTx = 0
     type(cvector), pointer		:: solns(:)
@@ -23,19 +23,19 @@ implicit none
     integer, pointer            :: errflag(:)
     type(grid_t), pointer       :: grid
     logical			:: allocated = .false.
-  end type EMsolnMTX_t
+  end type solnVectorMTX_t
 
 
 Contains
 
 !**********************************************************************
-!           Basic EMsolnMTX methods
+!           Basic solnVectorMTX methods
 !**********************************************************************
 
-   subroutine create_EMsolnMTX(nTx,eAll,grid)
+   subroutine create_solnVectorMTX(nTx,eAll,grid)
 
       integer, intent(in)               :: nTx
-      type(EMsolnMTX_t), intent(inout)  :: eAll
+      type(solnVectorMTX_t), intent(inout)  :: eAll
       type(grid_t), intent(in), target, optional :: grid
 
       !  local variables
@@ -50,12 +50,12 @@ Contains
       end if
       eAll%allocated = .true.
 
-   end subroutine create_EMsolnMTX
+   end subroutine create_solnVectorMTX
 
    !**********************************************************************
-   subroutine deall_EMsolnMTX(eAll)
+   subroutine deall_solnVectorMTX(eAll)
 
-      type(EMsolnMTX_t), intent(inout)  :: eAll
+      type(solnVectorMTX_t), intent(inout)  :: eAll
 
       !  local variables
       integer                           :: j, istat
@@ -71,32 +71,32 @@ Contains
 
       eAll%allocated = .false.
 
-   end subroutine deall_EMsolnMTX
+   end subroutine deall_solnVectorMTX
 
   !****************************************************************************
-  ! linComb_EMsolnMTX computes linear combination of two field solutions
+  ! linComb_solnVectorMTX computes linear combination of two field solutions
   ! stored for multiple transmitters; subroutine, not a function
   ! both input vectors must have the same dimension
-  subroutine linComb_EMsolnMTX(c1, E1, c2, E2, E3)
+  subroutine linComb_solnVectorMTX(c1, E1, c2, E2, E3)
 
     implicit none
     !   input vectors
-    type (EMsolnMTX_t), intent(in)         :: E1, E2
+    type (solnVectorMTX_t), intent(in)         :: E1, E2
     !  input complex scalars
     complex (kind=prec), intent(in)        :: c1, c2
-    type (EMsolnMTX_t), intent(inout)      :: E3
+    type (solnVectorMTX_t), intent(inout)      :: E3
     ! local
     integer                                :: j
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
-    	call errStop('inputs not allocated yet for linComb_EMsolnMTX')
+    	call errStop('inputs not allocated yet for linComb_solnVectorMTX')
     elseif (E1%nTx .ne. E2%nTx) then
-    	call errStop('inputs of different sizes for linComb_EMsolnMTX')
+    	call errStop('inputs of different sizes for linComb_solnVectorMTX')
     end if
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
-    	call create_EMsolnMTX(E1%nTx,E3,E2%grid)
+    	call create_solnVectorMTX(E1%nTx,E3,E2%grid)
     end if
 
     do j=1,E1%nTx
@@ -106,7 +106,7 @@ Contains
         	! form linear combination
 			call linComb_cvector(c1, E1%solns(j), c2, E2%solns(j), E3%solns(j))
 		else
-			call errStop('inputs for different transmitters in linComb_EMsolnMTX')
+			call errStop('inputs for different transmitters in linComb_solnVectorMTX')
 		end if
     end do
 
@@ -114,21 +114,21 @@ Contains
     E3%errflag = max(E1%errflag, E2%errflag)
     E3%grid => E1%grid
 
-  end subroutine linComb_EMsolnMTX ! linComb_EMsolnMTX
+  end subroutine linComb_solnVectorMTX ! linComb_solnVectorMTX
 
   !****************************************************************************
-  ! write_EMsolnMTX writes an ASCII data file containing the full EMsolnMTX
-  subroutine write_EMsolnMTX(fname, E)
+  ! write_solnVectorMTX writes an ASCII data file containing the full solnVectorMTX
+  subroutine write_solnVectorMTX(fname, E)
 
     implicit none
     !   input vectors
     character(*), intent(in)			   :: fname
-    type (EMsolnMTX_t), intent(in)         :: E
+    type (solnVectorMTX_t), intent(in)         :: E
     ! local
     integer                                :: j,ios
 
     if(.not.E%allocated) then
-    	call errStop('input not allocated yet for write_EMsolnMTX')
+    	call errStop('input not allocated yet for write_solnVectorMTX')
     end if
 
 	open(ioWRITE,file=fname,status='unknown',form='formatted',iostat=ios)
@@ -139,30 +139,30 @@ Contains
 	end do
 	close(ioWRITE)
 
-  end subroutine write_EMsolnMTX ! write_EMsolnMTX
+  end subroutine write_solnVectorMTX ! write_solnVectorMTX
 
   !****************************************************************************
-  ! read_EMsolnMTX reads an ASCII data file containing the full EMsolnMTX
-  subroutine read_EMsolnMTX(fname, E, grid)
+  ! read_solnVectorMTX reads an ASCII data file containing the full solnVectorMTX
+  subroutine read_solnVectorMTX(fname, E, grid)
 
     implicit none
     !   input vectors
     character(*), intent(in)			   :: fname
-    type (EMsolnMTX_t), intent(inout)      :: E
+    type (solnVectorMTX_t), intent(inout)      :: E
     type (grid_t), intent(in)			   :: grid
     ! local
     integer                                :: j,nTx,ios,istat
     character(100)						   :: comment
 
     if(E%allocated) then
-    	call deall_EMsolnMTX(E)
+    	call deall_solnVectorMTX(E)
     end if
 
 	open(ioREAD,file=fname,status='unknown',form='formatted',iostat=ios)
 	read(ioREAD,'(a35)',iostat=istat,advance='no') comment
 	read(ioREAD,*,iostat=istat) nTx
 	print *, 'Number of transmitters: ',nTx
-    call create_EMsolnMTX(nTx,E,grid)
+    call create_solnVectorMTX(nTx,E,grid)
 	do j = 1,nTx
 		read(ioREAD,'(i3)',iostat=istat) E%tx(j)
 		call read_cvector(ioREAD,E%solns(j),grid)
@@ -170,6 +170,6 @@ Contains
 	end do
 	close(ioREAD)
 
-  end subroutine read_EMsolnMTX ! read_EMsolnMTX
+  end subroutine read_solnVectorMTX ! read_solnVectorMTX
 
 end module SolnSpace

@@ -12,7 +12,7 @@ module DataIO
 
   private
 
-  public     :: write_dataVecMTX
+  public     :: write_dataVectorMTX
 
 
 Contains
@@ -20,10 +20,10 @@ Contains
 !**********************************************************************
 ! writes global responses file in ASCII format
 
-   subroutine write_dataVecMTX(allData,cfile)
+   subroutine write_dataVectorMTX(allData,cfile)
 
       character(*), intent(in)					:: cfile
-      type(dataVecMTX_t), intent(in)			:: allData
+      type(dataVectorMTX_t), intent(in)			:: allData
       ! local variables
       type (transmitter_t)						:: freq
       integer									:: ifreq
@@ -43,7 +43,7 @@ Contains
 
       end do
 
-   end subroutine write_dataVecMTX
+   end subroutine write_dataVectorMTX
 
 
 end module DataIO
