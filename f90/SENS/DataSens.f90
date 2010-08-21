@@ -27,15 +27,15 @@ use SolverSens
 
 implicit none
 
- public 		:: linDataMeas,  linDataComb, dataMeas
+ public 		:: Lmult,  LmultT
 
 Contains
 
-  subroutine linDataMeas(e0,Sigma0,ef,d,dSigma)
+  subroutine Lmult(e0,Sigma0,ef,d,dSigma)
   ! given the background model parameter (Sigma0) and both
   ! measured and  background electric field solutions (ef,e0)
   ! evaluate linearized data functionals for all sites represented
-  !  in a dataVec object.
+  !  in a dataBlock object.
 
   !  electric field solutions are stored as type solnVector
   type (solnVector_t), intent(in)			:: ef,e0
@@ -64,7 +64,7 @@ Contains
   !             ... all should point to same transmitter!
   if((d%tx.ne.e0%tx) .or. (d%tx.ne.ef%tx) .or. &
           (e0%tx.ne.ef%tx)) then
-     call errStop('transmitter incompatability in linDataMeas')
+     call errStop('transmitter incompatability in Lmult')
   endif
 
   itx = d%tx
@@ -73,14 +73,14 @@ Contains
   !  calcQ is true when data functional coefficients depend on
   !   model parameters
   if(calcQ .and. .not.present(dSigma)) then
-     call errStop('dSigma required as input to linDataMeas for this data type')
+     call errStop('dSigma required as input to Lmult for this data type')
   endif
   ncomp = d%ncomp
   if(d%isComplex) then
      !  data are complex; one sensitivity calculation can be
      !   used for both real and imaginary parts
      if(mod(ncomp,2).ne.0) then
-        call errStop('for complex data # of components must be even in linDataMeas')
+        call errStop('for complex data # of components must be even in Lmult')
      endif
      nFunc = ncomp/2
   else
@@ -100,11 +100,11 @@ Contains
      ! compute sparse vector representations of linearized
      ! data functionals for transfer function (TE impedance)
      ! elements at one site
-     !   Note that elements of QZ are created inside linDataFunc only
+     !   Note that elements of QZ are created inside Lrows only
      !    if required
-     !   linDataFunc returns one Lz (and Qz if appropriate)
+     !   Lrows returns one Lz (and Qz if appropriate)
      !    for each of nFunc functionals
-     call linDataFunc(e0,Sigma0,iDT,d%rx(iSite),Lz,Qz)
+     call Lrows(e0,Sigma0,iDT,d%rx(iSite),Lz,Qz)
      if((iSite .eq. 1).and.calcQ) then
         sigmaQreal = Sigma0
         call zero(sigmaQreal)
@@ -156,14 +156,14 @@ Contains
   deallocate(Lz)
   deallocate(Qz)
 
-  end subroutine linDataMeas
+  end subroutine Lmult
 
 !*****************************************************************************
-  subroutine linDataComb(e0,Sigma0,d,comb,Qcomb)
+  subroutine LmultT(e0,Sigma0,d,comb,Qcomb)
 
-  ! given background electric field solution
-  ! and a dataVec object (element of data space containing
-  ! MT data for one frequency, one or more sites) compute adjoint
+  ! given background solution vector e0
+  ! and a dataBlock object d (element of data space containing data
+  ! for one frequency and data type, one or more sites) compute adjoint
   ! of measurement operator: i.e., the comb constructed from the scaled
   ! superposition of data kernals (scaled by conjugate of data values ...
   !  e.g., if d contains residuals, this can be used to set up for
@@ -173,10 +173,10 @@ Contains
   !   with respect to model parameters
   !
   !  NOTE: this will not zero comb (or Qcomb): repeated calls with different
-  !  instances of dataVec will add new comb elements to input comb
+  !  instances of dataBlock will add new comb elements to input comb
   !  NOTE: we are only supporting full storage sources in comb;
   !    the elements of comb should be allocated and zeroed before calling
-  ! As with linDataPred, all of the receiver, transmitter, and data type
+  ! As with Lmult, all of the receiver, transmitter, and data type
   !   information is obtained from the dictionaries using indices
   !    stored in d%rx, d%tx, d%dataType
 
@@ -210,7 +210,7 @@ Contains
      !  data are complex; one sensitivity calculation can be
      !   used for both real and imaginary parts
      if(mod(ncomp,2).ne.0) then
-        call errStop('for complex data # of components must be even in linDataComb')
+        call errStop('for complex data # of components must be even in LmultT')
      endif
      nFunc = ncomp/2
   else
@@ -233,7 +233,7 @@ Contains
      ! compute sparse vector representations of linearized
      ! data functionals for transfer function
      ! elements at one site
-     call linDataFunc(e0,Sigma0,iDT,d%rx(iSite),Lz,Qz)
+     call Lrows(e0,Sigma0,iDT,d%rx(iSite),Lz,Qz)
 
      iComp = 1
      do iFunc  = 1, nFunc
@@ -265,68 +265,7 @@ Contains
   deallocate(Lz)
   deallocate(Qz)
 
-  end subroutine linDataComb
-
-!****************************************************************************
-  subroutine dataMeas(ef,Sigma,d)
-  ! given solution for a single TX ef compute predicted data
-  !  at all sites, returning result in d
-  !   Data type information is obtained from typeDict,
-  !   using dictionary indices stored in d%dataType
-  !   Calls nonLinDataFunc to do the actual impedance calculation
-
-  type (solnVector_t), intent(in)     :: ef
-  ! d provides indices into receiver dictionary on
-  ! input. Predicted impedances are computed using
-  ! these and the input electric field solutions
-  type (dataBlock_t), intent(inout)    :: d
-  ! model parameter used to compute ef
-  type (modelParam_t), intent(in)  :: Sigma
-
-  !  local variables
-  integer               ::  iSite, ncomp,nFunc,iDT,iComp, iFunc
-  complex (kind=prec), pointer, dimension(:)      ::  Z
-
-  iDT = d%dataType
-  ncomp = d%ncomp
-  if(d%isComplex) then
-     !  data are complex; one sensitivity calculation can be
-     !   used for both real and imaginary parts
-     if(mod(ncomp,2).ne.0) then
-        call errStop('for complex data # of components must be even in dataMeas')
-     endif
-     nFunc = ncomp/2
-  else
-     !  data are treated as real
-     nFunc = ncomp
-  endif
-  allocate(Z(nFunc))
-
-  ! loop over sites
-  do iSite = 1,d%nSite
-     call nonLinDataFunc(ef,Sigma,iDT,d%rx(iSite),Z)
-     !  copy responses in Z (possibly complex, possibly multiple
-     !         components) into dataVec object d
-     !  Loop over components
-     iComp = 0
-     do iFunc  = 1, nFunc
-        if(d%isComplex) then
-           iComp = iComp + 1
-           d%value(iComp,iSite) = real(Z(iFunc))
-           iComp = iComp + 1
-           d%value(iComp,iSite) = imag(Z(iFunc))
-        else
-           iComp = iComp + 1
-           d%value(iComp,iSite) = real(Z(iFunc))
-        endif
-     enddo
-  enddo
-
-  ! predicted data have no error bars defined
-  d%errorBar = .false.
-  deallocate(Z)
-
-  end subroutine dataMeas
+  end subroutine LmultT
 
 !****************************************************************************
 

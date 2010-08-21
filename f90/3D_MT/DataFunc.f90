@@ -31,13 +31,13 @@ module dataFunc
 
   !   Names of these routines must be as here, as these are called by
   !    top-level inversion routines
-  public                        :: nonLinDataFunc, linDataFunc
+  public                        :: dataResp, Lrows, Qrows
 
 
 Contains
 
 !******************************************************************************
-  subroutine nonLinDataFunc(ef,Sigma,iDT,iRX,Z,Binv)
+  subroutine dataResp(ef,Sigma,iDT,iRX,Resp,Binv)
   ! given electric field solutions (both modes--and note
   !    that the solution knows about the transmitter used),
   ! and indices into data types and receiver dictionaries for one
@@ -50,7 +50,8 @@ Contains
   type (modelParam_t), intent(in) :: Sigma ! used to compute ef
   integer, intent(in)			:: iDT
   integer, intent(in) 			:: iRX
-  complex(kind=prec), intent(inout)	:: Z(*)
+  real(kind=prec), intent(inout)	:: Resp(*)
+  complex(kind=prec), allocatable :: Z(:)
 
   ! Definition of the impedance elements:
   !   iDT=Full_Impedance
@@ -65,12 +66,12 @@ Contains
   ! 		 	Z(1) = Mxx; Z(2) = Mxy; Z(3) = Myx; Z(4) = Myy
   !   iDT=Off_Diagonal_Rho_Phi (Added on behalf of Kristina Tietze, GFZ-Potsdam)
   !  			Z(1) = Rhoxy , Z(2) = Phixy, Z(3) = Rhoyx, Z(4) = Phiyx
-  
+
   !  optional argument, useful for linearized impedance
   complex(kind=prec), intent(out), optional	:: Binv(2,2)
 
   !  local variables
-  integer			:: iMode, i,j,xyz,ij
+  integer			:: iMode, i,j,xyz,ij, iComp,ncomp,iFunc,nFunc
   real(kind=prec)	:: omega,x(3),x_ref(3)
   complex(kind=prec)    :: tempZ(2)
   complex(kind=prec)	:: BB(3,2),EE(2,2),RR(2,2)
@@ -81,8 +82,20 @@ Contains
   !  probably should dependence on omega into BinterpSetup, as in 2D!
   omega = txDict(ef%tx)%omega
 
+  ncomp = typeDict(iDT)%ncomp
+  if(typeDict(iDT)%isComplex) then
+     !  data are complex; one sensitivity calculation can be
+     !   used for both real and imaginary parts
+     if(mod(ncomp,2).ne.0) then
+        call errStop('for complex data # of components must be even in dataResp')
+     endif
+     nFunc = ncomp/2
+  else
+     !  data are treated as real
+     nFunc = ncomp
+  endif
+  allocate(Z(nFunc))
 
-  
   selectcase (iDT)
      case(Full_Impedance)
                x     = rxDict(iRX)%x         !Local site position (x,y,z)
@@ -91,7 +104,7 @@ Contains
 			  call EinterpSetUp(ef%grid,x,xyz,Lex)
 			  xyz = 2
 			  call EinterpSetUp(ef%grid,x,xyz,Ley)
-			 ! Then set up interpolation functionals for Bx, By      
+			 ! Then set up interpolation functionals for Bx, By
 			  xyz = 1
 			  call BfromESetUp(ef%grid,omega,x,xyz,Lbx)
 			  xyz = 2
@@ -112,14 +125,14 @@ Contains
 			  BB(2,2) =  ctemp/det
 			  BB(1,2) = -BB(1,2)/det
 			  BB(2,1) = -BB(2,1)/det
-			  	      
+
 		        do j = 1,2
 		           do i = 1,2
 		              ij = 2*(i-1)+j
 		              Z(ij) = EE(i,1)*BB(1,j)+EE(i,2)*BB(2,j)
 		           enddo
 		        enddo
-		        
+
      case(Impedance_Plus_Hz)
               x     = rxDict(iRX)%x          !Local site position (x,y,z)
 		     ! First set up interpolation functionals for Ex, Ey
@@ -127,13 +140,13 @@ Contains
 			  call EinterpSetUp(ef%grid,x,xyz,Lex)
 			  xyz = 2
 			  call EinterpSetUp(ef%grid,x,xyz,Ley)
-			 ! Then set up interpolation functionals for Bx, By, Bz      
+			 ! Then set up interpolation functionals for Bx, By, Bz
 			  xyz = 1
 			  call BfromESetUp(ef%grid,omega,x,xyz,Lbx)
 			  xyz = 2
 			  call BfromESetUp(ef%grid,omega,x,xyz,Lby)
 			  xyz = 3
-     		  call BfromESetUp(ef%grid,omega,x,xyz,Lbz) 
+     		  call BfromESetUp(ef%grid,omega,x,xyz,Lbz)
 			  ! loop over modes
 			  do iMode = 1,2
 			      ! electric fields
@@ -151,7 +164,7 @@ Contains
 			  BB(2,2) =  ctemp/det
 			  BB(1,2) = -BB(1,2)/det
 			  BB(2,1) = -BB(2,1)/det
-			    
+
          do j = 1,2
            do i = 1,2
               ij = 2*(i-1)+j
@@ -161,7 +174,7 @@ Contains
            ij = 4+j
            Z(ij) = BB(3,1)*BB(1,j)+BB(3,2)*BB(2,j)
          enddo
-        
+
      case(Off_Diagonal_Impedance)
               x     = rxDict(iRX)%x          !Local site position (x,y,z)
 		     ! First set up interpolation functionals for Ex, Ey
@@ -169,7 +182,7 @@ Contains
 			  call EinterpSetUp(ef%grid,x,xyz,Lex)
 			  xyz = 2
 			  call EinterpSetUp(ef%grid,x,xyz,Ley)
-			 ! Then set up interpolation functionals for Bx, By      
+			 ! Then set up interpolation functionals for Bx, By
 			  xyz = 1
 			  call BfromESetUp(ef%grid,omega,x,xyz,Lbx)
 			  xyz = 2
@@ -190,21 +203,21 @@ Contains
 			  BB(2,2) =  ctemp/det
 			  BB(1,2) = -BB(1,2)/det
 			  BB(2,1) = -BB(2,1)/det
-			  
-			  
+
+
 	        Z(1) = EE(1,1)*BB(1,2)+EE(1,2)*BB(2,2)
 	        Z(2) = EE(2,1)*BB(1,1)+EE(2,2)*BB(2,1)
-        
+
      case(Full_Vertical_Components)
                x     = rxDict(iRX)%x          !Local site position (x,y,z)
               !  Vertical field TF
-			 ! First set up interpolation functionals for Bx, By, Bz      
+			 ! First set up interpolation functionals for Bx, By, Bz
 			  xyz = 1
 			  call BfromESetUp(ef%grid,omega,x,xyz,Lbx)
 			  xyz = 2
 			  call BfromESetUp(ef%grid,omega,x,xyz,Lby)
 			  xyz = 3
-     		  call BfromESetUp(ef%grid,omega,x,xyz,Lbz) 
+     		  call BfromESetUp(ef%grid,omega,x,xyz,Lbz)
 			  ! loop over modes
 			  do iMode = 1,2
 			      ! magnetic fields
@@ -219,19 +232,19 @@ Contains
 			  BB(2,2) =  ctemp/det
 			  BB(1,2) = -BB(1,2)/det
 			  BB(2,1) = -BB(2,1)/det
-			         		  
-       
+
+
               Z(1) = BB(3,1)*BB(1,1)+BB(3,2)*BB(2,1)
               Z(2) = BB(3,1)*BB(1,2)+BB(3,2)*BB(2,2)
      case(Full_Interstation_TF)
               x     = rxDict(iRX)%x          !Local site position (x,y,z)
               x_ref = rxDict(iRX)%r          !Reference site position (x,y,z)
-  			 ! First set up interpolation functionals for Bx, By at local site    
+  			 ! First set up interpolation functionals for Bx, By at local site
 			  xyz = 1
 			  call BfromESetUp(ef%grid,omega,x,xyz,Lbx)
 			  xyz = 2
-			  call BfromESetUp(ef%grid,omega,x,xyz,Lby)   
-		     !Then set up interpolation functionals for Bx, By at the referance site 
+			  call BfromESetUp(ef%grid,omega,x,xyz,Lby)
+		     !Then set up interpolation functionals for Bx, By at the referance site
 			  xyz = 1
 			  call BfromESetUp(ef%grid,omega,x_ref,xyz,Lrx)
 			  xyz = 2
@@ -265,7 +278,7 @@ Contains
 			  call EinterpSetUp(ef%grid,x,xyz,Lex)
 			  xyz = 2
 			  call EinterpSetUp(ef%grid,x,xyz,Ley)
-			 ! Then set up interpolation functionals for Bx, By      
+			 ! Then set up interpolation functionals for Bx, By
 			  xyz = 1
 			  call BfromESetUp(ef%grid,omega,x,xyz,Lbx)
 			  xyz = 2
@@ -286,21 +299,36 @@ Contains
 			  BB(2,2) =  ctemp/det
 			  BB(1,2) = -BB(1,2)/det
 			  BB(2,1) = -BB(2,1)/det
-			        
+
 		       tempZ(1) = EE(1,1)*BB(1,2)+EE(1,2)*BB(2,2)
 		       tempZ(2) = EE(2,1)*BB(1,1)+EE(2,2)*BB(2,1)
 		       Z(1)   = abs(tempZ(1))**2*MU_0/omega
 		       z(2)   = atan2(ISIGN*imag(tempZ(1)),real(tempZ(1)))*R2D
 		       Z(3)   = abs(tempZ(2))**2*MU_0/omega
-		       Z(4)   = atan2(ISIGN*imag(tempZ(2)),real(tempZ(2)))*R2D                
-    end select
+		       Z(4)   = atan2(ISIGN*imag(tempZ(2)),real(tempZ(2)))*R2D
+  end select
+
+  !  copy responses in Z (possibly complex) into real output vector Resp
+  !  Loop over components
+  iComp = 0
+  do iFunc  = 1, nFunc
+	    if(typeDict(iDT)%isComplex) then
+	       iComp = iComp + 1
+	       Resp(iComp) = real(Z(iFunc))
+	       iComp = iComp + 1
+	       Resp(iComp) = imag(Z(iFunc))
+	    else
+	       iComp = iComp + 1
+	       Resp(iComp) = real(Z(iFunc))
+	    endif
+	enddo
 
   if(present(Binv)) then
       if(typeDict(iDT)%tfType .eq. Full_Interstation_TF) then
          Binv = RR(1:2,:)
       else
          Binv = BB(1:2,:)
-      end if   
+      end if
   endif
 
   ! clean up
@@ -311,11 +339,12 @@ Contains
   call deall_sparsevecc(Lbz)
   call deall_sparsevecc(Lrx)
   call deall_sparsevecc(Lry)
-  
-  end subroutine nonLinDataFunc
+  deallocate(Z)
+
+  end subroutine dataResp
 !
 !****************************************************************************
-  subroutine linDataFunc(e0,Sigma0,iDT,iRX,L,Q)
+  subroutine Lrows(e0,Sigma0,iDT,iRX,L,Q)
   !  given input background electric field solution (both modes; e0),
   !  indices into data type/receiver dictionaries
   !  compute array of sparse complex vectors giving coefficients
@@ -338,9 +367,9 @@ Contains
   !  local variables
   complex(kind=prec)	:: Binv(2,2)
   complex (kind=prec)	:: Z(6), i_omega,c1,c2
-  real(kind=prec)	:: x(3),x_ref(3),omega
+  real(kind=prec)	:: Resp(12),x(3),x_ref(3),omega
   type(sparsevecc)		:: L1
-  integer			:: i,j,k,nComp,IJ(3,6),xyz,n, predictedComp
+  integer			:: i,j,k,nComp,IJ(3,6),xyz,n, iComp,predictedComp
   type(sparsevecC)		:: Lex,Ley,Lbx,Lby,Lbz,Lrx,Lry
   logical			:: ComputeHz
 
@@ -358,7 +387,7 @@ Contains
   !      to 3: (IJ(1,:) = row index in TF matrix Z;
   !             IJ(2,:) = column index in TF martrix X;
   !             IJ(3,:) = predicted field component ...
-  !                     Ex = 1; Ey =2; Bz = 3; (Bx = 4; By = 5,  at referance site)  
+  !                     Ex = 1; Ey =2; Bz = 3; (Bx = 4; By = 5,  at referance site)
   !						(can add more cases)
   !
   select case(iDT)
@@ -372,7 +401,7 @@ Contains
               IJ(3,2*(i-1)+j) = i
            enddo
         enddo
-        Call nonlinDataFunc(e0,Sigma0,Full_Impedance,iRX,Z,Binv)
+        Call dataResp(e0,Sigma0,Full_Impedance,iRX,Resp,Binv)
      case(Impedance_Plus_Hz)
         nComp = 6
         ComputeHz = .true.
@@ -383,7 +412,7 @@ Contains
               IJ(3,2*(i-1)+j) = i
            enddo
         enddo
-        Call nonlinDataFunc(e0,Sigma0,Impedance_Plus_Hz,iRX,Z,Binv)
+        Call dataResp(e0,Sigma0,Impedance_Plus_Hz,iRX,Resp,Binv)
      case(Off_Diagonal_Impedance)
         nComp = 2
         ComputeHz = .false.
@@ -393,7 +422,7 @@ Contains
         IJ(2,2) = 1
         IJ(3,1) = 1
         IJ(3,2) = 2
-        Call nonlinDataFunc(e0,Sigma0,Full_Impedance,iRX,Z,Binv)
+        Call dataResp(e0,Sigma0,Full_Impedance,iRX,Resp,Binv)
      case(Full_Vertical_Components)
         nComp = 2
         ComputeHz = .true.
@@ -403,7 +432,7 @@ Contains
         IJ(2,2) = 2
         IJ(3,1) = 3
         IJ(3,2) = 3
-        Call nonlinDataFunc(e0,Sigma0,Full_Vertical_Components,iRX,Z,Binv)
+        Call dataResp(e0,Sigma0,Full_Vertical_Components,iRX,Resp,Binv)
      case(Full_Interstation_TF)
         nComp = 4
         ComputeHz = .false.
@@ -414,7 +443,7 @@ Contains
               IJ(3,2*(i-1)+j) = i+3
            enddo
         enddo
-        Call nonlinDataFunc(e0,Sigma0,Full_Interstation_TF,iRX,Z,Binv) 
+        Call dataResp(e0,Sigma0,Full_Interstation_TF,iRX,Resp,Binv)
      endselect
 
   ! Then set up interpolation functionals for Ex, Ey, Bx, By, Bz, (Bx,By at referance station)
@@ -435,6 +464,18 @@ Contains
      call BfromESetUp(e0%grid,omega,x,xyz,Lbz)
   endif
 
+  !  convert responses to complex Z
+  iComp = 1
+  do n  = 1,nComp
+        if(typeDict(iDT)%isComplex) then
+           Z(n) = cmplx(Resp(iComp),Resp(iComp+1))
+           iComp = iComp + 2
+        else
+           Z(n) = Resp(iComp)
+           iComp = iComp + 1
+        endif
+  enddo
+
   !  compute sparse vector representations of linearized functionals
   do n = 1,nComp
      !  i runs over rows of TF matrix, j runs over columns of TF
@@ -443,11 +484,11 @@ Contains
      predictedComp = IJ(3,n)
      c1 = Z(2*(i-1)+1)
      c2 = Z(2*(i-1)+2)
-    if(typeDict(iDT)%tfType .eq. Full_Interstation_TF) then 
+    if(typeDict(iDT)%tfType .eq. Full_Interstation_TF) then
       Call linComb_sparsevecc(Lrx,c1,Lry,c2,L1)
-    else 
+    else
       Call linComb_sparsevecc(Lbx,c1,Lby,c2,L1)
-    end if  
+    end if
      do k = 1,2
         !  k defines which mode the linearized functional is
         !   to be applied to
@@ -467,7 +508,7 @@ Contains
            Call linComb_sparsevecc(Lrx,c1,L1,c2,L(n)%L(k))
         elseif(predictedComp.eq.5) then
            !  component in y row (interstation TF)
-           Call linComb_sparsevecc(Lry,c1,L1,c2,L(n)%L(k))        
+           Call linComb_sparsevecc(Lry,c1,L1,c2,L(n)%L(k))
         endif
      enddo
   enddo
@@ -481,7 +522,32 @@ Contains
   call deall_sparsevecc(Lbz)
   call deall_sparsevecc(Lrx)
   call deall_sparsevecc(Lry)
-  
-  end subroutine linDataFunc
+
+  end subroutine Lrows
+!
+!****************************************************************************
+  subroutine Qrows(e0,Sigma0,iDT,iRX,L,Q)
+  !  given input background electric field solution (both modes; e0),
+  !  indices into data type/receiver dictionaries
+  !  compute array of sparse complex vectors giving coefficients
+  !  of linearized impedance functional (complex representation)
+  !  For data types with attribute computeQ = .true. also returns
+  !     derivative of data functional with respect to model paramters
+  !         (NOT YET IMPLEMENTED FOR 3D MT!!!!)
+
+  type (solnVector_t), intent(in)		   :: e0
+  type (modelParam_t), intent(in)  :: Sigma0
+  integer, intent(in)			   :: iDT, iRX
+  !   NOTE: Lz and Qz have to be declared as arrays for
+  !     consistency with calling program (in general the
+  !     number nFunc of complex data functionals that will
+  !     be returned by data functional routines could be > 1)
+  !   NOTE:  in principal the comparable input arguments in
+  !        the 2D program should also be of type sparseVector!
+  type(sparseVector_t), intent(inout)		:: L(*),Q(*)
+
+
+
+  end subroutine Qrows
 
 end module dataFunc

@@ -106,7 +106,7 @@ program Mod3DMT
         !call Master_job_COMPUTE_J(allData,sigma0,sens)
         call Master_job_STOP_MESSAGE
 #else
-        call calcSensMatrix(allData,sigma0,sens)
+        call calcJ(allData,sigma0,sens)
 #endif
         call write_sensMatrixMTX(sens,cUserDef%wFile_Sens)
 

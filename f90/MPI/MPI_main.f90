@@ -936,7 +936,7 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'COMPUTE_J') then
                       d_local%d(1)%nDt              =1
                       
             ! Do the actual computation
-                     ! call calcSensMatrix(d_local,sigma0,sigma1)
+                     ! call calcJ(d_local,sigma0,sigma1)
             ! Send Info. about the current slave.    
                       call MPI_SEND(worker_job_task,1,worker_job_task_mpi, 0,FROM_WORKER, MPI_COMM_WORLD, ierr) 
 

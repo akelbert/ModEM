@@ -44,13 +44,13 @@ module datafunc
 
   !   Names of these routines must be as here, as these are called by
   !    top-level inversion routines
-  public			:: nonLinDataFunc, linDataFunc
+  public			:: dataResp, Lrows
 
 
 Contains
 
 !******************************************************************************
-  subroutine nonLinDataFunc(ef,Sigma,iDT,iRX,Z)
+  subroutine dataResp(ef,Sigma,iDT,iRX,Resp)
 
   !   2D MT impedance; gets mode from solution
   ! given electric field solution  (stored as type cvector)
@@ -64,14 +64,15 @@ Contains
   type (modelParam_t), intent(in)   :: Sigma
   ! indicies into data type and receiver dictionaries
   integer, intent(in)				:: iDt, iRX
-  !  complex data returned; note that (a) this will always be complex
-  !   (even if data is real ... then only real part is used by calling
-  !    routine)  and (b) Z will always be an array in the calling
+  !  real data returned; note that this will always be real (even when
+  !   data are complex ... then real and imag parts come in pairs)
+  real(kind=prec), intent(inout)    :: Resp(2)
+  !  Z will always be an array in the calling
   !    routine (as in top-level inversion routines) and so needs to
   !    be treated as an array here, even if there is only one element.
   !   As an example: to add tippers to TE mode, dimension on Z
-  !     will have to be changed to 2!
-  complex(kind=prec), intent(inout)	:: Z(1)
+  !     will have to be changed to 2 (and of Resp to 4)!
+  complex(kind=prec)	:: Z(1)
 
   !  local variables
   type(sparsevecc)		:: Lb,Le
@@ -100,7 +101,7 @@ Contains
      ! electric field
      call EfromBSetUp_TM(ef%grid,x,omega,Sigma,Le)
   else
-     call errStop('option not available in nonLinDataFunc')
+     call errStop('option not available in dataResp')
   endif
 
   !  Using sparse vector representations of data functionals,
@@ -112,14 +113,18 @@ Contains
   ! impedance is trivial for 2D!
   Z = E/B
 
+  ! convert to real output
+  Resp(1) = real(Z(1))
+  Resp(2) = imag(Z(1))
+
   ! clean up
   call deall_sparsevecc(Le)
   call deall_sparsevecc(Lb)
 
-  end subroutine nonLinDataFunc
+  end subroutine dataResp
 
 !****************************************************************************
-  subroutine linDataFunc(e0,Sigma0,iDT,iRX,Lz,Qz)
+  subroutine Lrows(e0,Sigma0,iDT,iRX,Lz,Qz)
   !  given input background electric field solution,
   !  index into receiver dictionary for a single site (iRX)
   !  compute sparse complex vector giving coefficients
@@ -170,7 +175,7 @@ Contains
      ! electric field
      call EfromBSetUp_TM(e0%grid,x,omega,Sigma0,Le,e0%vec,Qz(1)%L)
   else
-     call errStop('option not available in linDataFunc')
+     call errStop('option not available in Lrows')
   endif
 
   !  Compute electric, magnetic field for background soln.
@@ -197,6 +202,6 @@ Contains
   call deall_sparsevecc(Le)
   call deall_sparsevecc(Lb)
 
-  end subroutine linDataFunc
+  end subroutine Lrows
 
 end module dataFunc

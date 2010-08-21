@@ -64,7 +64,7 @@ program Mod2DMT
 
      case (COMPUTE_J)
         write(*,*) 'Calculating the full sensitivity matrix...'
-        call calcSensMatrix(allData,sigma0,sens)
+        call calcJ(allData,sigma0,sens)
         call write_sensMatrixMTX(sens,cUserDef%wFile_Sens)
 
      case (MULT_BY_J)

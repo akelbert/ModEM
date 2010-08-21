@@ -9,7 +9,7 @@ module sensComp
 
   implicit none
 
-  public 	:: calcSensMatrix, calcSensValue
+  public 	:: calcJ, Jrows
   public	:: Jmult,   Jmult_TX
   public	:: JmultT,  JmultT_TX
   public	:: fwdPred, fwdPred_TX
@@ -28,7 +28,7 @@ module sensComp
 Contains
 
   !**********************************************************************
-  subroutine calcSensValue(iTx,iDt,iRx,sigma0,emsoln,dsigma)
+  subroutine Jrows(iTx,iDt,iRx,sigma0,emsoln,dsigma)
    !  Calculate sensitivity matrix for data in d
    !  Approaching a generic form that will work for any problem;
    !   Documentation not edited.  Code not debugged!
@@ -105,7 +105,7 @@ Contains
       !  data are complex; one sensitivity calculation can be
       !   used for both real and imaginary parts
       if(mod(nComp,2).ne.0) then
-         call errStop('for complex data # of components must be even in CalcSensMatrix')
+         call errStop('for complex data # of components must be even in calcJ')
       endif
       nFunc = nComp/2
    else
@@ -117,7 +117,7 @@ Contains
    allocate(Q(nFunc))
 
    !  compute linearized data functional(s) : L
-   call linDataFunc(e0,sigma0,iDt,iRx,L,Q)
+   call Lrows(e0,sigma0,iDt,iRx,L,Q)
 
    ! loop over functionals  (for TE/TM impedances nFunc = 1)
    ii = 0
@@ -154,10 +154,10 @@ Contains
    deallocate(L)
    deallocate(Q)
 
-  end subroutine calcSensValue
+  end subroutine Jrows
 
   !**********************************************************************
-  subroutine calcSensMatrix(d,sigma0,sens)
+  subroutine calcJ(d,sigma0,sens)
    !  Calculate sensitivity matrix for data in d
    !  Approaching a generic form that will work for any problem;
    !   Documentation not edited.  Code not debugged!
@@ -240,7 +240,7 @@ Contains
            iRx = dVec%rx(k)
 
            ! compute the sensitivities for these transmitter, data type & receiver
-           call calcSensValue(iTx,iDt,iRx,sigma0,e0,dsigma)
+           call Jrows(iTx,iDt,iRx,sigma0,e0,dsigma)
 
            ! store in the full sensitivity matrix
            do iComp = 1,nComp
@@ -257,7 +257,7 @@ Contains
    enddo
    deallocate(dsigma, STAT=istat)
 
-  end subroutine calcSensMatrix
+  end subroutine calcJ
 
   !**********************************************************************
   subroutine Jmult_TX(dsigma,sigma0,d,emsoln)
@@ -320,9 +320,9 @@ Contains
          iDT = d%data(i)%dataType
          ! finally apply linearized data functionals
          if(typeDict(iDT)%calcQ) then
-            call linDataMeas(e0,sigma0,e,d%data(i),dsigma)
+            call Lmult(e0,sigma0,e,d%data(i),dsigma)
          else
-	        call linDataMeas(e0,sigma0,e,d%data(i))
+	        call Lmult(e0,sigma0,e,d%data(i))
          endif
       enddo
 
@@ -456,7 +456,7 @@ Contains
                !  first transmitter for which Q must be calculated:
                !   ==> allocate and zero Qcomb (use copy so that paramtype
                !         is set correctly)
-               !  NOTE: linDataComb ADDS to Qcomb, not overwrites
+               !  NOTE: LmultT ADDS to Qcomb, not overwrites
                !   ==> only zero Qcomb for first transmitter requiring Q
                Qcomb = sigmaTemp
                call zero(Qcomb)
@@ -464,20 +464,20 @@ Contains
                calcSomeQ = .true.
                firstQ = .false.
             endif
-            !  BUT: linDataComb overwrites comb ... so zero this
+            !  BUT: LmultT overwrites comb ... so zero this
             !       for every transmitter and for the first data type
 	          if (firstDT) then
 	            call zero_rhsVector(comb)
 	            firstDT=.false.
 	          end if
-            call linDataComb(e0,sigma0,d%data(i),comb,Qcomb)
+            call LmultT(e0,sigma0,d%data(i),comb,Qcomb)
          else
          ! Zero comb ONLY for the first data type
           if (firstDT) then
             call zero_rhsVector(comb)
             firstDT=.false.
           end if
-            call linDataComb(e0,sigma0,d%data(i),comb)
+            call LmultT(e0,sigma0,d%data(i),comb)
          endif
 
        enddo  ! dataType's
@@ -493,9 +493,9 @@ Contains
 
 
 
-	  ! In theory, linDataComb should compute Qcomb for each transmitter
+	  ! In theory, LmultT should compute Qcomb for each transmitter
 	  ! and data type, and add it to dsigma; however, this is currently
-	  ! implemented such that linDataComb *adds* to Qcomb, each time it
+	  ! implemented such that LmultT *adds* to Qcomb, each time it
 	  ! is called. So for now, we add the total Qcomb once at the end.
       if(calcSomeQ) then
          !  add Qcomb
@@ -591,7 +591,7 @@ Contains
    type(solnVector_t), intent(inout)	:: emsoln
 
    ! local variables
-   integer				:: iTx,i,j
+   integer				:: iTx,iDt,i,j
 
       if(.not.d%allocated) then
          call errStop('data vector not allocated on input to fwdPred')
@@ -613,8 +613,15 @@ Contains
          ! well-defined error bars (important for the inversion)
          d%data(i)%errorBar = .false.
 
-         ! apply data functionals
-         call dataMeas(emsoln,sigma,d%data(i))
+         iDt = d%data(i)%dataType
+
+         ! apply data functionals - loop over sites
+		 do j = 1,d%data(i)%nSite
+
+		    ! output is a real vector: complex values come in pairs
+		    call dataResp(emsoln,sigma,iDt,d%data(i)%rx(j),d%data(i)%value(:,j))
+
+		 enddo
 
       enddo
 

@@ -14,7 +14,7 @@ module sensComp
 
   implicit none
 
-  public 	:: calcSensMatrix, Jmult, JmultT, fwdPred, setGrid, cleanUp, deall_sensMatrix
+  public 	:: calcJ, Jmult, JmultT, fwdPred, setGrid, cleanUp, deall_sensMatrix
 
   ! numerical discretization used to compute the EM solution
   !  (may be different from the grid stored in model parameter)
@@ -43,7 +43,7 @@ module sensComp
 Contains
 
    !**********************************************************************
-   subroutine calcSensMatrix(d,sigma0,dsigma)
+   subroutine calcJ(d,sigma0,dsigma)
    !  Calculate sensitivity matrix for data in d
    !
    !   d is the input data vector, here just used to identify
@@ -58,7 +58,7 @@ Contains
    type(modelParam_t), pointer   :: dsigma(:)
 
 
-   end subroutine calcSensMatrix
+   end subroutine calcJ
 
    !**********************************************************************
    subroutine Jmult(dsigma,sigma0,d,eAll)
