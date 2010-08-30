@@ -11,6 +11,7 @@ module EMfieldInterp
 
   use math_constants
   use utilities
+  use EMfield
   use ModelSpace, rhoC => ModelParamToOneCell
 
   implicit none

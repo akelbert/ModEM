@@ -16,11 +16,35 @@ use transmitters
 implicit none
 
 interface assignment (=)
+   !MODULE PROCEDURE copy_rhsVector - doesn't exist yet
+   MODULE PROCEDURE copy_solnVrhsV
    MODULE PROCEDURE copy_solnVector
    MODULE PROCEDURE copy_solnVectorMTX
    MODULE PROCEDURE copy_sparseVector
-   !MODULE PROCEDURE copy_rhsVector - doesn't exist yet
 end interface
+
+interface create
+   MODULE PROCEDURE create_rhsVector
+   MODULE PROCEDURE create_rhsVectorMTX
+   MODULE PROCEDURE create_solnVector
+   MODULE PROCEDURE create_solnVectorMTX
+   MODULE PROCEDURE create_sparseVector
+end interface
+
+interface deall
+   MODULE PROCEDURE deall_rhsVector
+   MODULE PROCEDURE deall_rhsVectorMTX
+   MODULE PROCEDURE deall_solnVector
+   MODULE PROCEDURE deall_solnVectorMTX
+   MODULE PROCEDURE deall_sparseVector
+end interface
+
+interface dotProd
+   MODULE PROCEDURE dotProd_solnVector
+   MODULE PROCEDURE dotProd_rhsVsolnV
+   MODULE PROCEDURE dotProd_sparseVsolnV
+end interface
+
 
   type :: solnVector_t
     !!   Generic solution type, same name must be used to allow
@@ -110,6 +134,13 @@ end interface
      type(grid_t), pointer	:: grid
      integer				:: tx = 0
   end type rhsVector_t
+
+  type :: rhsVectorMTX_t
+    !! Generic solution type for storing RHS's for multiple transmitters
+    integer         :: nTx = 0
+    type(rhsVector_t), pointer     :: combs(:)
+    logical         :: allocated = .false.
+  end type rhsVectorMTX_t
 
 contains
 
@@ -220,6 +251,36 @@ contains
 
      end subroutine zero_solnVector
 
+     !**********************************************************************
+     function dotProd_solnVector(FV1,FV2,Conj_Case) result(c)
+       ! computes a dot product between solution vectors
+
+       type (solnVector_t), intent(in)         :: FV1, FV2  ! full vectors
+       logical, intent(in)                     :: conj_Case ! = .true.
+       complex(kind=prec)       :: c
+
+       !  local variables
+       complex(kind=prec)   :: temp
+       integer              :: k
+
+       if((.not. FV1%allocated) .or. (.not. FV2%allocated)) then
+            call errStop('solution vectors have to be allocated in dotProd_solnVector')
+       elseif(FV1%tx .ne. FV2%tx) then
+            call errStop('different transmitters on input to dotProd_solnVector')
+       endif
+
+       c = C_ZERO
+
+       do k = 1,FV1%nPol
+           if(Conj_Case) then
+           temp = dotProd_cvector_f(FV1%pol(k),FV2%pol(k))
+           else
+           temp = dotProd_noConj_cvector_f(FV1%pol(k),FV2%pol(k))
+          endif
+          c = c + temp
+       enddo
+
+     end function dotProd_solnVector
 
 !**********************************************************************
 !           Basic solnVectorMTX methods
@@ -608,6 +669,32 @@ contains
        enddo
      end subroutine zero_rhsVector
 
+
+     !**********************************************************************
+     subroutine copy_solnVrhsV(b,e)
+     !  implements b = e
+
+       type(rhsVector_t), intent(inout) :: b
+       type(solnVector_t), intent(in)   :: e
+
+       integer          :: k
+
+       if (.not. e%allocated) then
+         call errStop('input EM soln not allocated yet in copy_solnVrhsV')
+       endif
+
+       call create_rhsVector(e%grid,e%tx,b)
+
+       do k = 1,b%nPol
+          b%b(k)%nonzero_source = .true.
+          b%b(k)%s = e%pol(k)
+          b%b(k)%sparse_source = .false.
+          b%b(k)%nonzero_BC = .false.
+          b%b(k)%allocated = .true.
+       enddo
+     end subroutine copy_solnVrhsV
+
+
      !**********************************************************************
 
      subroutine add_sparseVrhsV(cs,SV,comb)
@@ -649,5 +736,97 @@ contains
        call deall_sparsevecc(temp)
 
      end subroutine add_sparseVrhsV
+
+!**********************************************************************
+!           combined solnVector/rhsVector methods
+!**********************************************************************
+     function dotProd_rhsVsolnV(comb,FV,Conj_Case) result(c)
+       ! computes a dot product between RHS vector and solution vector;
+       ! does not compute anything from the boundary conditions!!!
+       ! this might have to be changed.
+
+       type (rhsVector_t), intent(in)             :: comb  ! rhs
+       type (solnVector_t), intent(in)            :: FV  ! full vector
+       logical, intent(in)                     :: conj_Case ! = .true.
+       complex(kind=prec)       :: c
+
+       !  local variables
+       complex(kind=prec)   :: temp
+       integer              :: k
+
+       if((.not. comb%allocated) .or. (.not. FV%allocated)) then
+            call errStop('RHS and solution vectors have to be allocated in dotProd_rhsVsolnV')
+       elseif(comb%tx .ne. FV%tx) then
+            call errStop('different transmitters on input to dotProd_rhsVsolnV')
+       endif
+
+       c = C_ZERO
+
+       do k = 1,comb%nPol
+          if(comb%b(k)%nonzero_source) then
+             if(comb%b(k)%sparse_source) then
+                if(Conj_Case) then
+                temp = dotProd_scvector_f(comb%b(k)%sSparse,FV%pol(k))
+                else
+                temp = dotProd_noConj_scvector_f(comb%b(k)%sSparse,FV%pol(k))
+                endif
+             else
+                if(Conj_Case) then
+                temp = dotProd_cvector_f(comb%b(k)%s,FV%pol(k))
+                else
+                temp = dotProd_noConj_cvector_f(comb%b(k)%s,FV%pol(k))
+                endif
+             endif
+          else
+             temp = C_ZERO
+          endif
+          c = c + temp
+       enddo
+
+     end function dotProd_rhsVsolnV
+
+!**********************************************************************
+!           Basic rhsVectorMTX methods
+!**********************************************************************
+
+   subroutine create_rhsVectorMTX(nTx,bAll)
+
+      integer, intent(in)               :: nTx
+      type(rhsVectorMTX_t), intent(inout)  :: bAll
+
+      !  local variables
+      integer                           :: istat
+
+      if (bAll%allocated) then
+         if (bAll%nTx == nTx) then
+            ! do nothing
+            return
+         else
+            call deall_rhsVectorMTX(bAll)
+         end if
+      end if
+
+      bAll%nTx = nTx
+      allocate(bAll%combs(nTx), STAT=istat)
+      bAll%allocated = .true.
+
+   end subroutine create_rhsVectorMTX
+
+   !**********************************************************************
+   subroutine deall_rhsVectorMTX(bAll)
+
+      type(rhsVectorMTX_t), intent(inout)     :: bAll
+
+      !  local variables
+      integer                           :: j, istat
+
+      do j = 1,bAll%nTx
+        call deall_rhsVector(bAll%combs(j))
+      end do
+
+      if (associated(bAll%combs)) deallocate(bAll%combs, STAT=istat)
+      bAll%allocated = .false.
+
+   end subroutine deall_rhsVectorMTX
 
 end module SolnSpace

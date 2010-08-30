@@ -14,7 +14,6 @@ module dataTypes
      !    data types; these are accessed and used by the top-level
      !    inversion routines.
      logical                    :: isComplex = .false.
-     logical                    :: calcQ = .false.
      !    Other attributes might be different (different number,
      !        different names, types, etc.) for  different applications.
      ! character(2)                :: mode = ''! = 'TE' or 'TM'
@@ -49,14 +48,12 @@ Contains
      allocate(typeDict(2),STAT=istat)
      typeDict(TE_Impedance)%name = 'TE Impedance'
      typeDict(TE_Impedance)%isComplex = .true.
-     typeDict(TE_Impedance)%calcQ     = .false.
      typeDict(TE_Impedance)%nComp     = 2
      allocate(typeDict(TE_Impedance)%id(2),STAT=istat)
      typeDict(TE_Impedance)%id(1)     = 'Re'
      typeDict(TE_Impedance)%id(2)     = 'Im'
      typeDict(TM_Impedance)%name = 'TM Impedance'
      typeDict(TM_Impedance)%isComplex = .true.
-     typeDict(TM_Impedance)%calcQ     = .true.
      typeDict(TM_Impedance)%nComp     = 2
      allocate(typeDict(TM_Impedance)%id(2),STAT=istat)
      typeDict(TM_Impedance)%id(1)     = 'Re'

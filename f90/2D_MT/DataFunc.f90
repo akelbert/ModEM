@@ -1,34 +1,24 @@
 ! *****************************************************************************
 module datafunc
-  ! 2D MT data functionals ... now for TE + TM impedance ... could add
-  !  This module contains
-  !  (1) receiver dictionary (rxDict); representation of
-  !    data functionals for MT impedance are eliminated
-  !  (2) transmitter dictionary (txDict), information about sources,
-  !      now including TE/TM mode as well as frequency
-  !  (3) data type dictionary typeDict
-  !   DICTIONARIES ARE AN ARRAY OF reciever/transmitter descriptors
-  !       THESE AR NOW PUBLIC ... this is all still under development
-  !  (4) routines for evaluation of impedances, and ultimately other
-  !	  interpretation parameters
-  !  (5) routines to compute data functionals for linearized
+  ! 2D MT data functionals ... now for TE + TM impedance
+  !
+  ! This module contains
+  !  (1) routines for evaluation of impedances, and ultimately other
+  !       interpretation parameters
+  !  (2) routines to compute data functionals for linearized
   !       impedances,  and ultimately other interpretation paramters
   !   The idea:
-  !     -> rxDict and txDict are still private to this module
-  !     -> first initialize txDict and rxDict by calling
-  !          appropriate initialization/setup routines
-  !           (included here, assuming simple cases only)
-  !     -> data are stored in structures (defined in module data_vector)
+  !     -> first the dictionaries txDict, typeDict, rxDict are initialized
+  !         by calling appropriate initialization/setup routines
+  !     -> data are stored in structures (defined in module DataSpace)
   !        which contain indices into transmitter and receiver dictionaries
   !        in addition to actual data values.  These indices are used by
-  !        the data function computation routines to compute predicted data.
+  !        the data functional computation routines to compute predicted data.
   !
-  ! This module is specific to 2D MT; similar modules would need to be written
+  !  This module is specific to 2D MT; similar modules will need to be written
   !     to implement data functionals for other problems
 
-  use math_constants
-  use utilities
-  use emfieldinterp     !  basic interpolation routines for 2D TE and TM
+  use EMfieldInterp     !  basic interpolation routines for 2D TE and TM
                         !    solution grids; allow computation of both E and B
                         !    at an arbitrary point in either grid
   use ModelSpace, only:	rhoC => ModelParamToOneCell	!  model parameterization
@@ -38,13 +28,13 @@ module datafunc
   use SolnSpace
   use transmitters
   use receivers
-  use datatypes
+  use dataTypes
 
   implicit none
 
   !   Names of these routines must be as here, as these are called by
   !    top-level inversion routines
-  public			:: dataResp, Lrows
+  public			:: dataResp, Lrows, Qrows
 
 
 Contains
@@ -124,7 +114,7 @@ Contains
   end subroutine dataResp
 
 !****************************************************************************
-  subroutine Lrows(e0,Sigma0,iDT,iRX,Lz,Qz)
+  subroutine Lrows(e0,Sigma0,iDT,iRX,Lz)
   !  given input background electric field solution,
   !  index into receiver dictionary for a single site (iRX)
   !  compute sparse complex vector giving coefficients
@@ -132,7 +122,7 @@ Contains
   !  For TM mode solution also returns sparse vector Q (model
   !     paramter space) for derivative of data functional with
   !     respect to model paramters; Q is not referenced for TE data
-  !   NOTE: Lz and Qz have to be declared as arrays for
+  !   NOTE: Lz has to be declared as an array for
   !     consistency with calling program (in general the
   !     number nFunc of complex data functionals that will
   !     be returned by data functional routines could be > 1)
@@ -148,7 +138,7 @@ Contains
   !    be treated as arrays here, even if there is only one element.
   !   As an example: to add tippers to TE mode, dimension on LZ will
   !    have to be changed to 2.
-  type(sparseVector_t), intent(inout)		:: Lz(1), Qz(1)
+  type(sparseVector_t), intent(inout)		:: Lz(1)
 
   !  local variables
   complex (kind=prec)		:: B,E,c_E,c_B
@@ -173,7 +163,7 @@ Contains
      ! magnetic field
      call NodeInterpSetup2D(e0%grid,x,mode,Lb)
      ! electric field
-     call EfromBSetUp_TM(e0%grid,x,omega,Sigma0,Le,e0%vec,Qz(1)%L)
+     call EfromBSetUp_TM(e0%grid,x,omega,Sigma0,Le,e0%vec)
   else
      call errStop('option not available in Lrows')
   endif
@@ -191,17 +181,87 @@ Contains
   !    version of a sparsevecc object)
   call linComb_sparsevecc(Le,c_E,Lb,c_B,Lz(1)%L)
 
-  if(mode .eq. 'TM') then
-     !  also need to multiply parameter space sparse vector
-     !    (derivative of Le coefficients wrt cell resistivities)
-     !   by 1/B  (actually 1/B == 1 !)
-     Qz(1)%L%C = c_E*Qz(1)%L%C
-  endif
-
   ! clean up
   call deall_sparsevecc(Le)
   call deall_sparsevecc(Lb)
 
   end subroutine Lrows
+!
+!****************************************************************************
+  subroutine Qrows(e0,Sigma0,iDT,iRX,Qreal,Qimag)
+  !  given input background solution vector (e0) and model parameter (Sigma0)
+  !  and indices into data type and receiver dictionaries
+  !  compute derivative of data functional with respect to model parameters
+  !  for all components of the data type ...
+  !  For TM mode solution returns sparse vector Q (model
+  !     parameter space) for derivative of data functional with
+  !     respect to model parameters; Q is not referenced for TE data
+
+  type (solnVector_t), intent(in)          :: e0
+  type (modelParam_t), intent(in)      :: Sigma0
+  integer, intent(in)                        :: iDT, iRX
+  !   NOTE: Qreal and Qimag have to be declared as arrays for
+  !     consistency with calling program (in general the
+  !     number nFunc of complex data functionals that will
+  !     be returned by data functional routines could be > 1)
+  !   NOTE: Qreal and Qimag both exist regardless of whether the data
+  !     are real or complex, since Q itself is complex
+  type(modelParam_t), intent(inout)     :: Qreal(:), Qimag(:)
+
+  ! local variables
+  complex (kind=prec)   :: B,c_E
+  type(sparsevecc)      :: Lb,Le
+  real (kind=prec)      :: x(2), omega
+  character*2           :: mode
+  logical               :: Conj_case = .false.
+  logical               :: isComplex = .true.
+  integer               :: nFunc = 1
+  type(sparseVector_t)  :: Qz(1)
+  integer       :: istat,ncomp,iFunc
+
+  ! check for incorrect usage
+  ncomp = typeDict(iDT)%nComp
+  if((ncomp .ne. 2*nFunc) .or. (typeDict(iDT)%isComplex .neqv. isComplex)) then
+    call errStop('incorrect usage of type dictionary in Qrows')
+  endif
+  if((size(Qreal) .ne. nFunc) .or. (size(Qimag) .ne. nFunc)) then
+    call errStop('incorrect output size in Qrows')
+  endif
+
+  !  get mode, frequency from transmitter dictionary
+  mode = txDict(e0%tx)%mode
+  omega =  txDict(e0%tx)%omega
+  ! get location from receiver dictionary
+  x = rxDict(iRX)%x
+
+  if(mode .eq. 'TE') then
+    ! set the rows of Q to zero and exit
+	do iFunc = 1, nFunc
+	  Qreal(iFunc) = Sigma0
+	  call zero(Qreal(iFunc))
+      Qimag(iFunc) = Sigma0
+      call zero(Qimag(iFunc))
+	enddo
+  elseif(mode .eq. 'TM') then
+     ! compute magnetic field for background solution
+     call NodeInterpSetup2D(e0%grid,x,mode,Lb)
+     ! electric field
+     call EfromBSetUp_TM(e0%grid,x,omega,Sigma0,Le,e0%vec,Qz(1)%L)
+     B = dotProd_scvector(Lb,e0%vec,Conj_case)
+     c_E = C_ONE/B
+     !  also need to multiply parameter space sparse vector
+     !    (derivative of Le coefficients wrt cell resistivities)
+     !   by 1/B  (actually 1/B == 1 !)
+     Qz(1)%L%C = c_E*Qz(1)%L%C
+     !  map from the grid to the model parameter
+     call SparseCellToModelParam(Qz(1)%L,Sigma0,Qreal(1),Qimag(1))
+     ! clean up
+     call deall_sparsevecc(Le)
+     call deall_sparsevecc(Lb)
+  else
+     call errStop('option not available in Qrows')
+  endif
+
+  end subroutine Qrows
 
 end module dataFunc

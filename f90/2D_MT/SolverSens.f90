@@ -16,16 +16,14 @@
 module SolverSens
    use math_constants
    use utilities
-   use datafunc 	!!!! inherit: soln2d ModelSpace
-   use dataspace
+   use SolnSpace
    use transmitters
-   use datatypes
+   use dataTypes
 
    implicit none
 
    !  routines that are public/private
    public	::  Pmult, PmultT
-   public   ::  Qmult, QmultT, QaddT
 
    private	::  curlB, curlE, curlE_T
 
@@ -281,153 +279,6 @@ module SolverSens
    endif
 
   end subroutine PmultT
-
-   !**********************************************************************
-   subroutine Qmult(e0,sigma0,dsigma,d)
-   !  generic Qmult (sorts out TE vs. TM from txDict):
-   !   mapping from modelParam parameter dsigma to the data space;
-   !        dsigma -> d
-   !   e0 is input background field solution
-
-   type(solnVector_t), intent(in)             :: e0
-   type(modelParam_t), intent(in)	    :: sigma0 ! used to compute e0
-   type(modelParam_t), intent(in)		:: dsigma
-   type(dataBlock_t), intent(inout)          	:: d
-   !  local variables
-   character*80                 	    :: gridType
-   type(cvector)                 	    :: Jy,Jz,CJy,CJz
-
-   if(txDict(e0%tx)%mode.eq.'TE') then
-
-       call zero(d)
-
-   else
-
-	   !  allocate temporary data structures
-	   gridType = EDGE_EARTH
-	   call create_cvector(e0%grid,gridType,Jy)
-	   call create_cvector(e0%grid,gridType,Jz)
-	   call create_cvector(e0%grid,gridType,CJy)
-	   call create_cvector(e0%grid,gridType,CJz)
-
-	   call dModelParamToEdge(dsigma,CJy,CJz,sigma0)
-
-       ! instead, will implement
-	   ! the mapping d\psi/d\pi, or multQtilde:
-	   ! a linearized mapping from the edges to the data space
-	   call zero(d)
-
-	   call deall_cvector(Jy)
-	   call deall_cvector(Jz)
-	   call deall_cvector(CJy)
-	   call deall_cvector(CJz)
-
-   endif
-
-   end subroutine Qmult
-
-!**********************************************************************
-   subroutine QmultT(e0,sigma0,d,dsigmaReal,dsigmaImag)
-   !  generic QmultT (sorts out TE vs. TM from txDict):
-   !   transpose of Qmult, mapping from a data vector d to sigma
-   !   mapping from modelParam parameter dsigma to source;
-   !        d -> dsigma
-   !   e0 is input background field solution;
-   !   NOTE: because the model parameter is real, while e is complex
-   !       the adjoint mapping returns separate data structures
-   !        for real and imaginary parts; imaginary output is optional ...
-   !  outputs zero vectors when Q doesn't exist
-
-   type(solnVector_t), intent(in)             :: e0
-   type(modelParam_t), intent(in)	    :: sigma0 ! used to compute e0
-   type(dataBlock_t), intent(in)             :: d
-   type(modelParam_t), intent(inout)               :: dsigmaReal
-   type(modelParam_t), intent(inout),optional      :: dsigmaImag
-   !  local variables
-   character*80					        :: gridType
-   type(cvector)					    :: Jy,Jz,CJy,CJz
-
-   if(txDict(e0%tx)%mode.eq.'TE') then
-
-       dsigmaReal = sigma0
-       call zero(dsigmaReal)
-
-	   if(present(dsigmaImag)) then
-          dsigmaImag = sigma0
-          call zero(dsigmaImag)
-	   endif
-
-   else
-
-	   ! after these initialization routines, will implement
-	   ! the mapping (d\psi/d\pi)^T, or multQtildeT:
-	   ! a linearized mapping from the data space to the edges
-	   gridType = EDGE_EARTH
-	   call create_cvector(e0%grid,gridType,Jy)
-	   call create_cvector(e0%grid,gridType,Jz)
-	   call create_cvector(e0%grid,gridType,CJy)
-	   call create_cvector(e0%grid,gridType,CJz)
-
-	   ! map from edge back to model parameter space
-	   Jy%v = real(CJy%v)
-	   Jz%v = real(CJz%v)
-	   call dEdgeToModelParam(Jy,Jz,dsigmaReal,sigma0)
-
-	   if(present(dsigmaImag)) then
-	      Jy%v = imag(CJy%v)
-	      Jz%v = imag(CJz%v)
-	      call dEdgeToModelParam(Jy,Jz,dsigmaImag,sigma0)
-	   endif
-
-	   call deall_cvector(Jy)
-	   call deall_cvector(Jz)
-	   call deall_cvector(CJy)
-	   call deall_cvector(CJz)
-
-   endif
-
-  end subroutine QmultT
-
-  !****************************************************************************
-  subroutine QaddT(cs,dpsiT,sigma0,dsigmaReal,dsigmaImag)
-
-   !   QaddT (formerly sparseVectorQtoModelParam)
-   !   Maps the input sparse vector to the model space by multiplying it with
-   !   (d\pi/dm)^T. This is different from QmultT in that the latter acts on
-   !   a data vector to obtain a model vector. Thus, QmultT is used to multiply
-   !   with J^T, while this routine is needed to compute the full sensitivity
-   !   matrix. In practice, used to make Q_J^T = (d\pi/dm)^T * (d\psi_j/d\pi)^T,
-   !   then add cs*Q_j^T to (dsigmaReal,dSigmaImag)
-   !   cs is a complex constant, Q is a sparse scalar field defined on
-   !     grid cells (but represented with sparseVector data object ... the
-   !     xyz component indicators are ignored).  dsigmaReal/dsigmaImag
-   !     are used to collect sums of real and imaginary parts; dsigmaImag
-   !     is optional.
-
-   complex(kind=prec),intent(in)	:: cs
-   type (sparseVector_t), intent(in)                  :: dpsiT
-   type (modelParam_t), intent(in)                :: sigma0
-   type (modelParam_t), intent(inout)             :: dsigmaReal
-   type (modelParam_t), intent(inout),optional    :: dsigmaImag
-
-   !  local variables
-   type (sparsevecc)	:: Ltemp
-   type (modelParam_t)  :: csQReal, csQImag
-
-   call scMult_sparsevecc(cs,dpsiT%L,Ltemp)
-   call SparseCellToModelParam(Ltemp,sigma0,csQReal,csQImag)
-
-   call linComb_modelParam(ONE,dsigmaReal,ONE,csQReal,dsigmaReal)
-
-   if(present(dSigmaImag)) then
-      call linComb_modelParam(ONE,dsigmaImag,ONE,csQImag,dsigmaImag)
-   endif
-
-   call deall_sparsevecc(Ltemp)
-   call deall_modelParam(csQReal)
-   call deall_modelParam(csQImag)
-
-  end subroutine QaddT
 
    !**********************************************************************
 end module SolverSens

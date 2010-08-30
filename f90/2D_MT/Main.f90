@@ -43,7 +43,7 @@ module Main
   !  storage for EM solutions
   type(solnVectorMTX_t), save            :: eAll
 
-  logical                   :: write_model, write_data, write_EMsoln
+  logical   :: write_model, write_data, write_EMsoln, write_EMrhs
 
 
 
@@ -134,6 +134,19 @@ Contains
 	      endif
 	   end if
 
+	 case (TEST_ADJ)
+	   select case (cUserDef%test)
+	       case('J','Q')
+		       inquire(FILE=cUserDef%rFile_dModel,EXIST=exists)
+		       if (exists) then
+		          call deall_grid(grid)
+		          call read_modelParam(grid,dsigma,cUserDef%rFile_dModel)
+		       else
+		          call warning('The input model perturbation file does not exist')
+		       end if
+	       case default
+	   end select
+
     end select
 
 	!--------------------------------------------------------------------------
@@ -149,6 +162,10 @@ Contains
     write_EMsoln = .false.
     if (len_trim(cUserDef%wFile_EMsoln)>1) then
        write_EMsoln = .true.
+    end if
+    write_EMrhs = .false.
+    if (len_trim(cUserDef%wFile_EMrhs)>1) then
+       write_EMrhs = .true.
     end if
 
 	return

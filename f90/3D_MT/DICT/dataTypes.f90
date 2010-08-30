@@ -31,12 +31,9 @@ module dataTypes
      ! must be defined for all data types.  These are accessed
      ! and used by the top-level inversion routines.
      !
-     ! AK: It is debatable whether this is a good idea... I suggest rethinking:
-     ! isComplex can easily be stored in dataVec, and calcQ ... well, needs to
-     ! be done differently! I think that the sole purpose of the dataType
+     ! AK: isComplex is also stored in the dataVector; the sole purpose of the dataType
      ! should be to identify the mapping from the EM solution to the data vector.
      logical           :: isComplex = .false.
-     logical           :: calcQ = .false.
 
      ! a user-friendly description of this data type
      character(80)     :: name = ''
@@ -73,7 +70,7 @@ module dataTypes
   integer, parameter   :: Full_Vertical_Components = 4
   integer, parameter   :: Full_Interstation_TF = 5
   !(Added on behalf of Kristina Tietze, GFZ-Potsdam)
-  integer, parameter   :: Off_Diagonal_Rho_Phi = 6 
+  integer, parameter   :: Off_Diagonal_Rho_Phi = 6
 Contains
 
 
@@ -87,7 +84,6 @@ Contains
 
      typeDict(Full_Impedance)%name = 'Full_Impedance'
      typeDict(Full_Impedance)%isComplex = .true.
-     typeDict(Full_Impedance)%calcQ     = .false.
      typeDict(Full_Impedance)%tfType    = Full_Impedance
      typeDict(Full_Impedance)%nComp     = 8
      allocate(typeDict(Full_Impedance)%id(8),STAT=istat)
@@ -111,7 +107,6 @@ Contains
 
      typeDict(Impedance_Plus_Hz)%name = 'Full_Impedance_Plus_Hz'
      typeDict(Impedance_Plus_Hz)%isComplex = .true.
-     typeDict(Impedance_Plus_Hz)%calcQ     = .false.
      typeDict(Impedance_Plus_Hz)%tfType    = Impedance_Plus_Hz
      typeDict(Impedance_Plus_Hz)%nComp     = 12
      allocate(typeDict(Impedance_Plus_Hz)%id(12),STAT=istat)
@@ -143,7 +138,6 @@ Contains
 
      typeDict(Off_Diagonal_Impedance)%name = 'Off_Diagonal_Impedance'
      typeDict(Off_Diagonal_Impedance)%isComplex = .true.
-     typeDict(Off_Diagonal_Impedance)%calcQ     = .false.
      typeDict(Off_Diagonal_Impedance)%tfType    = Off_Diagonal_Impedance
      typeDict(Off_Diagonal_Impedance)%nComp     = 4
      allocate(typeDict(Off_Diagonal_Impedance)%id(4),STAT=istat)
@@ -159,7 +153,6 @@ Contains
 
      typeDict(Full_Vertical_Components)%name = 'Full_Vertical_Components'
      typeDict(Full_Vertical_Components)%isComplex = .true.
-     typeDict(Full_Vertical_Components)%calcQ     = .false.
      typeDict(Full_Vertical_Components)%tfType    = Full_Vertical_Components
      typeDict(Full_Vertical_Components)%nComp     = 4
      allocate(typeDict(Full_Vertical_Components)%id(4),STAT=istat)
@@ -173,10 +166,9 @@ Contains
      typeDict(Full_Vertical_Components)%units(3) = '[]'
      typeDict(Full_Vertical_Components)%units(4) = '[]'
 
-     
+
      typeDict(Full_Interstation_TF)%name = 'Full_Interstation_TF'
      typeDict(Full_Interstation_TF)%isComplex = .true.
-     typeDict(Full_Interstation_TF)%calcQ     = .false.
      typeDict(Full_Interstation_TF)%tfType    = Full_Interstation_TF
      typeDict(Full_Interstation_TF)%nComp     = 8
      allocate(typeDict(Full_Interstation_TF)%id(8),STAT=istat)
@@ -197,23 +189,22 @@ Contains
      typeDict(Full_Interstation_TF)%units(6) = '[]'
      typeDict(Full_Interstation_TF)%units(7) = '[]'
      typeDict(Full_Interstation_TF)%units(8) = '[]'
-     
-     
+
+
  	 typeDict(Off_Diagonal_Rho_Phi)%name = 'Off Diagonal Rho Phi'
      typeDict(Off_Diagonal_Rho_Phi)%isComplex = .false.
-     typeDict(Off_Diagonal_Rho_Phi)%calcQ     = .false.
-     typeDict(Off_Diagonal_Rho_Phi)%tfType     = Off_Diagonal_Rho_Phi        
+     typeDict(Off_Diagonal_Rho_Phi)%tfType     = Off_Diagonal_Rho_Phi
      typeDict(Off_Diagonal_Rho_Phi)%nComp     = 4
      allocate(typeDict(Off_Diagonal_Rho_Phi)%id(4),STAT=istat)
      typeDict(Off_Diagonal_Rho_Phi)%id(1) = 'Rhoxy'
      typeDict(Off_Diagonal_Rho_Phi)%id(2) = 'Phixy'
      typeDict(Off_Diagonal_Rho_Phi)%id(3) = 'Rhoyx'
-     typeDict(Off_Diagonal_Rho_Phi)%id(4) = 'Phiyx'   
+     typeDict(Off_Diagonal_Rho_Phi)%id(4) = 'Phiyx'
      allocate(typeDict(Off_Diagonal_Rho_Phi)%units(4),STAT=istat)
      typeDict(Off_Diagonal_Rho_Phi)%units(1)  = '[]'
      typeDict(Off_Diagonal_Rho_Phi)%units(2)  = '[]'
      typeDict(Off_Diagonal_Rho_Phi)%units(3)  = '[]'
-     typeDict(Off_Diagonal_Rho_Phi)%units(4)  = '[]'   
+     typeDict(Off_Diagonal_Rho_Phi)%units(4)  = '[]'
   end subroutine setup_typeDict
 
 ! **************************************************************************
@@ -272,7 +263,7 @@ Contains
 		else
 		   call errStop('Unknown input units in ImpUnits: '//trim(oldUnits))
 		end if
-	
+
 		! now convert [V/m]/[T] to the new units
 		if (index(newUnits,'[V/m]/[T]')>0) then
 		   ! SI units for E/B
@@ -286,10 +277,10 @@ Contains
 		else
 		   call errStop('Unknown output units in ImpUnits: '//trim(newUnits))
 		end if
-	
+
 		SI_factor = factor1 * factor2
 
-        
+
   end function ImpUnits
 
 !**********************************************************************
@@ -314,7 +305,7 @@ Contains
              dataType =  Full_Interstation_TF
           else
              dataType =  Full_Impedance
-          end if       
+          end if
        case(12)
           dataType =  Impedance_Plus_Hz
        case(4)
@@ -337,8 +328,8 @@ Contains
 
   end function ImpType
 
-  
-! Maybe it is not required anymore.  
+
+! Maybe it is not required anymore.
   subroutine get_nComp_DT(DT_word,dataType,nComp)
 
     character(*), intent(in)        :: DT_word
@@ -356,29 +347,29 @@ Contains
           dataType =  Off_Diagonal_Impedance
           nComp    =  4
        case('Full_Vertical_Components')
-          dataType =  Full_Vertical_Components 
+          dataType =  Full_Vertical_Components
           nComp    =  4
        case('Full_Interstation_TF')
-          dataType =  Full_Interstation_TF 
-          nComp    =  8 
+          dataType =  Full_Interstation_TF
+          nComp    =  8
     end select
 
 
   end subroutine get_nComp_DT
-  
 
- ! Maybe it is not required anymore.   
+
+ ! Maybe it is not required anymore.
  subroutine check_header_order(nComp,dataType,header)
  	 integer, intent(in)   	 	 :: nComp
  	 integer, intent(in)   	 	 :: dataType
-     character(*), intent(in)    :: header    
+     character(*), intent(in)    :: header
  	 !Local
  	 character(15), allocatable  :: compids(:)
      integer                     :: j,istat
- 	 
+
      allocate(compids(nComp),STAT=istat)
      read(header,*) compids
-    
+
 
       do j = 1,nComp
     	if (compids(j) .ne. typeDict(dataType)%id(j)) then
@@ -387,8 +378,8 @@ Contains
     end do
 
     deallocate(compids,STAT=istat)
-    
- end   subroutine check_header_order   
-    
-  
+
+ end   subroutine check_header_order
+
+
 end module dataTypes

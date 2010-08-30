@@ -3,13 +3,16 @@ module sensMatrix
   use math_constants
   use file_units
   use utilities
-  use dataspace
+  use DataSpace
   use ModelSpace
 
   implicit none
 
   public 	:: create_sensMatrix, deall_sensMatrix
   public 	:: create_sensMatrixMTX, deall_sensMatrixMTX
+  public    :: count_sensMatrixMTX
+  public    :: write_sensMatrixMTX
+  public    :: multBy_sensMatrixMTX
 
   !***********************************************************************
   ! Data type definitions for the full sensitivity matrix; a cross between
@@ -248,6 +251,10 @@ Contains
     integer  iTx,iDt,iRx,nTx,nDt,nSite,nComp,i,j,k,istat,ios,nAll
     character(80) header
 
+    if(.not. associated(sens)) then
+        call errStop('sensitivity matrix not allocated in write_sensMatrixMTX')
+    end if
+
     open(unit=ioSens, file=cfile, form='unformatted', iostat=ios)
 	write(0,*) 'Output sensitivity matrix...'
 
@@ -286,5 +293,61 @@ Contains
 
   end subroutine write_sensMatrixMTX
 
+  !*********************************************************************
+  ! implements direct (real) matrix vector multiplication d = J m
+  ! ... this can be used to test the implementation of calcJ,
+  !     by comparing the output to that of Jmult
+  subroutine multBy_sensMatrixMTX(sens,m,d)
+
+    type(sensMatrix_t), pointer :: sens(:)
+    type(modelParam_t), intent(in) :: m
+    type(dataVectorMTX_t), intent(out) :: d
+    ! local
+    integer  nTx,nDt,nSite,iComp,nComp,i,j,k,istat
+    logical  isComplex,errorBar
+
+    if(.not. associated(sens)) then
+        call errStop('sensitivity matrix not allocated in multBy_sensMatrixMTX')
+    end if
+
+    nTx = size(sens)
+    call create_dataVectorMTX(nTx,d)
+
+    do i = 1,nTx
+
+      nDt = sens(i)%nDt
+      call create_dataVector(nDt,d%d(i))
+
+      do j = 1,nDt
+
+        nComp = sens(i)%v(j)%nComp
+        nSite = sens(i)%v(j)%nSite
+        isComplex = sens(i)%v(j)%isComplex
+        errorBar = .false.
+        call create_dataBlock(nComp, nSite, d%d(i)%data(j), isComplex, errorBar)
+
+        do k = 1,nSite
+
+            do iComp = 1,nComp
+                ! computes the dot products of the model parameters
+                d%d(i)%data(j)%value(iComp,k) = dotProd_modelParam(sens(i)%v(j)%dm(iComp,k),m)
+
+            end do ! components
+
+        end do ! rx
+
+        d%d(i)%data(j)%dataType = sens(i)%v(j)%dataType
+        d%d(i)%data(j)%rx = sens(i)%v(j)%rx
+        d%d(i)%data(j)%tx = sens(i)%v(j)%tx
+        d%d(i)%data(j)%allocated = .true.
+
+      end do  ! data type
+
+      d%d(i)%tx = sens(i)%tx
+      d%d(i)%allocated = .true.
+
+    end do  ! tx
+
+  end subroutine multBy_sensMatrixMTX
 
 end module sensMatrix

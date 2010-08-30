@@ -2,9 +2,10 @@
 program Mod3DMT
 !  program for running 3D MT forward, sensitivity and inverse modelling
 
-     use senscomp
-     use main
-     use nlcg
+     use SensComp
+     use SymmetryTest
+     use Main
+     use NLCG
      use DCG
      !use mtinvsetup
 
@@ -168,6 +169,25 @@ program Mod3DMT
         write(*,*) 'Multiplying input model parameter by covariance ...'
         sigma1 = multBy_CmSqrt(sigma0)
         call write_modelParam(sigma1,cUserDef%wFile_Model)
+
+     case (TEST_ADJ)
+       select case (cUserDef%test)
+           case('J')
+               call Jtest(sigma0,dsigma,allData)
+           case('Q')
+               call Qtest(sigma0,dsigma,allData)
+
+           case default
+               write(0,*) 'Symmetry test for operator ',trim(cUserDef%test),' not yet implemented.'
+       end select
+         if (write_model .and. write_data) then
+            write(*,*) 'Writing model and data files and exiting...'
+            call write_modelParam(dsigma,cUserDef%wFile_Model)
+            call write_dataVectorMTX(allData,cUserDef%wFile_Data)
+         else if (write_model) then
+            write(*,*) 'Writing model and exiting...'
+            call write_modelParam(dsigma,cUserDef%wFile_Model)
+         end if
 
      case default
 

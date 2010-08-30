@@ -72,7 +72,7 @@ module DataSpace
 
 
 
-  ! basic data vector containing data for a single transmitter & data type
+  ! basic data block containing data for a single transmitter & data type
   type :: dataBlock_t
 
       ! nComp is number of EM components observed (e.g., 2 (3) for
@@ -106,13 +106,13 @@ module DataSpace
   end type dataBlock_t
 
 
-  ! collection of dataVec objects for all data types, single transmitter
+  ! collection of dataBlock objects for all data types, single transmitter
   type :: dataVector_t
-      ! the number of dataVecs (generally the number of data types) associated
+      ! the number of dataBlocks (generally the number of data types) associated
       ! with this transmitter (note: not the total number of data types)
       integer       :: ndt = 0
 
-      ! array of dataVec's, usually one for each data type (dimension ndt)
+      ! array of dataBlocks, usually one for each data type (dimension ndt)
       type (dataBlock_t), pointer, dimension(:)   :: data
 
       ! tx is the index into transmitter dictionary
@@ -126,12 +126,12 @@ module DataSpace
   end type dataVector_t
 
 
-  ! collection of dataVec objects for all transmitters
+  ! collection of dataVector objects for all transmitters
   type :: dataVectorMTX_t
       ! ntx is number of transmitters, number of frequencies for MT
       integer		:: ntx = 0
 
-      ! d is array of dataVec's for each transmitter (dimension nTX)
+      ! d is array of dataVectors for each transmitter (dimension nTX)
       type (dataVector_t), pointer, dimension(:)	:: d
 
       logical		:: allocated = .false.

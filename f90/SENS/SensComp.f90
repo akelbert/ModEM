@@ -1,15 +1,26 @@
-module sensComp
+module SensComp
+!  higher level module that calls routines in DataSens, SolverSens
+!  and ForwardSolver to implement Jacobian computations, including
+!  1) computation of predicted data functionals;
+!  2) multiplication by J and J^T;
+!  3) evaluation of the full sensitivity matrix J.
+!
+!  Before any of these routines may be called, the transmitter (txDict),
+!  data type (typeDict) and receiver (rxDict) dictionaries must be
+!  created and initialized. These are heavily used by Level II routines
+!  in DataFunc, SolverSens and ForwardSolver, inherited by this module;
+!  "pointers" to dictionary entries are attached to data vector d.
 
   use math_constants
   use utilities
-  use datasens	 !!!!  inherits : dataspace, dataFunc, SolnSpace
-  use SolverSens  !!!  inherits : modelspace, soln2d
+  use SensMatrix
+  use DataSens
+  use SolverSens
   use ForwardSolver
-  use sensmatrix
 
   implicit none
 
-  public 	:: calcJ, Jrows
+  public 	:: calcJ,   Jrows
   public	:: Jmult,   Jmult_TX
   public	:: JmultT,  JmultT_TX
   public	:: fwdPred, fwdPred_TX
@@ -28,63 +39,50 @@ module sensComp
 Contains
 
   !**********************************************************************
-  subroutine Jrows(iTx,iDt,iRx,sigma0,emsoln,dsigma)
-   !  Calculate sensitivity matrix for data in d
-   !  Approaching a generic form that will work for any problem;
-   !   Documentation not edited.  Code not debugged!
-   !
-   !  Mostly self-contained, but BEFORE CALLING:
-   !   1)  read in and initialize grid (sigma0 points
-   !        to this grid)
-   !   2)  call setWSparams to set grid dimensions inside
-   !         WS forward modeling module
-   !   3)  set up transmitter and receiver dictionaries;
-   !       "pointers" to entries in these dictionaries are
-   !        attached to multi-transmitter data vector d .
-   !        Note that the actual frequencies used for the
-   !        solver are extracted from the transmitter dictionary
-   !   IT IS NOT necessary to initialize for modeling
-   !     before calling
+  subroutine Jrows(iTx,iDt,iRx,sigma0,emsoln,Jreal,Jimag)
+   !  Given background model parameter sigma0 and background
+   !  solution vector emsoln, calculate a row of sensitivity matrix
+   !  for specified transmitter, data type and receiver,
+   !  for all data type components.
+   !  Generic form that will work for any problem.
+   !   returns a model parameter for each real data type component.
    !
    !   indices into transmitter, receiver & data type dictionaries
-   integer, intent(in)				:: iTx, iRx, iDt
+   integer, intent(in)				              :: iTx, iRx, iDt
    !   sigma0 is background conductivity parameter
-   type(modelParam_t), intent(in)	:: sigma0
+   type(modelParam_t), intent(in)	          :: sigma0
    !   to use this routine, need to first supply background EM soln
-   type(solnVector_t), intent(in)  		:: emsoln
-   !   dsigma is the output array of data sensitivities,
-   !   one for each element in the data array.  Each sensitivity
+   type(solnVector_t), intent(in)  	        :: emsoln
+   !   Jreal is the output array of data sensitivities,
+   !   one for each component in the data type.  Each sensitivity
    !    is an element of type modelParam, an abstract
    !    data type that defines the unknown conductivity
-   type(modelParam_t), pointer   	:: dsigma(:)
+   !   NOTE: Jreal and Jimag both exist regardless of whether the data
+   !     are real or complex, since J itself is complex
+   type(modelParam_t), pointer   	          :: Jreal(:), Jimag(:)
 
    !  local variables
-   type(dataBlock_t)  :: dVec
-   integer 		:: i,j,k,istat,nTot,ii,nFunc,nComp,iFunc
-   type(sparseVector_t), pointer	:: L(:),Q(:)
-   logical 		:: calcQ
+   integer 		:: istat,ii,nFunc,nComp,iFunc
+   type(sparseVector_t), pointer	:: L(:)
+   type(modelParam_t), pointer    :: Qreal(:),Qimag(:)
 
-   nComp = typeDict(iDt)%nComp
-
-   ! first test dsigma and deallocate if incompatible
-   if(associated(dsigma)) then
-      if (size(dsigma) .ne. nComp) then
-         do j = 1,nComp
-            call deall_modelParam(dsigma(j))
-         enddo
-         deallocate(dsigma, STAT=istat)
-      endif
+   ! the vectors Jreal, Jimag have to be allocated
+   if((.not. associated(Jreal)) .or. (.not. associated(Jimag))) then
+      call errStop('output rows of J have to be allocated in Jrows')
+   endif
+   nFunc = size(Jreal)
+   if(size(Jimag) .ne. nFunc) then
+      call errStop('outputs of incompatible size in Jrows')
    endif
 
-   ! now, allocate for sensitivity values, if necessary
-   if(.not. associated(dsigma)) then
-      allocate(dsigma(nComp), STAT=istat)
-      do j = 1,nComp
-         ! this makes a copy of model param, then zeroes it
-         dsigma(j) = sigma0
-         call zero(dsigma(j))
-      enddo
-   endif
+   ! allocate and initialize sensitivity values
+   do iFunc = 1,nFunc
+      ! this makes a copy of modelParam, then zeroes it
+      Jreal(iFunc) = sigma0
+      call zero(Jreal(iFunc))
+      Jimag(iFunc) = sigma0
+      call zero(Jimag(iFunc))
+   enddo
 
    !  manage any necessary initialization for this transmitter
    call initSolver(iTx,sigma0,grid,e0,e,comb)
@@ -92,116 +90,77 @@ Contains
    !  store the provided solnVector in e0
    e0 = emsoln
 
-   calcQ = typeDict(iDt)%calcQ
+   allocate(L(nFunc),STAT=istat)
+   allocate(Qreal(nFunc),STAT=istat)
+   allocate(Qimag(nFunc),STAT=istat)
 
-   ! get data type info for this dataVec: here we allow for either
-   !  real or complex data, though we always store as real
-   !  Complex data come in pairs, stored as two succesive
-   !  "components" in the dataVec structure.
-   !  "isComplex" is an attribute of a dataVec structure; can
-   !  be different for different dataVecs within the overall data
-   !  vector
-   if(typeDict(iDt)%isComplex) then
-      !  data are complex; one sensitivity calculation can be
-      !   used for both real and imaginary parts
-      if(mod(nComp,2).ne.0) then
-         call errStop('for complex data # of components must be even in calcJ')
-      endif
-      nFunc = nComp/2
-   else
-      !  data are treated as real: full sensitivity computation is required
-      !   for each component
-      nFunc = nComp
-   endif
-   allocate(L(nFunc))
-   allocate(Q(nFunc))
+   ! compute linearized data functional(s) : L
+   call Lrows(e0,sigma0,iDt,iRx,L)
 
-   !  compute linearized data functional(s) : L
-   call Lrows(e0,sigma0,iDt,iRx,L,Q)
+   ! compute linearized data functional(s) : Q
+   call Qrows(e0,sigma0,iDt,iRx,Qreal,Qimag)
 
-   ! loop over functionals  (for TE/TM impedances nFunc = 1)
-   ii = 0
-
+   ! loop over functionals  (e.g., for 2D TE/TM impedances nFunc = 1)
    do iFunc = 1,nFunc
 
-      ! solve forward problem for each of nFunc functionals
+      ! solve transpose problem for each of nFunc functionals
       call zero_rhsVector(comb)
       call add_sparseVrhsV(C_ONE,L(iFunc),comb)
 
       call sensSolve(iTx,TRN,comb,e)
 
-      ! multiply by P^T (and add Q^T if appropriate)
-      if(typeDict(iDt)%isComplex) then
-         ii = ii + 2
-         call PmultT(e0,sigma0,e,dsigma(ii-1),dsigma(ii))
-         if(calcQ) then
-            call QaddT(C_ONE,Q(iFunc),sigma0,dsigma(ii-1),dsigma(ii))
-         endif
-      else
-         ii = ii + 1
-         call PmultT(e0,sigma0,e,dsigma(ii))
-         if(calcQ) then
-            call QaddT(C_ONE,Q(iFunc),sigma0,dsigma(ii))
-         endif
-      endif
+      ! multiply by P^T and add the rows of Q
+      call PmultT(e0,sigma0,e,Jreal(iFunc),Jimag(iFunc))
+      call scMultAdd(ONE,Qreal(iFunc),Jreal(iFunc))
+      call scMultAdd(ONE,Qimag(iFunc),Jimag(iFunc))
 
-      ! deallocate temporary sparse vectors
+      ! deallocate temporary vectors
       call deall_sparseVector(L(iFunc))
-      call deall_sparseVector(Q(iFunc))
+      call deall_modelParam(Qreal(iFunc))
+      call deall_modelParam(Qimag(iFunc))
 
    enddo  ! iFunc
 
-   deallocate(L)
-   deallocate(Q)
+   !  deallocate local arrays
+   deallocate(L,STAT=istat)
+   deallocate(Qreal,STAT=istat)
+   deallocate(Qimag,STAT=istat)
 
   end subroutine Jrows
 
   !**********************************************************************
   subroutine calcJ(d,sigma0,sens)
-   !  Calculate sensitivity matrix for data in d
-   !  Approaching a generic form that will work for any problem;
-   !   Documentation not edited.  Code not debugged!
-   !
-   !  Mostly self-contained, but BEFORE CALLING:
-   !   1)  read in and initialize grid (sigma0 points
-   !        to this grid)
-   !   2)  call setWSparams to set grid dimensions inside
-   !         WS forward modeling module
-   !   3)  set up transmitter and receiver dictionaries;
-   !       "pointers" to entries in these dictionaries are
-   !        attached to multi-transmitter data vector d .
-   !        Note that the actual frequencies used for the
-   !        solver are extracted from the transmitter dictionary
-   !   IT IS NOT necessary to initialize for modeling
-   !     before calling
+   !  Calculate sensitivity matrix for data in d;
+   !  Generic form that will work for any problem.
    !
    !   d is the input data vector, here just used to identify
-   !     receiver transmitter pairs to compute sensitivities for
-   type(dataVectorMTX_t), intent(in)	:: d
+   !     receiver, data type and transmitter combinations
+   !     to compute sensitivities for
+   type(dataVectorMTX_t), intent(in)	  :: d
    !   sigma0 is background conductivity parameter
-   type(modelParam_t), intent(in)	:: sigma0
-   !   dsigma is the output array of data sensitivities,
-   !   one for each element in the data array.  Each sensitivity
-   !    is an element of type modelParam, an abstract
-   !    data type that defines the unknow conductivity
-   type(sensMatrix_t), pointer 		:: sens(:)
+   type(modelParam_t), intent(in)	      :: sigma0
+   !   sens is the output structure of data sensitivities,
+   !     stored as model parameters,
+   !     one for each element in the data array.
+   type(sensMatrix_t), pointer 		      :: sens(:)
 
    !  local variables
-   type(modelParam_t), pointer   :: dsigma(:)
-   type(dataBlock_t)  :: dVec
-   integer 		:: i,j,nTx,k,nSite,nTot,ii,iTx, &
+   type(modelParam_t), pointer   :: Jreal(:),Jimag(:)
+   type(dataBlock_t)             :: dTemplate
+   logical      :: isComplex
+   integer 		  :: i,j,nTx,k,nSite,nTotal,ii,iTx, &
 				iDT,nfunc,ncomp,iRx,iFunc,iComp,istat
 
-   ! nTot is number of real data
-   nTot = countData(d)
-   write(0,'(a32,i6,a15)') 'Computing the sensitivities for ',nTot,' data values...'
+   ! nTotal is number of real data
+   nTotal = countData(d)
+   write(0,'(a32,i6,a15)') 'Computing the sensitivities for ',nTotal,' data values...'
 
    ! now, allocate for sensitivity values, if necessary
    if(.not. associated(sens)) then
       call create_sensMatrixMTX(d, sigma0, sens)
    endif
 
-   ! nTX is number of transmitters
+   ! nTx is number of transmitters
    nTx = d%nTx
 
    ! loop over frequencies, computing all sensitivities for
@@ -220,42 +179,72 @@ Contains
       ! now loop over data types
       do i = 1,d%d(j)%nDt
 
-        ! make a local copy of the dataVec for this transmitter and dataType
-        dVec = d%d(j)%data(i)
+        ! make a local copy of the dataBlock for this transmitter and dataType
+        dTemplate = d%d(j)%data(i)
 
         ! get index into dataType dictionary for this dataVec
-        iDT = dVec%dataType
+        iDT = dTemplate%dataType
 
         ! get the dimensions of this data vector
-        nSite = dVec%nSite
-        nComp = dVec%nComp
+        nSite = dTemplate%nSite
+        nComp = dTemplate%nComp
 
         ! keep the user informed
         write(0,'(a35,i4,a12,i4,a4,i4,a6)') &
         	'Computing the sensitivities for tx ',iTx,' & dataType ',iDt,' at ',nSite,' sites'
 
+        ! allocate the rows of Jacobian operator
+        isComplex = dTemplate%isComplex
+		    if(isComplex) then
+		       !  data are complex; one sensitivity calculation can be
+		       !   used for both real and imaginary parts
+		       if(mod(nComp,2).ne.0) then
+		         call errStop('for complex data # of components must be even in calcJ')
+		       endif
+		       nFunc = nComp/2
+		    else
+		       !  data are treated as real: full sensitivity computation is required
+		       !   for each component
+		       nFunc = nComp
+		    endif
+		    allocate(Jreal(nFunc),STAT=istat)
+        allocate(Jimag(nFunc),STAT=istat)
+
         ! loop over sites, computing sensitivity for all components for each site
         do k = 1,nSite
 
-           iRx = dVec%rx(k)
+           iRx = dTemplate%rx(k)
 
            ! compute the sensitivities for these transmitter, data type & receiver
-           call Jrows(iTx,iDt,iRx,sigma0,e0,dsigma)
+           call Jrows(iTx,iDt,iRx,sigma0,e0,Jreal,Jimag)
 
            ! store in the full sensitivity matrix
-           do iComp = 1,nComp
-              sens(j)%v(i)%dm(iComp,k) = dsigma(iComp)
+           ii = 1
+           do iFunc = 1,nFunc
+              if(isComplex) then
+                 sens(j)%v(i)%dm(ii,k)   = Jreal(iFunc)
+                 sens(j)%v(i)%dm(ii+1,k) = Jimag(iFunc)
+                 ii = ii + 2
+              else
+                 ! for real data, throw away the imaginary part
+                 sens(j)%v(i)%dm(ii,k)   = Jreal(iFunc)
+                 ii = ii + 1
+              endif
            enddo
 
         enddo  ! sites
+
+        ! deallocate temporary vectors
+		    do iFunc = 1,nFunc
+		       call deall_modelParam(Jreal(iFunc))
+		       call deall_modelParam(Jimag(iFunc))
+		    enddo
+		    deallocate(Jreal, STAT=istat)
+		    deallocate(Jimag, STAT=istat)
+		    call deall_dataBlock(dTemplate)
+
       enddo  ! dataType's
    enddo  ! tx
-
-   call deall_dataBlock(dvec)
-   do j = 1,nComp
-      call deall_modelParam(dsigma(j))
-   enddo
-   deallocate(dsigma, STAT=istat)
 
   end subroutine calcJ
 
@@ -282,49 +271,55 @@ Contains
    type(solnVector_t), intent(inout), optional	:: emsoln
 
    !  local variables
+   type(dataVector_t) :: d1,d2
    integer 		:: i,j,iTx,iDT
    logical		:: savedSolns
 
-      savedSolns = present(emsoln)
-      if(savedSolns) then
-         if(d%tx .ne. emsoln%tx) then
-            call errStop('EM soln and d do not agree in Jmult')
-         endif
-      endif
+	  savedSolns = present(emsoln)
+	  if(savedSolns) then
+	     if(d%tx .ne. emsoln%tx) then
+	        call errStop('EM soln and d do not agree in Jmult')
+	     endif
+	  endif
 
-      !   get index into transmitter dictionary for this dataVector
-      iTx = d%tx
+	  !   get index into transmitter dictionary for this dataVector
+	  iTx = d%tx
 
-      !  manage any necessary initilization for this transmitter
-      call initSolver(iTx,sigma0,grid,e0,e,comb)
+	  !  manage any necessary initilization for this transmitter
+	  call initSolver(iTx,sigma0,grid,e0,e,comb)
 
-      if(savedSolns) then
-         ! e0 = emsoln
-         call copy_solnVector(e0,emsoln)
-      else
-         ! solve forward problem; result is stored in e0
-         call fwdSolve(iTx,e0)
-      endif
+	  !  initialize the temporary data vectors
+	  d1 = d
+	  d2 = d
 
-      !  compute rhs (stored in comb) for forward sensitivity
-      !  calculation, using conductivity perturbations and
-      !  background soln:
-      call Pmult(e0,sigma0,dsigma,comb)
+	  if(savedSolns) then
+	     ! e0 = emsoln
+	     call copy_solnVector(e0,emsoln)
+	  else
+	     ! solve forward problem; result is stored in e0
+	     call fwdSolve(iTx,e0)
+	  endif
 
-      ! solve forward problem with source in comb
-      call sensSolve(iTx,FWD,comb,e)
+	  !  compute rhs (stored in comb) for forward sensitivity
+	  !  calculation, using conductivity perturbations and
+	  !  background soln:
+	  call Pmult(e0,sigma0,dsigma,comb)
 
-      ! now, loop over data types
-      do i = 1,d%nDt
-         ! get index into the dataType dictionary
-         iDT = d%data(i)%dataType
-         ! finally apply linearized data functionals
-         if(typeDict(iDT)%calcQ) then
-            call Lmult(e0,sigma0,e,d%data(i),dsigma)
-         else
-	        call Lmult(e0,sigma0,e,d%data(i))
-         endif
-      enddo
+	  ! solve forward problem with source in comb
+	  call sensSolve(iTx,FWD,comb,e)
+
+	  ! multiply e by operator L to obtain perturbation in the data
+	  call Lmult(e0,sigma0,e,d1)
+
+	  ! multiply dsigma by operator Q to obtain perturbation in the data
+	  call Qmult(e0,sigma0,dsigma,d2)
+
+	  ! add the two together to compute the total sensitivity
+	  call linComb_dataVector(ONE,d1,ONE,d2,d)
+
+	  ! clean up
+	  call deall_dataVector(d1)
+	  call deall_dataVector(d2)
 
   end subroutine Jmult_TX
 
@@ -385,7 +380,7 @@ Contains
   !**********************************************************************
   subroutine JmultT_TX(sigma0,d,dsigma,emsoln)
 
-   !  Transpose of Jmult mujltiplied by data vector d for one transmitter;
+   !  Transpose of Jmult multiplied by data vector d for one transmitter;
    !   output is a single conductivity parameter in dsigma
    !
    !   sigma0 is background conductivity parameter
@@ -394,117 +389,67 @@ Contains
    !   solutions for this transmitter for conductivity sigma0
    !   (This can be used to avoid recomputing forward solutions,
    !    e.g., in a CG solution scheme)
-   !
-   !  First need to set up transmitter and receiver dictionaries;
-   !  "pointers" to dictionary entries are attached to data vector d
 
-   type(modelParam_t), intent(in)	:: sigma0
+   type(modelParam_t), intent(in)	          :: sigma0
    !   d is the computed (output) data vector, also used to identify
    !     receiver transmitter pairs for various computations
-   type(dataVector_t), intent(in)		:: d
+   type(dataVector_t), intent(in)		        :: d
    !   dsigma is the output conductivity parameter
-   type(modelParam_t), intent(inout)  	:: dsigma
+   type(modelParam_t), intent(inout)  	    :: dsigma
    type(solnVector_t), intent(in), optional	:: emsoln
 
    !  local variables
-   type(modelParam_t)	:: sigmaTemp, Qcomb
+   type(modelParam_t)	:: Qcomb
    integer 		:: i,j,iTx,iDT
-   logical		:: calcSomeQ, firstQ,firstDT
    logical		:: savedSolns
 
-      calcSomeQ = .false.
-      firstQ = .true.
-      savedSolns = present(emsoln)
-      if(savedSolns) then
-         if(d%tx .ne. emsoln%tx) then
-            call errStop('EM soln and d do not agree in JmultT')
-         endif
-      endif
+	  savedSolns = present(emsoln)
+	  if(savedSolns) then
+	     if(d%tx .ne. emsoln%tx) then
+	        call errStop('solution and data vectors do not agree in JmultT')
+	     endif
+	  endif
 
-      dsigma = sigma0
-      call zero(dsigma)
+    ! initialize local variable and output
+    dsigma = sigma0
+    call zero(dsigma)
+    Qcomb = dsigma
 
-      sigmaTemp = sigma0
-      call zero(sigmaTemp)
+	  !   get index into transmitter dictionary for this dataVector
+	  iTx = d%tx
 
-      !   get index into transmitter dictionary for this dataVector
-      iTx = d%tx
+	  !  manage any necessary initilization for this transmitter
+	  call initSolver(iTx,sigma0,grid,e0,e,comb)
 
-      !  manage any necessary initilization for this transmitter
-      call initSolver(iTx,sigma0,grid,e0,e,comb)
+	  if(savedSolns) then
+	     ! e0 = e1
+	     call copy_solnVector(e0,emsoln)
+	  else
+	     ! solve forward problem; result is stored in e0
+	     call fwdSolve(iTx,e0)
+	  endif
 
-      if(savedSolns) then
-         ! e0 = e1
-         call copy_solnVector(e0,emsoln)
-      else
-         ! solve forward problem; result is stored in e0
-         call fwdSolve(iTx,e0)
-      endif
+    ! set up comb using linearized data functionals
+    call LmultT(e0,sigma0,d,comb)
 
-      firstDT=.true.
-      ! now, loop over data types
-      do i = 1,d%nDt
+    ! solve transpose problem with source in comb
+    call sensSolve(iTx,TRN,comb,e)
 
-         ! get index into dataType dictionary
-         iDT = d%data(i)%dataType
+    ! map from edges to conductivity space ... result P^T e
+    !  NOTE: here we throw away imaginary part, even for complex
+    !     data (conceivably might want to save this in some cases!)
+    call PmultT(e0,sigma0,e,dsigma)
 
-         ! set up comb using linearized data functionals
-         !  ... for dataVecs with data functionals depending on conductivity
-         !   parameter also compute analagous comb in parameter space
-         if(typeDict(iDT)%calcQ) then
-            if(firstQ) then
-               !  first transmitter for which Q must be calculated:
-               !   ==> allocate and zero Qcomb (use copy so that paramtype
-               !         is set correctly)
-               !  NOTE: LmultT ADDS to Qcomb, not overwrites
-               !   ==> only zero Qcomb for first transmitter requiring Q
-               Qcomb = sigmaTemp
-               call zero(Qcomb)
-               !  set flags indicating that Q is now non-zero
-               calcSomeQ = .true.
-               firstQ = .false.
-            endif
-            !  BUT: LmultT overwrites comb ... so zero this
-            !       for every transmitter and for the first data type
-	          if (firstDT) then
-	            call zero_rhsVector(comb)
-	            firstDT=.false.
-	          end if
-            call LmultT(e0,sigma0,d%data(i),comb,Qcomb)
-         else
-         ! Zero comb ONLY for the first data type
-          if (firstDT) then
-            call zero_rhsVector(comb)
-            firstDT=.false.
-          end if
-            call LmultT(e0,sigma0,d%data(i),comb)
-         endif
+    !  ... for dataVectors with data functionals depending on conductivity
+    !   parameter also compute analogous comb in parameter space ...
+    !  throw away imaginary part here
+    call QmultT(e0,sigma0,d,Qcomb)
 
-       enddo  ! dataType's
+    !  add Qcomb to P^T e
+    call scMultAdd(ONE,Qcomb,dsigma)
 
-         ! solve forward problem with source in comb
-         call sensSolve(iTx,TRN,comb,e)
-         ! map from nodes to conductivity space ... result in sigmaTemp
-         !  HERE PmultT overwrites sigmaTemp
-         !  NOTE: here we throw away imaginary part, even for complex
-         !     data (conceivably might want to save this in some cases!)
-         call PmultT(e0,sigma0,e,sigmaTemp)
-         call linComb_modelParam(ONE,dsigma,ONE,sigmaTemp,dsigma)
-
-
-
-	  ! In theory, LmultT should compute Qcomb for each transmitter
-	  ! and data type, and add it to dsigma; however, this is currently
-	  ! implemented such that LmultT *adds* to Qcomb, each time it
-	  ! is called. So for now, we add the total Qcomb once at the end.
-      if(calcSomeQ) then
-         !  add Qcomb
-         call linComb_ModelParam(ONE,dsigma,ONE,Qcomb,dsigma)
-      endif
-
-      !  clean up
-      call deall_modelParam(Qcomb)
-      call deall_modelParam(sigmaTemp)
+    !  clean up
+    call deall_modelParam(Qcomb)
 
   end subroutine JmultT_TX
 
@@ -616,12 +561,12 @@ Contains
          iDt = d%data(i)%dataType
 
          ! apply data functionals - loop over sites
-		 do j = 1,d%data(i)%nSite
+		     do j = 1,d%data(i)%nSite
 
-		    ! output is a real vector: complex values come in pairs
-		    call dataResp(emsoln,sigma,iDt,d%data(i)%rx(j),d%data(i)%value(:,j))
+		        ! output is a real vector: complex values come in pairs
+		        call dataResp(emsoln,sigma,iDt,d%data(i)%rx(j),d%data(i)%value(:,j))
 
-		 enddo
+		     enddo
 
       enddo
 
@@ -705,4 +650,4 @@ Contains
 
   end subroutine cleanUp
 
-end module sensComp
+end module SensComp

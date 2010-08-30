@@ -4,13 +4,15 @@ module UserCtrl
 
   implicit none
 
-  character*1, parameter    :: READ_WRITE = 'R'
+  character*1, parameter  :: READ_WRITE = 'R'
   character*1, parameter	:: FORWARD = 'F'
   character*1, parameter	:: COMPUTE_J = 'J'
   character*1, parameter	:: MULT_BY_J = 'M'
   character*1, parameter	:: MULT_BY_J_T = 'T'
   character*1, parameter	:: INVERSE = 'I'
   character*1, parameter	:: TEST_COV = 'C'
+  character*1, parameter  :: TEST_ADJ = 'A'
+  character*1, parameter  :: TEST_SENS = 'S'
 
   ! ***************************************************************************
   ! * input_info contains the list of all essential input information currently
@@ -30,11 +32,12 @@ module UserCtrl
 	! Input files
 	character(80)       :: rFile_Grid, rFile_Model, rFile_Data
 	character(80)       :: rFile_dModel
+  character(80)       :: rFile_EMsoln, rFile_EMrhs
 
 	! Output files
 	character(80)       :: wFile_Grid, wFile_Model, wFile_Data
 	character(80)       :: wFile_dModel
-	character(80)       :: wFile_EMsoln, wFile_Sens
+	character(80)       :: wFile_EMsoln, wFile_EMrhs, wFile_Sens
 
 	! Specify damping parameter for the inversion
 	real(8)             :: lambda
@@ -47,6 +50,12 @@ module UserCtrl
 
 	! Choose the inverse search algorithm
 	character(80)       :: search
+
+  ! Choose the sort of test you wish to perform
+  character(80)       :: test
+
+  ! Specify the magnitude for random perturbations
+  real(8)             :: delta
 
 	! Indicate how much output you want
 	integer             :: output_level
@@ -74,12 +83,17 @@ Contains
   	ctrl%wFile_Data = 'n'
   	ctrl%rFile_dModel = 'n'
   	ctrl%wFile_dModel = 'n'
+  	ctrl%rFile_EMrhs = 'n'
+    ctrl%wFile_EMrhs = 'n'
+    ctrl%rFile_EMsoln = 'n'
   	ctrl%wFile_EMsoln = 'n'
   	ctrl%wFile_Sens = 'n'
   	ctrl%lambda = 1
   	ctrl%eps = 1.0e-7
   	ctrl%rFile_Cov = 'n'
   	ctrl%search = 'NLCG'
+  	ctrl%test = 'J'
+  	ctrl%delta = 0.05
   	ctrl%output_level = 3
 
   end subroutine initUserCtrl
@@ -182,6 +196,14 @@ Contains
         write(*,*) '[TEST_COV]'
         write(*,*) ' -C  rFile_Model wFile_Model [rFile_Cov]'
         write(*,*) '  Applies the model covariance to produce a smooth model output'
+        write(*,*) '[TEST_ADJ]'
+        write(*,*) ' -A  J rFile_Model rFile_dModel rFile_Data [wFile_Model wFile_Data]'
+        write(*,*) '  Tests the equality d^T J m = m^T J^T d for any model and data.'
+        write(*,*) '  Optionally, outputs J m and J^T d.'
+        write(*,*) '[TEST_SENS]'
+        write(*,*) ' -S  rFile_Model rFile_dModel rFile_Data wFile_Data [wFile_Sens]'
+        write(*,*) '  Multiplies by the full Jacobian, row by row, to get d = J m.'
+        write(*,*) '  Compare to the output of [MULT_BY_J] to test [COMPUTE_J]'
         write(*,*)
         write(*,*) 'Optional final argument -v [debug|full|regular|compact|result|none]'
         write(*,*) 'indicates the desired level of output to screen and to files.'
@@ -387,6 +409,136 @@ Contains
         end if
         if (narg > 2) then
             ctrl%rFile_Cov = temp(3)
+        end if
+
+      case (TEST_ADJ) ! A
+        if (narg < 3) then
+           write(0,*) 'Usage: Test the adjoint implementation for each of the critical'
+           write(0,*) '       operators in J = L S^{-1} P + Q'
+           write(0,*)
+           write(0,*) ' -A  J rFile_Model rFile_dModel rFile_Data [wFile_Model wFile_Data]'
+           write(0,*) '  Tests the equality d^T J m = m^T J^T d for any model and data.'
+           write(0,*) '  Optionally, outputs J m and J^T d.'
+           write(0,*)
+           write(0,*) ' -A  L rFile_Model rFile_EMsoln rFile_Data [wFile_EMrhs wFile_Data]'
+           write(0,*) '  Tests the equality d^T L e = e^T L^T d for any EMsoln and data.'
+           write(0,*) '  Optionally, outputs L e and L^T d.'
+           write(0,*)
+           write(0,*) ' -A  S rFile_Model rFile_EMrhs [wFile_EMsoln]'
+           write(0,*) '  Tests the equality b^T S^{-1} b = b^T (S^{-1})^T b for any EMrhs.'
+           write(0,*) '  For simplicity, use one EMrhs for forward and transpose solvers.'
+           write(0,*) '  Optionally, outputs e = S^{-1} b.'
+           write(0,*)
+           write(0,*) ' -A  P rFile_Model rFile_dModel rFile_EMsoln [wFile_Model wFile_EMrhs]'
+           write(0,*) '  Tests the equality e^T P m = m^T P^T e for any EMsoln and data.'
+           write(0,*) '  Optionally, outputs P m and P^T e.'
+           write(0,*)
+           write(0,*) ' -A  Q rFile_Model rFile_dModel rFile_Data [wFile_Model wFile_Data]'
+           write(0,*) '  Tests the equality d^T Q m = m^T Q^T d for any model and data.'
+           write(0,*) '  Optionally, outputs Q m and Q^T d.'
+           write(0,*)
+           write(0,*) 'Finally, generates random 5% perturbations, if implemented:'
+           write(0,*) ' -A  m rFile_Model wFile_Model [delta]'
+           write(0,*) ' -A  d rFile_Data wFile_Data [delta]'
+           write(0,*) ' -A  e rFile_EMsoln wFile_EMsoln [delta]'
+           write(0,*) ' -A  b rFile_EMrhs wFile_EMrhs [delta]'
+           stop
+        else
+           ctrl%test = temp(1)
+           select case (ctrl%test)
+           ! tests of adjoint implementation ...
+           case ('J')
+                ctrl%rFile_Model = temp(2)
+                ctrl%rFile_dModel = temp(3)
+                ctrl%rFile_Data = temp(4)
+                if (narg > 4) then
+                    ctrl%wFile_Model = temp(5)
+                endif
+                if (narg > 5) then
+                    ctrl%wFile_Data = temp(6)
+                endif
+           case ('L')
+                ctrl%rFile_Model = temp(2)
+                ctrl%rFile_EMsoln = temp(3)
+                ctrl%rFile_Data = temp(4)
+                if (narg > 4) then
+                    ctrl%wFile_EMrhs = temp(5)
+                endif
+                if (narg > 5) then
+                    ctrl%wFile_Data = temp(6)
+                endif
+           case ('S')
+                ctrl%rFile_Model = temp(2)
+                ctrl%rFile_EMrhs = temp(3)
+                if (narg > 3) then
+                    ctrl%wFile_EMsoln = temp(4)
+                endif
+           case ('P')
+                ctrl%rFile_Model = temp(2)
+                ctrl%rFile_dModel = temp(3)
+                ctrl%rFile_EMsoln = temp(4)
+                if (narg > 4) then
+                    ctrl%wFile_Model = temp(5)
+                endif
+                if (narg > 5) then
+                    ctrl%wFile_EMrhs = temp(6)
+                endif
+           case ('Q')
+                ctrl%rFile_Model = temp(2)
+                ctrl%rFile_dModel = temp(3)
+                ctrl%rFile_Data = temp(4)
+                if (narg > 4) then
+                    ctrl%wFile_Model = temp(5)
+                endif
+                if (narg > 5) then
+                    ctrl%wFile_Data = temp(6)
+                endif
+           ! random perturbations ...
+           case ('m')
+                ctrl%rFile_Model = temp(2)
+                ctrl%wFile_Model = temp(3)
+                if (narg > 3) then
+                    read(temp(4),*,iostat=istat) ctrl%delta
+                endif
+           case ('d')
+                ctrl%rFile_Data = temp(2)
+                ctrl%wFile_Data = temp(3)
+                if (narg > 3) then
+                    read(temp(4),*,iostat=istat) ctrl%delta
+                endif
+           case ('e')
+                ctrl%rFile_EMsoln = temp(2)
+                ctrl%wFile_EMsoln = temp(3)
+                if (narg > 3) then
+                    read(temp(4),*,iostat=istat) ctrl%delta
+                endif
+           case ('b')
+                ctrl%rFile_EMrhs = temp(2)
+                ctrl%wFile_EMrhs = temp(3)
+                if (narg > 3) then
+                    read(temp(4),*,iostat=istat) ctrl%delta
+                endif
+           case default
+                write(0,*) 'Unknown operator. Usage: -A [J | L | S | P | Q] OR -A [m | d | e | b]'
+                stop
+           end select
+        end if
+
+      case (TEST_SENS) ! S
+        if (narg < 4) then
+           write(0,*) 'Usage: -S  rFile_Model rFile_dModel rFile_Data wFile_Data [wFile_Sens]'
+           stop
+        else
+           ctrl%rFile_Model = temp(1)
+           ctrl%rFile_dModel = temp(2)
+           ctrl%rFile_Data = temp(3)
+           ctrl%wFile_Data = temp(4)
+        end if
+        if (narg > 4) then
+           ctrl%wFile_Sens = temp(5)
+        end if
+        if (narg > 5) then
+           ctrl%rFile_fwdCtrl = temp(6)
         end if
 
       case default

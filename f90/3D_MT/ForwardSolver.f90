@@ -137,9 +137,9 @@ Contains
    !**********************************************************************
    subroutine exitSolver(e0,e,comb)
    !   deallocates b0, comb, e0, e and solver arrays
-   type(solnVector_t), intent(inout)			:: e0
+   type(solnVector_t), intent(inout), optional  :: e0
    type(solnVector_t), intent(inout), optional	::e
-   type(rhsVector_t), intent(inout), optional		::comb
+   type(rhsVector_t), intent(inout), optional	::comb
 
    ! local variables
    logical			:: initForSens
@@ -147,7 +147,9 @@ Contains
    initForSens = present(comb)
 
    call deall_RHS(b0)
-   call deall_solnVector(e0)
+   if(present(e0)) then
+      call deall_solnVector(e0)
+   endif
 
    if(initForSens) then
       call deall_rhsVector(comb)

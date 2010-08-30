@@ -65,12 +65,20 @@ interface scMult ! operator (*)
    MODULE PROCEDURE scMult_modelParam
 end interface
 
+interface scMultAdd
+   MODULE PROCEDURE scMultAdd_modelParam
+end interface
+
 interface dotProd
    MODULE PROCEDURE dotProd_modelParam
 end interface
 
 interface linComb
    MODULE PROCEDURE linComb_modelParam
+end interface
+
+interface deall
+   MODULE PROCEDURE deall_modelParam
 end interface
 
 !  I/O interfaces
@@ -287,6 +295,22 @@ Contains
 
   end subroutine scMult_modelParam
 
+  ! **********************************************************************
+    subroutine scMultAdd_modelParam(a,mIn,mOut)
+  !  computes mOut = a * mIn + mOut for modelParam object m and real scalar a
+
+    real (kind=prec), intent(in)                :: a
+    type(modelParam_t), intent(in)              :: mIn
+    type(modelParam_t), intent(inout)           :: mOut
+
+    ! check to see that input m is allocated
+    if(.not.(mIn%allocated .and. mOut%allocated)) then
+       call errStop('input not allocated on call to scMultAdd_modelParam')
+    endif
+
+    call linComb_modelParam(a,mIn,ONE,mOut,mOut)
+
+  end subroutine scMultAdd_modelParam
 
    !**********************************************************************
    subroutine copy_modelParam(mOut,mIn)

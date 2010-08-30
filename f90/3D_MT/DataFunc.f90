@@ -1,31 +1,29 @@
 ! *****************************************************************************
 module dataFunc
-  ! 3D MT data functionals:  This module contains
-  !  (1) receiver dictionary (rxDict), containing sparse representation of
-  !    data functionals required to define MT impedance or other interpretation
-  !    parameters, including linear and linearized functionals.
-  !  (2) routines for evaluation of impedances, and ultimately other
+  ! 3D MT data functionals
+
+  ! This module contains
+  !  (1) routines for evaluation of impedances, and ultimately other
   !       interpretation parameters
-  !  (3) routines to compute data functionals for linearized
+  !  (2) routines to compute data functionals for linearized
   !       impedances,  and ultimately other interpretation paramters
   !   The idea:
-  !     -> first initialize rxDict by calling
-  !          appropriate initialization/setup routines
-  !           (included here, assuming simple cases only)
-  !     -> data are stored in structures (defined in module data_vector)
+  !     -> first the dictionaries txDict, typeDict, rxDict are initialized
+  !         by calling appropriate initialization/setup routines
+  !     -> data are stored in structures (defined in module DataSpace)
   !        which contain indices into transmitter and receiver dictionaries
   !        in addition to actual data values.  These indices are used by
-  !        the data function computation routines to compute predicted data.
+  !        the data functional computation routines to compute predicted data.
   !
   !
   !  This module is specific to 3D MT; similar modules will need to be written
   !     to implement data functionals for other problems
 
-  use emfieldinterp
+  use EMfieldInterp
   use SolnSpace
   use receivers
   use transmitters
-  use datatypes
+  use dataTypes
 
   implicit none
 
@@ -50,7 +48,7 @@ Contains
   type (modelParam_t), intent(in) :: Sigma ! used to compute ef
   integer, intent(in)			:: iDT
   integer, intent(in) 			:: iRX
-  real(kind=prec), intent(inout)	:: Resp(*)
+  real(kind=prec), intent(inout)	:: Resp(:)
   complex(kind=prec), allocatable :: Z(:)
 
   ! Definition of the impedance elements:
@@ -344,14 +342,11 @@ Contains
   end subroutine dataResp
 !
 !****************************************************************************
-  subroutine Lrows(e0,Sigma0,iDT,iRX,L,Q)
+  subroutine Lrows(e0,Sigma0,iDT,iRX,L)
   !  given input background electric field solution (both modes; e0),
   !  indices into data type/receiver dictionaries
   !  compute array of sparse complex vectors giving coefficients
   !  of linearized impedance functional (complex representation)
-  !  For data types with attribute computeQ = .true. also returns
-  !     derivative of data functional with respect to model paramters
-  !         (NOT YET IMPLEMENTED FOR 3D MT!!!!)
 
   type (solnVector_t), intent(in)		   :: e0
   type (modelParam_t), intent(in)  :: Sigma0
@@ -362,7 +357,7 @@ Contains
   !     be returned by data functional routines could be > 1)
   !   NOTE:  in principal the comparable input arguments in
   !        the 2D program should also be of type sparseVector!
-  type(sparseVector_t), intent(inout)		:: L(*),Q(*)
+  type(sparseVector_t), intent(inout)		:: L(:)
 
   !  local variables
   complex(kind=prec)	:: Binv(2,2)
@@ -526,27 +521,53 @@ Contains
   end subroutine Lrows
 !
 !****************************************************************************
-  subroutine Qrows(e0,Sigma0,iDT,iRX,L,Q)
-  !  given input background electric field solution (both modes; e0),
-  !  indices into data type/receiver dictionaries
-  !  compute array of sparse complex vectors giving coefficients
-  !  of linearized impedance functional (complex representation)
-  !  For data types with attribute computeQ = .true. also returns
-  !     derivative of data functional with respect to model paramters
-  !         (NOT YET IMPLEMENTED FOR 3D MT!!!!)
+  subroutine Qrows(e0,Sigma0,iDT,iRX,Qreal,Qimag)
+  !  given input background solution vector (e0) and model parameter (Sigma0)
+  !  and indices into data type and receiver dictionaries
+  !  compute derivative of data functional with respect to model parameters
+  !  for all components of the data type ...
+  !             (ZERO VECTORS FOR 3D MT!!!!)
 
-  type (solnVector_t), intent(in)		   :: e0
-  type (modelParam_t), intent(in)  :: Sigma0
-  integer, intent(in)			   :: iDT, iRX
-  !   NOTE: Lz and Qz have to be declared as arrays for
+  type (solnVector_t), intent(in)		    :: e0
+  type (modelParam_t), intent(in)       :: Sigma0
+  integer, intent(in)			              :: iDT, iRX
+  !   NOTE: Qreal and Qimag have to be declared as arrays for
   !     consistency with calling program (in general the
   !     number nFunc of complex data functionals that will
   !     be returned by data functional routines could be > 1)
-  !   NOTE:  in principal the comparable input arguments in
-  !        the 2D program should also be of type sparseVector!
-  type(sparseVector_t), intent(inout)		:: L(*),Q(*)
+  !   NOTE: Qreal and Qimag both exist regardless of whether the data
+  !     are real or complex, since Q itself is complex
+  type(modelParam_t), intent(inout)     :: Qreal(:), Qimag(:)
 
+  ! local variables
+  integer       :: istat,ncomp,nFunc,iFunc
+  logical       :: isComplex
 
+  ncomp = typeDict(iDT)%nComp
+  isComplex = typeDict(iDT)%isComplex
+  if(isComplex) then
+     !  data are complex; one sensitivity calculation can be
+     !   used for both real and imaginary parts
+     if(mod(ncomp,2).ne.0) then
+        call errStop('for complex data # of components must be even in Qrows')
+     endif
+     nFunc = ncomp/2
+  else
+     !  data are treated as real: full sensitivity computation is required
+     !   for each component
+     nFunc = ncomp
+  endif
+
+  ! set the rows of Q to zero
+  if((size(Qreal) .ne. nFunc) .or. (size(Qimag) .ne. nFunc)) then
+    call errStop('incorrect output size in Qrows')
+  endif
+  do iFunc = 1, nFunc
+    Qreal(iFunc) = Sigma0
+    call zero(Qreal(iFunc))
+    Qimag(iFunc) = Sigma0
+    call zero(Qimag(iFunc))
+	enddo
 
   end subroutine Qrows
 
