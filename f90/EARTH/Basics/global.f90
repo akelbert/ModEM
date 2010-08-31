@@ -16,13 +16,13 @@ module global
 
   ! ***************************************************************************
   ! * dictionaries of receivers, transmitters and transfer functions
-  type (Obs_List), save								:: obsList
-  type (Freq_List), save								:: freqList
-  type (TF_List), save								:: TFList
+  !type (Obs_List), save								:: obsList
+  !type (Freq_List), save								:: freqList
+  !type (TF_List), save								:: TFList
 
   ! ***************************************************************************
   ! * user-defined list of radii in meters at which we output the solution
-  type (Rad_List), save								:: slices
+  !type (Rad_List), save								:: slices
 
   ! ***************************************************************************
   ! * rho: storing the model on the grid - resistivity defined in cell centres

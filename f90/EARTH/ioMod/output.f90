@@ -6,6 +6,7 @@ module output
 
   use iotypes
   use iospec
+  use datadef
   use griddef
   use sg_vector
   use sg_sparse_vector
@@ -14,11 +15,10 @@ module output
   use responses
   use functionals
   use dataspace
+  use dataTypes
+  use transmitters
+  use receivers
   implicit none
-
-
-  logical, private    :: exists ! for I/O inquiries
-
 
 
 Contains

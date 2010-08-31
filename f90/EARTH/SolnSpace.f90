@@ -12,6 +12,8 @@ use utilities
 use sg_vector
 use sg_boundary
 use sg_sparse_vector
+use transmitters
+use receivers
 
 implicit none
 
@@ -25,6 +27,14 @@ implicit none
     logical			:: allocated = .false.
   end type solnVectorMTX_t
 
+  ! ***************************************************************************
+  ! * full solution information for a single 'slice' at a fixed radius (in km)
+  type :: solution_t
+
+    type (receiver_t), pointer, dimension(:,:)  :: o
+    complex(8), pointer, dimension(:,:)         :: x,y,z    !nx,ny
+
+  end type solution_t
 
 Contains
 

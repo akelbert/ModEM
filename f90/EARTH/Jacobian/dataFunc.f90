@@ -9,7 +9,10 @@ module dataFunc
   use griddef
   use sg_vector
   use sg_sparse_vector
-  use interp
+  use solnspace
+  use dataTypes
+  use transmitters
+  use receivers
   use dataspace
   implicit none
 
@@ -17,7 +20,7 @@ module dataFunc
 Contains
 
   ! ***************************************************************************
-  ! * operatorG acts on an input vector dvec length m = # of complex data values,
+  ! * LmultT acts on an input vector dvec length m = # of complex data values,
   ! * to produce a full complex vector defined on edges of the grid.
   ! * Matrix G consists of m vectors g(1),..,g(m), each defined on grid edges.
   ! * The output vector is G * dvec, computed by matrix rules of multiplication.
@@ -28,7 +31,7 @@ Contains
   ! * place. These are just the checks to avoid segmentation fault.
   ! * Output vector should not contain any non-zero boundary values.
 
-  subroutine operatorG(dvec,H,outE)
+  subroutine LmultT(dvec,H,outE)
 
 	! uses: funcList, obsList, freqList, grid
 	type (dataValue_t), dimension(:), intent(in)		:: dvec	! residuals
@@ -49,11 +52,11 @@ Contains
 	! Perform matrix multiplication column by column
 	do j = 1,m
   	  if (.not.dvec(j)%obs%defined) then
-		!write(0,*) 'Observatory ',trim(dvec(j)%obs%code),' is not defined at operatorG'
+		!write(0,*) 'Observatory ',trim(dvec(j)%obs%code),' is not defined at LmultT'
 		cycle
 	  end if
 	  ! Compute the column vector of matrix G, which is g_j
-	  call compute_g(dvec(j)%func,dvec(j)%obs,H,g_sparse)
+	  call Lrows(dvec(j)%func,dvec(j)%obs,H,g_sparse)
 	  ! Output vector x = G*r = \sum_{j=1}^m {g_j r_j}
 	  call add_scvector(dvec(j)%resp%value,g_sparse,outE)
 	end do
@@ -61,15 +64,15 @@ Contains
 	call deall_sparsevecc(g_sparse)
 	return	! return the outE
 
-  end subroutine operatorG	! operatorG
+  end subroutine LmultT	! LmultT
 
 
   ! ***************************************************************************
-  ! * operatorGt acts on an input vector defined on edges, to produce an output
+  ! * Lmult acts on an input vector defined on edges, to produce an output
   ! * data vector of length m; $G^* h = (g_1^* h,..,g_m^* h)^T$ is a vector of
   ! * linearised data functionals.
 
-  subroutine operatorGt(inE,H,dvec)
+  subroutine Lmult(inE,H,dvec)
 
 	! uses: funcList, obsList, freqList, grid
 	type (dataValue_t), dimension(:), intent(inout)		:: dvec	! residuals
@@ -87,11 +90,11 @@ Contains
 	! Perform matrix multiplication column by column
 	do j = 1,m
   	  if (.not.dvec(j)%obs%defined) then
-		!write(0,*) 'Observatory ',trim(dvec(j)%obs%code),' is not defined at operatorG'
+		!write(0,*) 'Observatory ',trim(dvec(j)%obs%code),' is not defined at LmultT'
 		cycle
 	  end if
 	  ! Compute the column vector of matrix G, which is g_j
-	  call compute_g(dvec(j)%func,dvec(j)%obs,H,g_sparse)
+	  call Lrows(dvec(j)%func,dvec(j)%obs,H,g_sparse)
 	  ! Compute the j'th entry of the data vector, g_j^* inE
 	  dvec(j)%resp%value = dotProd_scvector_f(g_sparse,inE)
 	end do
@@ -99,16 +102,16 @@ Contains
 	call deall_sparsevecc(g_sparse)
 	return	! return the outE
 
-  end subroutine operatorGt	! operatorGt
+  end subroutine Lmult	! Lmult
 
 
 
   ! ***************************************************************************
-  ! * compute_g is a subroutine to output a full vector g_j defined on edges,
+  ! * Lrows is a subroutine to output a full vector g_j defined on edges,
   ! * such that for a single frequency and a single observatory,
   ! * $\pd{psi_{\omega}^j}{veca} = g_j^* \pd{vecH}{veca}$
 
-  subroutine compute_g(dataType,obs,H,g_sparse)
+  subroutine Lrows(dataType,obs,H,g_sparse)
 
 	! uses: grid
 	type (functional_t), intent(in)					:: dataType
@@ -122,13 +125,13 @@ Contains
 	real(8)											:: EARTH_R
 
 	if (.not.obs%located) then
-	  write(0,*) 'Error: Observatory ',trim(obs%code),' not yet located in compute_g'
+	  write(0,*) 'Error: Observatory ',trim(obs%code),' not yet located in Lrows'
 	  stop
 	  !call LocateReceiver(grid,obs)
 	end if
 
 	if (.not.obs%defined) then
-	  write(0,*) 'Error: Observatory ',trim(obs%code),' is not defined at compute_g'
+	  write(0,*) 'Error: Observatory ',trim(obs%code),' is not defined at Lrows'
 	  stop
 	end if
 
@@ -167,7 +170,7 @@ Contains
 
 	else
 
-	  write(0, *) 'Error: (compute_g) unknown data functional', dataType%name
+	  write(0, *) 'Error: (Lrows) unknown data functional', dataType%name
 	  stop
 
 	end if
@@ -180,7 +183,7 @@ Contains
 	call deall_sparsevecc(Lz)
 	call deall_sparsevecc(gc_sparse)
 
-  end subroutine compute_g	! compute_g
+  end subroutine Lrows	! Lrows
 
 
 

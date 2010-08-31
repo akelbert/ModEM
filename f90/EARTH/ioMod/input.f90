@@ -11,6 +11,9 @@ module input
   use dataspace
   use SolnSpace
   use iotypes
+  use dataTypes
+  use transmitters
+  use receivers
   implicit none
 
   !integer, parameter							:: ioStartup=101
@@ -26,9 +29,6 @@ module input
   !integer, parameter							:: ioObs=18
   !integer, parameter							:: ioFunc=19
   !integer, parameter							:: ioRad=15
-
-  logical										:: exists ! for I/O inquiries
-  character(100)								:: label  ! first line in files
 
 Contains
 
@@ -255,196 +255,6 @@ Contains
 	return
 
   end subroutine initCrust	! initCrust
-
-  ! ***************************************************************************
-  ! * initFreq reads the file fn_period (currently periods in days, could be
-  ! * modified in the future) to store the freq or angular frequencies omega
-  subroutine initFreq(cUserDef,myfreq)
-
-	! Not sure yet, whether freq, period or omega will be required
-	implicit none
-    type (input_info), intent(in)							:: cUserDef
-	type (Freq_List), intent(out)							:: myfreq
-    integer				                                    :: num
-    integer				                                    :: i,j,ios=0
-    real(8)								                    :: tmp
-    real(8), dimension(:), allocatable				        :: value,days
-    character(80)                                                       :: basename
-
-    open(ioTX,file=cUserDef%fn_period,status='old',form='formatted',iostat=ios)
-
-    write(6,*) 'Reading from the periods file ',trim(cUserDef%fn_period)
-    read(ioTX,'(a)') label
-    ! write(6,*) label
-
-	read(ioTX,*) num
-	allocate(value(num),days(num))
-	do i=1,num
-      read(ioTX,*) days(i) ! reading period in *days*
-	  value(i)=1/(days(i)*24*60*60)	! turn into freq.
-	  value(i)=clean(value(i))
-	end do
-
-!        read(ioTX,*) value(i) ! reading frequency value
-!	  days(i)=(1/value(i))/(24*60*60)	! turn into period
-!	end do
-
-	close(ioTX)
-
-	! sort the values in ascending order
-    do i=1,num
-      do j=i+1,num
-		if(value(i)>value(j)) then
-          tmp=value(i)
-          value(i)=value(j)
-          value(j)=tmp
-		  tmp=days(i)
-          days(i)=days(j)
-          days(j)=tmp
-        end if
-      end do
-    end do
-
-	!omega(1:num)=2.0d0*pi*value(1:num)
-	allocate(myfreq%info(num))
-	myfreq%n=num
-	myfreq%info(1:num)%value=value(1:num)
-	myfreq%info(1:num)%period=days(1:num)
-	do i=1,num
-	  myfreq%info(i)%i = i
-	end do
-
-	deallocate(value)
-
-    basename=cUserDef%fn_period(1:index(cUserDef%fn_period,'.')-1)
-
-    inquire(FILE=trim(basename)//'.codes',EXIST=exists)
-    ! If file is not present, set the codes to the frequency numbers
-    if (.not.exists) then
-       do i=1,num
-          write (myfreq%info(i)%code,'(i3.3)') i
-       end do
-    else
-       open(ioTX,file=trim(basename)//'.codes',status='old',form='formatted',iostat=ios)
-       read(ioTX,'(a)') label
-       read(ioTX,*) num !should be the same as number of frequencies
-       do i=1,num
-          read(ioTX,*) myfreq%info(i)%code
-       end do
-       close(ioTX)
-    end if
-
-    return
-
-  end subroutine initFreq  !	initFreq
-
-
-  ! ***************************************************************************
-  ! * initCoords reads the file fn_coords that contains the observatory codes
-  ! * and locations. We use this information to output responses at these points,
-  ! * also to store the data, if computing the Jacobian
-
-  subroutine initCoords(cUserDef,myobs)
-
-	implicit none
-    type (input_info), intent(in)							:: cUserDef
-	type (Obs_List), intent(out)							:: myobs
-    integer				                                    :: num
-    integer				                                    :: i,j,ios=0
-
-    open(ioRX,file=cUserDef%fn_coords,status='old',form='formatted',iostat=ios)
-
-    write(6,*) 'Reading from the coordinates file ',trim(cUserDef%fn_coords)
-    read(ioRX,'(a)') label
-    ! write(6,*) label
-
-	read(ioRX,*) num
-	allocate(myobs%info(num))
-	do i=1,num
-
-      read(ioRX,*) myobs%info(i)%code,myobs%info(i)%colat,myobs%info(i)%lon
-	  myobs%info(i)%lat = 90.0d0 - myobs%info(i)%colat
-	  myobs%info(i)%defined = .TRUE.
-
-	end do
-
-	close(ioRX)
-
-	myobs%n = num
-
-
-    return
-
-  end subroutine initCoords !	initCoords
-
-
-  ! ***************************************************************************
-  ! * initTF reads the file fn_func that contains the information about the
-  ! * number and the types of data functionals to use
-  subroutine initTF(cUserDef,TFList)
-
-	implicit none
-    type (input_info), intent(in)							:: cUserDef
-	type (TF_List), intent(out)								:: TFList
-    integer				                                    :: num,i,ios
-
-    open(ioDT,file=cUserDef%fn_func,status='old',form='formatted',iostat=ios)
-
-    write(6,*) 'Reading from the transfer functions file ',trim(cUserDef%fn_func)
-    read(ioDT,'(a)') label
-
-	read(ioDT,*) num
-	allocate(TFList%info(num))
-	do i=1,num
-
-      read(ioDT,*) TFList%info(i)%name,TFList%info(i)%nComp,TFList%info(i)%w
-
-	end do
-
-	close(ioDT)
-
-	TFList%n = num
-
-  end subroutine initTF	! initTF
-
-
-  ! *****************************************************************************
-  ! * initSlices reads the file fn_slices that contains the information about the
-  ! * number and the values of grid radii at which we output full solution
-  subroutine initSlices(cUserDef,slices)
-
-	implicit none
-    type (input_info), intent(in)							:: cUserDef
-	type (Rad_List), intent(out)							:: slices
-    integer				                                    :: num,i,ios
-
-	inquire(FILE=cUserDef%fn_slices,EXIST=exists)
-	! If file is present, initialize the output radii ("slices")
-	if (.not.exists) then
-	  write(0,*) 'Warning: No radii specified; we will only output surface solution'
-	  allocate(slices%r(1))
-	  slices%n = 1
-	  slices%r(1) = EARTH_R
-	end if
-
-    open(ioRad,file=cUserDef%fn_slices,status='old',form='formatted',iostat=ios)
-
-    write(6,*) 'Reading from the output radii file ',trim(cUserDef%fn_slices)
-    read(ioRad,'(a)') label
-
-	read(ioRad,*) num
-	allocate(slices%r(num))
-	do i=1,num
-
-      read(ioRad,*) slices%r(i)
-
-	end do
-
-	close(ioRad)
-
-	slices%n = num
-
-  end subroutine initSlices	! initSlices
 
 
   ! ***************************************************************************

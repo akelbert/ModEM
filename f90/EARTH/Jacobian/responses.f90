@@ -3,9 +3,8 @@ module responses
 	! Module responses contains the variables and the basic subroutines to do
 	! with the data responses and the penalty functional and their derivatives
 
-  use datadef
-  use sg_sparse_vector
-  use interp
+  use SolnSpace
+  use receivers
   use global, only: grid
   implicit none
 

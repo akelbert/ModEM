@@ -189,7 +189,7 @@ Contains
 				  trim(TFList%info(ifunc)%name), ' responses...',ifreq,freq%value
 
 		! $G_\omega r_\omega$
-  		call operatorG(d%v(ifreq,ifunc,:),Hj,F)
+  		call LmultT(d%v(ifreq,ifunc,:),Hj,F)
 
 		!print *, 'operator G successful',Hj%x
 

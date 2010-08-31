@@ -352,6 +352,7 @@ end program earth
 	use ringcurrent
 	use maxwells
 	use output_orig
+	use transmitters
   	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -504,6 +505,7 @@ end program earth
 	use dataMisfit
 	use boundaries	!for testing
 	use senscomp
+    use transmitters
 	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -589,6 +591,8 @@ end program earth
 	use dataMisfit
 	use boundaries	!for testing
 	use senscomp
+    use transmitters
+    use dataTypes
 	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -735,6 +739,8 @@ end program earth
 	use dataFunc
 	use dataMisfit
 	use senscomp
+    use transmitters
+    use dataTypes
 	implicit none
 
 	type (sensMatrix_t)					    :: dR
@@ -886,6 +892,9 @@ end program earth
 	use initFields
 	use dataFunc
 	use dataMisfit
+    use transmitters
+    use dataTypes
+    use receivers
 	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -953,7 +962,7 @@ end program earth
 		  end if
 
 		  ! compute $\g_j$ and set $\tilde{\b} = \g_j$
-		  call compute_g(TFList%info(ifunc),obsList%info(iobs),H,g_sparse)
+		  call Lrows(TFList%info(ifunc),obsList%info(iobs),H,g_sparse)
 		  call create_cvector(grid,F,EDGE)
 		  call add_scvector(C_ONE,g_sparse,F)
 
@@ -1055,6 +1064,8 @@ end program earth
 	use initFields
 	use dataFunc
 	use dataMisfit
+    use transmitters
+    use dataTypes
 	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -1161,7 +1172,7 @@ end program earth
 		  ! Forcing term F should not contain any non-zero boundary values
 		  call operatorM(dH,F,omega,rho,grid,fwdCtrls,errflag,adjoint,delta)
 
-		  call operatorGt(dH,H,psi%v(ifreq,ifunc,:))
+		  call Lmult(dH,H,psi%v(ifreq,ifunc,:))
 
 		  misfit%dRda(ifreq,ifunc,index) &
 			= -2. * dreal(sum(conjg(wres%v(ifreq,ifunc,:)%resp%value) * psi%v(ifreq,ifunc,:)%resp%value))
@@ -1209,6 +1220,8 @@ end program earth
 	use dataFunc
 	use dataMisfit
 	use sg_spherical
+    use transmitters
+    use dataTypes
 	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -1321,11 +1334,11 @@ end program earth
 	call calcResponses(freq,H,dat,psi)
 	!dat%v(1,1,1)%resp%value = (1000000.,-200000)
 	!dat%v(1,1,2)%resp%value = (1500000.,-250000)
-  	call operatorG(dat%v(1,1,:),H,E2)
+  	call LmultT(dat%v(1,1,:),H,E2)
 	!print *,dat%v(1,1,:)%resp%value
 	value1 = dotProd(e1,e2)
 	print *, "Value 1 = ",value1
-  	call operatorGt(E1,H,psi%v(1,1,:))
+  	call Lmult(E1,H,psi%v(1,1,:))
 	!print *,psi%v(1,1,:)%resp%value
 	value2 = sum(conjg(dat%v(1,1,:)%resp%value) * psi%v(1,1,:)%resp%value)
 	print *, "Value 2 = ",value2
@@ -1404,12 +1417,12 @@ end program earth
 
 
 	  ! compute $\g_j$ and set $\tilde{\b} = \g_j$
-	  call compute_g(TFList%info(ifunc),obsList%info(k(1)),H,g_sparse)
+	  call Lrows(TFList%info(ifunc),obsList%info(k(1)),H,g_sparse)
 	  call create_cvector(grid,F1,EDGE)
 	  call add_scvector(C_ONE,g_sparse,F1)
 
 	  ! compute $\g_j$ and set $\tilde{\b} = \g_j$
-	  call compute_g(TFList%info(ifunc),obsList%info(k(2)),H,g_sparse)
+	  call Lrows(TFList%info(ifunc),obsList%info(k(2)),H,g_sparse)
 	  call create_cvector(grid,F2,EDGE)
 	  call add_scvector(C_ONE,g_sparse,F2)
 

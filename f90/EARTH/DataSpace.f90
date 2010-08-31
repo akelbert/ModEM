@@ -6,7 +6,9 @@ module DataSpace
 
   use utilities
   use math_constants
-  use datadef
+  use dataTypes
+  use transmitters
+  use receivers
   implicit none
 
   interface assignment (=)

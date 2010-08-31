@@ -5,7 +5,6 @@ module main
   use input
   use iospec
   use iotypes
-  use interp
   use math_constants
   use model_operators
   use modeldef
@@ -16,6 +15,9 @@ module main
   use data_vectors
   use sg_scalar
   use dataspace
+  use dataTypes
+  use transmitters
+  use receivers
   implicit none
 
 
@@ -253,15 +255,10 @@ Contains
 	call deall_dataVectorMTX(res)
 	call deall_dataVectorMTX(wres)
 
-	do i = 1,obsList%n
-	    call deall_sparsevecc(obsList%info(i)%Lx)
-	    call deall_sparsevecc(obsList%info(i)%Ly)
-	    call deall_sparsevecc(obsList%info(i)%Lz)
-	end do
-	deallocate(obsList%info,STAT=istat)
-	deallocate(freqList%info,STAT=istat)
-	deallocate(TFList%info,STAT=istat)
-	deallocate(slices%r,STAT=istat)
+    ! Deallocate dictionaries
+	call deall_obsList()
+	call deall_freqList()
+	call deall_TFList()
 
 	if (allocated(misfitValue)) then
 	  deallocate(misfitValue)

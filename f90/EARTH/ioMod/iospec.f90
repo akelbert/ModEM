@@ -15,7 +15,6 @@ module iospec
   ! indicates the required level of output
   ! integer, save							:: output_level
 
-
 Contains
 
   ! ***************************************************************************

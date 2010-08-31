@@ -1,16 +1,104 @@
 ! *****************************************************************************
-module interp
-  ! Module containing the Earth's surface interpolation subroutines
+module receivers
+  ! This module contains the receiver dictionary (rxDict) for EARTH
+  ! Also contains the Earth's surface interpolation subroutines
 
-  use modeldef
-  use datadef
-  use sg_vector
   use sg_sparse_vector
+  use math_constants
   use utilities
+  use iotypes
+
   implicit none
 
+  public            :: initCoords, initObsList, deall_obsList
+
+  ! ***************************************************************************
+  ! * type receiver_t contains the information about a single observatory; we
+  ! * define as many of them as there are observatories (nobs)
+  ! * This definition of the receiver has the limitation that it is assumed to
+  ! * be located on an ij-plane. It can be extended to being located at any
+  ! * point in the domain, if required, by modifying the LocateReceiver code,
+  ! * and making the ComputeInterpWeights a 3-D interpolation routine.
+  type :: receiver_t
+
+    ! observatory code that usually has three letters, but may have more
+    character(80)                           :: code
+    ! observatory location: co-latitude and longitude in degrees
+    real(8)                                 :: colat,lat,lon
+    ! observatory location: radius in km (default is EARTH_R)
+    real(8)                                 :: rad = EARTH_R
+    ! once you define a receiver, need to set defined to TRUE
+    logical                                 :: defined=.FALSE.
+
+    ! these values specify the location of the receiver relative to the grid,
+    ! required for interpolation. They only need to be computed once.
+    integer                                 :: i,j,k
+    ! the proportions for the distance from the cell corner, for linear interp.
+    real(8)                                 :: p_crn,q_crn
+    ! the proportions for the distance from the cell center, for bilinear interp.
+    real(8)                                 :: p_ctr,q_ctr
+    ! the location of the observatory relative to the center of the face (which side
+    ! from the mid-face) can be derived from comparing the values p_crn and q_crn to 1/2.
+
+    ! vectors that store the weights for interpolation
+    type (sparsevecc)                       :: Lx,Ly,Lz
+
+    ! indicator located is set to TRUE once the above values are computed
+    logical                                 :: located=.FALSE.
+
+  end type receiver_t
+
+  ! ***************************************************************************
+  ! * contains the full information about the observatories only
+  type :: Obs_List
+
+    integer                                     :: n
+    type (receiver_t), pointer, dimension(:)        :: info !nobs
+
+  end type Obs_List
+
+  ! receiver dictionary
+  type (Obs_List), save, public                :: obsList
 
 Contains
+
+  ! ***************************************************************************
+  ! * initCoords reads the file fn_coords that contains the observatory codes
+  ! * and locations. We use this information to output responses at these points,
+  ! * also to store the data, if computing the Jacobian
+
+  subroutine initCoords(cUserDef,myobs)
+
+    implicit none
+    type (input_info), intent(in)                           :: cUserDef
+    type (Obs_List), intent(out)                            :: myobs
+    integer                                                 :: num
+    integer                                                 :: i,j,ios=0
+
+    open(ioRX,file=cUserDef%fn_coords,status='old',form='formatted',iostat=ios)
+
+    write(6,*) 'Reading from the coordinates file ',trim(cUserDef%fn_coords)
+    read(ioRX,'(a)') label
+    ! write(6,*) label
+
+    read(ioRX,*) num
+    allocate(myobs%info(num))
+    do i=1,num
+
+      read(ioRX,*) myobs%info(i)%code,myobs%info(i)%colat,myobs%info(i)%lon
+      myobs%info(i)%lat = 90.0d0 - myobs%info(i)%colat
+      myobs%info(i)%defined = .TRUE.
+
+    end do
+
+    close(ioRX)
+
+    myobs%n = num
+
+
+    return
+
+  end subroutine initCoords !   initCoords
 
   ! ***************************************************************************
   ! * initObsList initializes the interpolation parameters for a pre-defined
@@ -31,6 +119,24 @@ Contains
 	end do
 
   end subroutine initObsList
+
+
+  ! **************************************************************************
+  ! Cleans up and deletes receiver dictionary at end of program execution
+  subroutine deall_obsList()
+
+    integer     :: i,istat
+
+    if (associated(obsList%info)) then
+        do i = 1,obsList%n
+            call deall_sparsevecc(obsList%info(i)%Lx)
+            call deall_sparsevecc(obsList%info(i)%Ly)
+            call deall_sparsevecc(obsList%info(i)%Lz)
+        end do
+        deallocate(obsList%info,STAT=istat)
+    end if
+
+  end subroutine deall_obsList
 
 
   ! ***************************************************************************
@@ -418,4 +524,4 @@ Contains
 
 
 
-end module interp
+end module receivers
