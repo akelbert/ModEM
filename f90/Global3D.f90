@@ -645,7 +645,7 @@ end program earth
 	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
 	  ! Compute the RHS = - del x drho (del x H)
-	  call operatorlC(H1D%solns(ifreq),F,grid)
+	  call operatorlC(H1D%solns(ifreq)%vec,F,grid)
 	  call diagMult(drhoF,F,F)
 	  call operatorCt(F,Bj,grid)
 	  call operatorD_Si_divide(Bj,grid)
@@ -658,7 +658,7 @@ end program earth
 
 	  ! Full solution for one frequency is the sum H1D + dH
 	  Hj = dH
-	  call linComb_cvector(C_ONE,H1D%solns(ifreq),C_ONE,dH,Hj)
+	  call linComb_cvector(C_ONE,H1D%solns(ifreq)%vec,C_ONE,dH,Hj)
 
 	  ! compute and output fields; C and D responses at cells
 	  call outputSolution(freq,Hj,slices,grid,cUserDef,rho,'h')
@@ -915,136 +915,136 @@ end program earth
 	logical									:: adjoint,delta
 	real(8),dimension(ncoeff)				:: da
 
-	! Start the (portable) clock
-	call date_and_time(values=tarray)
-    stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-
-	!write(0,*) param%p(:)%value
-
-	call initialize_fields(H,B)
-
-	do ifreq=1,freqList%n
-
-	  freq = freqList%info(ifreq)
-
-	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
-
-	  write(6,*) 'Solving 3D forward problem for freq ',ifreq,freq%value
-
-	  ! solve A <h> = <b> for vector <h>
-	  adjoint=.FALSE.
-	  call operatorM(H,B,omega,rho,grid,fwdCtrls,errflag,adjoint)
-
-	  ! compute and output fields; C and D responses at cells
-	  call outputSolution(freq,H,slices,grid,cUserDef,rho,'h')
-	  !call outputH('jacobian',H,grid)
-	  !call outputCellResp('jacobian',H)
-
-	  ! compute and output C and D responses at observatories
-	  call calcResponses(freq,H,dat,psi)
-	  call outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
-	  ! compute C and D residuals
-	  call calcResiduals(freq,dat,psi,res)
-
-	  ! if computing different kinds of misfits, be consistent;
-	  ! write different kinds into different data structures
-	  call calcMisfit(freq,res,misfit,misfit%name)
-
-
-	  do ifunc=1,nfunc
-
-		do iobs=1,nobs
-
-		  if (.not.obsList%info(iobs)%defined) then
-			sens%da_real(ifreq,ifunc,iobs,:) = 0.0d0
-			sens%da_imag(ifreq,ifunc,iobs,:) = 0.0d0
-			cycle
-		  end if
-
-		  ! compute $\g_j$ and set $\tilde{\b} = \g_j$
-		  call Lrows(TFList%info(ifunc),obsList%info(iobs),H,g_sparse)
-		  call create_cvector(grid,F,EDGE)
-		  call add_scvector(C_ONE,g_sparse,F)
-
-		  ! $M*^{-1}_{\rho,-\omega} ( g_j )$
-		  adjoint = .TRUE.
-		  delta = .TRUE.
-		  call create_cvector(grid,dH,EDGE)
-		  ! Forcing term F should not contain any non-zero boundary values
-		  call operatorM(dH,F,omega,rho,grid,fwdCtrls,errflag,adjoint,delta)
-		  !call outputH('jacobian_dh',dH,grid)
-		  !call outputCellResp('jacobian_dh',dH)
-		  ! call outputSolution(freq,dH,slices,grid,cUserDef,rho,'dh')
-
-		  ! Pre-divide the interior components of dH by elementary areas
-		  call operatorD_Si_divide(dH,grid)
-
-		  ! $C D_{S_i}^{-1} M*^{-1}_{\rho,\omega} ( g_j)$
-		  call createBC(Hb,grid)
-		  call insertBC(Hb,dH)
-		  call operatorC(dH,dE,grid)
-
-		  ! $\bar{\e} = C \bar{\h}$
-		  Hconj = conjg(H)
-		  call operatorD_l_mult(Hconj,grid)
-		  call operatorC(Hconj,Econj,grid)
-
-		  ! $D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,\omega} ( g_j )$
-		  call diagMult(Econj,dE,dE) !dE = Econj * dE
-
-		  ! $L^T D_{\bar{\e}} ... M*^{-1}_{\rho,\omega} g_j$
-		  dE_real = real(dE)
-		  call operatorLt(sens%drho_real%v,dE_real,grid)
-
-		  dE_imag = imag(dE)
-		  call operatorLt(sens%drho_imag%v,dE_imag,grid)
-
-		  ! $P^T L^T D_{\bar{\e}} C A^{-1}_{\rho,-\omega} g_j$
-		  call operatorPt(sens%drho_real,rsensTemp)
-		  call operatorPt(sens%drho_imag,isensTemp)
-
-		  rsens = multBy_CmSqrt(rsensTemp)
-		  isens = multBy_CmSqrt(isensTemp)
-
-		  call getParamValues_modelParam(rsens,sens%da_real(ifreq,ifunc,iobs,:))
-		  call getParamValues_modelParam(isens,sens%da_imag(ifreq,ifunc,iobs,:))
-
-
-		  ! account for the fact that this is $\pd{\bar{\psi}^j_\omega}{\a}$
-		  sens%da_imag = - sens%da_imag
-
-		  sens%da(ifreq,ifunc,iobs,:) = - dcmplx(sens%da_real(ifreq,ifunc,iobs,:),sens%da_imag(ifreq,ifunc,iobs,:))
-
-		end do
-
-                call outputJacobian(freq,psi,sens,freqList,TFList,obsList,param,cUserDef)
-		  !print *, 'ifreq,ifunc,iobs,dpsi/da: ',ifreq,ifunc,iobs,&
-		!		  sens%da(ifreq,ifunc,iobs,:)
-
-	  end do
-
-	  call date_and_time(values=tarray)
-	  etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	  ftime = etime - stime
-	  print *,'Time taken (secs) ',ftime
-	  rtime = rtime + ftime
-
-	end do
-
-	call misfitSumUp(res,misfit,misfitValue)
-
-	!call outputMisfit(param,misfit,misfitValue,cUserDef)
-
-	continue
-
-	call deall_modelParam(rsensTemp)
-	call deall_modelParam(rsens)
-	call deall_modelParam(isensTemp)
-	call deall_modelParam(isens)
-	call deall_sparsevecc(bv_H)
-	call deall_sparsevecc(bv_dH)
-	call deall_sparsevecc(Hb)
-	call deall_sparsevecc(g_sparse)
+!	! Start the (portable) clock
+!	call date_and_time(values=tarray)
+!    stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+!
+!	!write(0,*) param%p(:)%value
+!
+!	call initialize_fields(H,B)
+!
+!	do ifreq=1,freqList%n
+!
+!	  freq = freqList%info(ifreq)
+!
+!	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
+!
+!	  write(6,*) 'Solving 3D forward problem for freq ',ifreq,freq%value
+!
+!	  ! solve A <h> = <b> for vector <h>
+!	  adjoint=.FALSE.
+!	  call operatorM(H,B,omega,rho,grid,fwdCtrls,errflag,adjoint)
+!
+!	  ! compute and output fields; C and D responses at cells
+!	  call outputSolution(freq,H,slices,grid,cUserDef,rho,'h')
+!	  !call outputH('jacobian',H,grid)
+!	  !call outputCellResp('jacobian',H)
+!
+!	  ! compute and output C and D responses at observatories
+!	  call calcResponses(freq,H,dat,psi)
+!	  call outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
+!	  ! compute C and D residuals
+!	  call calcResiduals(freq,dat,psi,res)
+!
+!	  ! if computing different kinds of misfits, be consistent;
+!	  ! write different kinds into different data structures
+!	  call calcMisfit(freq,res,misfit,misfit%name)
+!
+!
+!	  do ifunc=1,nfunc
+!
+!		do iobs=1,nobs
+!
+!		  if (.not.obsList%info(iobs)%defined) then
+!			sens%da_real(ifreq,ifunc,iobs,:) = 0.0d0
+!			sens%da_imag(ifreq,ifunc,iobs,:) = 0.0d0
+!			cycle
+!		  end if
+!
+!		  ! compute $\g_j$ and set $\tilde{\b} = \g_j$
+!		  call Lrows(TFList%info(ifunc),obsList%info(iobs),H,g_sparse)
+!		  call create_cvector(grid,F,EDGE)
+!		  call add_scvector(C_ONE,g_sparse,F)
+!
+!		  ! $M*^{-1}_{\rho,-\omega} ( g_j )$
+!		  adjoint = .TRUE.
+!		  delta = .TRUE.
+!		  call create_cvector(grid,dH,EDGE)
+!		  ! Forcing term F should not contain any non-zero boundary values
+!		  call operatorM(dH,F,omega,rho,grid,fwdCtrls,errflag,adjoint,delta)
+!		  !call outputH('jacobian_dh',dH,grid)
+!		  !call outputCellResp('jacobian_dh',dH)
+!		  ! call outputSolution(freq,dH,slices,grid,cUserDef,rho,'dh')
+!
+!		  ! Pre-divide the interior components of dH by elementary areas
+!		  call operatorD_Si_divide(dH,grid)
+!
+!		  ! $C D_{S_i}^{-1} M*^{-1}_{\rho,\omega} ( g_j)$
+!		  call createBC(Hb,grid)
+!		  call insertBC(Hb,dH)
+!		  call operatorC(dH,dE,grid)
+!
+!		  ! $\bar{\e} = C \bar{\h}$
+!		  Hconj = conjg(H)
+!		  call operatorD_l_mult(Hconj,grid)
+!		  call operatorC(Hconj,Econj,grid)
+!
+!		  ! $D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,\omega} ( g_j )$
+!		  call diagMult(Econj,dE,dE) !dE = Econj * dE
+!
+!		  ! $L^T D_{\bar{\e}} ... M*^{-1}_{\rho,\omega} g_j$
+!		  dE_real = real(dE)
+!		  call operatorLt(sens%drho_real%v,dE_real,grid)
+!
+!		  dE_imag = imag(dE)
+!		  call operatorLt(sens%drho_imag%v,dE_imag,grid)
+!
+!		  ! $P^T L^T D_{\bar{\e}} C A^{-1}_{\rho,-\omega} g_j$
+!		  call operatorPt(sens%drho_real,rsensTemp)
+!		  call operatorPt(sens%drho_imag,isensTemp)
+!
+!		  rsens = multBy_CmSqrt(rsensTemp)
+!		  isens = multBy_CmSqrt(isensTemp)
+!
+!		  call getParamValues_modelParam(rsens,sens%da_real(ifreq,ifunc,iobs,:))
+!		  call getParamValues_modelParam(isens,sens%da_imag(ifreq,ifunc,iobs,:))
+!
+!
+!		  ! account for the fact that this is $\pd{\bar{\psi}^j_\omega}{\a}$
+!		  sens%da_imag = - sens%da_imag
+!
+!		  sens%da(ifreq,ifunc,iobs,:) = - dcmplx(sens%da_real(ifreq,ifunc,iobs,:),sens%da_imag(ifreq,ifunc,iobs,:))
+!
+!		end do
+!
+!                call outputJacobian(freq,psi,sens,freqList,TFList,obsList,param,cUserDef)
+!		  !print *, 'ifreq,ifunc,iobs,dpsi/da: ',ifreq,ifunc,iobs,&
+!		!		  sens%da(ifreq,ifunc,iobs,:)
+!
+!	  end do
+!
+!	  call date_and_time(values=tarray)
+!	  etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+!	  ftime = etime - stime
+!	  print *,'Time taken (secs) ',ftime
+!	  rtime = rtime + ftime
+!
+!	end do
+!
+!	call misfitSumUp(res,misfit,misfitValue)
+!
+!	!call outputMisfit(param,misfit,misfitValue,cUserDef)
+!
+!	continue
+!
+!	call deall_modelParam(rsensTemp)
+!	call deall_modelParam(rsens)
+!	call deall_modelParam(isensTemp)
+!	call deall_modelParam(isens)
+!	call deall_sparsevecc(bv_H)
+!	call deall_sparsevecc(bv_dH)
+!	call deall_sparsevecc(Hb)
+!	call deall_sparsevecc(g_sparse)
 
   end subroutine calc_jacobian	! calc_jacobian
 
@@ -1064,6 +1064,7 @@ end program earth
 	use initFields
 	use dataFunc
 	use dataMisfit
+	use DataSens
     use transmitters
     use dataTypes
 	implicit none
@@ -1075,13 +1076,15 @@ end program earth
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
-    type (cvector)							:: H,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero,dR
+	type (solnVector_t)                     :: H,dH
+    type (cvector)							:: B,F,Hconj,B_tilde,dE,Econj,Bzero,dR
 	type (rvector)							:: dE_real
 	type (rscalar)							:: drho
 	type (sparsevecc)						:: Hb
 	type (functional_t)						:: dataType
 	type (transmitter_t)					:: freq
 	type (modelCoeff_t)						:: coeff
+	type (modelParam_t)                     :: m0 ! NOT USED
 	integer									:: ifreq,ifunc,index
 	logical									:: adjoint,delta
 	character(1)							:: cfunc
@@ -1091,7 +1094,7 @@ end program earth
 	call date_and_time(values=tarray)
     stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
-	call initialize_fields(H,B)
+	call initialize_fields(H%vec,B)
 
 	call create_rscalar(grid,drho,CENTER)
 
@@ -1105,17 +1108,17 @@ end program earth
 
 	  ! solve A <h> = <b> for vector <h>
 	  adjoint=.FALSE.
-	  call operatorM(H,B,omega,rho,grid,fwdCtrls,errflag,adjoint)
+	  call operatorM(H%vec,B,omega,rho,grid,fwdCtrls,errflag,adjoint)
 	  !call create_cvector(grid,H,EDGE)
 	  !H%x = C_ONE
 	  !H%y = C_ONE
 	  !H%z = C_ONE
 
 	  ! compute and output fields & C and D responses at cells
-	  call outputSolution(freq,H,slices,grid,cUserDef,rho,'h')
+	  call outputSolution(freq,H%vec,slices,grid,cUserDef,rho,'h')
 
 	  ! compute and output C and D responses at observatories
-	  call calcResponses(freq,H,dat,psi)
+	  call calcResponses(freq,H%vec,dat,psi)
 	  call outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
 
 	  ! compute and output C and D residuals
@@ -1154,7 +1157,7 @@ end program earth
 
 		  ! ${\e} = C {\h}$
 		  call create_cvector(grid,Hconj,EDGE)
-		  Hconj = H
+		  Hconj = H%vec
 		  call operatorD_l_mult(Hconj,grid)
 		  call operatorC(Hconj,Econj,grid)
 
@@ -1170,9 +1173,9 @@ end program earth
 		  adjoint = .FALSE.
 		  delta = .TRUE.
 		  ! Forcing term F should not contain any non-zero boundary values
-		  call operatorM(dH,F,omega,rho,grid,fwdCtrls,errflag,adjoint,delta)
+		  call operatorM(dH%vec,F,omega,rho,grid,fwdCtrls,errflag,adjoint,delta)
 
-		  call Lmult(dH,H,psi%v(ifreq,ifunc,:))
+		  call Lmult(H,m0,dH,psi%v(ifreq,ifunc,:))
 
 		  misfit%dRda(ifreq,ifunc,index) &
 			= -2. * dreal(sum(conjg(wres%v(ifreq,ifunc,:)%resp%value) * psi%v(ifreq,ifunc,:)%resp%value))
@@ -1220,6 +1223,7 @@ end program earth
 	use dataFunc
 	use dataMisfit
 	use sg_spherical
+	use DataSens
     use transmitters
     use dataTypes
 	implicit none
@@ -1253,213 +1257,213 @@ end program earth
 	logical, dimension(:,:,:), allocatable	:: mask
 	!logical									:: verbose
 
-	! Start the (portable) clock
-	call date_and_time(values=tarray)
-    stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-
-	allocate(mask(grid%nx,grid%ny,grid%nz))
-	mask = .TRUE.
-
-	! Symmetry test for operators P (initModel) and Pt
-	print *, 'Symmetry test for operators P (initModel) and Pt'
-	call create_rscalar(grid,drho1,CENTER)
-	call create_rscalar(grid,drho2,CENTER)
-	drho1%v = ONE
-	call operatorP(param,drho2)
-	value0 = dot_product(pack(drho1%v,mask),pack(drho2%v,mask))
-	value1 = sum(drho1%v(:,:,grid%nzAir+1:nz-1) * drho2%v(:,:,grid%nzAir+1:nz-1))
-	print *, "Value 1 = ",value1
-	dparam = param
-	call operatorPt(drho1,dparam)
-	!value2 = dot_product(param%p%value,dparam%p%value)
-	value2 = dotProd_modelParam_f(param,dparam)
-	print *, "Value 2 = ",value2
-	!stop
-	do i= grid%nx,grid%nx
-	  do j =grid%ny,grid%ny
-		do kk =1, grid%nz
-		  if (drho1%v(i,j,kk)*drho2%v(i,j,kk) /= 0.0) then
-			!print *, 'rho:',i,j,kk,rho(i,j,kk),drho2%v(i,j,kk)
-		  end if
-		end do
-	  end do
-	end do
-	!print *,param%p%value
-	!print *,dparam%p%value
-
-
-	! Symmetry test for operators C and Ct
-	print *, 'Symmetry test for operators C and Ct'
-	call create_cvector(grid,f1,FACE)
-	call random_number(random_x)
-	call random_number(random_y)
-	call random_number(random_z)
-	f1%x = C_ONE
-	f1%y = C_ONE
-	f1%z = C_ONE
-	!f1%z(:,:,1) = random_z(:,:,1)
-	!f1%z(:,:,4) = random_z(:,:,4)
-	!f1%z(:,:,nz+1) = random_z(:,:,nz+1)
-	!call validate_cvector(f1,verbose)
-	call create_cvector(grid,e1,EDGE)
-	e1%x = random_x
-	e1%y = random_y
-	e1%z = random_z
-	!e1%z(1,1,9) = random_z(1,1,9)
-	!call validate_cvector(e1)
-	call operatorC(e1,f2,grid)
-	!call validate_cvector(f2,verbose)
-	!f2%x(grid%nx+1,:,:) = C_ZERO
-	!value1 = dotProd_noConj(f1,f2)
-	value1 = dotProd(f1,f2)
-	print *, "Value 1 = ",value1
-	call operatorCt(f1,e2,grid)
-	!call validate_cvector(e2,verbose)
-	!e2%y(grid%nx+1,:,:) = C_ZERO
-	!e2%z(grid%nx+1,:,:) = C_ZERO
-	!e2%z(2:grid%nx,1,:) = C_ZERO
-	!e2%z(2:grid%nx,ny+1,:) = C_ZERO
-	!value2 = dotProd_noConj(e1,e2)
-	value2 = dotProd(e1,e2)
-	print *, "Value 2 = ",value2
-
-
-	! Symmetry test for operators G and Gt
-	print *, 'Symmetry test for operators G and Gt'
-	call create_cvector(grid,H,EDGE)
-	H%x = (2.0,1.0)
-	H%y = (0.5,3.0)
-	H%z = C_ONE
-	freq = freqList%info(1)
-	call calcResponses(freq,H,dat,psi)
-	!dat%v(1,1,1)%resp%value = (1000000.,-200000)
-	!dat%v(1,1,2)%resp%value = (1500000.,-250000)
-  	call LmultT(dat%v(1,1,:),H,E2)
-	!print *,dat%v(1,1,:)%resp%value
-	value1 = dotProd(e1,e2)
-	print *, "Value 1 = ",value1
-  	call Lmult(E1,H,psi%v(1,1,:))
-	!print *,psi%v(1,1,:)%resp%value
-	value2 = sum(conjg(dat%v(1,1,:)%resp%value) * psi%v(1,1,:)%resp%value)
-	print *, "Value 2 = ",value2
-
-
-	!stop
-
-	! Symmetry test for operators L and Lt
-	print *, 'Symmetry test for operators L and Lt'
-	call create_rvector(grid,r1,FACE)
-	r1%x = 2.0
-	r1%y = 3.5
-	r1%z = 5.0
-	!e1%z(2,4,6) = 5.0
-	!e1%x(1,:,:) = R_ZERO
-	!e1%x(grid%nx,:,:) = R_ZERO
-	drho1%v = ONE*2.0 !rho
-	call operatorL(drho1%v,r2,grid)
-	!call operatorL(rho,e2,grid)
-	r2%x(grid%nx+1,:,:) = R_ZERO
-	!e1%x(grid%nx+1,:,:) = R_ZERO
-	value1 = dotProd(r1,r2)
-	print *, "Value 1 = ",value1
-	call operatorLt(drho2%v,r1,grid)
-	value0 = 0.0d0
-	do i= 1,grid%nx
-	  do j =1,grid%ny
-		do kk =1, grid%nz
-		  !value0 = value0 + drho1%v(i,j,kk)*drho2%v(i,j,kk)
-		  if (drho1%v(i,j,kk)*drho2%v(i,j,kk) > 0.0) then
-			!print *, 'rho:',i,j,kk, drho2%v(i,j,kk)
-		  end if
-		  if (r1%z(i,j,kk)*r2%z(i,j,kk) > 0.0) then
-			!print *, 'e: ',i,j,kk, r2%z(i,j,kk)
-		  end if
-		end do
-	  end do
-	end do
-	value0 = dot_product(pack(drho1%v,mask),pack(drho2%v,mask))
-	!value2 = sum(drho%v(:,:,grid%nzAir+1:nz) * drho2%v(:,:,grid%nzAir+1:nz))
-	print *, "Value 2 = ",value0
-
-
-	!stop
-
-	! Symmetry test for operators M  and M*
-
-	print *, 'Symmetry test for operators M  and M*'
-
-	call initialize_fields(H,B)
-
-
-	k(1) = 8
-	k(2) = 3
-	k(3) = 11
-
-	do i=1,3
-	  if (.not.obsList%info(k(i))%defined) then
-		write(0,*) 'Error: observatory ',k(i),' not defined'
-		stop
-	  end if
-	end do
-
-	ifreq=1
-	ifunc=1
-
-	  omega  = 2.0d0*pi*freqList%info(ifreq)%value     ! angular frequency (radians/sec)
-
-	  write(6,*) 'Solving 3D forward problem for freq ',ifreq,freqList%info(ifreq)%value
-
-	  ! solve A <h> = <b> for vector <h>
-	  adjoint=.FALSE.
-	  call operatorM(H,B,omega,rho,grid,fwdCtrls,errflag,adjoint)
-
-	  print *, 'Starting the symmetry test for ',k(1), ' and ',k(2)
-
-
-	  ! compute $\g_j$ and set $\tilde{\b} = \g_j$
-	  call Lrows(TFList%info(ifunc),obsList%info(k(1)),H,g_sparse)
-	  call create_cvector(grid,F1,EDGE)
-	  call add_scvector(C_ONE,g_sparse,F1)
-
-	  ! compute $\g_j$ and set $\tilde{\b} = \g_j$
-	  call Lrows(TFList%info(ifunc),obsList%info(k(2)),H,g_sparse)
-	  call create_cvector(grid,F2,EDGE)
-	  call add_scvector(C_ONE,g_sparse,F2)
-
-	  write(6,*) 'Solving 3D forward problem for obs.',1,' index ',k(1)
-
-	  ! solve A <h> = <b> for vector <h>
-	  adjoint=.FALSE.
-	  call operatorM(H1,F1,omega,rho,grid,fwdCtrls,errflag,adjoint)
-
-	  value(1,2) = dotProd(F2,H1)
-	  print *, 'Solution: 1, ',value(1,2)
-
-	  write(6,*) 'Solving 3D adjoint problem for obs.',2,' index ',k(2)
-
-	  ! solve A <h> = <b> for vector <h>
-	  adjoint=.TRUE.
-	  call operatorM(H2,F2,omega,rho,grid,fwdCtrls,errflag,adjoint)
-
-	  value(2,1) = dotProd(F1,H2)
-	  print *, 'Solution: 2, ',value(2,1)
-
-
-	  call date_and_time(values=tarray)
-	  etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	  ftime = etime - stime
-	  print *,'Time taken (secs) ',ftime
-	  rtime = rtime + ftime
-
-	  print *, 'The fwd and adj results should be complex conjugates of each other...'
-
-	  print *, 'Solution g_2^* Mfwd^{-1} g_1: ',value(1,2)
-	  print *, 'Solution g_1^* Madj^{-1} g_2: ',value(2,1)
-
-	continue
-
-	call deall_modelParam(dparam)
-	call deall_rscalar(drho)
-	call deall_sparsevecc(g_sparse)
+!	! Start the (portable) clock
+!	call date_and_time(values=tarray)
+!    stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+!
+!	allocate(mask(grid%nx,grid%ny,grid%nz))
+!	mask = .TRUE.
+!
+!	! Symmetry test for operators P (initModel) and Pt
+!	print *, 'Symmetry test for operators P (initModel) and Pt'
+!	call create_rscalar(grid,drho1,CENTER)
+!	call create_rscalar(grid,drho2,CENTER)
+!	drho1%v = ONE
+!	call operatorP(param,drho2)
+!	value0 = dot_product(pack(drho1%v,mask),pack(drho2%v,mask))
+!	value1 = sum(drho1%v(:,:,grid%nzAir+1:nz-1) * drho2%v(:,:,grid%nzAir+1:nz-1))
+!	print *, "Value 1 = ",value1
+!	dparam = param
+!	call operatorPt(drho1,dparam)
+!	!value2 = dot_product(param%p%value,dparam%p%value)
+!	value2 = dotProd_modelParam_f(param,dparam)
+!	print *, "Value 2 = ",value2
+!	!stop
+!	do i= grid%nx,grid%nx
+!	  do j =grid%ny,grid%ny
+!		do kk =1, grid%nz
+!		  if (drho1%v(i,j,kk)*drho2%v(i,j,kk) /= 0.0) then
+!			!print *, 'rho:',i,j,kk,rho(i,j,kk),drho2%v(i,j,kk)
+!		  end if
+!		end do
+!	  end do
+!	end do
+!	!print *,param%p%value
+!	!print *,dparam%p%value
+!
+!
+!	! Symmetry test for operators C and Ct
+!	print *, 'Symmetry test for operators C and Ct'
+!	call create_cvector(grid,f1,FACE)
+!	call random_number(random_x)
+!	call random_number(random_y)
+!	call random_number(random_z)
+!	f1%x = C_ONE
+!	f1%y = C_ONE
+!	f1%z = C_ONE
+!	!f1%z(:,:,1) = random_z(:,:,1)
+!	!f1%z(:,:,4) = random_z(:,:,4)
+!	!f1%z(:,:,nz+1) = random_z(:,:,nz+1)
+!	!call validate_cvector(f1,verbose)
+!	call create_cvector(grid,e1,EDGE)
+!	e1%x = random_x
+!	e1%y = random_y
+!	e1%z = random_z
+!	!e1%z(1,1,9) = random_z(1,1,9)
+!	!call validate_cvector(e1)
+!	call operatorC(e1,f2,grid)
+!	!call validate_cvector(f2,verbose)
+!	!f2%x(grid%nx+1,:,:) = C_ZERO
+!	!value1 = dotProd_noConj(f1,f2)
+!	value1 = dotProd(f1,f2)
+!	print *, "Value 1 = ",value1
+!	call operatorCt(f1,e2,grid)
+!	!call validate_cvector(e2,verbose)
+!	!e2%y(grid%nx+1,:,:) = C_ZERO
+!	!e2%z(grid%nx+1,:,:) = C_ZERO
+!	!e2%z(2:grid%nx,1,:) = C_ZERO
+!	!e2%z(2:grid%nx,ny+1,:) = C_ZERO
+!	!value2 = dotProd_noConj(e1,e2)
+!	value2 = dotProd(e1,e2)
+!	print *, "Value 2 = ",value2
+!
+!
+!	! Symmetry test for operators G and Gt
+!	print *, 'Symmetry test for operators G and Gt'
+!	call create_cvector(grid,H,EDGE)
+!	H%x = (2.0,1.0)
+!	H%y = (0.5,3.0)
+!	H%z = C_ONE
+!	freq = freqList%info(1)
+!	call calcResponses(freq,H,dat,psi)
+!	!dat%v(1,1,1)%resp%value = (1000000.,-200000)
+!	!dat%v(1,1,2)%resp%value = (1500000.,-250000)
+!  	call LmultT(dat%v(1,1,:),H,E2)
+!	!print *,dat%v(1,1,:)%resp%value
+!	value1 = dotProd(e1,e2)
+!	print *, "Value 1 = ",value1
+!  	call Lmult(E1,H,psi%v(1,1,:))
+!	!print *,psi%v(1,1,:)%resp%value
+!	value2 = sum(conjg(dat%v(1,1,:)%resp%value) * psi%v(1,1,:)%resp%value)
+!	print *, "Value 2 = ",value2
+!
+!
+!	!stop
+!
+!	! Symmetry test for operators L and Lt
+!	print *, 'Symmetry test for operators L and Lt'
+!	call create_rvector(grid,r1,FACE)
+!	r1%x = 2.0
+!	r1%y = 3.5
+!	r1%z = 5.0
+!	!e1%z(2,4,6) = 5.0
+!	!e1%x(1,:,:) = R_ZERO
+!	!e1%x(grid%nx,:,:) = R_ZERO
+!	drho1%v = ONE*2.0 !rho
+!	call operatorL(drho1%v,r2,grid)
+!	!call operatorL(rho,e2,grid)
+!	r2%x(grid%nx+1,:,:) = R_ZERO
+!	!e1%x(grid%nx+1,:,:) = R_ZERO
+!	value1 = dotProd(r1,r2)
+!	print *, "Value 1 = ",value1
+!	call operatorLt(drho2%v,r1,grid)
+!	value0 = 0.0d0
+!	do i= 1,grid%nx
+!	  do j =1,grid%ny
+!		do kk =1, grid%nz
+!		  !value0 = value0 + drho1%v(i,j,kk)*drho2%v(i,j,kk)
+!		  if (drho1%v(i,j,kk)*drho2%v(i,j,kk) > 0.0) then
+!			!print *, 'rho:',i,j,kk, drho2%v(i,j,kk)
+!		  end if
+!		  if (r1%z(i,j,kk)*r2%z(i,j,kk) > 0.0) then
+!			!print *, 'e: ',i,j,kk, r2%z(i,j,kk)
+!		  end if
+!		end do
+!	  end do
+!	end do
+!	value0 = dot_product(pack(drho1%v,mask),pack(drho2%v,mask))
+!	!value2 = sum(drho%v(:,:,grid%nzAir+1:nz) * drho2%v(:,:,grid%nzAir+1:nz))
+!	print *, "Value 2 = ",value0
+!
+!
+!	!stop
+!
+!	! Symmetry test for operators M  and M*
+!
+!	print *, 'Symmetry test for operators M  and M*'
+!
+!	call initialize_fields(H,B)
+!
+!
+!	k(1) = 8
+!	k(2) = 3
+!	k(3) = 11
+!
+!	do i=1,3
+!	  if (.not.obsList%info(k(i))%defined) then
+!		write(0,*) 'Error: observatory ',k(i),' not defined'
+!		stop
+!	  end if
+!	end do
+!
+!	ifreq=1
+!	ifunc=1
+!
+!	  omega  = 2.0d0*pi*freqList%info(ifreq)%value     ! angular frequency (radians/sec)
+!
+!	  write(6,*) 'Solving 3D forward problem for freq ',ifreq,freqList%info(ifreq)%value
+!
+!	  ! solve A <h> = <b> for vector <h>
+!	  adjoint=.FALSE.
+!	  call operatorM(H,B,omega,rho,grid,fwdCtrls,errflag,adjoint)
+!
+!	  print *, 'Starting the symmetry test for ',k(1), ' and ',k(2)
+!
+!
+!	  ! compute $\g_j$ and set $\tilde{\b} = \g_j$
+!	  call Lrows(TFList%info(ifunc),obsList%info(k(1)),H,g_sparse)
+!	  call create_cvector(grid,F1,EDGE)
+!	  call add_scvector(C_ONE,g_sparse,F1)
+!
+!	  ! compute $\g_j$ and set $\tilde{\b} = \g_j$
+!	  call Lrows(TFList%info(ifunc),obsList%info(k(2)),H,g_sparse)
+!	  call create_cvector(grid,F2,EDGE)
+!	  call add_scvector(C_ONE,g_sparse,F2)
+!
+!	  write(6,*) 'Solving 3D forward problem for obs.',1,' index ',k(1)
+!
+!	  ! solve A <h> = <b> for vector <h>
+!	  adjoint=.FALSE.
+!	  call operatorM(H1,F1,omega,rho,grid,fwdCtrls,errflag,adjoint)
+!
+!	  value(1,2) = dotProd(F2,H1)
+!	  print *, 'Solution: 1, ',value(1,2)
+!
+!	  write(6,*) 'Solving 3D adjoint problem for obs.',2,' index ',k(2)
+!
+!	  ! solve A <h> = <b> for vector <h>
+!	  adjoint=.TRUE.
+!	  call operatorM(H2,F2,omega,rho,grid,fwdCtrls,errflag,adjoint)
+!
+!	  value(2,1) = dotProd(F1,H2)
+!	  print *, 'Solution: 2, ',value(2,1)
+!
+!
+!	  call date_and_time(values=tarray)
+!	  etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+!	  ftime = etime - stime
+!	  print *,'Time taken (secs) ',ftime
+!	  rtime = rtime + ftime
+!
+!	  print *, 'The fwd and adj results should be complex conjugates of each other...'
+!
+!	  print *, 'Solution g_2^* Mfwd^{-1} g_1: ',value(1,2)
+!	  print *, 'Solution g_1^* Madj^{-1} g_2: ',value(2,1)
+!
+!	continue
+!
+!	call deall_modelParam(dparam)
+!	call deall_rscalar(drho)
+!	call deall_sparsevecc(g_sparse)
 
   end subroutine calc_symmetric_operators  ! calc_symmetric_operators

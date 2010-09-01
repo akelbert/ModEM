@@ -11,6 +11,7 @@ module sensComp
   use boundaries
   use dataspace
   use SolnSpace
+  use DataSens
 
   implicit none
 
@@ -113,10 +114,12 @@ Contains
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
-    type (cvector)							:: Hj,B,F,Hconj,dH,dE,Econj
+    !type (cvector)                          :: Hj,B,F,Hconj,dH,dE,Econj
+    type (solnVector_t)						:: Hj,Hconj,dH,dE,Econj
+    type (rhsVector_t)                      :: B,F
 	type (rvector)							:: dE_real
 	type (rscalar)							:: rho,drho
-	type (sparsevecc)						:: Hb
+    type (sparsevecc)                       :: Hb
 	type (functional_t)						:: dataType
 	type (transmitter_t)					:: freq
 	type (modelParam_t)						:: dmisfit
@@ -168,16 +171,16 @@ Contains
 	  if(savedSolns) then
 		Hj = H%solns(ifreq)
 	  else
-		call initialize_fields(Hj,B)
+		call initialize_fields(Hj%vec,B%source)
 
 	  	write(6,*) 'Solving 3D forward problem for freq ',ifreq,freq%value
 
 	  	! solve A <h> = <b> for vector <h>
 	  	adjoint=.FALSE.
-	  	call operatorM(Hj,B,omega,rho%v,grid,fwdCtrls,errflag,adjoint)
+	  	call operatorM(Hj%vec,B%source,omega,rho%v,grid,fwdCtrls,errflag,adjoint)
 
 	  	! compute and output fields & C and D responses at cells
-	  	call outputSolution(freq,Hj,slices,grid,cUserDef,rho%v,'h')
+	  	call outputSolution(freq,Hj%vec,slices,grid,cUserDef,rho%v,'h')
 	  end if
 
 	  !print *, 'Model initialized',H%solns(ifreq)%allocated,Hj%allocated
@@ -189,16 +192,16 @@ Contains
 				  trim(TFList%info(ifunc)%name), ' responses...',ifreq,freq%value
 
 		! $G_\omega r_\omega$
-  		call LmultT(d%v(ifreq,ifunc,:),Hj,F)
+  		call LmultT(Hj,m0,d%v(ifreq,ifunc,:),F)
 
-		!print *, 'operator G successful',Hj%x
+		print *, 'LmultT successful'!,Hj%x
 
 
 		! $M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
 		adjoint = .TRUE.
 		delta = .TRUE.
 		! Forcing term F should not contain any non-zero boundary values
-		call operatorM(dH,F,omega,rho%v,grid,fwdCtrls,errflag,adjoint,delta)
+		call operatorM(dH%vec,F%source,omega,rho%v,grid,fwdCtrls,errflag,adjoint,delta)
 		!call create_cvector(grid,dH,EDGE)
 		!dH%x = C_ONE
 		!dH%y = C_ONE
@@ -206,12 +209,12 @@ Contains
 		! call outputSolution(freq,dH,slices,grid,cUserDef,rho,'dh')
 
 		! Pre-divide the interior components of dH by elementary areas
-		call operatorD_Si_divide(dH,grid)
+		call operatorD_Si_divide(dH%vec,grid)
 
 		! $C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
 		call createBC(Hb,grid)
-		call insertBC(Hb,dH)
-		call operatorC(dH,dE,grid)
+		call insertBC(Hb,dH%vec)
+		call operatorC(dH%vec,dE%vec,grid)
 
 		!	cfunc = trim(TFList%info(ifunc)%name)
 		!	fn_err = trim(outFiles%fn_err)//trim(cfunc)
@@ -228,15 +231,15 @@ Contains
 		!	close(ioERR)
 
 		! $\bar{\e} = C \bar{\h}$
-		Hconj = conjg(Hj)
-		call operatorD_l_mult(Hconj,grid)
-		call operatorC(Hconj,Econj,grid)
+		Hconj%vec = conjg(Hj%vec)
+		call operatorD_l_mult(Hconj%vec,grid)
+		call operatorC(Hconj%vec,Econj%vec,grid)
 
 		! $D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
-		call diagMult(Econj,dE,dE) !dE = Econj * dE
+		call diagMult(Econj%vec,dE%vec,dE%vec) !dE = Econj * dE
 
 		! $\Re( D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega ) )$
-		dE_real = real(dE)
+		dE_real = real(dE%vec)
 
 		! $L^T \delta{R}$
 		call operatorLt(drho%v,dE_real,grid)
@@ -270,13 +273,13 @@ Contains
 	call deall_rscalar(rho)
 	call deall_rscalar(drho)
 	call deall_sparsevecc(Hb)
-	call deall_cvector(Hj)
-	call deall_cvector(B)
-	call deall_cvector(F)
-	call deall_cvector(dH)
-	call deall_cvector(Hconj)
-	call deall_cvector(dE)
-	call deall_cvector(Econj)
+	call deall_solnVector(Hj)
+	call deall_rhsVector(B)
+	call deall_rhsVector(F)
+	call deall_solnVector(dH)
+	call deall_solnVector(Hconj)
+	call deall_solnVector(dE)
+	call deall_solnVector(Econj)
 	call deall_rvector(dE_real)
 
    end subroutine JmultT
@@ -324,7 +327,7 @@ Contains
 
     if(present(H)) then
        if(.not. H%allocated) then
-          call create_solnVectorMTX(d%nTx,H,grid)
+          call create_solnVectorMTX(d%nTx,H)
        else if(d%nTx .ne. H%nTx) then
           call errStop('dimensions of H and d do not agree in fwdPred')
        end if
@@ -388,9 +391,9 @@ Contains
 	  rtime = rtime + ftime
 
 	  if(present(H)) then
-	     H%solns(ifreq) = Hj
-	     H%tx(ifreq) = ifreq
-	     H%errflag(ifreq) = errflag
+	     H%solns(ifreq)%vec = Hj
+	     H%solns(ifreq)%tx = ifreq
+	     H%solns(ifreq)%errflag = errflag
 	  end if
 
 	end do

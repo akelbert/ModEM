@@ -21,8 +21,7 @@ module dataTypes
     logical                                 :: isComplex = .true.
     ! Here specify rules used to compute this data functional
     character(80)                           :: name
-    ! nComp is number of complex EM components observed (e.g., 3 for
-    ! MT (with vertical field TFs))
+    ! nComp is number of *complex* EM components observed
     integer                                 :: nComp
     ! The weight of this data type in the calculation of misfit
     real(8)                                 :: w

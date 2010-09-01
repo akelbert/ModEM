@@ -334,8 +334,11 @@ Contains
 	  do i=1,myfreq%n
 		do k=1,myobs%n
 		  mydat%v(i,j,k)%freq => myfreq%info(i)
+		  mydat%v(i,j,k)%tx = i
 		  mydat%v(i,j,k)%obs => myobs%info(k)
+          mydat%v(i,j,k)%rx = k
 		  mydat%v(i,j,k)%func => myfunc%info(j)
+          mydat%v(i,j,k)%dataType = j
 		end do
 	  end do
 

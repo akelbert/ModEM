@@ -41,6 +41,9 @@ Contains
 		  psi%v(i,j,k)%func => TFList%info(j)
 		  psi%v(i,j,k)%obs => obsList%info(k)
 		  psi%v(i,j,k)%freq => freqList%info(i)
+          psi%v(i,j,k)%dataType = j
+          psi%v(i,j,k)%rx = k
+          psi%v(i,j,k)%tx = i
 		end do
 	  case ('D')
 		do k=1,nobs
@@ -50,6 +53,9 @@ Contains
 		  psi%v(i,j,k)%func => TFList%info(j)
 		  psi%v(i,j,k)%obs => obsList%info(k)
 		  psi%v(i,j,k)%freq => freqList%info(i)
+          psi%v(i,j,k)%dataType = j
+          psi%v(i,j,k)%rx = k
+          psi%v(i,j,k)%tx = i
 		end do
 	  case default
 		write(0,*) 'Warning: no transfer functions specified to compute'
@@ -89,6 +95,9 @@ Contains
   		res%v(i,j,k)%func => dat%v(i,j,k)%func
   		res%v(i,j,k)%obs => dat%v(i,j,k)%obs
   		res%v(i,j,k)%freq => dat%v(i,j,k)%freq
+          res%v(i,j,k)%dataType = j
+          res%v(i,j,k)%rx = k
+          res%v(i,j,k)%tx = i
 		! The residual exists if both the data entry and the response make sense
 		if (dat%v(i,j,k)%resp%exists.and.psi%v(i,j,k)%resp%exists) then
 		  res%v(i,j,k)%resp%exists = .TRUE.

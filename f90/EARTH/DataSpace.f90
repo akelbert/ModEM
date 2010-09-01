@@ -97,6 +97,7 @@ module DataSpace
 	type (response_t)							:: resp
 	! For the more general case, define dimension(freq%nMode,dataType%nComp)
 	! type (response_t), pointer, dimension(:,:) :: resp
+	integer                                     :: tx,dataType,rx
 
   end type dataValue_t
 
@@ -266,6 +267,9 @@ Contains
     			d2%v(i,j,k)%freq => d1%v(i,j,k)%freq
     			d2%v(i,j,k)%func => d1%v(i,j,k)%func
     			d2%v(i,j,k)%obs => d1%v(i,j,k)%obs
+                d2%v(i,j,k)%tx = d1%v(i,j,k)%tx
+                d2%v(i,j,k)%dataType = d1%v(i,j,k)%dataType
+                d2%v(i,j,k)%rx = d1%v(i,j,k)%rx
     		enddo
     	enddo
     enddo
