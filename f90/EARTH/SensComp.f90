@@ -12,6 +12,7 @@ module sensComp
   use dataspace
   use SolnSpace
   use DataSens
+  use SolverSens
 
   implicit none
 
@@ -168,6 +169,10 @@ Contains
 
 	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
+	  ! initialize solution vectors Hj and dH
+	  call create_solnVector(grid,ifreq,Hj)
+      call create_solnVector(grid,ifreq,dH)
+
 	  if(savedSolns) then
 		Hj = H%solns(ifreq)
 	  else
@@ -208,47 +213,9 @@ Contains
 		!dH%z = C_ONE
 		! call outputSolution(freq,dH,slices,grid,cUserDef,rho,'dh')
 
-		! Pre-divide the interior components of dH by elementary areas
-		call operatorD_Si_divide(dH%vec,grid)
+		call PmultT(Hj,m0,dH,dmisfit)
 
-		! $C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
-		call createBC(Hb,grid)
-		call insertBC(Hb,dH%vec)
-		call operatorC(dH%vec,dE%vec,grid)
-
-		!	cfunc = trim(TFList%info(ifunc)%name)
-		!	fn_err = trim(outFiles%fn_err)//trim(cfunc)
-		!	call initFileWrite(fn_err,ioERR)
-		!	do i= 1,grid%nx
-		!	  do j =1,grid%ny
-		!		do k =1,grid%nz
-		!		  if (dreal(dE%y(i,j,k)) > 1.0) then
-		!			write(ioERR,*) i,j,k, dreal(dH%y(i,j,k)), dreal(dE%y(i,j,k))
-		!		  end if
-		!		end do
-		!	  end do
-		!	end do
-		!	close(ioERR)
-
-		! $\bar{\e} = C \bar{\h}$
-		Hconj%vec = conjg(Hj%vec)
-		call operatorD_l_mult(Hconj%vec,grid)
-		call operatorC(Hconj%vec,Econj%vec,grid)
-
-		! $D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
-		call diagMult(Econj%vec,dE%vec,dE%vec) !dE = Econj * dE
-
-		! $\Re( D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega ) )$
-		dE_real = real(dE%vec)
-
-		! $L^T \delta{R}$
-		call operatorLt(drho%v,dE_real,grid)
-
-		! $P^T L^T \delta{R}$
-		call operatorPt(drho,dmisfit)
-
-		! this line is needed to counter some mistake in the above... should be -dmisfit
-		call scMult(MinusONE,dmisfit,dmisfit)
+        print *, 'PmultT successful'!,Hj%x
 
 		! add to the total model parametrization
 		call linComb(ONE,dm,ONE,dmisfit,dm)
@@ -391,8 +358,8 @@ Contains
 	  rtime = rtime + ftime
 
 	  if(present(H)) then
+	     call create_solnVector(grid,ifreq,H%solns(ifreq))
 	     H%solns(ifreq)%vec = Hj
-	     H%solns(ifreq)%tx = ifreq
 	     H%solns(ifreq)%errflag = errflag
 	  end if
 

@@ -632,7 +632,7 @@ end program earth
 	drho%v = rho - rho1D%v
 
 	! Map the resistivity vector to primary cell faces (dual edges)
-	call operatorL(drho%v,drhoF,grid)
+	call operatorL(drho,drhoF,grid)
 
 	! Read the primary field solution, computed for a 1D model
 	! (alternatively, compute it locally)
@@ -994,10 +994,10 @@ end program earth
 !
 !		  ! $L^T D_{\bar{\e}} ... M*^{-1}_{\rho,\omega} g_j$
 !		  dE_real = real(dE)
-!		  call operatorLt(sens%drho_real%v,dE_real,grid)
+!		  call operatorLt(sens%drho_real,dE_real,grid)
 !
 !		  dE_imag = imag(dE)
-!		  call operatorLt(sens%drho_imag%v,dE_imag,grid)
+!		  call operatorLt(sens%drho_imag,dE_imag,grid)
 !
 !		  ! $P^T L^T D_{\bar{\e}} C A^{-1}_{\rho,-\omega} g_j$
 !		  call operatorPt(sens%drho_real,rsensTemp)
@@ -1152,7 +1152,7 @@ end program earth
 
 		  drho = vectorPj(param,index)
 
-		  call operatorL(drho%v,dE_real,grid)
+		  call operatorL(drho,dE_real,grid)
 		  !dE = dE_real
 
 		  ! ${\e} = C {\h}$
@@ -1360,13 +1360,13 @@ end program earth
 !	!e1%x(1,:,:) = R_ZERO
 !	!e1%x(grid%nx,:,:) = R_ZERO
 !	drho1%v = ONE*2.0 !rho
-!	call operatorL(drho1%v,r2,grid)
+!	call operatorL(drho1,r2,grid)
 !	!call operatorL(rho,e2,grid)
 !	r2%x(grid%nx+1,:,:) = R_ZERO
 !	!e1%x(grid%nx+1,:,:) = R_ZERO
 !	value1 = dotProd(r1,r2)
 !	print *, "Value 1 = ",value1
-!	call operatorLt(drho2%v,r1,grid)
+!	call operatorLt(drho2,r1,grid)
 !	value0 = 0.0d0
 !	do i= 1,grid%nx
 !	  do j =1,grid%ny

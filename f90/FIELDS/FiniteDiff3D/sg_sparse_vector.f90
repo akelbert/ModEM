@@ -247,7 +247,7 @@ Contains
   ! this will copy a sparse complex vector from SV1 to SV2 ...
   ! interface to =
   ! basically like copy commands for vectors, scalars, BC
-  ! check for szie consistency (nCoeff), reallocate output if needed
+  ! check for size consistency (nCoeff), reallocate output if needed
   ! note that before allocation nCoeff = 0
   ! Remember, SV2 = SV1
   subroutine copy_sparsevecc(SV2,SV1)
@@ -258,15 +258,24 @@ Contains
     integer	                     		:: status
 
     ! check to see if RHS (SV1) is active (allocated)
-    if(.not.SV1%allocated) then
+    if(.not. SV1%allocated) then
        write(0,*) 'RHS not allocated yet for copy_sparsevecc'
        stop
-    else
+    end if
 
-       ! happen to have the same specs
-       if(SV1%nCoeff == SV2%nCoeff) then
+    ! allocate output if needed, otherwise check for consistency
+    if(.not. SV2%allocated) then
+       call create_sparsevecc(SV1%nCoeff, SV2, SV1%gridType)
+    elseif(SV1%nCoeff .ne. SV2%nCoeff) then
+        ! internal memory allocation is strongly discouraged. But this
+        ! is an exception
+        call deall_sparsevecc(SV2)
+        ! ... now allocate for correct number of components
+        call create_sparsevecc(SV1%nCoeff, SV2, SV1%gridType)
+    end if
 
-          if (SV1%gridType == SV2%gridType) then
+    ! happen to have the same specs
+    if (SV1%gridType == SV2%gridType) then
 
              ! just copy the components
              SV2%i = SV1%i
@@ -275,33 +284,8 @@ Contains
              SV2%xyz = SV1%xyz
              SV2%c = SV1%c
 
-	  else
+	else
              write (0, *) 'not compatible usage for copy_sparsevecc'
-          end if
-
-          ! SV1 and SV2 do not have the same number of coefficients
-       else
-
-	  ! internal memory allocation is strongly discouraged. But this
-	  ! is an exception
-          if(SV2%allocated) then
-             ! first deallocate memory for all the components
-             deallocate(SV2%i, SV2%j, SV2%k, SV2%xyz, SV2%c ,STAT=status)
-	     SV2%gridType = ''
-       	     SV2%allocated = .false.
-          end if
-
-          !  then allocate SV2 of correct size ...
-          Call create_sparsevecc(SV1%nCoeff, SV2, SV1%gridType)
-          !   .... and copy SV1
-          SV2%nCoeff = SV1%nCoeff
-	  SV2%i = SV1%i
-	  SV2%j = SV1%j
-	  SV2%k = SV1%k
-	  SV2%xyz = SV1%xyz
-	  SV2%c = SV1%c
-
-       end if
 
     end if
 

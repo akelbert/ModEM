@@ -51,7 +51,7 @@ MODULE = -fmod=$(OBJDIR)
 LIBS = -lblas -llapack
 
 # -------------------End-macro-Defs---------------------------
-OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/utilities.o $(OBJDIR)/polpak.o $(OBJDIR)/paramfunc.o $(OBJDIR)/modeldef.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/datadef.o $(OBJDIR)/iotypes.o $(OBJDIR)/dataTypes.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/DataSpace.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/SolnSpace.o $(OBJDIR)/model_operators.o $(OBJDIR)/input.o $(OBJDIR)/iospec.o $(OBJDIR)/modelmap.o $(OBJDIR)/global.o $(OBJDIR)/grid_orig.o $(OBJDIR)/field_vectors.o $(OBJDIR)/data_vectors.o $(OBJDIR)/dimensions.o $(OBJDIR)/boundaries.o $(OBJDIR)/elements.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/Main.o $(OBJDIR)/responses.o $(OBJDIR)/functionals.o $(OBJDIR)/output.o $(OBJDIR)/DataFunc.o $(OBJDIR)/sg_spherical.o $(OBJDIR)/wrapper.o $(OBJDIR)/coreFwd.o $(OBJDIR)/maxwells.o $(OBJDIR)/jacobian.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/DataSens.o $(OBJDIR)/SensComp.o $(OBJDIR)/DataIO.o $(OBJDIR)/NLCG.o $(OBJDIR)/interp_orig.o $(OBJDIR)/output_orig.o $(OBJDIR)/Global3D.o 
+OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/GridDef.o $(OBJDIR)/utilities.o $(OBJDIR)/polpak.o $(OBJDIR)/paramfunc.o $(OBJDIR)/modeldef.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/datadef.o $(OBJDIR)/iotypes.o $(OBJDIR)/dataTypes.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/DataSpace.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/SolnSpace.o $(OBJDIR)/model_operators.o $(OBJDIR)/input.o $(OBJDIR)/iospec.o $(OBJDIR)/modelmap.o $(OBJDIR)/global.o $(OBJDIR)/grid_orig.o $(OBJDIR)/field_vectors.o $(OBJDIR)/data_vectors.o $(OBJDIR)/dimensions.o $(OBJDIR)/boundaries.o $(OBJDIR)/elements.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/Main.o $(OBJDIR)/responses.o $(OBJDIR)/functionals.o $(OBJDIR)/output.o $(OBJDIR)/DataFunc.o $(OBJDIR)/sg_spherical.o $(OBJDIR)/wrapper.o $(OBJDIR)/coreFwd.o $(OBJDIR)/maxwells.o $(OBJDIR)/jacobian.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/DataSens.o $(OBJDIR)/SolverSens.o $(OBJDIR)/SensComp.o $(OBJDIR)/DataIO.o $(OBJDIR)/NLCG.o $(OBJDIR)/interp_orig.o $(OBJDIR)/output_orig.o $(OBJDIR)/Global3D.o 
 
 
 all: Global3D 
@@ -191,10 +191,13 @@ $(OBJDIR)/initFields.o:EARTH/FWD/initFields.f90 $(OBJDIR)/grid_orig.o $(OBJDIR)/
 $(OBJDIR)/dataMisfit.o:EARTH/Jacobian/dataMisfit.f90 $(OBJDIR)/global.o $(OBJDIR)/responses.o $(OBJDIR)/functionals.o $(OBJDIR)/model_operators.o $(OBJDIR)/DataSpace.o $(OBJDIR)/iotypes.o $(OBJDIR)/iospec.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) EARTH/Jacobian/dataMisfit.f90 -o $(OBJDIR)/dataMisfit.o
 
-$(OBJDIR)/DataSens.o:EARTH/DataSens.f90 $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o 
+$(OBJDIR)/DataSens.o:EARTH/DataSens.f90 $(OBJDIR)/DataSpace.o $(OBJDIR)/DataFunc.o $(OBJDIR)/receivers.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) EARTH/DataSens.f90 -o $(OBJDIR)/DataSens.o
 
-$(OBJDIR)/SensComp.o:EARTH/SensComp.f90 $(OBJDIR)/GridDef.o $(OBJDIR)/data_vectors.o $(OBJDIR)/DataFunc.o $(OBJDIR)/modelmap.o $(OBJDIR)/jacobian.o $(OBJDIR)/output.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/boundaries.o $(OBJDIR)/DataSpace.o $(OBJDIR)/SolnSpace.o $(OBJDIR)/DataSens.o 
+$(OBJDIR)/SolverSens.o:EARTH/SolverSens.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/SolnSpace.o $(OBJDIR)/transmitters.o $(OBJDIR)/dataTypes.o 
+	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) EARTH/SolverSens.f90 -o $(OBJDIR)/SolverSens.o
+
+$(OBJDIR)/SensComp.o:EARTH/SensComp.f90 $(OBJDIR)/GridDef.o $(OBJDIR)/data_vectors.o $(OBJDIR)/DataFunc.o $(OBJDIR)/modelmap.o $(OBJDIR)/jacobian.o $(OBJDIR)/output.o $(OBJDIR)/initFields.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/boundaries.o $(OBJDIR)/DataSpace.o $(OBJDIR)/SolnSpace.o $(OBJDIR)/DataSens.o $(OBJDIR)/SolverSens.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) EARTH/SensComp.f90 -o $(OBJDIR)/SensComp.o
 
 $(OBJDIR)/DataIO.o:EARTH/DataIO.f90 $(OBJDIR)/data_vectors.o $(OBJDIR)/global.o $(OBJDIR)/input.o $(OBJDIR)/output.o 

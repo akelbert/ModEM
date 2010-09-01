@@ -233,6 +233,7 @@ Contains
   ! ***************************************************************************
   ! * operator D_{l}^{-1}: E -> E represents the diagonal operator that
   ! * pre-divides all components of the input vector X by unit lengths,
+  ! * including the boundary conditions
 
   subroutine operatorD_l_divide(Xfull,grid)
 
@@ -253,7 +254,7 @@ Contains
 	allocate(vectorx(np2),STAT=istat)
 	call copyd3_d1_d(vectorx,Xfull,grid)  ! extract interior components
 	call divide_vec_by_l(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
-	call copyd1_d3_d(vectorx,Xfull,grid,bc=bc)  ! map back with zero b.c.
+	call copyd1_d3_d(vectorx,Xfull,grid,bc=bc)  ! map back with b.c.
 	deallocate(vectorx)
 	call deall_sparsevecc(Xb)
 	call deall_sparsevecc(bc)
@@ -264,6 +265,7 @@ Contains
   ! ***************************************************************************
   ! * operator D_{l}: E -> E represents the diagonal operator that
   ! * pre-multiplies all components of the input vector X by unit lengths,
+  ! * including the boundary conditions
 
   subroutine operatorD_l_mult(Xfull,grid)
 
@@ -284,7 +286,7 @@ Contains
 	allocate(vectorx(np2),STAT=istat)
 	call copyd3_d1_d(vectorx,Xfull,grid)  ! extract interior components
 	call mult_vec_by_l(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
-	call copyd1_d3_d(vectorx,Xfull,grid,bc=bc)  ! map back with zero b.c.
+	call copyd1_d3_d(vectorx,Xfull,grid,bc=bc)  ! map back with b.c.
 	deallocate(vectorx)
 	call deall_sparsevecc(Xb)
 	call deall_sparsevecc(bc)
@@ -705,9 +707,9 @@ Contains
   subroutine operatorL(resist,vecF,grid)
 
     implicit none
-	real(8),dimension(:,:,:),intent(in)			 :: resist	 !(nx,ny,nz)
-	type (rvector), intent(inout)					 :: vecF
-	type (grid_t), intent(in)				 :: grid
+	type (rscalar), intent(in)			         :: resist	 !(nx,ny,nz)
+	type (rvector), intent(inout)				 :: vecF
+	type (grid_t), intent(in)				     :: grid
     real(8)										 :: lm,lp,S
 	integer										 :: i,j,k,istat
 	integer										 :: nx,ny,nz
@@ -754,9 +756,9 @@ Contains
           call area_sijk(j,k,y,z,S)
 
 		  if (i==1) then
-			vecF%x(i,j,k)=(lp*resist(i,j,k)+lm*resist(nx,j,k))/(2*S)
+			vecF%x(i,j,k)=(lp*resist%v(i,j,k)+lm*resist%v(nx,j,k))/(2*S)
 		  else
-			vecF%x(i,j,k)=(lp*resist(i,j,k)+lm*resist(i-1,j,k))/(2*S)
+			vecF%x(i,j,k)=(lp*resist%v(i,j,k)+lm*resist%v(i-1,j,k))/(2*S)
 		  end if
 
 		  call leng_yijk2(j,k,y,z,lp)
@@ -769,7 +771,7 @@ Contains
 		  if (j==1) then
 			vecF%y(i,j,k)=R_ZERO  !undefined
 		  else
-			vecF%y(i,j,k)=(lp*resist(i,j,k)+lm*resist(i,j-1,k))/(2*S)
+			vecF%y(i,j,k)=(lp*resist%v(i,j,k)+lm*resist%v(i,j-1,k))/(2*S)
 		  end if
 
 		  call leng_zijk2(k,z,lp)
@@ -781,9 +783,9 @@ Contains
           call area_skij(i,j,k,x,y,z,S)
 
 		  if (k==1) then
-			vecF%z(i,j,k)=(lp*resist(i,j,k))/(2*S)
+			vecF%z(i,j,k)=(lp*resist%v(i,j,k))/(2*S)
 		  else
-			vecF%z(i,j,k)=(lp*resist(i,j,k)+lm*resist(i,j,k-1))/(2*S)
+			vecF%z(i,j,k)=(lp*resist%v(i,j,k)+lm*resist%v(i,j,k-1))/(2*S)
 		  end if
 
 		end do
@@ -797,7 +799,7 @@ Contains
     do j=1,ny
       do i=1,nx
         call area_skij(i,j,nz+1,x,y,z,S)
-		vecF%z(i,j,nz+1) = lm*resist(i,j,nz)/(2*S)
+		vecF%z(i,j,nz+1) = lm*resist%v(i,j,nz)/(2*S)
 	  end do
 	end do
 
@@ -812,7 +814,7 @@ Contains
   subroutine operatorLt(resist,vecF,grid)
 
     implicit none
-	real(8),dimension(:,:,:),intent(inout)		 :: resist	 !(nx,ny,nz)
+	type (rscalar), intent(inout)		         :: resist	 !(nx,ny,nz)
 	type (rvector), intent(inout)				 :: vecF
 	type (grid_t), intent(in)				 :: grid
     real(8)										 :: l,S,Sp
@@ -832,6 +834,7 @@ Contains
 
     endif
 
+
 	nx = grid%nx
 	ny = grid%ny
 	nz = grid%nz
@@ -841,7 +844,9 @@ Contains
 	y = grid%y
 	z = grid%z
 
-	resist = R_ZERO
+    ! Allocate the resistivity vector
+	! resist = R_ZERO
+    call create_rscalar(grid,resist,CENTER)
 
 	! making sure the input vector makes scientific sense...
 	vecF%x(nx+1,:,:) = vecF%x(1,:,:)
@@ -855,23 +860,23 @@ Contains
 		  call leng_xijk2(i,j,k,x,y,z,l)
           call area_sijk(j,k,y,z,S)
 		  Sp=S
-		  resist(i,j,k)=vecF%x(i,j,k)*l/(2*S)+vecF%x(i+1,j,k)*l/(2*Sp)
+		  resist%v(i,j,k)=vecF%x(i,j,k)*l/(2*S)+vecF%x(i+1,j,k)*l/(2*Sp)
 
 		  call leng_yijk2(j,k,y,z,l)
           call area_sjki(i,j,k,x,y,z,S)
           call area_sjki(i,j+1,k,x,y,z,Sp)
 		  if (j==1) then
-			resist(i,j,k)=resist(i,j,k)+vecF%y(i,j+1,k)*l/(2*Sp)
+			resist%v(i,j,k)=resist%v(i,j,k)+vecF%y(i,j+1,k)*l/(2*Sp)
 		  else if (j==ny) then
-			resist(i,j,k)=resist(i,j,k)+vecF%y(i,j,k)*l/(2*S)
+			resist%v(i,j,k)=resist%v(i,j,k)+vecF%y(i,j,k)*l/(2*S)
 		  else
-  			resist(i,j,k)=resist(i,j,k)+vecF%y(i,j,k)*l/(2*S)+vecF%y(i,j+1,k)*l/(2*Sp)
+  			resist%v(i,j,k)=resist%v(i,j,k)+vecF%y(i,j,k)*l/(2*S)+vecF%y(i,j+1,k)*l/(2*Sp)
 		  end if
 
 		  call leng_zijk2(k,z,l)
           call area_skij(i,j,k,x,y,z,S)
           call area_skij(i,j,k+1,x,y,z,Sp)
-		  resist(i,j,k)=resist(i,j,k)+vecF%z(i,j,k)*l/(2*S)+vecF%z(i,j,k+1)*l/(2*Sp)
+		  resist%v(i,j,k)=resist%v(i,j,k)+vecF%z(i,j,k)*l/(2*S)+vecF%z(i,j,k+1)*l/(2*Sp)
 
 		end do
 	  end do

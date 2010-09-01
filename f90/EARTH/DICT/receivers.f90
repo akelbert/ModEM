@@ -3,6 +3,7 @@ module receivers
   ! This module contains the receiver dictionary (rxDict) for EARTH
   ! Also contains the Earth's surface interpolation subroutines
 
+  use griddef
   use sg_sparse_vector
   use math_constants
   use utilities
