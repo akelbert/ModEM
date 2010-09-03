@@ -21,6 +21,8 @@ module transmitters
     real(8)                                 :: value
     ! period in days used for input/output only
     real(8)                                 :: period ! (in days)
+    ! use / don't use secondary field formulation
+    logical                                 :: secondaryField = .false.
     ! order index of this frequency that is used for the output
     integer                                 :: i
     ! nMode is number of "modes" for transmitter (e.g., 2 for MT)
@@ -120,6 +122,10 @@ Contains
        end do
        close(ioTX)
     end if
+
+    ! Should we use secondary field formulation?
+    inquire(FILE=cUserDef%fn_field,EXIST=exists)
+    myfreq%info(1:num)%secondaryField = exists
 
     return
 

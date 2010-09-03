@@ -107,7 +107,7 @@ Contains
       call zero_rhsVector(comb)
       call add_sparseVrhsV(C_ONE,L(iFunc),comb)
 
-      call sensSolve(iTx,TRN,comb,e)
+      call sensSolve(iTx,TRN,e,comb)
 
       ! multiply by P^T and add the rows of Q
       call PmultT(e0,sigma0,e,Jreal(iFunc),Jimag(iFunc))
@@ -306,7 +306,7 @@ Contains
 	  call Pmult(e0,sigma0,dsigma,comb)
 
 	  ! solve forward problem with source in comb
-	  call sensSolve(iTx,FWD,comb,e)
+	  call sensSolve(iTx,FWD,e,comb)
 
 	  ! multiply e by operator L to obtain perturbation in the data
 	  call Lmult(e0,sigma0,e,d1)
@@ -433,7 +433,7 @@ Contains
     call LmultT(e0,sigma0,d,comb)
 
     ! solve transpose problem with source in comb
-    call sensSolve(iTx,TRN,comb,e)
+    call sensSolve(iTx,TRN,e,comb)
 
     ! map from edges to conductivity space ... result P^T e
     !  NOTE: here we throw away imaginary part, even for complex

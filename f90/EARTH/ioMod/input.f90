@@ -196,6 +196,7 @@ Contains
   ! ***************************************************************************
   ! * initField reads in the full field solution from fn_field.
   ! * This is used for reading in the primary (radial) magnetic fields.
+  ! * If the file exists, it contains the fields for the prior model.
 
   subroutine initField(cUserDef,mygrid,H)
 

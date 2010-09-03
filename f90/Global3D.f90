@@ -645,7 +645,8 @@ end program earth
 	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
 	  ! Compute the RHS = - del x drho (del x H)
-	  call operatorlC(H1D%solns(ifreq)%vec,F,grid)
+	  call operatorD_l_mult(H1D%solns(ifreq)%vec,grid)
+	  call operatorC(H1D%solns(ifreq)%vec,F,grid)
 	  call diagMult(drhoF,F,F)
 	  call operatorCt(F,Bj,grid)
 	  call operatorD_Si_divide(Bj,grid)

@@ -196,8 +196,8 @@ Contains
       ! compute boundary conditions for polarization iMode
       !   uses cell conductivity already set by updateCond
       call SetBound(imode,period,e0%pol(imode),b0%bc)
-			write(*,'(a12,a3,a20,es12.6,a15,i2)') 'Solving the ','FWD', &
-				' problem for period ',(2*PI)/omega,' secs & mode # ',imode
+			write(*,'(a12,a3,a20,i4,a2,es12.6,a15,i2)') 'Solving the ','FWD', &
+				' problem for period ',iTx,': ',(2*PI)/omega,' secs & mode # ',imode
       call FWDsolve3D(b0,omega,e0%pol(imode))
    enddo
 
@@ -207,7 +207,7 @@ Contains
    end subroutine fwdSolve
 
    !**********************************************************************
-   subroutine sensSolve(iTx,FWDorADJ,comb,e)
+   subroutine sensSolve(iTx,FWDorADJ,e,comb)
    !   Uses forcing input from comb, which must be set before calling
    !    solves forward or adjoint problem, depending on comb%ADJ
    !  NOTE that this routine DOES NOT call UpdateFreq routine to complete
@@ -217,8 +217,8 @@ Contains
 
    integer, intent(in)          	:: iTx
    character*3, intent(in)		:: FWDorADJ
-   type(rhsVector_t), intent(inout)		:: comb
    type(solnVector_t), intent(inout)		:: e
+   type(rhsVector_t), intent(inout)		:: comb
 
    ! local variables
    integer      			:: IER,iMode
@@ -230,8 +230,8 @@ Contains
    call zero_solnVector(e)
    do iMode = 1,e%nPol
       comb%b(imode)%adj = FWDorADJ
-			write(*,'(a12,a3,a20,es12.6,a15,i2)') 'Solving the ',FWDorADJ, &
-				' problem for period ',(2*PI)/omega,' secs & mode # ',imode
+			write(*,'(a12,a3,a20,i4,a2,es12.6,a15,i2)') 'Solving the ',FWDorADJ, &
+				' problem for period ',iTx,': ',(2*PI)/omega,' secs & mode # ',imode
       call FWDsolve3d(comb%b(imode),omega,e%pol(imode))
    enddo
 

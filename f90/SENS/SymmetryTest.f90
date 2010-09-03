@@ -203,14 +203,14 @@ Contains
       call initSolver(iTx,m0,comb%grid,eFwd)
 
       ! solve forward problem with source in comb, and save for output
-      call sensSolve(iTx,FWD,comb,eFwd)
+      call sensSolve(iTx,FWD,eFwd,comb)
       eAll%solns(j) = eFwd
 
       !  now, initialize for sensitivity ... do nothing to comb, though!
       call initSolver(iTx,m0,comb%grid,eAdj)
 
       ! solve transpose problem with source in comb
-      call sensSolve(iTx,ADJ,comb,eAdj)
+      call sensSolve(iTx,ADJ,eAdj,comb)
 
       ! compute dot product #1: b^T S^{-1} b
       r1 = dotProd(comb,eFwd,Conj_case)

@@ -13,6 +13,7 @@ module sensComp
   use SolnSpace
   use DataSens
   use SolverSens
+  use ForwardSolver
 
   implicit none
 

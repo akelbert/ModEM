@@ -246,7 +246,7 @@ Contains
    end subroutine fwdSolve
 
    !**********************************************************************
-   subroutine sensSolve(iTx,FWDorADJ,comb,e)
+   subroutine sensSolve(iTx,FWDorADJ,e,comb)
    !   Uses forcing input from comb, which must be set before calling
    !    solves forward or adjoint problem, depending on comb%ADJ
    !  NOTE that this routine now does no initialization: this must be
@@ -255,8 +255,8 @@ Contains
 
    integer, intent(in)          	:: iTx
    character*3, intent(in)		    :: FWDorADJ
-   type(rhsVector_t), intent(inout)		:: comb
    type(solnVector_t), intent(inout)		:: e
+   type(rhsVector_t), intent(inout)		:: comb
 
    ! local variables
    integer      :: IER
