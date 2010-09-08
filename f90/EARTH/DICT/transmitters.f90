@@ -8,7 +8,7 @@ module transmitters
 
   implicit none
 
-  public			:: initFreq, deall_freqList
+  public			:: initFreq, getFreq, deall_freqList
 
   ! ***************************************************************************
   ! * type transmitter_t contains the information about the frequencies; and also
@@ -143,5 +143,30 @@ Contains
     end if
 
   end subroutine deall_freqList
+
+  ! ***************************************************************************
+  ! * Uses frequency (Hz) to locate the transmitter in the list; default zero
+
+  function getFreq(list,freq) result (ifreq)
+
+    type(Freq_List), intent(in)      :: list
+    real(8), intent(in)              :: freq
+    integer                          :: ifreq
+    ! local
+    integer                          :: i
+    real(8)                          :: const
+
+    const = 1.0d-2
+
+    ifreq = 0
+    do i = 1,list%n
+      if (abs((list%info(i)%value-freq)/list%info(i)%value) < const) then
+        ifreq = i
+        exit
+      end if
+    end do
+
+  end function getFreq
+
 
 end module transmitters

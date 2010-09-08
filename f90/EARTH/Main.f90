@@ -12,14 +12,14 @@ module main
   use global
   use grid_orig
   use field_vectors
-  use data_vectors
   use sg_scalar
   use dataspace
+  use userdata
   use dataTypes
   use transmitters
   use receivers
+  use senscomp
   implicit none
-
 
 Contains
 
@@ -61,6 +61,9 @@ Contains
 	!--------------------------------------------------------------------------
 	! Read and compute grid information
 	call initGrid(cUserDef,grid)
+    !--------------------------------------------------------------------------
+    ! Read and compute grid information
+    call setGrid(grid)
 	!--------------------------------------------------------------------------
 	! Read and save thin shell conductance information, if present
 	call initCrust(cUserDef,grid,crust)
@@ -185,16 +188,16 @@ Contains
 	! If this information is required, initialize data functionals
 	if (cUserDef%calculate == 'original') then
 	else
-	  call create_dataVectorMTX(nfreq,nfunc,nobs,dat)
-	  call create_dataVectorMTX(nfreq,nfunc,nobs,psi)
-	  call create_dataVectorMTX(nfreq,nfunc,nobs,res)
+	  !call create_dataVectorMTX(nfreq,nfunc,nobs,dat)
+	  !call create_dataVectorMTX(nfreq,nfunc,nobs,psi)
+	  !call create_dataVectorMTX(nfreq,nfunc,nobs,res)
 	  allocate(ndat(nfreq,nfunc),STAT=istat)
 	  allocate(misfitValue(nfunc))
-	  call initData(cUserDef,dat,obsList,freqList,TFList)
-	  call initMisfit(misfitType,TFList,freqList,dat,misfit)
+	  call initData(cUserDef,allData,obsList,freqList,TFList)
+	  call initMisfit(misfitType,TFList,freqList,allData,misfit)
 	  if (cUserDef%calculate /= 'responses') then
 		allocate(dmisfitValue(nfunc,ncoeff))
-		call create_dataVectorMTX(nfreq,nfunc,nobs,wres) ! weighted residuals
+		!call create_dataVectorMTX(nfreq,nfunc,nobs,wres) ! weighted residuals
 		allocate(misfit%dRda(nfreq,nfunc,ncoeff),STAT=istat)
 		call create_rscalar(grid,sens%drho_real,CENTER)
 		call create_rscalar(grid,sens%drho_imag,CENTER)
@@ -250,10 +253,7 @@ Contains
 	deallocate(sens%da,STAT=istat)
 	call deall_rscalar(sens%drho_real)
 	call deall_rscalar(sens%drho_imag)
-	call deall_dataVectorMTX(dat)
-	call deall_dataVectorMTX(psi)
-	call deall_dataVectorMTX(res)
-	call deall_dataVectorMTX(wres)
+	call deall_dataVectorMTX(allData)
 
     ! Deallocate dictionaries
 	call deall_obsList()

@@ -6,15 +6,15 @@ module output
 
   use iotypes
   use iospec
-  use datadef
   use griddef
   use sg_vector
   use sg_sparse_vector
   use modeldef
-  !use global
+  use dataMisfit
   use responses
   use functionals
   use dataspace
+  use UserData
   use dataTypes
   use transmitters
   use receivers
@@ -136,51 +136,51 @@ Contains
   ! * OutputResponses writes the chosen kind of responses calculated at every
   ! * observatory location to an output file
 
-  subroutine outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
+  subroutine outputResponses(psi,outFiles,dat)
 
-	type (transmitter_t), intent(in)					:: freq
-	type (dataVectorMTX_t), intent(in)					:: psi
-	type (dataVectorMTX_t), intent(in), optional		    :: dat
-	type (TF_List), intent(in)						:: TFList
-	type (Obs_List), intent(in)						:: obsList
-	type (Freq_List), intent(in)					:: freqList
+	type (dataVector_t), intent(in)					:: psi
+	type (dataVector_t), intent(in), optional		:: dat
 	type (output_info), intent(in)					:: outFiles
 	character(80)									:: fn_response
 	complex(8), dimension(:), allocatable			:: Resp,RespRatio
 	complex(8), dimension(:), allocatable			:: FieldData
-	real(8), dimension(:), allocatable			:: FieldError
+	real(8), dimension(:), allocatable			    :: FieldError
 	real(8)											:: rval,ival,err,rms
-	integer											:: i,j,k
+	integer											:: i,j,k,itype,iobs,nSite
 	integer											:: ios,istat
 
-	i = freq%i
+    i = psi%tx
 
 	allocate(Resp(obsList%n),RespRatio(obsList%n),FieldData(obsList%n),FieldError(obsList%n), STAT=istat)
 
-	do j=1,TFList%n
+	do j=1,psi%ndt
 
-	  select case ( trim(TFList%info(j)%name) )
+	  nSite = psi%data(j)%nSite
+      allocate(Resp(nSite),RespRatio(nSite),FieldData(nSite),FieldError(nSite), STAT=istat)
+	  RespRatio(:) = cmplx(psi%data(j)%value(1,:),psi%data(j)%value(2,:))
+	  FieldData(:) = cmplx(dat%data(j)%value(1,:),dat%data(j)%value(2,:))
+	  FieldError(:) = dat%data(j)%error(1,:)
+	  itype = dat%data(j)%dataType
+
+	  select case ( trim(TFList%info(itype)%name) )
+
 	  case ('C')
 		fn_response = outFiles%fn_cdat
-		RespRatio(:) = psi%v(i,j,:)%resp%value
-		FieldData(:) = dat%v(i,j,:)%resp%value
-		FieldError(:) = dat%v(i,j,:)%resp%err
-		do k=1,obsList%n
-			Resp(k) = RespRatio(k) * dtan(obsList%info(k)%colat*d2r) * m2km
+		do k=1,nSite
+		    iobs = psi%data(j)%rx(k)
+			Resp(k) = RespRatio(k) * dtan(obsList%info(iobs)%colat*d2r) * m2km
 		end do
 
 	  case ('D')
 		fn_response = outFiles%fn_ddat
-		RespRatio(:) = psi%v(i,j,:)%resp%value
-		FieldData(:) = dat%v(i,j,:)%resp%value
-		FieldError(:) = dat%v(i,j,:)%resp%err
-		do k=1,obsList%n
-			Resp(k) = RespRatio(k) * dsin(obsList%info(k)%colat*d2r) * m2km
+		do k=1,nSite
+            iobs = psi%data(j)%rx(k)
+			Resp(k) = RespRatio(k) * dsin(obsList%info(iobs)%colat*d2r) * m2km
 		end do
 
 	  case default
 		write(0,*) 'Warning: unknown transfer function: ',&
-		  trim(TFList%info(j)%name)
+		  trim(TFList%info(itype)%name)
 		cycle
 	  end select
 
@@ -205,29 +205,32 @@ Contains
 		  open(ioResp,file=fn_response,position='append', form='formatted',iostat=ios)
 	  end if
 		!write(ioResp,*) "freq = ",freq%value
-		do k=1,size(RespRatio)
-		  if (.not.obsList%info(k)%defined) then
+		do k=1,nSite
+          iobs = psi%data(j)%rx(k)
+		  if (.not.obsList%info(iobs)%defined) then
 			cycle
 		  end if
 		  write(ioResp,'(f8.3,a12,4g15.7)',advance='no') &
 			  freqList%info(i)%period,&
-			  trim(obsList%info(k)%code),&
-			  obsList%info(k)%lon,obsList%info(k)%lat,Resp(k)
+			  trim(obsList%info(iobs)%code),&
+			  obsList%info(iobs)%lon,obsList%info(iobs)%lat,Resp(k)
 		  if(present(dat)) then
-			if (dat%v(i,j,k)%resp%exists) then
+			!if (dat%data(j)%exists(k)) then
 			  rval = dreal(FieldData(k)-RespRatio(k))
 			  ival = dimag(FieldData(k)-RespRatio(k))
 			  err = FieldError(k)
 			  rms = ((rval/err)**2 + (ival/err)**2)/2
 			  write(ioResp,'(g15.7)') rms
-			else
-			  write(ioResp,'(g15.7)') 999999.9
-			end if
+			!else
+			!  write(ioResp,'(g15.7)') 999999.9
+			!end if
 		  else
 			write(ioResp,*)
 		  end if
 		end do
 	  close(ioResp)
+
+      deallocate(Resp,RespRatio,FieldData,FieldError, STAT=istat)
 
 !	  if (fn_response == '') then
 !		do k=1,size(Resp)
@@ -237,7 +240,6 @@ Contains
 
 	end do
 
-	deallocate(Resp)
 	return
 
   end subroutine outputResponses  ! outputResponses
@@ -297,18 +299,15 @@ Contains
   ! * OutputResiduals writes out the non-averaged residuals for all observatories
   ! * for each frequency and data functional
 
-  subroutine outputResiduals(freq,res,TFList,obsList,outFiles)
+  subroutine outputResiduals(res,outFiles)
 
-	type (transmitter_t), intent(in)					:: freq
-	type (dataVectorMTX_t), intent(in)					:: res
-	type (TF_List), intent(in)						:: TFList
-	type (Obs_List), intent(in)						:: obsList
+	type (dataVector_t), intent(in)					:: res
 	type (output_info), intent(in)					:: outFiles
 	character(80)									:: fname
-	integer											:: i,j,k,ios
+	integer											:: i,j,k,ios,iobs
 	real(8)											:: rval,ival,error
 
-	i = freq%i
+	i = res%tx
 
 	fname = outFiles%fn_residuals
 
@@ -319,19 +318,20 @@ Contains
 	  open(ioWRITE,file=fname,position='append', form='formatted',iostat=ios)
 	end if
 
-	do j = 1,TFList%n
-	  do k = 1,obsList%n
+	do j = 1,res%ndt
+	  do k = 1,res%data(j)%nSite
 
-		if (.not.res%v(i,j,k)%resp%exists) then
-		  cycle
-		end if
+		!if (res%data(j)%exists(k)) then
+		!  cycle
+		!end if
 
-		rval = dreal(res%v(i,j,k)%resp%value)
-		ival = dimag(res%v(i,j,k)%resp%value)
-		error = res%v(i,j,k)%resp%err
+		rval = res%data(j)%value(1,k)
+		ival = res%data(j)%value(2,k)
+		error = res%data(j)%error(1,k)
+		iobs = res%data(j)%rx(k)
 
   		write(ioWRITE,'(2i5,a10,5g15.7)') i,j,&
-		  adjustr(trim(res%v(i,j,k)%obs%code)),&
+		  adjustr(trim(obsList%info(iobs)%code)),&
 		  rval,ival,error,rval/error,ival/error
 
 	  end do
@@ -385,17 +385,13 @@ Contains
   ! ***************************************************************************
   ! * OutputJacobian outputs the full Jacobian matrix
 
-  subroutine outputJacobian(freq,psi,sens,freqList,TFList,obsList,param,cUserDef)
+  subroutine outputJacobian(psi,sens,param,cUserDef)
 
     use model_operators
 
-	type (transmitter_t), intent(in)					:: freq
-        type (sensitivity_t), intent(in)                                  :: sens
-	type (dataVectorMTX_t), intent(in)					:: psi
+    type (sensitivity_t), intent(in)                :: sens
+	type (dataVector_t), intent(in)					:: psi
 	type (modelParam_t), intent(in), optional		    :: param
-	type (TF_List), intent(in)						:: TFList
-	type (Obs_List), intent(in)						:: obsList
-	type (Freq_List), intent(in)					:: freqList
 	!type (output_info), intent(in)					:: outFiles
 	type (modelCoeff_t)								:: coeff
 	type (input_info), intent(in)			  :: cUserDef
@@ -404,39 +400,42 @@ Contains
 	character(80)									:: fn_jacobian
 	complex(8), dimension(:), allocatable			:: Resp
 	real(8)											:: rval,ival,error,rms
-	integer											:: i,j,k,l
+	integer											:: i,j,k,l,itype,iobs,nSite
 	integer											:: ios,istat
 
-	i = freq%i
+	i = psi%tx
 
 	!write (ichar,'(i3.3)') freq%i
 
-	allocate(Resp(obsList%n), STAT=istat)
 
-	do j=1,TFList%n
+	do j=1,psi%ndt
 
-	  select case ( trim(TFList%info(j)%name) )
+      nSite = psi%data(j)%nSite
+	  allocate(Resp(nSite), STAT=istat)
+      Resp(:) = cmplx(psi%data(j)%value(1,:),psi%data(j)%value(2,:))
+      itype = psi%data(j)%dataType
+
+	  select case ( trim(TFList%info(itype)%name) )
 	  case ('C')
                 echar = 'cj'
 	  case ('D')
                 echar = 'dj'
 	  case default
 		write(0,*) 'Warning: unknown transfer function: ',&
-		  trim(TFList%info(j)%name)
+		  trim(TFList%info(itype)%name)
 		cycle
 	  end select
 
-          fn_jacobian = trim(cUserDef%modelname)//'_'//trim(freq%code)//'.'//trim(echar)
+          fn_jacobian = trim(cUserDef%modelname)//'_'//trim(freqList%info(i)%code)//'.'//trim(echar)
 	  print *, "Outputting Jacobian to ",fn_jacobian
-
-	  Resp(:) = psi%v(i,j,:)%resp%value
 
           open(ioSens,file=fn_jacobian,status='unknown',form='formatted',iostat=ios)
           !write(ioSens,*) "#Full Jacobian, output of earth3d (for ",freqList%n," frequency values)";
           !write(ioSens,*) "#Period Code GM_Lon GM_Lat Layer Coeff.code Coeff.value Re(psi) Im(psi) Re(dpsi) Im(dpsi)";
 
-          do k=1,size(Resp)
-            if (.not.obsList%info(k)%defined) then
+          do k=1,nSite
+            iobs = psi%data(j)%rx(k)
+            if (.not.obsList%info(iobs)%defined) then
               cycle
             end if
             do l=1,param%nc
@@ -448,8 +447,8 @@ Contains
 
                 write(ioSens,'(f8.3,a12,2g15.7,i4,a12,g15.7,2g15.7,2g15.7)',advance='yes') &
                      freqList%info(i)%period,&
-                     trim(obsList%info(k)%code),&
-                     obsList%info(k)%lon,obsList%info(k)%lat,&
+                     trim(obsList%info(iobs)%code),&
+                     obsList%info(iobs)%lon,obsList%info(iobs)%lat,&
                      coeff%L%num,coeff%code,coeff%value,&
                      Resp(k),&
                      sens%da(i,j,k,l)

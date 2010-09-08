@@ -11,6 +11,7 @@ module initFields
   use global
   use wrapper
   use sg_sparse_vector
+  use griddef
   implicit none
 
 
@@ -32,11 +33,12 @@ Contains
   !	* call copyd1_d3_b(nx,ny,nz,Hx,Hy,Hz,hvec,x,y,z)
   ! * call insertBoundaryValues(bvH,Hx,Hy,Hz)
 
-  subroutine initialize_fields_vec(hvec,bvec,bvH)
+  subroutine initialize_fields_vec(hvec,bvec,bvH,grid)
 
 
 	complex(8), dimension(:), intent(inout)	:: hvec,bvec
 	type (sparsevecc), intent(inout)		:: bvH
+	type (grid_t), intent(in)               :: grid
 	integer									:: istat
 
 	!allocate(Hx(np1),Hy(np1),Hz(np1),STAT=istat)
@@ -75,12 +77,13 @@ Contains
   ! ***************************************************************************
   ! * initialize_fields is the routine to compute the initial values of the
   ! * magnetic fields based on the boundary conditions
-  subroutine initialize_fields(H,F)
+  subroutine initialize_fields(H,F,grid)
 
 	!use field_vectors
 
 	type (cvector), intent(inout)			:: H,F
 	type (sparsevecc)						:: Hb
+	type (grid_t), intent(in)               :: grid
 	complex(8), dimension(:), allocatable	:: hvec
 	!complex(8), dimension(:), allocatable   :: Hx,Hy,Hz
 	integer									:: istat,i

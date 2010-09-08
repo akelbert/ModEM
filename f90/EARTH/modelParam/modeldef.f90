@@ -6,19 +6,6 @@ module modeldef
   use griddef
   implicit none
 
-  ! ***************************************************************************
-  ! * storing the forward solver control parameters
-  type :: fwdCtrl_t
-
-      integer                                   :: ipotloopmax
-	  integer									:: nrelmax
-      integer                                   :: n_reldivh
-      integer                                   :: ipot0
-	  integer									:: ipotint
-      integer                                   :: ipot_max
-      real(8)                                   :: errend
-
-  end type fwdCtrl_t
 
   ! ***************************************************************************
   ! * type modelPoint_t contains information about a point in the Earth: coords

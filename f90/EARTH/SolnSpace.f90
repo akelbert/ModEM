@@ -9,6 +9,7 @@ module SolnSpace
 use math_constants
 use file_units
 use utilities
+use sg_scalar
 use sg_vector
 use sg_boundary
 use sg_sparse_vector
@@ -509,6 +510,7 @@ Contains
 
        call add_scvector(cs,SV%L,FV%source)
        FV%nonzero_source = .true.
+       FV%allocated = .true.
 
      end subroutine add_sparseVrhsV
 

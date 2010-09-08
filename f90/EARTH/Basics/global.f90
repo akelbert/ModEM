@@ -30,7 +30,7 @@ module global
 
   ! ***************************************************************************
   ! * grid: Contains the information about the user-specified grid
-  type (grid_t), save								:: grid
+  !type (grid_t), save								:: grid
 
   ! ***************************************************************************
   ! * shell: Contains the information about thin-shell conductance
@@ -47,30 +47,23 @@ module global
   type (modelParam_t), save								:: param0
 
   ! ***************************************************************************
-  ! * cUserDef: Vital character-based information specified by the user
+  ! *  allData: Contains all input data, saved for computations and output
   ! * outFiles: Information about output file names; extensions are hard-coded
+  ! * cUserDef: Vital character-based information specified by the user
   ! * fwdCtrls: User-specified information about the forward solver relaxations
-  type (input_info), save								:: cUserDef
-  type (output_info),save							:: outFiles
-  type (fwdCtrl_t),save								:: fwdCtrls
+  !type (dataVectorMTX_t), save  :: allData
+  !type (output_info), save      :: outFiles
+  !type (input_info), save       :: cUserDef
+  !type (fwdCtrl_t), save        :: fwdCtrls
 
-
-  ! ***************************************************************************
-  ! * misfitType: preconditioning and regularisation parameters
-  type (misfitDef_t)								:: misfitType
 
   ! ***************************************************************************
   ! * some common integers are stored here to simplify the code
-  !integer										:: nfreq,ifreq
-  !integer               						:: nobs, iobs
-  !integer										:: nfunc, ifunc
-  !integer										:: nvar, ivar, ilayer
-  !integer										:: ncoeff, icoeff
-  integer										:: nfreq
-  integer               						:: nobs
-  integer										:: nfunc
-  integer										:: nvar
-  integer										:: ncoeff
+  !integer										:: nfreq
+  !integer               						:: nobs
+  !integer										:: nfunc
+  !integer										:: nvar
+  !integer										:: ncoeff
 
 
   ! Dimensions:

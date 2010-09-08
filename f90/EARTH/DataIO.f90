@@ -1,10 +1,10 @@
 ! *****************************************************************************
 module DataIO
   ! This module contains io routines for reading and writing the data vectors
+  ! Generic interface required to call this from Level I inversion routines...
   ! Version: Global 3D
 
-  use data_vectors
-  use global
+  use UserData
   use input
   use output
 
@@ -20,18 +20,15 @@ Contains
 !**********************************************************************
 ! writes global responses file in ASCII format
 
-   subroutine write_dataVectorMTX(allData,cfile)
+   subroutine write_dataVectorMTX(allResp,cfile)
 
-      character(*), intent(in)					:: cfile
-      type(dataVectorMTX_t), intent(in)			:: allData
+      character(*), intent(in)                      :: cfile
+      type(dataVectorMTX_t), intent(in)             :: allResp
       ! local variables
-      type (transmitter_t)						:: freq
-      integer									:: ifreq
+      integer									:: i
       character(80)								:: strtmp
 
-      do ifreq=1,freqList%n
-
-		freq = freqList%info(ifreq)
+      do i=1,allData%nTx
 
 		write(strtmp,*) trim(cfile),'.cout'
 		outFiles%fn_cdat = strtmp
@@ -39,7 +36,7 @@ Contains
 		write(strtmp,*) trim(cfile),'.dout'
 		outFiles%fn_ddat = strtmp
 
-		call outputResponses(freq,allData,freqList,TFList,obsList,outFiles,dat)
+		call outputResponses(allResp%d(i),outFiles,allData%d(i))
 
       end do
 

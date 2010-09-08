@@ -408,15 +408,16 @@ Contains
 	        endif
 	     enddo ! iFunc
 	  enddo ! iSite
-	  !  deallocate local arrays
+	  !  deallocate these arrays for each data type
 	  do iFunc = 1, nFunc
 	    call deall_modelParam(sigmaQreal(iFunc))
 	    call deall_modelParam(sigmaQimag(iFunc))
 	  enddo
 	  deallocate(sigmaQreal,STAT=istat)
 	  deallocate(sigmaQimag,STAT=istat)
-	  call deall_modelParam(sigmaTemp)
   enddo ! j
+  ! finally, deallocate sigmaTemp
+  call deall_modelParam(sigmaTemp)
 
   end subroutine QmultT
 

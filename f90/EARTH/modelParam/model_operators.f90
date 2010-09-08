@@ -44,7 +44,7 @@ module model_operators
 !  END INTERFACE
 
   INTERFACE dotProd
-     MODULE PROCEDURE dotProd_modelParam_f
+     MODULE PROCEDURE dotProd_modelParam
      MODULE PROCEDURE dotProdVec_modelParam_f
   END INTERFACE
 
@@ -54,6 +54,10 @@ module model_operators
 
   INTERFACE scMult
      MODULE PROCEDURE scMult_modelParam
+  END INTERFACE
+
+  INTERFACE scMultAdd
+     MODULE PROCEDURE scMultAdd_modelParam
   END INTERFACE
 
   INTERFACE compare
@@ -80,8 +84,8 @@ module model_operators
   public			:: getDegree_modelParam_f, getLayerDegree_modelParam_f
   public			:: getRadial_modelParam_f
   public			:: add_modelParam_f, subtract_modelParam_f, linComb_modelParam
-  public			:: mult_modelParam_f, dotProd_modelParam_f, dotProdVec_modelParam_f
-  public			:: scMult_modelParam, scDiv_modelParam_f
+  public			:: mult_modelParam_f, dotProd_modelParam, dotProdVec_modelParam_f
+  public			:: scMult_modelParam, scMultAdd_modelParam, scDiv_modelParam_f
   public			:: print_modelParam, write_modelParam
   public			:: smoothV_modelParam, smoothH_modelParam
   public			:: multBy_CmSqrt, multBy_Cm
@@ -928,7 +932,7 @@ Contains
   ! **********************************************************************
   ! * We can multiply values with exists==.FALSE. (they equal zero)
   ! * BOP
-  function dotProd_modelParam_f(P1,P2) result(r)
+  function dotProd_modelParam(P1,P2) result(r)
 
     implicit none
     type (modelParam_t), intent(in)		:: P1
@@ -956,7 +960,7 @@ Contains
 	  end do
 	end do
 
-  end function dotProd_modelParam_f
+  end function dotProd_modelParam
 
 
   ! **********************************************************************
@@ -1021,6 +1025,29 @@ Contains
 
 
   end subroutine scMult_modelParam
+
+  ! **********************************************************************
+  ! * BOP
+  subroutine scMultAdd_modelParam(v,P1,P)
+
+    implicit none
+    type (modelParam_t), intent(in)     :: P1
+    real(8), intent(in)                 :: v
+    type (modelParam_t), intent(inout)  :: P
+    ! * EOP
+
+    if (.not. P1%allocated) then
+        call errStop('(scMult_modelParam) input parametrization not allocated yet')
+    else if (.not. P%allocated) then
+        call errStop('(scMult_modelParam) output structure has to be allocated before calling')
+    else if (.not. compare(P1,P)) then
+        call errStop('(scMult_modelParam) output parametrization is incompatible')
+    end if
+
+    P%c%value = P%c%value + v * P1%c%value
+
+
+  end subroutine scMultAdd_modelParam
 
   ! **********************************************************************
   ! * BOP
@@ -1387,5 +1414,74 @@ Contains
 	close(ioPrm)
 
   end subroutine write_modelParam
+
+
+  ! **********************************************************************
+  ! * Use to output a vector of model parameters, normally for the full
+  ! * sensitivity matrix (NOTE ioSens HARDCODED).
+  ! * Assume that the vector consists of parameters of the same type
+  ! * (size, etc); could be verified on input.
+  ! * Assume also that the file is already open; will be closed in the
+  ! * calling subroutine.
+  subroutine writeVec_modelParam(np,P,header,cfile)
+
+    implicit none
+    integer, intent(in)                     :: np
+    type (modelParam_t), intent(in)         :: P(np)
+    character(*), intent(in)                :: header, cfile
+    ! * EOP
+
+    integer                                 :: lmax,i,j,k,istat
+    logical                                 :: opened
+    character(6)                            :: if_log_char,if_var_char
+
+    inquire(file=cfile, opened=opened)
+    if (.not. opened) then
+        open(unit=ioSens, file=cfile, status='unknown', iostat=istat)
+    endif
+
+    lmax = getDegree(P(1))
+
+    write(ioSens,'(a24,i2,a8,i2)') 'Format: harmonic layers ',P(1)%nL,' degree ',lmax
+    write(ioSens,*)
+
+    do j=1,P(1)%nL
+        if (P(1)%L(j)%if_log) then
+            if_log_char = 'log'
+        else
+            if_log_char = 'linear'
+        end if
+        lmax = getDegree(P(1),j)
+        write(ioSens,'(a6)',advance='no') if_log_char
+        write(ioSens,'(a8,i2)',advance='no') ' degree ',lmax
+        write(ioSens,'(a7,g10.5)',advance='no') ' layer ',P(1)%L(j)%depth
+        ! DO NOT WRITE THE REGULARISATION PARAMETERS...
+        !write(ioSens,'(a5,2g10.5)') ' reg ',P(1)%L(j)%alpha, P(1)%L(j)%beta
+        ! INSTEAD, START NEW LINE:
+        write(ioSens,*)
+        write(ioSens,*) '  l   m   value       min       max'
+        do i=1,P(1)%nF
+            if (.not.P(1)%c(j,i)%exists) then
+                cycle
+            end if
+            write(ioSens,'(2i4)',advance='no') P(1)%F(i)%l,P(1)%F(i)%m
+            do k=1,size(P)
+                write(ioSens,'(g15.7)',advance='no') P(k)%c(j,i)%value
+            end do
+            if (P(1)%c(j,i)%frozen) then
+                if_var_char = 'const'
+            else
+                if_var_char = 'range'
+            end if
+            write(ioSens,'(2g15.7,a6)') P(1)%c(j,i)%min,P(1)%c(j,i)%max,if_var_char
+        end do
+        write(ioSens,*)
+    end do
+    write(ioSens,*)
+
+    !... do not close!
+    !close(ioSens)
+
+  end subroutine writeVec_modelParam
 
 end module model_operators

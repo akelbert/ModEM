@@ -11,7 +11,7 @@ module receivers
 
   implicit none
 
-  public            :: initCoords, initObsList, deall_obsList
+  public            :: initCoords, initObsList, getObs, deall_obsList
 
   ! ***************************************************************************
   ! * type receiver_t contains the information about a single observatory; we
@@ -139,6 +139,26 @@ Contains
 
   end subroutine deall_obsList
 
+  ! ***************************************************************************
+  ! * Uses observatory code to locate the receiver in the list; default zero
+
+  function getObs(list,code) result (iobs)
+
+    type(Obs_List), intent(in)       :: list
+    character(*), intent(in)         :: code
+    integer                          :: iobs
+    ! local
+    integer                          :: j
+
+	  iobs = 0
+	  do j = 1,list%n
+	    if (trim(code) == trim(list%info(j)%code)) then
+	      iobs = j
+	      exit
+	    end if
+	  end do
+
+  end function getObs
 
   ! ***************************************************************************
   ! * ComputeInterpWeights computes the sparse vector L at a single observatory,

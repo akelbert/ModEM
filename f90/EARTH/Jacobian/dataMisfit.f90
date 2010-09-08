@@ -3,12 +3,75 @@ module dataMisfit
   ! Module containing the definitions and subroutines related to the penalty
   ! functional only. Only use it if we want to compute the data misfit.
 
-  use global
   use responses
   use functionals
   use model_operators
-  use dataspace
+  use UserData
+  use SolnSpace
+  use DataSpace
+  use dataTypes
   implicit none
+
+  ! ***************************************************************************
+  ! * type sensitivity_t contains the full information about the data sensitivities
+  ! * with respect to the original model parameters and to
+  ! * each cell resistivity for all frequencies
+  ! * used in the Jacobian calculations only
+  type :: sensitivity_t
+
+    complex(8), pointer, dimension(:,:,:,:) :: da  !(nfreq,nfunc,nobs,nvar)
+    real(8), pointer, dimension(:,:,:,:)    :: da_real  !(nfreq,nfunc,nobs,nvar)
+    real(8), pointer, dimension(:,:,:,:)    :: da_imag  !(nfreq,nfunc,nobs,nvar)
+    type (rscalar)                          :: drho_real
+    type (rscalar)                          :: drho_imag
+    !real(8), pointer, dimension(:,:,:)     :: drho_real  !(nx,ny,nz) - single freq, all func
+    !real(8), pointer, dimension(:,:,:)     :: drho_imag  !(nx,ny,nz) - single freq, all func
+
+  end type sensitivity_t
+
+
+  ! ***************************************************************************
+  ! * type misfit_t contains the full information about the misfit and its'
+  ! * partial derivatives with respect to the original model parameters and to
+  ! * each cell resistivity for all frequencies
+  ! * used in the Jacobian and derivative calculations
+  type :: misfit_t
+
+    character(80)                           :: name
+    real(8)                   :: damping
+    real(8), pointer, dimension(:,:)        :: value  !(nfreq,nfunc)
+    integer, pointer, dimension(:,:)        :: ndat   !(nfreq,nfunc)
+    real(8), pointer, dimension(:)          :: weight !nfunc
+    real(8), pointer, dimension(:,:,:)      :: dRda   !(nfreq,nfunc,ncoeff)
+    !real(8), pointer, dimension(:,:,:,:)   :: dRda   !(nfreq,nfunc,nlayer,nparam)
+
+  end type misfit_t
+
+  type (misfit_t), save                            :: misfit
+  type (sensitivity_t), save                       :: sens
+
+  ! ***************************************************************************
+  ! * storing data misfit for each freq and func, dim(nfreq,nfunc)
+  ! * total number of observations per data type & misfit weights, dim(nfunc)
+  !real(8), allocatable, dimension(:,:), save       :: misfit
+  integer, allocatable, dimension(:,:), save        :: ndat
+  !real(8), allocatable, dimension(:), save     :: weight
+  real(8), allocatable, dimension(:), save      :: misfitValue
+  real(8), allocatable, dimension(:,:), save        :: dmisfitValue
+
+  !type (misfitInfo_t),dimension(:,:),allocatable,save   :: misfitInfo ! (nfreq,nfunc)
+
+  ! ***************************************************************************
+  ! * type sensMatrix_t stores the full sensitivity matrix or the
+  ! * partial derivatives with respect to the original model parameters
+  ! * for all frequencies and all data functionals
+
+  type :: sensMatrix_tmp_t
+
+    type(modelParam_t), pointer, dimension(:,:)  :: dm    !(nfreq,nfunc)
+    logical                                      :: allocated=.false.
+
+  end type sensMatrix_tmp_t
 
 
 Contains
@@ -16,55 +79,44 @@ Contains
   ! ***************************************************************************
   ! * calcResponses is the subroutine to compute the values of data functionals
 
-  subroutine calcResponses(freq,H,dat,psi)
+  subroutine calcResponses(H,dat,psi)
 
 	!uses: TFList,obsList
 
-	type (transmitter_t), intent(in)		:: freq
-	type (dataVectorMTX_t), intent(in)			:: dat
-	type (dataVectorMTX_t), intent(inout)		:: psi
+	type (dataVector_t), intent(in)			:: dat
+	type (dataVector_t), intent(inout)		:: psi
 	type (cvector), intent(in)				:: H
-	integer									:: i,j,k
+	integer									:: i,j,k,itype,iobs,nSite
 
-    psi%nTx = dat%nTx
-	psi%n = dat%n
+    psi = dat
+	i = dat%tx
 
-	i = freq%i
-
-	do j=1,TFList%n
-	  select case ( TFList%info(j)%name )
+	do j=1,dat%ndt
+	  itype = dat%data(j)%dataType
+	  nSite = dat%data(j)%nSite
+	  select case ( TFList%info(itype)%name )
 	  case ('C')
-		do k=1,nobs
-		  psi%v(i,j,k)%resp%value = dataResp(C_ratio,obsList%info(k),H)
-		  psi%v(i,j,k)%resp%err = 0.0d0
-		  psi%v(i,j,k)%resp%exists = dat%v(i,j,k)%resp%exists
-		  psi%v(i,j,k)%func => TFList%info(j)
-		  psi%v(i,j,k)%obs => obsList%info(k)
-		  psi%v(i,j,k)%freq => freqList%info(i)
-          psi%v(i,j,k)%dataType = j
-          psi%v(i,j,k)%rx = k
-          psi%v(i,j,k)%tx = i
+		do k=1,nSite
+		  iobs = psi%data(j)%rx(k)
+		  psi%data(j)%value = dataResp_rx(C_ratio,obsList%info(iobs),H)
+		  psi%data(j)%error = 0.0d0
+          psi%data(j)%errorBar = .FALSE.
 		end do
 	  case ('D')
-		do k=1,nobs
-		  psi%v(i,j,k)%resp%value = dataResp(D_ratio,obsList%info(k),H)
-		  psi%v(i,j,k)%resp%err = 0.0d0
-		  psi%v(i,j,k)%resp%exists = dat%v(i,j,k)%resp%exists
-		  psi%v(i,j,k)%func => TFList%info(j)
-		  psi%v(i,j,k)%obs => obsList%info(k)
-		  psi%v(i,j,k)%freq => freqList%info(i)
-          psi%v(i,j,k)%dataType = j
-          psi%v(i,j,k)%rx = k
-          psi%v(i,j,k)%tx = i
+		do k=1,nSite
+          iobs = psi%data(j)%rx(k)
+          psi%data(j)%value = dataResp_rx(D_ratio,obsList%info(iobs),H)
+          psi%data(j)%error = 0.0d0
+          psi%data(j)%errorBar = .FALSE.
 		end do
 	  case default
 		write(0,*) 'Warning: no transfer functions specified to compute'
 		stop
 	  end select
-	  do k=1,obsList%n
-		if (.not.obsList%info(k)%defined) then
-		  psi%v(i,j,k)%resp%exists = .FALSE.
-		  psi%n(i,j) = psi%n(i,j) - 1
+	  do k=1,nSite
+        iobs = psi%data(j)%rx(k)
+		if (.not.obsList%info(iobs)%defined) then
+		  !psi%data(j)%exists(k) = .FALSE.
 		end if
 	  end do
 	end do
@@ -76,53 +128,34 @@ Contains
   ! * calcResiduals is the subroutine to compute the data residuals from the
   ! * data and the corresponding responses obtained by first computing the fields.
 
-  subroutine calcResiduals(freq,dat,psi,res,weighted)
+  subroutine calcResiduals(dat,psi,res,weighted)
 
-	type (transmitter_t), intent(in)			:: freq
-	type (dataVectorMTX_t), intent(in)				:: dat,psi
-	type (dataVectorMTX_t), intent(inout)			:: res
+	type (dataVector_t), intent(in)				:: dat,psi
+	type (dataVector_t), intent(inout)			:: res
 	logical, intent(in), optional				:: weighted
-	integer										:: i,j,k
-	complex(8)									:: value
+	integer										:: i,j,k,itype,iobs,nSite
+	real(8)									    :: value(2)
 	real(8)										:: error
 
-	i = freq%i
+    res = dat
+    i = dat%tx
 
 	! Cycle over functional types and the observatories for this frequency
-	do j=1,TFList%n
-	  do k=1,obsList%n
-
-  		res%v(i,j,k)%func => dat%v(i,j,k)%func
-  		res%v(i,j,k)%obs => dat%v(i,j,k)%obs
-  		res%v(i,j,k)%freq => dat%v(i,j,k)%freq
-          res%v(i,j,k)%dataType = j
-          res%v(i,j,k)%rx = k
-          res%v(i,j,k)%tx = i
-		! The residual exists if both the data entry and the response make sense
-		if (dat%v(i,j,k)%resp%exists.and.psi%v(i,j,k)%resp%exists) then
-		  res%v(i,j,k)%resp%exists = .TRUE.
-		  res%v(i,j,k)%resp%value = psi%v(i,j,k)%resp%value - dat%v(i,j,k)%resp%value
-		  res%v(i,j,k)%resp%err = dat%v(i,j,k)%resp%err
-		else
-		  res%v(i,j,k)%resp%exists = .FALSE.
-		  res%v(i,j,k)%resp%value = C_ZERO
-		  res%v(i,j,k)%resp%err = LARGE_REAL
-		end if
-
-	  end do
-	  ! Count the number of existing residuals
-	  res%n(i,j) = count(res%v(i,j,:)%resp%exists)
+    do j=1,dat%ndt
+      itype = dat%data(j)%dataType
+      res%data(j)%value = psi%data(j)%value - dat%data(j)%value
 	end do
 
 	! If instead weighted responses are required, divide by error squared
 	if (present(weighted)) then
 	  if (weighted) then
-		do j=1,TFList%n
-		  do k=1,obsList%n
-			value = res%v(i,j,k)%resp%value
-			error = res%v(i,j,k)%resp%err
-			res%v(i,j,k)%resp%value = value/(error**2)
-			res%v(i,j,k)%resp%err = ONE
+		do j=1,dat%ndt
+		  nSite = res%data(j)%nSite
+		  do k=1,nSite
+			value = res%data(j)%value(:,k)
+			error = res%data(j)%error(1,k)
+			res%data(j)%value(:,k) = value/(error**2)
+			res%data(j)%error(:,k) = ONE
 		  end do
 		end do
 	  end if
@@ -134,35 +167,34 @@ Contains
   ! ***************************************************************************
   ! * calcMisfit performs the misfit computations per frequency
 
-  subroutine calcMisfit(freq,res,misfit,name)
+  subroutine calcMisfit(res,misfit,name)
 
-	type (transmitter_t), intent(in)				:: freq
 	type (misfit_t), intent(inout)			:: misfit
-	type (dataVectorMTX_t), intent(in)				:: res
+	type (dataVector_t), intent(in)				:: res
 	character(80), intent(in)					:: name
 	real(8)										:: rval,ival,error
-	integer										:: i,j,k
+	integer										:: iTx,iDt,j,k,nSite
 
-	i = freq%i
+	iTx = res%tx
 
 	!call OutputResiduals(freq,res,TFList,obsList)
-	do j=1,TFList%n
-	  do k=1,obsList%n
-		if (.not.res%v(i,j,k)%resp%exists) then
-		  cycle
-		end if
+	do j=1,res%ndt
+       iDt = res%data(j)%dataType
 
-		rval = dreal(res%v(i,j,k)%resp%value)
-		ival = dimag(res%v(i,j,k)%resp%value)
-		error = res%v(i,j,k)%resp%err
+	   do k=1,res%data(j)%nSite
+		!if (.not.res%data(j)%exists(k)) then
+		!  cycle
+		!end if
 
-		misfit%ndat(i,j) = res%n(i,j)
+		rval = res%data(j)%value(1,k)
+		ival = res%data(j)%value(2,k)
+		error = res%data(j)%error(1,k)
 
 		! Calculate the misfit
 		select case (trim(name))
 		case ('Mean Squared')
-		  misfit%value(i,j) = &
-			 misfit%value(i,j) + (rval/error)**2 + (ival/error)**2
+		  misfit%value(iTx,iDt) = &
+			 misfit%value(iTx,iDt) + (rval/error)**2 + (ival/error)**2
 		case default
 		  write(0,*) 'Warning: (compute_misfit) unknown penalty functional ',trim(name)
 		  return
@@ -178,18 +210,18 @@ Contains
   ! ***************************************************************************
   ! * misfitSumUp
 
-  subroutine misfitSumUp(res,misfit,misfitValue,dmisfitValue)
+  subroutine misfitSumUp(p_input,misfit,misfitValue,dmisfitValue)
 
 	! this is temporary: output to files will be moved to output.f90
 	use iotypes
 	use iospec
-	! uses: TFList,p_input,param
+	! uses: TFList
 	type (misfit_t), intent(inout)			  :: misfit
-	type (dataVectorMTX_t), intent(in)				  :: res
-	type (modelParam_t)							  :: dparam,weighted_norm
+    type (modelParam_t), intent(in)           :: p_input
+	type (modelParam_t)							  :: param,dparam,weighted_norm
   	real(8), dimension(:), intent(out)			  :: misfitValue  !nfunc
 	real(8), dimension(:,:), intent(out),optional :: dmisfitValue !nfunc,ncoeff
-	type (modelCoeff_t), dimension(param%nc)	  :: norm,grad,point
+	type (modelCoeff_t), dimension(p_input%nc)	  :: norm,grad,point
 	character(80)                    :: comment
 	real(8)										  :: v1,v2
 	integer										  :: j,l
@@ -203,7 +235,7 @@ Contains
 	end do
 
 	v1=dot_product(misfit%weight,misfitValue)
-	v2=dotProd_modelParam_f(p_input,p_input)
+	v2=dotProd_modelParam(p_input,p_input)
 	v2=v2*misfit%damping
 
 	write(0,*) 'Weighted model norm = ',v2
@@ -225,7 +257,7 @@ Contains
 	!---------------------------------------------------------------------------
 
 	! Output derivative summary
-
+    param = multBy_CmSqrt(p_input)
 	dparam = param
 
 	if(.not.present(dmisfitValue)) then

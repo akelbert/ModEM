@@ -4,7 +4,7 @@ module maxwells
   ! numerically the integral form of the quasi-static approximation to Maxwell's
   ! equations on the given grid
 
-  use modeldef, only: fwdCtrl_t
+  use iotypes
   use grid_orig
   use field_vectors ! contains global vectors for divergence correction
   use math_constants

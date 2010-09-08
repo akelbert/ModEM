@@ -10,6 +10,20 @@ module iotypes
   public            :: initSlices, deall_Slices
 
   ! ***************************************************************************
+  ! * storing the forward solver control parameters
+  type :: fwdCtrl_t
+
+      integer                                   :: ipotloopmax
+      integer                                   :: nrelmax
+      integer                                   :: n_reldivh
+      integer                                   :: ipot0
+      integer                                   :: ipotint
+      integer                                   :: ipot_max
+      real(8)                                   :: errend
+
+  end type fwdCtrl_t
+
+  ! ***************************************************************************
   ! * input_info contains the list of all essential input information currently
   ! * read in from fn_startup.
   type :: input_info

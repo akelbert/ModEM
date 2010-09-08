@@ -15,12 +15,12 @@ module ForwardSolver
   !   (after deallocation/cleanup if required) is performed.
 
   use math_constants
-  use solnspace
+  use SolnSpace
   use jacobian
   use transmitters
   use input
   use output
-  use global, only: cUserDef,fwdCtrls
+  use UserData
   use initFields
   use modelmap
 
@@ -60,8 +60,8 @@ Contains
    initForSens = present(comb)
 
    freq => freqList%info(iTx)
-   write(*,'(a43,f9.6,a15)') &
-        'Initializing 3D forward problem for period ',freq%period,' days'
+   write(*,'(a46,f9.6,a5)') &
+        'Initializing 3D SGFD global solver for period ',freq%period,' days'
 
    if(initFwd) then
      if(h0%allocated) then
@@ -70,14 +70,16 @@ Contains
      else
         ! no forward solution computed yet... initialize
         call create_solnVector(grid,iTx,h0)
+        b%nonzero_source = .true.
         call create_rhsVector(grid,iTx,b)
-        call initialize_fields(h0%vec,b%source)
+        call initialize_fields(h0%vec,b%source,grid)
      endif
    endif
 
    if(initForSens) then
         ! also initialize the optional outputs
       call create_solnVector(grid,iTx,h)
+      comb%nonzero_source = .true.
       call create_rhsVector(grid,iTx,comb)
    endif
 
@@ -118,10 +120,10 @@ Contains
    real(kind=prec)                              :: omega
    logical                                      :: adjoint,sens
 
-   freq = freqList%info(iTx)
+   freq => freqList%info(iTx)
 
    ! run FWD/ADJ solver
-   write(*,'(a12,a3,a20,i4,a2,es12.6,a15)') &
+   write(*,'(a12,a3,a20,i4,a2,es12.6,a5)') &
     'Solving the ',FWD,' problem for period ',iTx,': ',1/freq%value,' secs'
 
    omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
@@ -129,10 +131,10 @@ Contains
    ! solve A <h> = <b> for vector <h>
    adjoint = .false.
    sens = .false.
-   call operatorM(h%vec,b%source,omega,resist%v,grid,fwdCtrls,h%errflag,adjoint,sens)
+   call operatorM(h%vec,b%source,omega,resist%v,h%grid,fwdCtrls,h%errflag,adjoint,sens)
 
    ! compute and output fields & C and D responses at cells
-   call outputSolution(freq,h%vec,slices,grid,cUserDef,resist%v,'h')
+   call outputSolution(freq,h%vec,slices,h%grid,cUserDef,resist%v,'h')
 
    ! output full H-field cvector
    if (output_level > 3) then
@@ -162,30 +164,33 @@ Contains
    ! local variables
    type(transmitter_t), pointer                 :: freq
    real(kind=prec)                              :: omega
+   type(cvector)                                :: source
    logical                                      :: adjoint,sens
 
    if(.not. present(comb)) then
     ! use b as RHS
     adjoint = .false.
     sens = .false.
+    source = b%source
    else
     adjoint = (FWDorADJ .ne. FWD)
     sens = .true.
+    source = comb%source
    endif
 
-   freq = freqList%info(iTx)
+   freq => freqList%info(iTx)
 
    ! run FWD/ADJ solver
-   write(*,'(a12,a3,a20,i4,a2,es12.6,a15)') &
+   write(*,'(a12,a3,a20,i4,a2,es12.6,a5)') &
     'Solving the ',FWDorADJ,' problem for period ',iTx,': ',1/freq%value,' secs'
 
    omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
    ! solve A <h> = <b> for vector <h>
-   call operatorM(h%vec,b%source,omega,resist%v,grid,fwdCtrls,h%errflag,adjoint,sens)
+   call operatorM(h%vec,source,omega,resist%v,h%grid,fwdCtrls,h%errflag,adjoint,sens)
 
    ! compute and output fields & C and D responses at cells
-   call outputSolution(freq,h%vec,slices,grid,cUserDef,resist%v,'h')
+   call outputSolution(freq,h%vec,slices,h%grid,cUserDef,resist%v,'h')
 
    ! output full H-field cvector
    if (output_level > 3) then
@@ -194,6 +199,9 @@ Contains
 
    ! update pointer to the transmitter in solnVector
    h%tx = iTx
+
+   ! clean up
+   call deall(source)
 
    if (output_level > 1) then
       write (*,*) ' time taken (mins) ', elapsed_time(timer)/60.0

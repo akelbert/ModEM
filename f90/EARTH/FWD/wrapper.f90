@@ -723,12 +723,12 @@ Contains
   ! * insertBoundaryValues is the routine to insert the boundary values of the
   ! * magnetic fields into the Hx,Hy,Hz representation of the fields
 
-  subroutine insertBoundaryValues(bvH,Hx,Hy,Hz)
+  subroutine insertBoundaryValues(bvH,Hx,Hy,Hz,grid)
 
 	use elements
-	use global, only: grid
 	type (sparsevecc), intent(in)			:: bvH
 	complex(8), dimension(:), intent(out)	:: Hx,Hy,Hz
+	type (grid_t), intent(in)               :: grid
 	integer									:: i,j,k,ii,ib
 	integer									:: bv1,bv2,bv3
 	integer									:: l,m,n
@@ -772,12 +772,12 @@ Contains
   ! * in type (cvector) by the relevant edge lengths. This is an implementation
   ! * of the diagonal operator l_b.
 
-  subroutine divide_bc_by_l(Hb,lHb)
+  subroutine divide_bc_by_l(Hb,lHb,grid)
 
 	use elements
-	use global, only: grid
 	type (sparsevecc), intent(in)			:: Hb
 	type (sparsevecc), intent(out)			:: lHb
+    type (grid_t), intent(in)               :: grid
 	integer									:: i,j,k,ib
 	integer									:: bv1,bv2,bv3
 	real(8)									:: xx,yy,zz
@@ -813,12 +813,12 @@ Contains
   ! * in type (cvector) by the relevant edge lengths. This is an implementation
   ! * of the diagonal operator l_b.
 
-  subroutine mult_bc_by_l(Hb,lHb)
+  subroutine mult_bc_by_l(Hb,lHb,grid)
 
 	use elements
-	use global, only: grid
 	type (sparsevecc), intent(in)			:: Hb
 	type (sparsevecc), intent(out)			:: lHb
+    type (grid_t), intent(in)               :: grid
 	integer									:: i,j,k,ib
 	integer									:: bv1,bv2,bv3
 	real(8)									:: xx,yy,zz
@@ -858,7 +858,7 @@ Contains
 ! * Does *not* pre-multiply by edge lengths any longer
 ! * Last mod.: Oct 05, 2005
 
-  subroutine calcb_from_bc(l,m,n,bc,bvec,resist,x,y,z)
+  subroutine calcb_from_bc(l,m,n,bc,bvec,resist,x,y,z,grid)
 
 
 	  use griddef
@@ -873,6 +873,7 @@ Contains
       real(8),dimension(m+1)      :: y
       real(8),dimension(n+1)      :: z
 	  type (sparsevecc)			  :: bc,newbc
+	  type (grid_t)               :: grid
       complex(8),dimension(:),allocatable   :: hx,hy,hz	!np1
       complex(8),dimension(np2)   :: bvec
       complex(8)                  :: sum
@@ -894,8 +895,8 @@ Contains
 	  hx = C_ZERO
 	  hy = C_ZERO
 	  hz = C_ZERO
-	  call mult_bc_by_l(bc,newbc)
-	  call insertBoundaryValues(newbc,hx,hy,hz)
+	  call mult_bc_by_l(bc,newbc,grid)
+	  call insertBoundaryValues(newbc,hx,hy,hz,grid)
 	  call deall_sparsevecc(newbc)
 
 !

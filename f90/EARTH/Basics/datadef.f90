@@ -29,40 +29,7 @@ module datadef
   ! --------------------------------------
 
 
-  ! ***************************************************************************
-  ! * type sensitivity_t contains the full information about the data sensitivities
-  ! * with respect to the original model parameters and to
-  ! * each cell resistivity for all frequencies
-  ! * used in the Jacobian calculations only
-  type :: sensitivity_t
 
-	complex(8), pointer, dimension(:,:,:,:)	:: da  !(nfreq,nfunc,nobs,nvar)
-	real(8), pointer, dimension(:,:,:,:)	:: da_real  !(nfreq,nfunc,nobs,nvar)
-	real(8), pointer, dimension(:,:,:,:)	:: da_imag  !(nfreq,nfunc,nobs,nvar)
-	type (rscalar)							:: drho_real
-	type (rscalar)							:: drho_imag
-	!real(8), pointer, dimension(:,:,:)		:: drho_real  !(nx,ny,nz) - single freq, all func
-	!real(8), pointer, dimension(:,:,:)		:: drho_imag  !(nx,ny,nz) - single freq, all func
-
-  end type sensitivity_t
-
-
-  ! ***************************************************************************
-  ! * type misfit_t contains the full information about the misfit and its'
-  ! * partial derivatives with respect to the original model parameters and to
-  ! * each cell resistivity for all frequencies
-  ! * used in the Jacobian and derivative calculations
-  type :: misfit_t
-
-	character(80)							:: name
-	real(8)                   :: damping
-	real(8), pointer, dimension(:,:)		:: value  !(nfreq,nfunc)
-	integer, pointer, dimension(:,:)		:: ndat	  !(nfreq,nfunc)
-	real(8), pointer, dimension(:)			:: weight !nfunc
-	real(8), pointer, dimension(:,:,:)	    :: dRda	  !(nfreq,nfunc,ncoeff)
-	!real(8), pointer, dimension(:,:,:,:)	:: dRda	  !(nfreq,nfunc,nlayer,nparam)
-
-  end type misfit_t
 
 
 end module datadef

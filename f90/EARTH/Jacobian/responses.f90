@@ -5,7 +5,6 @@ module responses
 
   use SolnSpace
   use receivers
-  use global, only: grid
   implicit none
 
 
@@ -21,7 +20,7 @@ Contains
   ! * observatory type (receiver_t) at the required location and call this routine.
   ! * Interpolation is automatic through LocateReceiver->ComputeInterpWeights.
 
-  function dataResp(func,obs,H) result(Resp)
+  function dataResp_rx(func,obs,H) result(Resp)
 
 	complex(8), external							:: func
 	type (receiver_t), intent(inout)					:: obs
@@ -33,7 +32,7 @@ Contains
 
 
 	if (.not.obs%located) then
-	  call LocateReceiver(grid,obs)
+	  call LocateReceiver(H%grid,obs)
 	end if
 
 	if (.not.obs%defined) then
@@ -59,7 +58,7 @@ Contains
 	call deall_sparsevecc(Ly)
 	call deall_sparsevecc(Lz)
 
-  end function dataResp ! response
+  end function dataResp_rx ! response
 
 
   ! ***************************************************************************
@@ -82,9 +81,9 @@ Contains
 	type (sparsevecc)								:: Lx,Ly,Lz
 	complex(8)										:: Hx,Hy,Hz
 
-	rad = grid%r(k)
-	lon = grid%ph(i)*r2d
-	colat = (grid%th(j)+grid%th(j+1))*r2d/2
+	rad = H%grid%r(k)
+	lon = H%grid%ph(i)*r2d
+	colat = (H%grid%th(j)+H%grid%th(j+1))*r2d/2
 
 	write(name,'(2i5)') i,j
 	name = trim(name)
@@ -93,7 +92,7 @@ Contains
 	call CreateReceiver(obs,rad,lon,colat,name)
 
 	! Compute interpolation parameters
-	call LocateReceiver(grid,obs)
+	call LocateReceiver(H%grid,obs)
 
 	if (.not.obs%defined) then
 	  return
@@ -135,8 +134,8 @@ Contains
 	integer											:: i,j,istat
 	integer											:: nx,ny
 
-	nx = grid%nx
-	ny = grid%ny
+	nx = H%grid%nx
+	ny = H%grid%ny
 
 	allocate(Hij%x(nx,ny),Hij%y(nx,ny),Hij%z(nx,ny),Hij%o(nx,ny),STAT=istat)
 
@@ -151,11 +150,11 @@ Contains
 		!lon = grid%ph(i)*r2d
 		!Use if obs is at the center of the (i,j,k)'th cell
 		if (i == nx) then
-		  lon = (grid%ph(i)+2*PI)*r2d/2
+		  lon = (H%grid%ph(i)+2*PI)*r2d/2
 		else
-		  lon = (grid%ph(i)+grid%ph(i+1))*r2d/2
+		  lon = (H%grid%ph(i)+H%grid%ph(i+1))*r2d/2
 		end if
-		colat = (grid%th(j)+grid%th(j+1))*r2d/2
+		colat = (H%grid%th(j)+H%grid%th(j+1))*r2d/2
 
 		write(name,'(2i4)') i,j
 		name = trim(name)
@@ -164,7 +163,7 @@ Contains
 		call CreateReceiver(Hij%o(i,j),rad,lon,colat,name)
 
 		! NB: The receiver is shifted down to the nearest grid radius!!!
-		call LocateReceiver(grid,Hij%o(i,j))
+		call LocateReceiver(H%grid,Hij%o(i,j))
 
 		if (Hij%o(i,j)%located) then
 		  Hij%x(i,j) = dotProd_noConj(Hij%o(i,j)%Lx,H) ! dotProd_noConj_scvector_f

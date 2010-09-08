@@ -7,10 +7,11 @@ module input
   use griddef
   use utilities
   use modeldef
-  use datadef
-  use dataspace
+  use dataMisfit
+  use DataSpace
   use SolnSpace
   use iotypes
+  use UserData
   use dataTypes
   use transmitters
   use receivers
@@ -261,16 +262,17 @@ Contains
   ! ***************************************************************************
   ! * initMisfit initializes the values required to compute the full penalty
   ! * functional
-  subroutine initMisfit(misfitType,TFList,freqList,dat,misfit)
+  ! * Uses: freqList,TFList
+  subroutine initMisfit(misfitType,TFList,freqList,allData,misfit)
 
 	type (misfitDef_t), intent(in)						:: misfitType
-	type (dataVectorMTX_t), intent(in)						:: dat
+	type (dataVectorMTX_t), intent(in)						:: allData
 	type (Freq_List), intent(in)						:: freqList
 	type (TF_List), intent(in)							:: TFList
 	type (misfit_t), intent(out)						:: misfit
 	!integer, dimension(:,:), intent(out)				:: ndat
 	integer												:: ifunc,ifreq,iobs
-	integer												:: istat
+	integer												:: istat,i,j,iTx,iDt
 	real(8)												:: total_weight
 
 	allocate(misfit%value(freqList%n,TFList%n),STAT=istat)
@@ -280,20 +282,20 @@ Contains
 	misfit%name = misfitType%name
 	misfit%damping = misfitType%mu
 
-	!ndat = 0
-	!do ifunc = 1,TFList%n
-  	  ! compute the total number of observations of each type for all frequencies
-	!  do ifreq = 1,freqList%n
-	!	ndat(ifreq,ifunc) = ndat(ifreq,ifunc) + count(dat%v(ifreq,ifunc,:)%resp%exists)
-	!  end do
-	!end do
+	misfit%ndat(:,:) = 0
+	do i = 1,allData%nTx
+	   do j = 1,allData%d(i)%nDt
+	       iTx = allData%d(i)%tx
+	       iDt = allData%d(i)%data(j)%dataType
+	       misfit%ndat(iTx,iDt) = allData%d(i)%data(j)%nSite * allData%d(i)%data(j)%nComp / 2 !countData(allData%d(i)%data(j))
+	   end do
+	end do
 
-	misfit%ndat = dat%n
 	misfit%value = 0.0d0
 
-	total_weight = dot_product(TFList%info%w,sum(dat%n,1))
+	total_weight = dot_product(TFList%info%w,sum(misfit%ndat,1))
 	do ifunc = 1,TFList%n
-	  misfit%weight(ifunc) = TFList%info(ifunc)%w * sum(dat%n(:,ifunc))/total_weight
+	  misfit%weight(ifunc) = TFList%info(ifunc)%w * sum(misfit%ndat(:,ifunc))/total_weight
 	end do
 
   end subroutine initMisfit
@@ -316,78 +318,83 @@ Contains
 
   ! ***************************************************************************
   ! * initData initializes the data according to the information stored in
-  ! * the list of transfer functions TFList
-  subroutine initData(cUserDef,mydat,myobs,myfreq,myfunc)
+  ! * the list of transfer functions TFList; then merges all data types into
+  ! * a single data vector allData
+  subroutine initData(cUserDef,allData,obsList,freqList,TFList)
 
 	implicit none
     type (input_info), intent(in)							:: cUserDef
-	type (dataVectorMTX_t), intent(inout)						:: mydat
-	type (Obs_List), target, intent(inout)					:: myobs
-	type (Freq_List), target, intent(inout)					:: myfreq
-	type (TF_List), target, intent(in)						:: myfunc
-	real(8)                         :: theta
-	integer													:: i,j,k
+	type (dataVectorMTX_t), intent(inout)					:: allData
+	type (Obs_List), target, intent(inout)					:: obsList
+	type (Freq_List), target, intent(inout)					:: freqList
+	type (TF_List), target, intent(in)						:: TFList
+	! local
+	type (dataVectorMTX_t)     :: cdata,ddata
+	real(8)                    :: theta
+	integer                    :: i,j,k,iTx,iDt,iRx,istat
 
-    mydat%nTx = myfreq%n
+	! Read the data from files into data blocks, and save in the data vector
+    do iDt=1,TFList%n
 
-	do j=1,myfunc%n
+      select case ( TFList%info(iDt)%name )
 
-	  do i=1,myfreq%n
-		do k=1,myobs%n
-		  mydat%v(i,j,k)%freq => myfreq%info(i)
-		  mydat%v(i,j,k)%tx = i
-		  mydat%v(i,j,k)%obs => myobs%info(k)
-          mydat%v(i,j,k)%rx = k
-		  mydat%v(i,j,k)%func => myfunc%info(j)
-          mydat%v(i,j,k)%dataType = j
-		end do
-	  end do
+      case ('C')
+        ! Read C responses into a data vector with a single data type (cdata)
+        call initDataList(cUserDef%fn_cdata,cdata,iDt,obsList,freqList)
+        if (.not. cdata%allocated) then
+          write(0,*) 'Warning: Data misfit will not be calculated for C responses: data file not available'
+        end if
+        do i=1,cdata%ntx
+          do k=1,cdata%d(i)%data(1)%nSite
+                iRx = cdata%d(i)%data(1)%rx(k)
+                theta = obsList%info(iRx)%colat*d2r;
+                if ((theta >= pi/2-EPS_GRID).and.(theta <= pi/2+EPS_GRID)) then
+                  write(0,*) 'Error: (initData) receiver ',trim(obsList%info(iRx)%code),' located too close to equator;'
+                  write(0,*) 'Error: (initData) please delete this receiver from the list and try again.'
+                    exit
+                end if
+                ! convert from C responses to C ratios
+                cdata%d(i)%data(1)%value(:,k) = cdata%d(i)%data(1)%value(:,k)/dtan(theta)
+                cdata%d(i)%data(1)%error(:,k) = cdata%d(i)%data(1)%error(:,k)/abs(dtan(theta))
+          end do
+        end do
 
-	  select case ( myfunc%info(j)%name )
+      case ('D')
+        ! Read D responses into a data vector with a single data type (ddata)
+        call initDataList(cUserDef%fn_ddata,ddata,iDt,obsList,freqList)
+        if (.not. ddata%allocated) then
+          write(0,*) 'Warning: Data misfit will not be calculated for D responses: data file not available'
+        end if
+        do i=1,ddata%ntx
+          do k=1,ddata%d(i)%data(1)%nSite
+                iRx = ddata%d(i)%data(1)%rx(k)
+                theta = obsList%info(iRx)%colat*d2r;
+                if ((theta >= pi/2-EPS_GRID).and.(theta <= pi/2+EPS_GRID)) then
+                  write(0,*) 'Error: (initData) receiver ',trim(obsList%info(iRx)%code),' located too close to equator;'
+                  write(0,*) 'Error: (initData) please delete this receiver from the list and try again.'
+                    exit
+                end if
+                ! convert from D responses to D ratios
+                ddata%d(i)%data(1)%value(:,k) = ddata%d(i)%data(1)%value(:,k)/dsin(theta)
+                ddata%d(i)%data(1)%error(:,k) = ddata%d(i)%data(1)%error(:,k)/abs(dsin(theta))
+          end do
+        end do
 
-	  case ('C')
-		call initDataList(cUserDef%fn_cdata,mydat%v(:,j,:),myobs,myfreq)
-		if (count(mydat%v(:,j,:)%resp%exists)==0) then
-  		  write(0,*) 'Warning: Data misfit will not be calculated for C responses: data file not available'
-		end if
-	  do i=1,myfreq%n
-		  do k=1,myobs%n
-				theta = mydat%v(i,j,k)%obs%colat*d2r;
-				if ((theta >= pi/2-EPS_GRID).and.(theta <= pi/2+EPS_GRID)) then
-				  write(0,*) 'Error: (initData) receiver ',trim(mydat%v(i,j,k)%obs%code),' located too close to equator;'
-				  write(0,*) 'Error: (initData) please delete this receiver from the list and try again.'
-					exit
-				end if
-		    mydat%v(i,j,k)%resp%value = mydat%v(i,j,k)%resp%value/dtan(theta)
-		    mydat%v(i,j,k)%resp%err = mydat%v(i,j,k)%resp%err/dtan(theta)
-		  end do
-	  end do
+      case default
 
-	  case ('D')
-		call initDataList(cUserDef%fn_ddata,mydat%v(:,j,:),myobs,myfreq)
-		if (count(mydat%v(:,j,:)%resp%exists)==0) then
-  		  write(0,*) 'Warning: Data misfit will not be calculated for D responses: data file not available'
-		end if
-	  do i=1,myfreq%n
-		  do k=1,myobs%n
-				theta = mydat%v(i,j,k)%obs%colat*d2r;
-		    mydat%v(i,j,k)%resp%value = mydat%v(i,j,k)%resp%value/dsin(theta)
-		    mydat%v(i,j,k)%resp%err = mydat%v(i,j,k)%resp%err/dsin(theta)
-		  end do
-	  end do
+        write(0,*) 'Please specify correct transfer functions in the file ',trim(cUserDef%fn_func)
+        stop
 
-	  case default
+      end select
 
-		write(0,*) 'Please specify correct transfer functions in the file ',trim(cUserDef%fn_func)
-		stop
+    end do
 
-	  end select
+    ! Now, merge the data types into a single data vector
+    call merge_dataVectorMTX(cdata,ddata,allData)
 
-	  do i=1,myfreq%n
-		mydat%n(i,j) = count(mydat%v(i,j,:)%resp%exists)
-	  end do
-
-	end do
+    ! Clean up
+    call deall_dataVectorMTX(cdata)
+    call deall_dataVectorMTX(ddata)
 
   end subroutine initData ! initData
 
@@ -395,47 +402,44 @@ Contains
   ! * initData reads the file fn_data (in future could be several files) that
   ! * contain all the information about the available data: the values of the
   ! * responses, data errors corresponding to an observatory and a frequency.
-  ! * The logical values stored in global variables freq and obs are also
-  ! * initialized here. If in future they are not needed, they can easily be
-  ! * deleted.
-  ! * Currently only using C-responses! If we ever want to read and access
-  ! * D- and J-responses, rename this subroutine to initDataC, file to fn_dataC,
-  ! * and write analogous subroutines to initialize these values
-  ! * (can be done by copying and pasting, change C to D or J).
-  ! * Until this is done, do not even try to access dat%D and dat%J !!!!!!
-  subroutine initDataList(fname,mydat,myobs,myfreq)
+
+  subroutine initDataList(fname,mydat,itype,obsList,freqList)
 
 	implicit none
-	character(*), intent(in)					:: fname
-	type (dataValue_t), dimension(:,:), intent(inout)		:: mydat
-	type (Obs_List), target, intent(inout)				:: myobs
-	type (Freq_List), target, intent(inout)				:: myfreq
-    integer				                                :: ifreq,iobs,count
-    character(100)				                        :: label
-    integer				                                :: i,j,ios=0,istat=0
-	real(8)								:: const,large
-	real(8)								:: freq,days,prev
-	character(3)							:: code
-	real(8)								:: lon,lat
-	real(8)								:: creal,cimag,cerr
-	integer								:: nfreq,nobs
-	logical								:: new
+	character(*), intent(in)                   :: fname
+	type (dataVectorMTX_t), intent(inout)      :: mydat
+	integer, intent(in)                        :: itype
+    type (Obs_List), target, intent(in)        :: obsList
+    type (Freq_List), target, intent(in)       :: freqList
+	! local
+    integer                 :: ifreq,iobs
+    character(100)          :: label
+    integer                 :: i,j,ios=0,istat=0
+	real(8)                 :: const,large
+	real(8)                 :: freq,days,prev
+	character(3)            :: code
+	real(8)                 :: lon,lat
+	real(8)                 :: creal,cimag,cerr
+	integer                 :: nfreq,nobs,ncomp,nsite
+    integer                 :: countData,countFreq
+	complex(8), allocatable :: value(:,:) ! (nfreq,nobs)
+	real(8), allocatable    :: error(:,:) ! (nfreq,nobs)
+    logical, allocatable    :: exist(:,:) ! (nfreq,nobs)
+	logical                 :: new,isComplex,errorBar
 
 	large = 2.0e15
 	const = 1.0d-2
 	prev = 0.0d0
 
-	!nfreq = size(mydat,1)
-	!allocate(f(nfreq),STAT=istat)
-	!f(:) = mydat(:,1)%freq%info%value
-	!nobs  = size(mydat,2)
-	!allocate(o(nobs),STAT=istat)
-	!o(:) = mydat(1,:)%obs%info%code
-
 	! Initialize the data functionals
-	mydat(:,:)%resp%exists = .FALSE.
-	mydat(:,:)%resp%value = dcmplx(0.0d0,0.0d0)
-	mydat(:,:)%resp%err = large
+	nfreq = freqList%n
+	nobs  =  obsList%n
+    allocate(value(nfreq,nobs),STAT=istat)
+    allocate(error(nfreq,nobs),STAT=istat)
+    allocate(exist(nfreq,nobs),STAT=istat)
+	value(:,:) = dcmplx(0.0d0,0.0d0)
+	error(:,:) = large
+    exist(:,:) = .FALSE.
 
 	inquire(FILE=trim(fname),EXIST=exists)
 	! If data file is present, initialize data, functionals and residuals
@@ -450,7 +454,8 @@ Contains
     write(6,*) label
     read(ioDat,'(a)') label
 
-    count=0
+    countData = 0
+    countFreq = 0
 
 
 	READ_DATA: do
@@ -462,339 +467,97 @@ Contains
 
 	  read(ioDat,*,iostat=ios) days,code,lon,lat,creal,cimag,cerr
 
+	  ! Find the relevant frequency in the list
 	  freq  = 1/(days*24*60*60)
 	  new = .FALSE.
 	  if (abs((prev-freq)/freq) > const) then
 		new = .TRUE.
 		prev = freq
 	  end if
-
-	  ! Find the relevant frequency in the list
 	  if (new) then
-		ifreq = 0
-		do i = 1,myfreq%n
-  		  if (abs((myfreq%info(i)%value-freq)/myfreq%info(i)%value) < const) then
-			print *, 'Reading data for the frequency ',i, freq !myfreq%info(i)%value
-			ifreq = i
-			exit
-		  end if
-		end do
-	  end if
-	  ! If the frequency is not in our list, skip the data
-	  if (ifreq == 0) then
-		!print *, 'Frequency ',freq,' is not in the frequency list; ignore'
-		!do j=1,num
-		  !read(ioDat,*,iostat=ios)
-		!end do
-		cycle READ_DATA
-	  end if
-	  ! Find the relevant observatory in the list
-	  iobs = 0
-	  do j = 1,myobs%n
-  		if (trim(code) == trim(myobs%info(j)%code)) then
-		  iobs = j
-		  count = count + 1
-		  exit
+	    ifreq = getFreq(freqList,freq)
+	    if (ifreq > 0) then
+	       print *, 'Reading data for the frequency ',ifreq, freq !freqList%info(i)%value
+	       countFreq = countFreq + 1
 		end if
-	  end do
-	  ! If observatory is not in our list, ignore it
-	  if (iobs == 0) then
+	  end if
+      if (ifreq == 0) then
+        !print *, 'Frequency ',freq,' is not in the frequency list; ignore'
+        !do j=1,num
+          !read(ioDat,*,iostat=ios)
+        !end do
+        cycle READ_DATA
+      end if
+	  ! Find the relevant observatory in the list
+	  iobs = getObs(obsList,code)
+	  if (iobs > 0) then
+	    countData = countData + 1
+	  else
 		!print *, 'Observatory ',trim(code),' in file ',trim(fname),' is not in our list'
 		!print *, 'This is an error; exiting...'
 		!stop
 		cycle READ_DATA
 	  end if
 
-	  ! If everything is correct, save the data into the variable mydat(ifreq,:)
-	  !mydat(ifreq,iobs)%freq => myfreq%info(ifreq)
-	  !mydat(ifreq,iobs)%obs	 => myobs%info(iobs)
-	  !mydat(ifreq,iobs)%dataFunc	 => myfunc%info(ifunc)
-	  mydat(ifreq,iobs)%resp%value = km2m * dcmplx(creal,cimag)
-	  mydat(ifreq,iobs)%resp%err = km2m * cerr
-	  mydat(ifreq,iobs)%resp%exists = .TRUE.
+	  ! If everything is correct, save the data into the 2D arrays
+	  value(ifreq,iobs) = km2m * dcmplx(creal,cimag)
+	  error(ifreq,iobs) = km2m * cerr
+	  exist(ifreq,iobs) = .TRUE.
 
 	end do READ_DATA
 
 	close(ioDat)
 
-	if (count==0) then
+	if (countData==0) then
   	  write(0,*) 'Warning: No data matches given frequencies and observatories'
 	else
-  	  write(0,*) 'Number of complex data values in total: ',count
+  	  write(0,*) 'Number of complex data values in total: ',countData
 	end if
 
-	! We haven't assigned the targets to some pointers, which is not good, so do it
-	!do i = 1, myfreq%n
-	 ! do j = 1, myobs%n
-	!	if (.not.mydatC(i,j)%resp%exists) then
-	!	  mydatC(i,j)%freq => myfreq%info(i)
-	!	  mydatC(i,j)%obs  => myobs%info(j)
-	!	end if
-	 ! end do
-	!end do
+	! Finally, store the data in the data vector
+	call create_dataVectorMTX(countFreq,mydat)
+	mydat%allocated = .TRUE.
+	i = 0
+	ifreq = 0
+	SAVE_DATA: do ifreq = 1,nfreq
+
+	   nComp = 2
+	   nSite = count(exist(ifreq,:))
+	   isComplex = .TRUE.
+	   errorBar = .TRUE.
+	   if(nSite == 0) then
+	       ! no data for this frequency ... try next one
+	       cycle SAVE_DATA
+	   end if
+       i = i + 1
+	   call create_dataVector(1,mydat%d(i))
+	   mydat%d(i)%tx = ifreq
+       mydat%d(i)%allocated = .TRUE.
+	   call create_dataBlock(nComp,nSite,mydat%d(i)%data(1),isComplex,errorBar)
+	   j = 1
+	   do iobs = 1,nobs
+	       if(exist(ifreq,iobs)) then
+	           mydat%d(i)%data(1)%value(1,j) = real(value(ifreq,iobs))
+               mydat%d(i)%data(1)%value(2,j) = imag(value(ifreq,iobs))
+               mydat%d(i)%data(1)%error(1,j) = error(ifreq,iobs)
+               mydat%d(i)%data(1)%error(2,j) = error(ifreq,iobs)
+               mydat%d(i)%data(1)%rx(j) = iobs
+               j = j + 1
+           end if
+       end do
+       mydat%d(i)%data(1)%dataType = itype
+       mydat%d(i)%data(1)%tx = ifreq
+       mydat%d(i)%data(1)%allocated = .TRUE.
+
+    end do SAVE_DATA
+
+    deallocate(value,STAT=istat)
+    deallocate(error,STAT=istat)
+    deallocate(exist,STAT=istat)
 
     return
 
   end subroutine initDataList !	initData
-
-
-  ! ***************************************************************************
-  ! * initData reads the file fn_data (in future could be several files) that
-  ! * contain all the information about the available data: the values of the
-  ! * responses, data errors corresponding to an observatory and a frequency.
-  ! * The logical values stored in global variables freq and obs are also
-  ! * initialized here. If in future they are not needed, they can easily be
-  ! * deleted.
-  ! * Currently only using C-responses! If we ever want to read and access
-  ! * D- and J-responses, rename this subroutine to initDataC, file to fn_dataC,
-  ! * and write analogous subroutines to initialize these values
-  ! * (can be done by copying and pasting, change C to D or J).
-  ! * Until this is done, do not even try to access dat%D and dat%J !!!!!!
-  subroutine initDataC(cUserDef,mydatC,myobs,myfreq)
-
-	implicit none
-    type (input_info), intent(in)							:: cUserDef
-	type (dataValue_t), dimension(:,:), intent(out)			:: mydatC
-	type (Obs_List), target, intent(inout)					:: myobs
-	type (Freq_List), target, intent(inout)					:: myfreq
-    integer				                                    :: ifreq,iobs,num
-    character(100)				                            :: label
-    integer				                                    :: i,j,ios=0,istat=0
-	real(8)													:: const,large
-	real(8)													:: freq
-	character(3)											:: code
-	real(8)													:: lon,lat
-	real(8)													:: creal,cimag,cerr
-
-	! Initialize logicals if_C (if_D, if_J) in data types (transmitter_t) and (receiver_t)
-	!do i = 1, myfreq%n
-	!  do j = 1, myobs%n
-	!	allocate(myobs%info(j)%if_C(i),STAT=istat)
-	!	allocate(myfreq%info(i)%if_C(j),STAT=istat)
-	!	myobs%info(j)%if_C(i) = .FALSE.
-	!	myfreq%info(i)%if_C(j) = .FALSE.
-	!  end do
-	!end do
-
-	large = 2.0e15
-
-	! Initialize the data functionals
-	mydatC(:,:)%resp%exists = .FALSE.
-	mydatC(:,:)%resp%value = dcmplx(0.0d0,0.0d0)
-	mydatC(:,:)%resp%err = large
-
-    open(ioDat,file=cUserDef%fn_cdata,status='old',form='formatted',iostat=ios)
-
-    write(6,*) 'Reading from the data file ',trim(cUserDef%fn_cdata)
-    read(ioDat,'(a)') label
-    write(6,*) label
-
-	READ_DATA: do
-
-	  read(ioDat,'(a12,1x)',advance='no',iostat=ios)  label !'# freq, obs: '
-	  read(ioDat,*,iostat=ios) freq, num
-
-	  if (ios /= 0) exit
-
-	  const = 1.0d-2
-
-	  ! Before reading the values for this frequency, check whether we need them
-	  ifreq = 0
-
-	  do i = 1,myfreq%n
-  		if (abs((myfreq%info(i)%value-freq)/myfreq%info(i)%value) < const) then
-		  print *, 'Reading data for the frequency ',i, freq !myfreq%info(i)%value
-		  ifreq = i
-		  exit
-		end if
-	  end do
-	  ! If the frequency is not in our list, skip the data
-	  if (ifreq == 0) then
-		print *, 'Frequency ',freq,' is not in the frequency list; ignore'
-		do j=1,num
-		  read(ioDat,*,iostat=ios)
-		end do
-		cycle READ_DATA
-	  end if
-
-	  ! If the answer is yes, read them into the variable mydat(ifreq,:)
-	  do i=1,num
-		read(ioDat,*,iostat=ios) code,lon,lat,creal,cimag,cerr
-		! - note - dividing by tan(colat) to obtain ratios
-		creal = creal/dtan((90-lat)*d2r)
-		cimag = cimag/dtan((90-lat)*d2r)
-		cerr = cerr/dtan((90-lat)*d2r)
-		! - note - end
-		iobs = 0
-		do j = 1,myobs%n
-  		  if (trim(code) == trim(myobs%info(j)%code)) then
-			iobs = j
-			exit
-		  end if
-		end do
-		! If observatory is not in our list, output an error - should not happen!..
-		if (iobs == 0) then
-		  print *, 'Observatory ',trim(code),' in file ',trim(cUserDef%fn_cdata),' is not in our list'
-		  print *, 'This is an error; exiting...'
-		  stop
-		else
-		  mydatC(ifreq,iobs)%freq => myfreq%info(ifreq)
-		  mydatC(ifreq,iobs)%obs	 => myobs%info(iobs)
-		  !mydatC(ifreq,iobs)%dataFunc	 => myfunc%info(ifunc)
-		  mydatC(ifreq,iobs)%resp%value = km2m * dcmplx(creal,cimag)
-		  mydatC(ifreq,iobs)%resp%err = km2m * cerr
-		  mydatC(ifreq,iobs)%resp%exists = .TRUE.
-		end if
-
-	  end do
-
-	end do READ_DATA
-
-	close(ioDat)
-
-	! Update logicals if_C (if_D, if_J) in data types (transmitter_t) and (receiver_t)
-	do i = 1, myfreq%n
-	  do j = 1, myobs%n
-		if (mydatC(i,j)%resp%exists) then
-		  !myobs%info(j)%if_C(i) = .TRUE.
-		  !myfreq%info(i)%if_C(j) = .TRUE.
-		else ! We haven't assigned the targets to our pointers, which is not good, so do it
-		  mydatC(i,j)%freq => myfreq%info(i)
-		  mydatC(i,j)%obs  => myobs%info(j)
-		end if
-	  end do
-	end do
-
-    return
-
-  end subroutine initDataC !	initData
-
-  ! ***************************************************************************
-  ! * initData reads the file fn_data (in future could be several files) that
-  ! * contain all the information about the available data: the values of the
-  ! * responses, data errors corresponding to an observatory and a frequency.
-  ! * The logical values stored in global variables freq and obs are also
-  ! * initialized here. If in future they are not needed, they can easily be
-  ! * deleted.
-  subroutine initDataD(cUserDef,mydatD,myobs,myfreq)
-
-	implicit none
-    type (input_info), intent(in)							:: cUserDef
-	type (dataValue_t), dimension(:,:), intent(out)			:: mydatD
-	type (Obs_List), target, intent(inout)					:: myobs
-	type (Freq_List), target, intent(inout)					:: myfreq
-    integer				                                    :: ifreq,iobs,num
-    character(100)				                            :: label
-    integer				                                    :: i,j,ios=0,istat=0
-	real(8)													:: const,large
-	real(8)													:: freq
-	character(3)											:: code
-	real(8)													:: lon,lat
-	real(8)													:: dreal,dimag,derr
-
-	! Initialize logicals if_C (if_D, if_J) in data types (transmitter_t) and (receiver_t)
-	!do i = 1, myfreq%n
-	!  do j = 1, myobs%n
-	!	allocate(myobs%info(j)%if_D(i),STAT=istat)
-	!	allocate(myfreq%info(i)%if_D(j),STAT=istat)
-	!	myobs%info(j)%if_D(i) = .FALSE.
-	!	myfreq%info(i)%if_D(j) = .FALSE.
-	!  end do
-	!end do
-
-	large = 2.0e15
-
-	! Initialize the data functionals
-	mydatD(:,:)%resp%exists = .FALSE.
-	mydatD(:,:)%resp%value = dcmplx(0.0d0,0.0d0)
-	mydatD(:,:)%resp%err = large
-
-    open(ioDat,file=cUserDef%fn_ddata,status='old',form='formatted',iostat=ios)
-
-    write(6,*) 'Reading from the data file ',trim(cUserDef%fn_ddata)
-    read(ioDat,'(a)') label
-    write(6,*) label
-
-	READ_DATA: do
-
-	  read(ioDat,'(a12,1x)',advance='no',iostat=ios)  label !'# freq, obs: '
-	  read(ioDat,*,iostat=ios) freq, num
-
-	  if (ios /= 0) exit
-
-	  const = 1.0d-2
-
-	  ! Before reading the values for this frequency, check whether we need them
-	  ifreq = 0
-
-	  do i = 1,myfreq%n
-  		if (abs((myfreq%info(i)%value-freq)/myfreq%info(i)%value) < const) then
-		  print *, 'Reading data for the frequency ',i, freq !myfreq%info(i)%value
-		  ifreq = i
-		  exit
-		end if
-	  end do
-	  ! If the frequency is not in our list, skip the data
-	  if (ifreq == 0) then
-		print *, 'Frequency ',freq,' is not in the frequency list; ignore'
-		do j=1,num
-		  read(ioDat,*,iostat=ios)
-		end do
-		cycle READ_DATA
-	  end if
-
-	  ! If the answer is yes, read them into the variable mydat(ifreq,:)
-	  do i=1,num
-		read(ioDat,*,iostat=ios) code,lon,lat,dreal,dimag,derr
-		! - note - dividing by sin(colat) to obtain ratios
-		dreal = dreal/dsin((90-lat)*d2r)
-		dimag = dimag/dsin((90-lat)*d2r)
-		derr = derr/dsin((90-lat)*d2r)
-		! - note - end
-		iobs = 0
-		do j = 1,myobs%n
-  		  if (trim(code) == trim(myobs%info(j)%code)) then
-			iobs = j
-			exit
-		  end if
-		end do
-		! If observatory is not in our list, output an error - should not happen!..
-		if (iobs == 0) then
-		  print *, 'Observatory ',trim(code),' in file ',trim(cUserDef%fn_ddata),' is not in our list'
-		  print *, 'This is an error; exiting...'
-		  stop
-		else
-		  mydatD(ifreq,iobs)%freq => myfreq%info(ifreq)
-		  mydatD(ifreq,iobs)%obs	 => myobs%info(iobs)
-		  !mydatD(ifreq,iobs)%dataFunc	 => myfunc%info(ifunc)
-		  mydatD(ifreq,iobs)%resp%value = km2m * dcmplx(dreal,dimag)
-		  mydatD(ifreq,iobs)%resp%err = km2m * derr
-		  mydatD(ifreq,iobs)%resp%exists = .TRUE.
-		end if
-
-	  end do
-
-	end do READ_DATA
-
-	close(ioDat)
-
-	! Update logicals if_C (if_D, if_J) in data types (transmitter_t) and (receiver_t)
-	do i = 1, myfreq%n
-	  do j = 1, myobs%n
-		if (mydatD(i,j)%resp%exists) then
-		  !myobs%info(j)%if_D(i) = .TRUE.
-		  !myfreq%info(i)%if_D(j) = .TRUE.
-		else ! We haven't assigned the targets to our pointers, which is not good, so do it
-		  mydatD(i,j)%freq => myfreq%info(i)
-		  mydatD(i,j)%obs  => myobs%info(j)
-		end if
-	  end do
-	end do
-
-    return
-
-  end subroutine initDataD !	initData
-
 
 
   ! ***************************************************************************

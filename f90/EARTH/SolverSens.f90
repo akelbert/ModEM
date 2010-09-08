@@ -49,7 +49,7 @@ module SolverSens
    ! L \rho = l^F \rho^F (S^F)^{-1}. So, L already does multiplication by length elements
    ! division by area elements (parts of the curl on primary and dual grids). Will clean
    ! this up later; for now, keep as is.
-   call operatorP(m,drho)
+   call operatorP(m,drho,grid)
    call operatorL(drho,drhoF,grid)
 
    ! Insert boundary conditions in Hj
@@ -135,7 +135,7 @@ module SolverSens
    ! this up later; for now, keep as is.
    dE_real = real(dE)
    call operatorLt(drho,dE_real,grid)
-   call operatorPt(drho,mReal)
+   call operatorPt(drho,mReal,grid)
    call scMult(MinusONE,mReal,mReal)
 
    if(present(mImag)) then
@@ -143,7 +143,7 @@ module SolverSens
 	   ! Map from faces back to model parameter space: imag part
 	   dE_imag = imag(dE)
 	   call operatorLt(drho,dE_imag,grid)
-	   call operatorPt(drho,mImag)
+	   call operatorPt(drho,mImag,grid)
        call scMult(MinusONE,mImag,mImag)
 
    endif

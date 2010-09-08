@@ -62,12 +62,18 @@ module DataSpace
      MODULE PROCEDURE normalize_dataVectorMTX
   end interface
 
+  interface mergeData
+     MODULE PROCEDURE merge_dataBlock
+     MODULE PROCEDURE merge_dataVector
+     MODULE PROCEDURE merge_dataVectorMTX
+  end interface
+
   interface countData
      MODULE PROCEDURE count_dataVectorMTX_f
   end interface
 
-  interface countDataVec
-     MODULE PROCEDURE countVec_dataVectorMTX_f
+  interface countDataBlock
+     MODULE PROCEDURE countBlock_dataVectorMTX_f
   end interface
 
 
@@ -151,8 +157,9 @@ module DataSpace
   public            :: scMultAdd_dataBlock, scMultAdd_dataVector, scMultAdd_dataVectorMTX
   public			:: dotProd_dataBlock_f, dotProd_dataVector_f, dotProd_dataVectorMTX_f
   public            :: normalize_dataBlock, normalize_dataVector, normalize_dataVectorMTX
+  public            :: merge_dataBlock, merge_dataVector, merge_dataVectorMTX
   ! additional operators needed for the upper level code
-  public			:: count_dataVectorMTX_f, countVec_dataVectorMTX_f
+  public			:: count_dataVectorMTX_f, countBlock_dataVectorMTX_f
 
 Contains
 
@@ -516,7 +523,7 @@ Contains
 
    do j = 1, d%nSite
      do i = 1, d%nComp
-        if (d%error(i,j) <= TOL6 * d%value(i,j)) then
+        if (abs(d%error(i,j)) <= TOL6 * abs(d%value(i,j))) then
            call errStop('data error bars too small in normalize_dataBlock')
         endif
         d%value(i,j) = d%value(i,j)/(d%error(i,j)**nn)
@@ -526,6 +533,106 @@ Contains
    d%normalized = .true.
 
   end subroutine normalize_dataBlock
+
+  !**********************************************************************
+  ! Merge two data blocks for the same tx and dataType into a single
+  ! dataBlock structure
+
+  subroutine merge_dataBlock(d1,d2,d)
+
+    type(dataBlock_t), intent(in)        :: d1,d2
+    type(dataBlock_t), intent(inout)     :: d
+
+    ! local variables
+    real, allocatable       :: values(:,:), errors(:,:)
+    integer, allocatable    :: rxList(:)
+    logical                 :: newRx, errorBar
+    integer                 :: i,j,iRx,nComp,nSite,nSiteMax,istat
+
+    if(.not. d1%allocated .and. .not. d2%allocated) then
+        call errStop('both input data blocks not allocated in merge_dataBlock')
+    elseif(.not. d1%allocated) then
+        d = d2
+        return
+    elseif(.not. d2%allocated) then
+        d = d1
+        return
+    endif
+
+    if((d1%tx .ne. d2%tx) .or. (d1%dataType .ne. d2%dataType)) then
+        call errStop('different transmitters or data types in merge_dataBlock')
+    elseif(d1%errorBar .neqv. d2%errorBar) then
+        call errStop('input error bars incompatible in merge_dataBlock')
+    elseif(d1%normalized .neqv. d2%normalized) then
+        call errStop('input data incompatible in merge_dataBlock')
+    endif
+
+    nComp = d1%nComp
+    errorBar = d1%errorBar .and. d2%errorBar
+    nSiteMax = d1%nSite + d2%nSite
+    allocate(rxList(nSiteMax),STAT=istat)
+    allocate(values(nComp,nSiteMax),STAT=istat)
+    if(errorBar) then
+        allocate(errors(nComp,nSiteMax),STAT=istat)
+    endif
+    nSite = 0
+
+    do i = 1,d1%nSite
+        iRx = d1%rx(i)
+        newRx = .true.
+        do j = 1,nSite
+            if(rxList(j) == iRx) then
+                newRx = .false.
+                exit
+            endif
+        enddo
+        if(newRx) then
+            nSite = nSite + 1
+            rxList(nSite) = iRx
+            values(:,nSite) = d1%value(:,i)
+            if(errorBar) then
+                errors(:,nSite) = d1%error(:,i)
+            endif
+        endif
+    enddo
+
+    do i = 1,d2%nSite
+        iRx = d2%rx(i)
+        newRx = .true.
+        do j = 1,nSite
+            if(rxList(j) == iRx) then
+                newRx = .false.
+                exit
+            endif
+        enddo
+        if(newRx) then
+            nSite = nSite + 1
+            rxList(nSite) = iRx
+            values(:,nSite) = d2%value(:,i)
+            if(errorBar) then
+                errors(:,nSite) = d2%error(:,i)
+            endif
+        endif
+    enddo
+
+    call create_dataBlock(nComp, nSite, d, d1%isComplex, errorBar)
+    d%value = values(1:nComp,1:nSite)
+    if(errorBar) then
+        d%error = errors(1:nComp,1:nSite)
+    endif
+    d%rx = rxList(1:nSite)
+    d%dataType = d1%dataType
+    d%tx = d1%tx
+    d%normalized = d1%normalized .and. d2%normalized
+    d%allocated = .true.
+
+    deallocate(rxList,STAT=istat)
+    deallocate(values,STAT=istat)
+    if(errorBar) then
+        deallocate(errors,STAT=istat)
+    endif
+
+  end subroutine merge_dataBlock
 
 !-----------------------------!
 ! Basic operators: dataVector !
@@ -799,6 +906,97 @@ Contains
 
   end subroutine normalize_dataVector
 
+  !**********************************************************************
+  ! Merge two data vectors for the same tx into a single dataVector
+
+  subroutine merge_dataVector(d1,d2,d)
+
+    type(dataVector_t), intent(in)        :: d1,d2
+    type(dataVector_t), intent(inout)     :: d
+
+    ! local variables
+    integer, allocatable    :: i1(:),i2(:),typeList(:)
+    logical                 :: newDt
+    integer                 :: i,j,iDt,nDt,countDt,istat
+
+    if(.not. d1%allocated .and. .not. d2%allocated) then
+        call errStop('both input data vectors not allocated in merge_dataVector')
+    elseif(.not. d1%allocated) then
+        d = d2
+        return
+    elseif(.not. d2%allocated) then
+        d = d1
+        return
+    endif
+
+    if(d1%tx .ne. d2%tx) then
+        call errStop('different transmitters in merge_dataVector')
+    endif
+
+    nDt = d1%nDt + d2%nDt
+    allocate(typeList(nDt),STAT=istat)
+    allocate(i1(nDt),i2(nDt),STAT=istat)
+    countDt = 0
+
+    ! make list of d1 data types and indices
+    i1 = 0
+    do i = 1,d1%nDt
+        iDt = d1%data(i)%dataType
+        newDt = .true.
+        do j = 1,countDt
+            if(iDt .eq. typeList(j)) then
+                i1(j) = i
+                newDt = .false.
+                exit
+            endif
+        enddo
+        if(newDt) then
+            countDt = countDt + 1
+            typeList(countDt) = iDt
+            i1(countDt) = i
+        endif
+    enddo
+
+    ! make list of d2 data types and indices
+    i2 = 0
+    do i = 1,d2%nDt
+        iDt = d2%data(i)%dataType
+        newDt = .true.
+        do j = 1,countDt
+            if(iDt .eq. typeList(j)) then
+                i2(j) = i
+                newDt = .false.
+                exit
+            endif
+        enddo
+        if(newDt) then
+            countDt = countDt + 1
+            typeList(countDt) = iDt
+            i2(countDt) = i
+        endif
+    enddo
+
+    call create_dataVector(countDt, d)
+    do i = 1,countDt
+        if((i1(i)>0) .and. (i2(i)>0)) then
+            ! data type typeList(i) exists in both vectors
+            call merge_dataBlock(d1%data(i1(i)),d2%data(i2(i)),d%data(i))
+        elseif(i1(i)>0) then
+            ! data type typeList(i) present in d1 only
+            d%data(i) = d1%data(i1(i))
+        elseif(i2(i)>0) then
+            ! data type typeList(i) present in d2 only
+            d%data(i) = d2%data(i2(i))
+        endif
+    enddo
+    d%tx = d1%tx
+    d%allocated = .true.
+
+    deallocate(typeList,STAT=istat)
+    deallocate(i1,i2,STAT=istat)
+
+  end subroutine merge_dataVector
+
 !--------------------------------!
 ! Basic operators: dataVectorMTX !
 !--------------------------------!
@@ -1047,9 +1245,95 @@ Contains
 
   end subroutine normalize_dataVectorMTX
 
-!----------------------------------!
+  !**********************************************************************
+  ! Merge two multi-transmitter data vectors into a single dataVectorMTX
+
+  subroutine merge_dataVectorMTX(d1,d2,d)
+
+    type(dataVectorMTX_t), intent(in)        :: d1,d2
+    type(dataVectorMTX_t), intent(inout)     :: d
+
+    ! local variables
+    integer, allocatable    :: i1(:),i2(:),txList(:)
+    logical                 :: newTx
+    integer                 :: i,j,iTx,nTx,countTx,istat
+
+    if(.not. d1%allocated .and. .not. d2%allocated) then
+        call errStop('both input data vectors not allocated in merge_dataVectorMTX')
+    elseif(.not. d1%allocated) then
+        d = d2
+        return
+    elseif(.not. d2%allocated) then
+        d = d1
+        return
+    endif
+
+    nTx = d1%nTx + d2%nTx
+    allocate(txList(nTx),STAT=istat)
+    allocate(i1(nTx),i2(nTx),STAT=istat)
+    countTx = 0
+
+    ! make list of d1 transmitters and indices
+    i1 = 0
+    do i = 1,d1%nTx
+        iTx = d1%d(i)%tx
+        newTx = .true.
+        do j = 1,countTx
+            if(iTx .eq. txList(j)) then
+                i1(j) = i
+                newTx = .false.
+                exit
+            endif
+        enddo
+        if(newTx) then
+            countTx = countTx + 1
+            txList(countTx) = iTx
+            i1(countTx) = i
+        endif
+    enddo
+
+    ! make list of d2 transmitters and indices
+    i2 = 0
+    do i = 1,d2%nTx
+        iTx = d2%d(i)%tx
+        newTx = .true.
+        do j = 1,countTx
+            if(iTx .eq. txList(j)) then
+                i2(j) = i
+                newTx = .false.
+                exit
+            endif
+        enddo
+        if(newTx) then
+            countTx = countTx + 1
+            txList(countTx) = iTx
+            i2(countTx) = i
+        endif
+    enddo
+
+    call create_dataVectorMTX(countTx, d)
+    do i = 1,countTx
+        if((i1(i)>0) .and. (i2(i)>0)) then
+            ! transmitter txList(i) exists in both vectors
+            call merge_dataVector(d1%d(i1(i)),d2%d(i2(i)),d%d(i))
+        elseif(i1(i)>0) then
+            ! transmitter txList(i) present in d1 only
+            d%d(i) = d1%d(i1(i))
+        elseif(i2(i)>0) then
+            ! transmitter txList(i) present in d2 only
+            d%d(i) = d2%d(i2(i))
+        endif
+    enddo
+    d%allocated = .true.
+
+    deallocate(txList,STAT=istat)
+    deallocate(i1,i2,STAT=istat)
+
+  end subroutine merge_dataVectorMTX
+
+!-------------------------------------!
 ! Additional operators: dataVectorMTX !
-!----------------------------------!
+!-------------------------------------!
 
   !**********************************************************************
   ! count all real data values in the full data vector dataVectorMTX
@@ -1071,22 +1355,22 @@ Contains
   end function count_dataVectorMTX_f
 
   !**********************************************************************
-  ! count the number of data vectors in the full data vector dataVectorMTX.
+  ! count the number of data blocks in the full data vector dataVectorMTX.
   ! there should be one for each transmitter and data type
 
-  function countVec_dataVectorMTX_f(d) result(nvec)
+  function countBlock_dataVectorMTX_f(d) result(nblock)
 
    type(dataVectorMTX_t), intent(in)		:: d
-   integer				:: nvec
+   integer				:: nblock
 
    ! local variables
    integer 				:: j
-   nvec = 0
+   nblock = 0
    do j = 1,d%nTx
-     nvec = nvec + d%d(j)%nDt
+     nblock = nblock + d%d(j)%nDt
    enddo
 
-  end function countVec_dataVectorMTX_f
+  end function countBlock_dataVectorMTX_f
 
 
 end module DataSpace

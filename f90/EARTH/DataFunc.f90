@@ -8,12 +8,52 @@ module DataFunc
   use dataTypes
   use transmitters
   use receivers
+  use functionals
   use responses
   implicit none
 
+  public                        :: dataResp, Lrows, Qrows
 
 Contains
 
+!******************************************************************************
+  subroutine dataResp(H,m0,iDt,iRx,Resp)
+  ! given magnetic field solution and indices into data types and receiver
+  ! dictionaries, compute the single complex response function; store output
+  ! in a vector or real values
+
+  implicit none
+  type (solnVector_t), intent(in)   :: H
+  type (modelParam_t), intent(in)   :: m0 ! currently not used
+  integer, intent(in)           :: iDt
+  integer, intent(in)           :: iRx
+  real(kind=prec), intent(inout)    :: Resp(:)
+
+  !  local variables
+  complex(8)            :: res
+  type (functional_t), pointer   :: dataType
+  type (receiver_t), pointer     :: obs
+  integer               :: iComp,nComp
+
+  dataType => TFList%info(iDt)
+  obs => obsList%info(iRx)
+
+  ! compute the complex data response (C/D ratio)
+
+  select case (dataType%name)
+     case('C')
+        res = dataResp_rx(C_ratio,obs,H%vec)
+     case('D')
+        res = dataResp_rx(D_ratio,obs,H%vec)
+     case default
+        call errStop('Unknown data response specified in dataResp')
+  end select
+
+  ! save real output
+  Resp(1) = dreal(res)
+  Resp(2) = dimag(res)
+
+  end subroutine dataResp
 
   ! ***************************************************************************
   ! * Lrows is a subroutine to output a full vector g_j defined on edges,
@@ -59,7 +99,7 @@ Contains
 	Hy = dotProd_noConj(Ly,H%vec)
 	Hz = dotProd_noConj(Lz,H%vec)
 
-	EARTH_R = grid%z(grid%nzAir+1) * m2km
+	EARTH_R = H%grid%z(H%grid%nzAir+1) * m2km
 
 	if (dataType%name == 'C') then
 

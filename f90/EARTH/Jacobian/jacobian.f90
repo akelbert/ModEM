@@ -3,6 +3,7 @@ module jacobian
   ! Module containing the operators required for the Jacobian and penalty
   ! functional derivative calculations
 
+  use iotypes
   use modeldef
   use model_operators
   use elements
@@ -109,7 +110,7 @@ Contains
 	!-----------------------------------
 	call copyd3_d1_d(vectors,Yfull,grid)  ! extract interior components
 	call extractBC(Yb,Yfull)			  ! extract boundary components
-	call calcb_from_bc(nx,ny,nz,Yb,vectorb,rho,grid%x,grid%y,grid%z)
+	call calcb_from_bc(nx,ny,nz,Yb,vectorb,rho,grid%x,grid%y,grid%z,grid)
 	vectory = vectors
 	if (adjoint) then
 	  call divide_vec_by_l(nx,ny,nz,vectory,grid%x,grid%y,grid%z)
@@ -143,7 +144,7 @@ Contains
 	if (.not.delta) then
 	  Xb = Yb ! then use original boundary conditions for H
 	end if
-	call insertBoundaryValues(Xb,hx,hy,hz)
+	call insertBoundaryValues(Xb,hx,hy,hz,grid)
 
 
 	!----------------------
@@ -250,7 +251,7 @@ Contains
 	nz = grid%nz
 
 	call extractBC(Xb,Xfull)
-	call divide_bc_by_l(Xb,bc)
+	call divide_bc_by_l(Xb,bc,grid)
 	allocate(vectorx(np2),STAT=istat)
 	call copyd3_d1_d(vectorx,Xfull,grid)  ! extract interior components
 	call divide_vec_by_l(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
@@ -282,7 +283,7 @@ Contains
 	nz = grid%nz
 
 	call extractBC(Xb,Xfull)
-	call mult_bc_by_l(Xb,bc)
+	call mult_bc_by_l(Xb,bc,grid)
 	allocate(vectorx(np2),STAT=istat)
 	call copyd3_d1_d(vectorx,Xfull,grid)  ! extract interior components
 	call mult_vec_by_l(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
@@ -930,12 +931,13 @@ Contains
   ! * vector p_j is the j'th column of P, that corresponds to \pd{\rho}{a_j}.
   ! * p_j \In G.
 
-  function vectorPj(da,n) result (dm)
+  function vectorPj(da,n,grid) result (dm)
 
-	use global	! uses grid,param,rho
+	use global	! uses param,rho
 
     type (modelParam_t), intent(inout)				:: da
 	integer, intent(in)								:: n
+    type (grid_t), intent(in)                       :: grid
 	type (rscalar)									:: dm !(nx,ny,nz)
 	integer											:: i,j,k,l,istat
 	real(8)											:: value
@@ -1012,13 +1014,14 @@ Contains
   ! * initModel is the routine that generates the 3-D resistivity map on the
   ! * grid using the information stored in the grid and the parametrization
 
-  subroutine operatorP(da,dm)
+  subroutine operatorP(da,dm,grid)
 
-	use global	! uses grid,param,rho
+	use global	! uses param,rho
 
     type (modelParam_t), intent(in)					:: da
 	type (rscalar), intent(inout)						:: dm !(nx,ny,nz)
 	!real(8), dimension(:,:,:), intent(inout)		:: dm !(nx,ny,nz)
+    type (grid_t), intent(in)                       :: grid
 	integer											:: i,j,k,l,istat
 	integer											:: iL,ip
 	real(8)											:: value,coeff
@@ -1108,13 +1111,14 @@ Contains
   ! *	end if
   ! * end do
 
-  subroutine operatorPt(dm,da)
+  subroutine operatorPt(dm,da,grid)
 
 	! uses: rho, param, grid
 	use global
     implicit none
 	type (rscalar), intent(in)						:: dm !(nx,ny,nz)
     type (modelParam_t), intent(inout)					:: da
+    type (grid_t), intent(in)                       :: grid
 	!real(8),dimension(:,:,:),intent(in)				 :: dm  !(nx,ny,nz)
 	!real(8),dimension(:),intent(out)				 :: da  !ncoeff
 	integer											 :: i,j,k,l

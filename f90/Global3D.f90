@@ -1,6 +1,7 @@
 
 program earth
 
+  use userdata
   use main
   use output
   use senscomp
@@ -12,7 +13,6 @@ program earth
   use ringcurrent
   use dimensions
   use field_vectors
-  use data_vectors
   implicit none
 
   real										:: runtime
@@ -153,51 +153,51 @@ program earth
   ! Run Jacobian computations for the unperturbed parametrization (a)
 	call calc_jacobian(runtime)
 
-	write(0,*) 'Data functionals 1: written into file psi1.dat'
-    open(unit=51,file='psi1.dat',status='unknown')
-	do ifreq=1,nfreq
-	  do ifunc=1,nfunc
-		do iobs=1,nobs
-		  write(51,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,value: ',ifreq,ifunc,iobs,&
-				psi%v(ifreq,ifunc,iobs)%resp%value
-		end do
-	  end do
-	end do
-	close(51)
-	write(0,*) 'Derivative 1 = Jacobian x perturbation: written into file dpsi1.dat'
-    open(unit=52,file='dpsi1.dat',status='unknown')
-	do ifreq=1,nfreq
-	  do ifunc=1,nfunc
-		do iobs=1,nobs
-		  dpsi1(ifreq,ifunc,iobs) = dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
-		  write(52,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,delta: ',ifreq,ifunc,iobs,&
-				dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
-		end do
-	  end do
-	end do
-	close(52)
-
-	write(0,*) 'Data functionals 1: '
-	do ifreq=1,nfreq
-	  do ifunc=1,nfunc
-		do iobs=1,nobs
-		  write(0,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,value: ',ifreq,ifunc,iobs,&
-				psi%v(ifreq,ifunc,iobs)%resp%value
-		end do
-	  end do
-	end do
-	write(0,*) 'Derivative 1 = Jacobian x perturbation: '
-	do ifreq=1,nfreq
-	  do ifunc=1,nfunc
-		do iobs=1,nobs
-		  dpsi1(ifreq,ifunc,iobs) = dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
-		  write(0,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,delta: ',ifreq,ifunc,iobs,&
-				dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
-		end do
-	  end do
-	end do
-
-	psi1 = psi%v(:,:,:)%resp%value
+!	write(0,*) 'Data functionals 1: written into file psi1.dat'
+!    open(unit=51,file='psi1.dat',status='unknown')
+!	do ifreq=1,nfreq
+!	  do ifunc=1,nfunc
+!		do iobs=1,nobs
+!		  write(51,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,value: ',ifreq,ifunc,iobs,&
+!				psi%v(ifreq,ifunc,iobs)%resp%value
+!		end do
+!	  end do
+!	end do
+!	close(51)
+!	write(0,*) 'Derivative 1 = Jacobian x perturbation: written into file dpsi1.dat'
+!    open(unit=52,file='dpsi1.dat',status='unknown')
+!	do ifreq=1,nfreq
+!	  do ifunc=1,nfunc
+!		do iobs=1,nobs
+!		  dpsi1(ifreq,ifunc,iobs) = dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
+!		  write(52,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,delta: ',ifreq,ifunc,iobs,&
+!				dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
+!		end do
+!	  end do
+!	end do
+!	close(52)
+!
+!	write(0,*) 'Data functionals 1: '
+!	do ifreq=1,nfreq
+!	  do ifunc=1,nfunc
+!		do iobs=1,nobs
+!		  write(0,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,value: ',ifreq,ifunc,iobs,&
+!				psi%v(ifreq,ifunc,iobs)%resp%value
+!		end do
+!	  end do
+!	end do
+!	write(0,*) 'Derivative 1 = Jacobian x perturbation: '
+!	do ifreq=1,nfreq
+!	  do ifunc=1,nfunc
+!		do iobs=1,nobs
+!		  dpsi1(ifreq,ifunc,iobs) = dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
+!		  write(0,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,delta: ',ifreq,ifunc,iobs,&
+!				dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
+!		end do
+!	  end do
+!	end do
+!
+!	psi1 = psi%v(:,:,:)%resp%value
 
 	call DeleteGlobalData()
 	call DeleteGlobalArrays()
@@ -208,51 +208,51 @@ program earth
   ! Run Jacobian computations after the perturbation (a+da)
 	call calc_jacobian(runtime)
 
-	write(0,*) 'Data functionals 2: written into file psi2.dat'
-    open(unit=51,file='psi2.dat',status='unknown')
-	do ifreq=1,nfreq
-	  do ifunc=1,nfunc
-		do iobs=1,nobs
-		  write(51,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,value: ',ifreq,ifunc,iobs,&
-				psi%v(ifreq,ifunc,iobs)%resp%value
-		end do
-	  end do
-	end do
-	close(51)
-	write(0,*) 'Derivative 2 = Jacobian x perturbation: written into file dpsi2.dat'
-    open(unit=52,file='dpsi2.dat',status='unknown')
-	do ifreq=1,nfreq
-	  do ifunc=1,nfunc
-		do iobs=1,nobs
-		  dpsi1(ifreq,ifunc,iobs) = dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
-		  write(52,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,delta: ',ifreq,ifunc,iobs,&
-				dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
-		end do
-	  end do
-	end do
-	close(52)
-
-	write(0,*) 'Data functionals 2: '
-	do ifreq=1,nfreq
-	  do ifunc=1,nfunc
-		do iobs=1,nobs
-		  write(0,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,value: ',ifreq,ifunc,iobs,&
-				psi%v(ifreq,ifunc,iobs)%resp%value
-		end do
-	  end do
-	end do
-	write(0,*) 'Derivative 2 = Jacobian x perturbation: '
-	do ifreq=1,nfreq
-	  do ifunc=1,nfunc
-		do iobs=1,nobs
-		  dpsi2(ifreq,ifunc,iobs) = dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
-		  write(0,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,delta: ',ifreq,ifunc,iobs,&
-				dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
-		end do
-	  end do
-	end do
-
-	psi2 = psi%v(:,:,:)%resp%value
+!	write(0,*) 'Data functionals 2: written into file psi2.dat'
+!    open(unit=51,file='psi2.dat',status='unknown')
+!	do ifreq=1,nfreq
+!	  do ifunc=1,nfunc
+!		do iobs=1,nobs
+!		  write(51,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,value: ',ifreq,ifunc,iobs,&
+!				psi%v(ifreq,ifunc,iobs)%resp%value
+!		end do
+!	  end do
+!	end do
+!	close(51)
+!	write(0,*) 'Derivative 2 = Jacobian x perturbation: written into file dpsi2.dat'
+!    open(unit=52,file='dpsi2.dat',status='unknown')
+!	do ifreq=1,nfreq
+!	  do ifunc=1,nfunc
+!		do iobs=1,nobs
+!		  dpsi1(ifreq,ifunc,iobs) = dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
+!		  write(52,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,delta: ',ifreq,ifunc,iobs,&
+!				dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
+!		end do
+!	  end do
+!	end do
+!	close(52)
+!
+!	write(0,*) 'Data functionals 2: '
+!	do ifreq=1,nfreq
+!	  do ifunc=1,nfunc
+!		do iobs=1,nobs
+!		  write(0,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,value: ',ifreq,ifunc,iobs,&
+!				psi%v(ifreq,ifunc,iobs)%resp%value
+!		end do
+!	  end do
+!	end do
+!	write(0,*) 'Derivative 2 = Jacobian x perturbation: '
+!	do ifreq=1,nfreq
+!	  do ifunc=1,nfunc
+!		do iobs=1,nobs
+!		  dpsi2(ifreq,ifunc,iobs) = dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
+!		  write(0,'(a30,3i8,2g15.7)') 'ifreq,ifunc,iobs,delta: ',ifreq,ifunc,iobs,&
+!				dot_product(da(:),sens%da(ifreq,ifunc,iobs,:))
+!		end do
+!	  end do
+!	end do
+!
+!	psi2 = psi%v(:,:,:)%resp%value
 
 
 	write(0,*) 'Psi2 - Psi1 / derivative (should be 1): '
@@ -316,6 +316,7 @@ end program earth
 
   subroutine calc_inverse(rtime)
 
+    use userdata
   	use global
   	use nlcg
 
@@ -328,7 +329,7 @@ end program earth
 	call date_and_time(values=tarray)
 	stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
-  	call NLCGsolver(dat,cUserDef%damping,param,invparam,cUserDef%fn_invctrl)
+  	call NLCGsolver(allData,cUserDef%damping,param,invparam,cUserDef%fn_invctrl)
 
 	call date_and_time(values=tarray)
 	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
@@ -347,6 +348,7 @@ end program earth
 
   subroutine calc_original(rtime)
 
+    use userdata
 	use global
 	use field_vectors
 	use ringcurrent
@@ -495,9 +497,8 @@ end program earth
 
   subroutine calc_responses(rtime)
 
+    use userdata
 	use griddef
-	use data_vectors
-	use global
 	use dataFunc
 	use jacobian
 	use output
@@ -515,7 +516,9 @@ end program earth
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
-	type (solnVectorMTX_t)                      :: H
+	type (solnVectorMTX_t)                  :: H
+    type (dataVectorMTX_t)                  :: allResp
+    type (dataVector_t)                     :: res
     !type (cvector)							:: H,B,F
 	!type (sparsevecc)						:: Hb
 	!type (functional_t)						:: dataType
@@ -528,22 +531,16 @@ end program earth
 	stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
     ! Call the forward solver for all frequencies
-    psi = dat
-    call fwdPred(param,psi,H)
+    allResp = allData
+    call fwdPred(param,allResp,H)
 
-	do ifreq=1,freqList%n
+	do ifreq=1,allData%ntx
 
-	  freq = freqList%info(ifreq)
-
-	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
-
-	  call calcResiduals(freq,dat,psi,res)
+	  call calcResiduals(allData%d(ifreq),allResp%d(ifreq),res)
 
 	  ! If computing different kinds of misfits, be consistent;
 	  ! write different kinds into different data structures
-	  call calcMisfit(freq,res,misfit,misfit%name)
-
-	!call OutputResiduals(freq,res,TFList,obsList)
+	  call calcMisfit(res,misfit,misfit%name)
 
 	end do
 
@@ -558,12 +555,13 @@ end program earth
 	end do
 	end if
 
-	call misfitSumUp(res,misfit,misfitValue)
+	call misfitSumUp(p_input,misfit,misfitValue)
 
 	!call outputMisfit(param,misfit,misfitValue,cUserDef)
 
 	continue
 	call deall_solnVectorMTX(H)
+	call deall_dataVector(res)
 
 	call date_and_time(values=tarray)
 	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
@@ -580,8 +578,8 @@ end program earth
 
   subroutine calc_secondary_fields(rtime)
 
+    use userdata
 	use griddef
-	use data_vectors
 	use global
 	use dataFunc
 	use jacobian
@@ -602,6 +600,7 @@ end program earth
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
+    type (dataVector_t)                     :: dat,psi,res,wres
 	type (solnVectorMTX_t)						:: H1D
 	type (cvector)                     	    :: Hj, Bj, dH, F
 	type (rvector)							:: drhoF
@@ -641,6 +640,7 @@ end program earth
 	do ifreq=1,freqList%n
 
 	  freq = freqList%info(ifreq)
+	  dat = allData%d(ifreq)
 
 	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
@@ -670,14 +670,14 @@ end program earth
 	  end if
 
 	  ! compute and output C and D responses at observatories
-	  call calcResponses(freq,Hj,dat,psi)
-	  call outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
+	  call calcResponses(Hj,dat,psi)
+	  call outputResponses(psi,outFiles,dat)
 
-	  call calcResiduals(freq,dat,psi,res)
+	  call calcResiduals(dat,psi,res)
 
 	  ! If computing different kinds of misfits, be consistent;
 	  ! write different kinds into different data structures
-	  call calcMisfit(freq,res,misfit,misfit%name)
+	  call calcMisfit(res,misfit,misfit%name)
 
 	!call OutputResiduals(freq,res,TFList,obsList)
 
@@ -700,7 +700,7 @@ end program earth
 	end do
 	end if
 
-	call misfitSumUp(res,misfit,misfitValue)
+	call misfitSumUp(p_input,misfit,misfitValue)
 
 	!call outputMisfit(param,misfit,misfitValue,cUserDef)
 
@@ -714,6 +714,10 @@ end program earth
 	call deall_rscalar(rho1D)
 	call deall_modelParam(param1D)
 	call deall_solnVectorMTX(H1D)
+	call deall_dataVector(dat)
+	call deall_dataVector(psi)
+	call deall_dataVector(res)
+	call deall_dataVector(wres)
 
 	call date_and_time(values=tarray)
 	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
@@ -731,8 +735,7 @@ end program earth
 
   subroutine calc_derivative(rtime)
 
-	use data_vectors
-	use global
+    use userdata
 	use jacobian
 	use boundaries
 	use output
@@ -744,7 +747,7 @@ end program earth
     use dataTypes
 	implicit none
 
-	type (sensMatrix_t)					    :: dR
+	type (sensMatrix_tmp_t)					:: dR
 	real, intent(inout)						:: rtime  ! run time
 	real									:: ftime  ! run time per frequency
 	real									:: stime, etime ! start and end times
@@ -752,6 +755,8 @@ end program earth
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
+    type (dataVector_t)                     :: dat,psi,res,wres
+    type (dataVectorMTX_t)                  :: allResp
 	type (solnVectorMTX_t)                      :: H
     !type (cvector)							:: H,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero,dR
 	!type (rvector)							:: dE_real
@@ -772,25 +777,39 @@ end program earth
 	stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
     ! Call the forward solver for all frequencies
-    psi = dat
-    call fwdPred(param,psi,H)
+    allResp = allData
+    call fwdPred(param,allResp,H)
 
-	do ifreq=1,freqList%n
+	do ifreq=1,allData%ntx
 
 	  freq = freqList%info(ifreq)
+	  dat = allData%d(ifreq)
+	  psi = allResp%d(ifreq)
 
 	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
+	  ! initialize res
+	  res = psi
+	  ! compute residual: res = dat-psi
+	  call linComb(ONE,dat,MinusONE,psi,res)
+	  ! normalize residuals, compute sum of squares
+	  wres = res
+	  call normalizeData(wres,2)
+
 	  ! res = psi-dat (note: multiply by +2 to obtain derivative)
-	  call calcResiduals(freq,dat,psi,res)
+	  !call calcResiduals(dat,psi,res)
 	  !call OutputResiduals(freq,res,TFList,obsList)
+
+	  ! compute the weighted residuals and start the derivative computations
+	  !call calcResiduals(dat,psi,wres,weighted=.TRUE.)
+
 
 	  ! If computing different kinds of misfits, be consistent;
 	  ! write different kinds into different data structures
-	  !call calcMisfit(freq,res,misfit,misfit%name)
+	  call calcMisfit(res,misfit,misfit%name)
 
-	  ! compute the weighted residuals and start the derivative computations
-	  call calcResiduals(freq,dat,psi,wres,weighted=.TRUE.)
+      ! save normalized residuals for the derivative computation
+	  allResp%d(ifreq) = wres
 
 	end do
 
@@ -806,52 +825,52 @@ end program earth
 !	RMS = sqrt(SS/Ndata)
 !	print *, 'Total RMS squared misfit for ',Ndata,' data values = ',RMS**2
 
+    if (output_level>0) then
+    write(0,*)
+    do i=1,freqList%n
+      do j=1,TFList%n
+    write(6,'(a12,i3,a3,a35,i2,a2,g15.7)') 'Misfit for ',misfit%ndat(i,j),&
+            trim(TFList%info(j)%name),' responses, computed for frequency ',i,' :',&
+            misfit%value(i,j)/(2*misfit%ndat(i,j))
+      end do
+    end do
+    end if
+
+!        if (.not. dR%allocated) then
+!            allocate(dR%dm(nfreq,nfunc),STAT=istat)
+!            dR%allocated = .true.
+!        endif
+
 	! Call multiplication by J^T
-	call JmultT(param,wres,dmisfit,H,dR)
+	!call JmultT(param,allResp,dmisfit,H,dR)
+    call JmultT(param,allResp,dmisfit,H)
 
 	!dmisfit = -2. * dmisfit
-	call scMult(TWO,dmisfit,dmisfit)
+	call scMult(MinusTWO,dmisfit,dmisfit)
 
 	dmisfitSmooth = multBy_CmSqrt(dmisfit)
 
-	! We can no longer store misfit%dRda - misfit derivative for each frequency,
-	! functional and model parameter. They are now summed up internally in JmultT.
-	! We might want to add this functionality back!!!
-	do ifreq=1,freqList%n
-	  do ifunc=1,nfunc
+    call write_modelParam(dmisfitSmooth,cUserDef%fn_gradient)
+	write(0,*) 'Gradient written into file ',trim(cUserDef%fn_gradient)
 
-		call scMult(TWO,dR%dm(ifreq,ifunc),dR%dm(ifreq,ifunc))
-	    dmisfitSmooth = multBy_CmSqrt(dR%dm(ifreq,ifunc))
+!	! We can no longer store misfit%dRda - misfit derivative for each frequency,
+!	! functional and model parameter. They are now summed up internally in JmultT.
+!	! We might want to add this functionality back!!!
+!	do ifreq=1,freqList%n
+!	  do ifunc=1,nfunc
+!
+!		call scMult(TWO,dR%dm(ifreq,ifunc),dR%dm(ifreq,ifunc))
+!	    dmisfitSmooth = multBy_CmSqrt(dR%dm(ifreq,ifunc))
+!
+!		call getParamValues_modelParam(dmisfitSmooth,misfit%dRda(ifreq,ifunc,:))
+!
+!	  end do
+!	end do
+!
+!	! Output the summary and exit
+!	call misfitSumUp(p_input,misfit,misfitValue,dmisfitValue)
+!	!call misfitSumUp(res,misfit,misfitValue)
 
-		call getParamValues_modelParam(dmisfitSmooth,misfit%dRda(ifreq,ifunc,:))
-
-	  end do
-	end do
-
-	do ifreq=1,freqList%n
-
-	  freq = freqList%info(ifreq)
-
-	  ! If computing different kinds of misfits, be consistent;
-	  ! write different kinds into different data structures
-	  call calcMisfit(freq,res,misfit,misfit%name)
-
-	end do
-
-	! Output the summary and exit
-	call misfitSumUp(res,misfit,misfitValue,dmisfitValue)
-	!call misfitSumUp(res,misfit,misfitValue)
-
-	if (output_level>0) then
-	write(0,*)
-  	do i=1,freqList%n
-	  do j=1,TFList%n
-    write(6,'(a12,i3,a3,a35,i2,a2,g15.7)') 'Misfit for ',misfit%ndat(i,j),&
-			trim(TFList%info(j)%name),' responses, computed for frequency ',i,' :',&
-			misfit%value(i,j)/(2*misfit%ndat(i,j))
-	  end do
-	end do
-	end if
 
 	!do i=1,freqList%n
 	!  do j=1,TFList%n
@@ -864,10 +883,23 @@ end program earth
 	!call outputDerivative(param,misfit,dmisfitValue,cUserDef)
 
 	continue
-	call deall_sensMatrix(dR)
+!    if (dR%allocated) then
+!        do i = 1,size(dR%dm,1)
+!            do j = 1,size(dR%dm,2)
+!                call deall_modelParam(dR%dm(i,j))
+!            enddo
+!        enddo
+!    endif
+!    if (associated(dR%dm)) deallocate(dR%dm,STAT=istat)
+!    dR%allocated = .false.
+   	!call deall_sensMatrix(dR)
 	call deall_solnVectorMTX(H)
 	call deall_modelParam(dmisfit)
 	call deall_modelParam(dmisfitSmooth)
+    call deall_dataVector(dat)
+    call deall_dataVector(psi)
+    call deall_dataVector(res)
+    call deall_dataVector(wres)
 
 	call date_and_time(values=tarray)
 	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
@@ -885,7 +917,7 @@ end program earth
 
   subroutine calc_jacobian(rtime)
 
-	use data_vectors
+    use userdata
 	use global
 	use jacobian
 	use boundaries
@@ -1057,7 +1089,7 @@ end program earth
 
   subroutine calc_symmetry(rtime)
 
-	use data_vectors
+    use userdata
 	use global
 	use jacobian
 	use boundaries
@@ -1095,108 +1127,108 @@ end program earth
 	call date_and_time(values=tarray)
     stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
-	call initialize_fields(H%vec,B)
-
-	call create_rscalar(grid,drho,CENTER)
-
-	do ifreq=1,freqList%n
-
-	  freq = freqList%info(ifreq)
-
-	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
-
-	  write(6,*) 'Solving 3D forward problem for freq ',ifreq,freq%value
-
-	  ! solve A <h> = <b> for vector <h>
-	  adjoint=.FALSE.
-	  call operatorM(H%vec,B,omega,rho,grid,fwdCtrls,errflag,adjoint)
-	  !call create_cvector(grid,H,EDGE)
-	  !H%x = C_ONE
-	  !H%y = C_ONE
-	  !H%z = C_ONE
-
-	  ! compute and output fields & C and D responses at cells
-	  call outputSolution(freq,H%vec,slices,grid,cUserDef,rho,'h')
-
-	  ! compute and output C and D responses at observatories
-	  call calcResponses(freq,H%vec,dat,psi)
-	  call outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
-
-	  ! compute and output C and D residuals
-	  call calcResiduals(freq,dat,psi,res)
-	  !call outputResiduals(freq,res,TFList,obsList,outFiles)
-
-	  ! if computing different kinds of misfits, be consistent;
-	  ! write different kinds into different data structures
-	  call calcMisfit(freq,res,misfit,misfit%name)
-
-	  ! compute the weighted residuals and start the derivative computations
-	  call calcResiduals(freq,dat,psi,wres,weighted=.TRUE.)
-
-	  do ifunc=1,nfunc
-
-		print *
-		print *, 'Starting the derivative computations for ',&
-				  trim(TFList%info(ifunc)%name), ' responses...'
-
-
-		!---------------------------------------------------------
-		! Direct computations
-
-		do index = 1,param%nc
-
-		  coeff = getCoeff_modelParam(param,index)
-
-		  if (coeff%frozen) then
-			cycle
-		  end if
-
-		  drho = vectorPj(param,index)
-
-		  call operatorL(drho,dE_real,grid)
-		  !dE = dE_real
-
-		  ! ${\e} = C {\h}$
-		  call create_cvector(grid,Hconj,EDGE)
-		  Hconj = H%vec
-		  call operatorD_l_mult(Hconj,grid)
-		  call operatorC(Hconj,Econj,grid)
-
-		  call diagMult(Econj,dE_real,dE) !dE = Econj * dE_real
-
-		  call operatorCt(dE,F,grid)
-		  call createBC(Hb,grid)
-		  call insertBC(Hb,F)
-
-		  call operatorD_Si_divide(F,grid)
-
-		  ! $M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
-		  adjoint = .FALSE.
-		  delta = .TRUE.
-		  ! Forcing term F should not contain any non-zero boundary values
-		  call operatorM(dH%vec,F,omega,rho,grid,fwdCtrls,errflag,adjoint,delta)
-
-		  call Lmult(H,m0,dH,psi%v(ifreq,ifunc,:))
-
-		  misfit%dRda(ifreq,ifunc,index) &
-			= -2. * dreal(sum(conjg(wres%v(ifreq,ifunc,:)%resp%value) * psi%v(ifreq,ifunc,:)%resp%value))
-
-		end do
-		! End of direct computations
-		!---------------------------------------------------------
-
-	  end do
-
-	  call date_and_time(values=tarray)
-	  etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	  ftime = etime - stime
-	  print *,'Time taken (secs) ',ftime
-	  rtime = rtime + ftime
-
-	end do
-
-	! Output the summary and exit
-	call misfitSumUp(res,misfit,misfitValue,dmisfitValue)
+!	call initialize_fields(H%vec,B)
+!
+!	call create_rscalar(grid,drho,CENTER)
+!
+!	do ifreq=1,freqList%n
+!
+!	  freq = freqList%info(ifreq)
+!
+!	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
+!
+!	  write(6,*) 'Solving 3D forward problem for freq ',ifreq,freq%value
+!
+!	  ! solve A <h> = <b> for vector <h>
+!	  adjoint=.FALSE.
+!	  call operatorM(H%vec,B,omega,rho,grid,fwdCtrls,errflag,adjoint)
+!	  !call create_cvector(grid,H,EDGE)
+!	  !H%x = C_ONE
+!	  !H%y = C_ONE
+!	  !H%z = C_ONE
+!
+!	  ! compute and output fields & C and D responses at cells
+!	  call outputSolution(freq,H%vec,slices,grid,cUserDef,rho,'h')
+!
+!	  ! compute and output C and D responses at observatories
+!	  call calcResponses(freq,H%vec,dat,psi)
+!	  call outputResponses(freq,psi,freqList,TFList,obsList,outFiles,dat)
+!
+!	  ! compute and output C and D residuals
+!	  call calcResiduals(freq,dat,psi,res)
+!	  !call outputResiduals(freq,res,TFList,obsList,outFiles)
+!
+!	  ! if computing different kinds of misfits, be consistent;
+!	  ! write different kinds into different data structures
+!	  call calcMisfit(freq,res,misfit,misfit%name)
+!
+!	  ! compute the weighted residuals and start the derivative computations
+!	  call calcResiduals(freq,dat,psi,wres,weighted=.TRUE.)
+!
+!	  do ifunc=1,nfunc
+!
+!		print *
+!		print *, 'Starting the derivative computations for ',&
+!				  trim(TFList%info(ifunc)%name), ' responses...'
+!
+!
+!		!---------------------------------------------------------
+!		! Direct computations
+!
+!		do index = 1,param%nc
+!
+!		  coeff = getCoeff_modelParam(param,index)
+!
+!		  if (coeff%frozen) then
+!			cycle
+!		  end if
+!
+!		  drho = vectorPj(param,index)
+!
+!		  call operatorL(drho,dE_real,grid)
+!		  !dE = dE_real
+!
+!		  ! ${\e} = C {\h}$
+!		  call create_cvector(grid,Hconj,EDGE)
+!		  Hconj = H%vec
+!		  call operatorD_l_mult(Hconj,grid)
+!		  call operatorC(Hconj,Econj,grid)
+!
+!		  call diagMult(Econj,dE_real,dE) !dE = Econj * dE_real
+!
+!		  call operatorCt(dE,F,grid)
+!		  call createBC(Hb,grid)
+!		  call insertBC(Hb,F)
+!
+!		  call operatorD_Si_divide(F,grid)
+!
+!		  ! $M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
+!		  adjoint = .FALSE.
+!		  delta = .TRUE.
+!		  ! Forcing term F should not contain any non-zero boundary values
+!		  call operatorM(dH%vec,F,omega,rho,grid,fwdCtrls,errflag,adjoint,delta)
+!
+!		  call Lmult(H,m0,dH,psi%v(ifreq,ifunc,:))
+!
+!		  misfit%dRda(ifreq,ifunc,index) &
+!			= -2. * dreal(sum(conjg(wres%v(ifreq,ifunc,:)%resp%value) * psi%v(ifreq,ifunc,:)%resp%value))
+!
+!		end do
+!		! End of direct computations
+!		!---------------------------------------------------------
+!
+!	  end do
+!
+!	  call date_and_time(values=tarray)
+!	  etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+!	  ftime = etime - stime
+!	  print *,'Time taken (secs) ',ftime
+!	  rtime = rtime + ftime
+!
+!	end do
+!
+!	! Output the summary and exit
+!	call misfitSumUp(res,misfit,misfitValue,dmisfitValue)
 
 	!call outputMisfit(param,misfit,misfitValue,cUserDef)
 	!call outputDerivative(param,misfit,dmisfitValue,cUserDef)
@@ -1215,7 +1247,7 @@ end program earth
 
   subroutine calc_symmetric_operators(rtime)
 
-	use data_vectors
+    use userdata
 	use global
 	use jacobian
 	use output
