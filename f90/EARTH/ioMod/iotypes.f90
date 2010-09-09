@@ -28,11 +28,12 @@ module iotypes
   ! * read in from fn_startup.
   type :: input_info
 
-	character(80)				:: paramname  ! 'harmonic'/'mixed' parametrization
+	character(80)				:: paramname  ! 'harmonic'/'mixed'/'grid' parametrization
 	character(80)				:: modelname  ! specify how to call the output files
 	character(80)				:: verbose  ! 'none'/'model'/'responses'/'all'/'debug'
 	character(80)				:: calculate  ! 'responses'/'jacobian'/'derivative'
 	character(80)				:: fn_grid	! grid information
+    character(80)               :: fn_rho  ! resistivity on the grid (instead of *.prm)
 	character(80)				:: fn_shell	! GM thin shell conductance values
 	character(80)				:: fn_period  ! periods or frequencies
 	character(80)				:: fn_coords  ! observatory coordinates file
@@ -44,6 +45,7 @@ module iotypes
 	character(80)				:: fn_precond	! preconditioning parameters
 	character(80)				:: fn_param0	! base model parametrization
 	character(80)				:: fn_param	! information about the parametrization
+    character(80)               :: fn_source ! additional interior source
 	character(80)				:: fn_cdata	! name of 1st data and observatory file
 	character(80)				:: fn_ddata	! name of 2nd data and observatory file
 	character(80)				:: fn_misfit  ! output file for data misfit

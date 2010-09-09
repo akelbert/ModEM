@@ -66,6 +66,7 @@ Contains
     read (ioStartup,'(a17,a80)') string,cUserDef%calculate;
     read (ioStartup,'(a17,g15.7)') string,cUserDef%damping;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_grid;
+    read (ioStartup,'(a17,a80)') string,cUserDef%fn_rho;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_shell;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_field;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_period;
@@ -76,6 +77,7 @@ Contains
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_slices;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_param0;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_param;
+    read (ioStartup,'(a17,a80)') string,cUserDef%fn_source;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_cdata;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_ddata;
     read (ioStartup,'(a17,a80)') string,cUserDef%fn_misfit;
@@ -583,125 +585,14 @@ Contains
     type (input_info), intent(in)					:: cUserDef
     type (modelParam_t), intent(inout)					:: myparam
 	logical, intent(in), optional		:: p0
-    integer								:: ilayer,i,j,k,n,l,m
-	integer								:: nF,nL
-    integer								:: sum,sum0,degree
-    integer								:: ios,istat
-    real(8)								:: upperb,lowerb,width,depth,alpha,beta
-    character(6)						:: if_log_char,if_var_char
-    logical								:: if_log, if_fixed
-    character(80)						:: prmname, string
-    real(8)                             :: v,min,max
-
-    lowerb = EARTH_R
-    depth = 0.0d0
-    width = 0.0d0
-    sum = 0
-    sum0 = 0
 
 	if(present(p0)) then
 	  if(p0) then
-		open(ioPrm,file=cUserDef%fn_param0,status='old',form='formatted',iostat=ios)
-		write(6,*) 'Reading from the parametrization file ',trim(cUserDef%fn_param0)
+	    call read_modelParam(myparam,cUserDef%fn_param0)
 	  end if
 	else
-	  open(ioPrm,file=cUserDef%fn_param,status='old',form='formatted',iostat=ios)
-	  write(6,*) 'Reading from the parametrization file ',trim(cUserDef%fn_param)
+      call read_modelParam(myparam,cUserDef%fn_param)
 	end if
-
-    read(ioPrm,'(a8,a80)') string,prmname
-
-	if (index(prmname,'harmonic')==0) then
-       write(0, *) 'Error: (initModelParam) not a spherical harmonic parametrization'
-       stop
-	else
-	  i = index(prmname,'layers')
-	  read(prmname(i+7:len(prmname)),'(i2)') nL
-	  i = index(prmname,'degree')
-	  read(prmname(i+7:len(prmname)),'(i2)') degree
-	  write(6,*) prmname
-	end if
-
-
-	call create_modelParam(myparam,nL,degree)
-
-    !write(6,'(a50,i3)') 'Number of layers in script: ',myparam%nL
-
-
-    ! Unwind spherical harmonic parametrization
-
-    do n=1,nL
-
-	   read(ioPrm, *)
-
-       upperb = lowerb
-
- 	   ! If you wish to read the line in sections, use advance='no' specifier
-     !  read(ioPrm,'(a3,1x,a6,1x,i2,a6,g15.7)',iostat=ios) &
-			!if_log_char,string,degree,string,depth
-
-			!read(ioPrm,'(a3)',iostat=ios,advance='no') if_log_char
-
-			read(ioPrm,'(a80)',iostat=ios) string
-			i = index(string,'degree')
-			j = index(string,'layer')
-			k = index(string,'reg')
-
-
-			if (k==0) then
-					! no regularisation specified for this layer
-					alpha = 0.0d0
-					beta  = 1.0d0
-					k = len(string)
-			else
-					read(string(k+4:len(string)),*) alpha,beta
-			end if
-
-			read(string(1:i-1),*) if_log_char
-			read(string(i+7:j),*) degree
-			read(string(j+6:k),*) depth
-
-       read(ioPrm,'(a80)',iostat=ios) string
-
-       if (if_log_char == 'log') then  ! log means log_{10}
-          if_log = .TRUE.
-       else
-          if_log = .FALSE.
-       end if
-	   lowerb = EARTH_R - depth
-
-	   call setLayer_modelParam(myparam,n,upperb,lowerb,alpha,beta,if_log)
-
-       sum0=sum0+sum
-       sum=0
-       do l=0,degree
-          sum = sum + (2*l+1)
-       end do
-       !write(6,'(a46,i2,a2,i3)') 'Number of coefficients in layer ',n,': ',sum
-
-       do i=1,sum
-          read(ioPrm,*,iostat=ios) l,m,v,min,max,if_var_char
-		  if (if_var_char == 'range') then
-			if_fixed = .FALSE.
-		  else if (if_var_char == 'const') then
-			if_fixed = .TRUE.
-		  else
-			write(0, *) 'Error: (initModelParam) wrong character constant for ',n,l,m
-			stop
-		  end if
-		  call setCoeffValue_modelParam(myparam,n,l,m,v,min,max,if_fixed)
-		  !print *,'Values: ',l,m,v,min,max,if_fixed
-       end do
-
-    end do
-
-    ! this check is not necessary, but helps to debug parametrization scripts
-    !write(6,'(a50,i3)') 'Number of variable parameters in script: ',count(.not.myparam%c%frozen)
-	write(6,*)
-
-    close(ioPrm)
-
-    return
 
   end subroutine initModelParam	! initModelParam
 

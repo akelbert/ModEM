@@ -90,7 +90,7 @@ module model_operators
   public			:: add_modelParam_f, subtract_modelParam_f, linComb_modelParam
   public			:: mult_modelParam_f, dotProd_modelParam, dotProdVec_modelParam_f
   public			:: scMult_modelParam, scMultAdd_modelParam, scDiv_modelParam_f
-  public			:: print_modelParam, write_modelParam
+  public			:: print_modelParam, write_modelParam, read_modelParam
   public			:: smoothV_modelParam, smoothH_modelParam
   public			:: multBy_CmSqrt, multBy_Cm
 
@@ -1521,5 +1521,145 @@ Contains
     !close(ioSens)
 
   end subroutine writeVec_modelParam
+
+  ! ***************************************************************************
+  ! * read_modelParam reads the parametrization info to store in the derived data
+  ! * type variables (modelCoeff_t, modelLayer_t) in the special case when the
+  ! * parametrization is in terms of spherical harmonics of various degree/order
+  ! * per layer, each of the parameters being either variable (keyword 'range') or
+  ! * constant (keyword 'const'). We keep this information internally in such
+  ! * a format, that generalizations of this case would be easy to implement.
+  ! * In the parametrization type variables, each layer has the same (maximum)
+  ! * degree and order of spherical harmonics, and hence identical numbers of
+  ! * coefficients to store. Out of these coefficients, those that have been
+  ! * defined in the script bear logical keyword 'exists'. Out of those, variable
+  ! * coefficients have logical 'frozen==.FALSE.'
+  ! * Obviously, the information on the range is not required for the forward
+  ! * solver to operate. This is provided for the inversion, which will share
+  ! * the same input format for now.
+
+  subroutine read_modelParam(P,cfile)
+
+    character(*), intent(in)            :: cfile
+    type (modelParam_t), intent(inout)  :: P
+    integer                             :: ilayer,i,j,k,n,l,m
+    integer                             :: nF,nL
+    integer                             :: sum,sum0,degree
+    integer                             :: ios,istat
+    real(8)                             :: upperb,lowerb,width,depth,alpha,beta
+    character(6)                        :: if_log_char,if_var_char
+    logical                             :: if_log, if_fixed
+    character(80)                       :: prmname, string
+    real(8)                             :: v,min,max
+
+    lowerb = EARTH_R
+    depth = 0.0d0
+    width = 0.0d0
+    sum = 0
+    sum0 = 0
+
+    if(exists) then
+      open(ioPrm,file=cfile,status='old',form='formatted',iostat=ios)
+      write(6,*) 'Reading from the parametrization file ',trim(cfile)
+    else
+      write(0,*) 'Error: (read_modelParam) input file does not exist'
+      stop
+    end if
+
+    read(ioPrm,'(a8,a80)') string,prmname
+
+    if (index(prmname,'harmonic')==0) then
+       write(0, *) 'Error: (read_modelParam) not a spherical harmonic parametrization'
+       stop
+    else
+      i = index(prmname,'layers')
+      read(prmname(i+7:len(prmname)),'(i2)') nL
+      i = index(prmname,'degree')
+      read(prmname(i+7:len(prmname)),'(i2)') degree
+      write(6,*) prmname
+    end if
+
+
+    call create_modelParam(P,nL,degree)
+
+    !write(6,'(a50,i3)') 'Number of layers in script: ',P%nL
+
+
+    ! Unwind spherical harmonic parametrization
+
+    do n=1,nL
+
+       read(ioPrm, *)
+
+       upperb = lowerb
+
+       ! If you wish to read the line in sections, use advance='no' specifier
+     !  read(ioPrm,'(a3,1x,a6,1x,i2,a6,g15.7)',iostat=ios) &
+            !if_log_char,string,degree,string,depth
+
+            !read(ioPrm,'(a3)',iostat=ios,advance='no') if_log_char
+
+            read(ioPrm,'(a80)',iostat=ios) string
+            i = index(string,'degree')
+            j = index(string,'layer')
+            k = index(string,'reg')
+
+
+            if (k==0) then
+                    ! no regularisation specified for this layer
+                    alpha = 0.0d0
+                    beta  = 1.0d0
+                    k = len(string)
+            else
+                    read(string(k+4:len(string)),*) alpha,beta
+            end if
+
+            read(string(1:i-1),*) if_log_char
+            read(string(i+7:j),*) degree
+            read(string(j+6:k),*) depth
+
+       read(ioPrm,'(a80)',iostat=ios) string
+
+       if (if_log_char == 'log') then  ! log means log_{10}
+          if_log = .TRUE.
+       else
+          if_log = .FALSE.
+       end if
+       lowerb = EARTH_R - depth
+
+       call setLayer_modelParam(P,n,upperb,lowerb,alpha,beta,if_log)
+
+       sum0=sum0+sum
+       sum=0
+       do l=0,degree
+          sum = sum + (2*l+1)
+       end do
+       !write(6,'(a46,i2,a2,i3)') 'Number of coefficients in layer ',n,': ',sum
+
+       do i=1,sum
+          read(ioPrm,*,iostat=ios) l,m,v,min,max,if_var_char
+          if (if_var_char == 'range') then
+            if_fixed = .FALSE.
+          else if (if_var_char == 'const') then
+            if_fixed = .TRUE.
+          else
+            write(0, *) 'Error: (read_modelParam) wrong character constant for ',n,l,m
+            stop
+          end if
+          call setCoeffValue_modelParam(P,n,l,m,v,min,max,if_fixed)
+          !print *,'Values: ',l,m,v,min,max,if_fixed
+       end do
+
+    end do
+
+    ! this check is not necessary, but helps to debug parametrization scripts
+    !write(6,'(a50,i3)') 'Number of variable parameters in script: ',count(.not.P%c%frozen)
+    write(6,*)
+
+    close(ioPrm)
+
+    return
+
+  end subroutine read_modelParam
 
 end module model_operators
