@@ -152,6 +152,8 @@ Contains
 
   iTx = d%tx
 
+  call zero_rhsVector(comb)
+
   do j = 1,d%ndt
 	  iDt = d%data(j)%dataType
 	  ncomp = d%data(j)%nComp
@@ -174,7 +176,6 @@ Contains
 	  do iFunc=1,nFunc
 	      call create_sparseVector(e0%grid,iTx,Lz(iFunc))
 	  end do
-	  call zero_rhsVector(comb)
 
 	  !  loop over sites
 	  do iSite = 1,d%data(j)%nSite

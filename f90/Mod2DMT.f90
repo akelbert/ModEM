@@ -30,6 +30,10 @@ program Mod2DMT
 !     character*80  gridType, header,arg, paramtype
 !     character*80, dimension(:), pointer :: temp
 
+     ! needed for symmetry testing
+     type (solnVectorMTX_t) :: ePred
+     type (rhsVectorMTX_t)  :: bAll
+
      call parseArgs('Mod2DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
 
      call initGlobalData(cUserDef)
@@ -97,8 +101,36 @@ program Mod2DMT
        select case (cUserDef%test)
            case('J')
                call Jtest(sigma0,dsigma,allData)
+           case('L')
+               !call fwdPred(sigma0,allData,eAll)
+			   !ePred = eAll
+			   call random_solnVectorMTX(eAll,cUserDef%delta)
+			   call random_dataVectorMTX(allData,cUserDef%delta)
+			   !call Ltest(sigma0,eAll,allData,ePred)
+			   !call deall_solnVectorMTX(ePred)
+               call Ltest(sigma0,eAll,allData)
+           case('S')
+               call random_solnVectorMTX(eAll,cUserDef%delta)
+               bAll = eAll
+               call Stest(sigma0,bAll,eAll)
            case('Q')
                call Qtest(sigma0,dsigma,allData)
+
+           case('m')
+               call random_modelParam(sigma0,cUserDef%delta)
+               call write_modelParam(sigma0,cUserDef%wFile_Model)
+               write_model = .false.
+               write_data = .false.
+           case('d')
+               call random_dataVectorMTX(allData,cUserDef%delta)
+               call write_dataVectorMTX(allData,cUserDef%wFile_Data)
+               write_model = .false.
+               write_data = .false.
+           case('e')
+               call random_solnVectorMTX(eAll,cUserDef%delta)
+               call write_solnVectorMTX(ioWrite,cUserDef%wFile_EMsoln,eAll)
+               write_model = .false.
+               write_data = .false.
 
            case default
                write(0,*) 'Symmetry test for operator ',trim(cUserDef%test),' not yet implemented.'

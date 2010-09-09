@@ -45,6 +45,7 @@ module global
   type (modelParam_t), save								:: p_diff
   type (modelParam_t), save								:: param
   type (modelParam_t), save								:: param0
+  type (modelParam_t), save                             :: p_delta
 
   ! ***************************************************************************
   ! *  allData: Contains all input data, saved for computations and output

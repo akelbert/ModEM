@@ -144,6 +144,20 @@ Contains
 		       else
 		          call warning('The input model perturbation file does not exist')
 		       end if
+           case('L','e')
+               inquire(FILE=cUserDef%rFile_EMsoln,EXIST=exists)
+               if (exists) then
+                  call read_solnVectorMTX(ioRead,grid,eAll,cUserDef%rFile_EMsoln)
+               else
+                  call warning('The input solution vector file does not exist')
+               end if
+           case('S')
+               inquire(FILE=cUserDef%rFile_EMrhs,EXIST=exists)
+               if (exists) then
+                  call read_solnVectorMTX(ioRead,grid,eAll,cUserDef%rFile_EMrhs)
+               else
+                  call warning('The input RHS solution vector file does not exist')
+               end if
 	       case default
 	   end select
 

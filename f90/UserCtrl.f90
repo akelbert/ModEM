@@ -424,9 +424,10 @@ Contains
            write(0,*) '  Tests the equality d^T L e = e^T L^T d for any EMsoln and data.'
            write(0,*) '  Optionally, outputs L e and L^T d.'
            write(0,*)
-           write(0,*) ' -A  S rFile_Model rFile_EMrhs [wFile_EMsoln]'
+           write(0,*) ' -A  S rFile_Model rFile_EMrhs rFile_Data [wFile_EMsoln]'
            write(0,*) '  Tests the equality b^T S^{-1} b = b^T (S^{-1})^T b for any EMrhs.'
            write(0,*) '  For simplicity, use one EMrhs for forward and transpose solvers.'
+           write(0,*) '  Data file only needed to set up dictionaries.'
            write(0,*) '  Optionally, outputs e = S^{-1} b.'
            write(0,*)
            write(0,*) ' -A  P rFile_Model rFile_dModel rFile_EMsoln [wFile_Model wFile_EMrhs]'
@@ -470,8 +471,9 @@ Contains
            case ('S')
                 ctrl%rFile_Model = temp(2)
                 ctrl%rFile_EMrhs = temp(3)
-                if (narg > 3) then
-                    ctrl%wFile_EMsoln = temp(4)
+                ctrl%rFile_Data = temp(4)
+                if (narg > 4) then
+                    ctrl%wFile_EMsoln = temp(5)
                 endif
            case ('P')
                 ctrl%rFile_Model = temp(2)

@@ -66,7 +66,7 @@ Contains
       write(ioDat,'(a17,i3)') 'Sign convention: ',sign_in_file
       write(ioDat,*)
 
-      nBlocks = countDataVec(allData)
+      nBlocks = countDataBlock(allData)
       write(ioDat,'(i5)') nBlocks
 
       ! loop over periods

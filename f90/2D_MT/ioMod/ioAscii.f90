@@ -186,6 +186,40 @@ module ioAscii
       return
       end subroutine write_solnVectorMTX
 
+     !******************************************************************
+      subroutine read_solnVectorMTX(fid,grid,eAll,cfile)
+
+      !  open cfile on unit fid, writes out object of
+      !   type cvector in standard format (readable by matlab
+      !   routine readcvector.m), closes file
+      !  NOT coded at present to specifically write out TE/TM
+      !    solutions, periods, etc. (can get this infor from
+      !    eAll%solns(j)%tx, but only with access to TXdict.
+
+      integer, intent(in)       :: fid
+      character*80, intent(in)      :: cfile
+      type(grid_t), intent(in)      :: grid
+      type(solnVectorMTX_t), intent(inout)     :: eAll
+
+      integer       :: nTx,j
+
+      open(unit=fid, file=cfile, form='unformatted',status='unknown')
+      if(eAll%allocated) then
+        call deall_solnVectorMTX(eAll)
+      endif
+      read(fid) nTx
+      call create_solnVectorMTX(nTx,eAll)
+      eAll%nTx = nTx
+      do j = 1,eAll%nTx
+         call create_solnVector(grid,j,eAll%solns(j))
+         read(fid) eAll%solns(j)%vec%gridType
+         read(fid) eAll%solns(j)%vec%N1,eAll%solns(j)%vec%N2
+         read(fid) eAll%solns(j)%vec%v
+      enddo
+      close(fid)
+      return
+      end subroutine read_solnVectorMTX
+
      !**********************************************************************
       subroutine write_Z(fid,cfile,nTx,periods,modes,nSites,sites,units,allData)
      ! writes impedance file, including list of periods, siteLocations

@@ -2,6 +2,7 @@
 program earth
 
   use userdata
+  use symmetrytest
   use main
   use output
   use senscomp
@@ -15,6 +16,12 @@ program earth
   use field_vectors
   implicit none
 
+  type(timer_t)                             :: t
+  type(modelParam_t)                        :: grad
+  type(dataVectorMTX_t)                     :: allResp,d_delta
+  type(solnVectorMTX_t)                     :: H,h_delta
+  type(rhsVectorMTX_t)                      :: b
+  real(8)                                   :: f,f1,f2,eps
   real										:: runtime
   character(80)								:: fn_startup=''
   character(80)								:: fn_model='rho.out'
@@ -25,7 +32,6 @@ program earth
   complex(8),dimension(:,:,:),allocatable	:: psi1,psi2,dpsi1,dpsi2
   integer									:: ifreq,ifunc,iobs
   real(8), dimension(2)                         :: value1, value2, delta
-  real(8)                                       :: eps
 
   runtime = 0.0d0
 
@@ -46,6 +52,9 @@ program earth
 	print *,'Successfully initialized the model. Exiting...'
 	stop
   end if
+
+  ! Start the (portable) clock
+  call clear_time(t)
 
   ! Model initialisation complete, and boundary conditions have been set.
   !	Now solve forward problem for each frequency, in turn, and for each
@@ -76,13 +85,13 @@ program earth
 
 	print *,'Calculating responses only.'
 
-	call calc_responses(runtime)
+	call calc_responses(f,allResp)
 
   case ('derivative')
 
 	print *,'Calculating responses and the penalty functional derivative.'
 
-	call calc_derivative(runtime)
+	call calc_derivative(f,grad)
 
   case ('jacobian')
 
@@ -90,52 +99,112 @@ program earth
 
 	call calc_jacobian(runtime)
 
-  case ('symmetry')
+  case ('test_symmetry')
 
 	print *,'Perform the symmetry test and exit.'
 
+    call DeleteGlobalData()
+    call DeleteGlobalArrays()
+
+    ! compute random model parturbation ...
+    eps = 0.005
+    write(0,*) 'Model perturbation used is uniform random times ',eps
+
+    call InitGlobalData(fn_startup,eps)
+    call InitGlobalArrays()
+
 	!call calc_symmetry(runtime)
 	call calc_symmetric_operators(runtime)
+
+  case ('test_J')
+
+    ! Symmetry test for operators J and Jt
+    eps = 0.005
+    write(0,*) 'Model perturbation used is uniform random times ',eps
+    p_delta = p_input
+    call random_modelParam(p_delta,eps)
+    call Jtest(p_input,p_delta,allData)
+
+  case ('test_L')
+
+    ! Symmetry test for operators L and Lt
+    call fwdPred(p_input,allData,H)
+    eps = 0.005
+    write(0,*) 'Solution and data perturbations are uniform random times ',eps
+    !call create_solnVectorMTX(allData%ntx,h_delta)
+    h_delta = H
+    call random_solnVectorMTX(h_delta,eps)
+    d_delta = allData
+    call random_dataVectorMTX(d_delta,eps)
+    call Ltest(p_input,h_delta,d_delta,H)
+
+  case ('test_S')
+
+    ! Symmetry test for operators S and St
+    eps = 5e-4
+    write(0,*) 'Source perturbation will be uniform random times ',eps
+    p_delta = p_input
+    call random_modelParam(p_delta,eps)
+    call create_rhsVectorMTX(allData%ntx,b)
+    do j = 1,allData%ntx
+        b%combs(j)%nonzero_source = .true.
+        call create_rhsVector(grid,j,b%combs(j))
+    end do
+    call random_rhsVectorMTX(b,eps)
+    call Stest(p_input,b,H)
+
+  case ('test_P')
+
+    ! Symmetry test for operators P and Pt
+    call fwdPred(p_input,allData,H)
+    eps = 0.005
+    write(0,*) 'Model and solution perturbations are uniform random times ',eps
+    p_delta = p_input
+    call random_modelParam(p_delta,eps)
+    h_delta = H
+    call random_solnVectorMTX(h_delta,eps)
+    call Ptest(p_input,allData,p_delta,h_delta,H)
+
+  case ('test_Q')
+
+    ! Symmetry test for operators Q and Qt
+    eps = 0.005
+    write(0,*) 'Model perturbation used is uniform random times ',eps
+    p_delta = p_input
+    call random_modelParam(p_delta,eps)
+    call Qtest(p_input,p_delta,allData)
+
 
   case ('test_derivative')
 
 	print *,'Run a test to validate derivative computations.'
 
-	! this includes 'frozen' variables, but we're just testing
-	allocate(da(param%nc))
-	call random_number(da)
-	da = da * 0.005
-
-    open(unit=50,file='da.dat',status='unknown')
-	write(50,*) 'da = ',da
-	close(50)
-
-	allocate(dR(TFList%n,param%nc),R1(TFList%n),R2(TFList%n))
-
-  ! Run Jacobian computations for the unperturbed parametrization (a)
-	call calc_derivative(runtime)
-        R1 = misfitValue
-        dR = dmisfitValue
+    ! compute the misfit and gradient for the unperturbed parametrization (m0)
+	call calc_derivative(f1,grad)
 
 	call DeleteGlobalData()
 	call DeleteGlobalArrays()
 
-	call InitGlobalData(fn_startup,da)
+	! compute random model parturbation ...
+	eps = 0.005
+    write(0,*) 'Model perturbation used is uniform random times ',eps
+
+	call InitGlobalData(fn_startup,eps)
 	call InitGlobalArrays()
 
-  ! Run Jacobian computations after the perturbation (a+da)
-	call calc_derivative(runtime)
-        R2 = misfitValue
+    ! compute misfit after the perturbation (m0+dm)
+	call calc_responses(f2,allResp)
 
-        do ifunc=1,TFList%n
-           write(0,'(a40)') trim(TFList%info(ifunc)%name)//'-response: R1-R2, dR'
-           write(0,'(2g15.7)') R2(ifunc)-R1(ifunc),dot_product(da(:),dR(ifunc,:))
-        end do
+    !do ifunc=1,TFList%n
+    !   write(0,'(a40)') trim(TFList%info(ifunc)%name)//'-response: func2-func1, grad'
+    !   write(0,'(2g15.7)') func2(ifunc)-func1(ifunc),dot_product(da(:),grad(ifunc,:))
+    !end do
 
+    write(0,'(a100)') 'Total derivative test based on Taylor series [f(m0+dm) ~ f(m0) + df/dm|_{m0} x dm]'
+    write(0,'(a20,g15.7)') 'f(m0+dm) - f(m0): ',f2-f1
+    write(0,'(a20,g15.7)') 'df/dm|_{m0} x dm: ',dotProd(p_delta,grad)
 
-        deallocate(da,dR,R1,R2)
-
-  case ('validate')
+  case ('test_jacobian')
 
 	print *,'Run full test to validate Jacobian computations.'
 
@@ -202,7 +271,8 @@ program earth
 	call DeleteGlobalData()
 	call DeleteGlobalArrays()
 
-	call InitGlobalData(fn_startup,da)
+    eps = 0.005
+	call InitGlobalData(fn_startup,eps)
 	call InitGlobalArrays()
 
   ! Run Jacobian computations after the perturbation (a+da)
@@ -300,7 +370,7 @@ program earth
 
   continue
 
-  write(0,*) ' elapsed time (mins) ',runtime/60.0
+  write(0,*) ' total elapsed time (mins) ',elapsed_time(t)/60.0
 
   call CloseOutFiles()
 
@@ -328,6 +398,7 @@ end program earth
 	! Start the (portable) clock
 	call date_and_time(values=tarray)
 	stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+	invparam = p_input
 
   	call NLCGsolver(allData,cUserDef%damping,param,invparam,cUserDef%fn_invctrl)
 
@@ -495,78 +566,84 @@ end program earth
   ! * the specified model, list of frequencies and possibly geometric locations,
   ! * output them and exit.
 
-  subroutine calc_responses(rtime)
+  subroutine calc_responses(f,allResp)
 
     use userdata
-	use griddef
-	use dataFunc
-	use jacobian
-	use output
-	use initFields
-	use dataMisfit
-	use boundaries	!for testing
-	use senscomp
+    use jacobian
+    use boundaries
+    use output
+    use initFields
+    use dataFunc
+    use dataMisfit
+    use senscomp
     use transmitters
-	implicit none
+    use dataTypes
+    implicit none
 
-	real, intent(inout)						:: rtime  ! run time
-	real									:: ftime  ! run time per frequency
-	real									:: stime, etime ! start and end times
-    integer, dimension(8)					:: tarray ! utility variable
-    integer	                                :: errflag	! internal error flag
-	real(8)									:: omega  ! variable angular frequency
-	integer									:: istat,i,j,k
-	type (solnVectorMTX_t)                  :: H
-    type (dataVectorMTX_t)                  :: allResp
-    type (dataVector_t)                     :: res
-    !type (cvector)							:: H,B,F
-	!type (sparsevecc)						:: Hb
-	!type (functional_t)						:: dataType
-	type (transmitter_t)					:: freq
-	integer									:: ifreq
-	!logical									:: adjoint
-
-	! Start the (portable) clock
-	call date_and_time(values=tarray)
-	stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+    real(8), intent(out)                    :: f  ! penalty functional
+    type (dataVectorMTX_t), intent(out)     :: allResp
+    integer                                 :: istat,i,j,k
+    type (dataVector_t)                     :: dat,psi,res,wres
+    type (solnVectorMTX_t)                  :: H
+    type (modelParam_t)                     :: dmisfit,dmisfitSmooth
+    integer                                 :: ifreq,ifunc
+    real(8)                                 :: SS, RMS
+    integer                                 :: Ndata
 
     ! Call the forward solver for all frequencies
     allResp = allData
-    call fwdPred(param,allResp,H)
+    call fwdPred(param,allResp)
 
-	do ifreq=1,allData%ntx
+    f = R_ZERO
 
-	  call calcResiduals(allData%d(ifreq),allResp%d(ifreq),res)
+    do ifreq=1,allData%ntx
 
-	  ! If computing different kinds of misfits, be consistent;
-	  ! write different kinds into different data structures
-	  call calcMisfit(res,misfit,misfit%name)
+      dat = allData%d(ifreq)
+      psi = allResp%d(ifreq)
 
-	end do
+      ! initialize res
+      res = psi
+      ! compute residual: res = dat-psi
+      call linComb(ONE,dat,MinusONE,psi,res)
+      ! normalize residuals, compute sum of squares
+      !wres = res
+      !call normalizeData(wres,2)
 
-	if (output_level>0) then
-	write(0,*)
-  	do i=1,freqList%n
-	  do j=1,TFList%n
-    write(6,'(a12,i3,a2,a35,i2,a2,g15.7)') 'Misfit for ',misfit%ndat(i,j),&
-			trim(TFList%info(j)%name),' responses, computed for frequency ',i,' :',&
-			misfit%value(i,j)/(2*misfit%ndat(i,j))
-	  end do
-	end do
-	end if
+      !   SS = dotProd(res,wres)
+      !   Ndata = countData(res)
+      !   RMS = sqrt(SS/Ndata)
+      !   print *, 'Total RMS squared misfit for ',Ndata,' data values = ',RMS**2
 
-	call misfitSumUp(p_input,misfit,misfitValue)
+      ! res = psi-dat (note: multiply by +2 to obtain derivative)
+      !call calcResiduals(dat,psi,res)
+      !call OutputResiduals(freq,res,TFList,obsList)
 
-	!call outputMisfit(param,misfit,misfitValue,cUserDef)
+      ! compute the weighted residuals and start the derivative computations
+      !call calcResiduals(dat,psi,wres,weighted=.TRUE.)
 
-	continue
-	call deall_solnVectorMTX(H)
-	call deall_dataVector(res)
 
-	call date_and_time(values=tarray)
-	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	rtime = etime - stime
+      ! If computing different kinds of misfits, be consistent;
+      ! write different kinds into different data structures
+      call calcMisfit(res,misfit)
 
+      f = f + sum(misfit%value)/(2*sum(misfit%ndat))
+
+    end do
+
+    if (output_level>0) then
+    write(0,*)
+    do i=1,freqList%n
+      do j=1,TFList%n
+    write(6,'(a12,i3,a3,a35,i2,a2,g15.7)') 'Misfit for ',misfit%ndat(i,j),&
+            trim(TFList%info(j)%name),' responses, computed for frequency ',i,' :',&
+            misfit%value(i,j)/(2*misfit%ndat(i,j))
+      end do
+    end do
+    end if
+
+    call deall_dataVector(dat)
+    call deall_dataVector(psi)
+    call deall_dataVector(res)
 
   end subroutine calc_responses	! calc_responses
 
@@ -576,7 +653,7 @@ end program earth
   ! * using secondary field formulation; reading the primary field (1D solution)
   ! * from a file, or computing it internally (not implemented yet).
 
-  subroutine calc_secondary_fields(rtime)
+  subroutine calc_secondary_fields(f,allResp)
 
     use userdata
 	use griddef
@@ -593,16 +670,14 @@ end program earth
     use dataTypes
 	implicit none
 
-	real, intent(inout)						:: rtime  ! run time
-	real									:: ftime  ! run time per frequency
-	real									:: stime, etime ! start and end times
-    integer, dimension(8)					:: tarray ! utility variable
+    real(8), intent(out)                    :: f  ! penalty functional
+    type (dataVectorMTX_t), intent(out)     :: allResp
     integer	                                :: errflag	! internal error flag
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,k
     type (dataVector_t)                     :: dat,psi,res,wres
 	type (solnVectorMTX_t)						:: H1D
-	type (cvector)                     	    :: Hj, Bj, dH, F
+	type (cvector)                     	    :: Hj, Bj, dH, Fj
 	type (rvector)							:: drhoF
 	type (rscalar)							:: rho1D, drho
 	type (modelParam_t)                     :: param1D
@@ -612,10 +687,7 @@ end program earth
 	type (transmitter_t)					:: freq
 	integer									:: ifreq
 	logical									:: adjoint, delta
-
-	! Start the (portable) clock
-	call date_and_time(values=tarray)
-	stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+    integer                                 :: Ndata
 
 	! Don't need to initialize fields: initial dH and boundary conditions are zero
 	! call initialize_fields(dH,Bj)
@@ -637,6 +709,8 @@ end program earth
 	! (alternatively, compute it locally)
 	call initField(cUserDef,grid,H1D)
 
+	f = R_ZERO
+
 	do ifreq=1,freqList%n
 
 	  freq = freqList%info(ifreq)
@@ -646,9 +720,9 @@ end program earth
 
 	  ! Compute the RHS = - del x drho (del x H)
 	  call operatorD_l_mult(H1D%solns(ifreq)%vec,grid)
-	  call operatorC(H1D%solns(ifreq)%vec,F,grid)
-	  call diagMult(drhoF,F,F)
-	  call operatorCt(F,Bj,grid)
+	  call operatorC(H1D%solns(ifreq)%vec,Fj,grid)
+	  call diagMult(drhoF,Fj,Fj)
+	  call operatorCt(Fj,Bj,grid)
 	  call operatorD_Si_divide(Bj,grid)
 	  call linComb(C_MinusONE,Bj,C_ZERO,Bj,Bj)
 
@@ -675,17 +749,15 @@ end program earth
 
 	  call calcResiduals(dat,psi,res)
 
+	  ! Ndata = countData(res)
+
 	  ! If computing different kinds of misfits, be consistent;
 	  ! write different kinds into different data structures
-	  call calcMisfit(res,misfit,misfit%name)
+	  call calcMisfit(res,misfit)
+
+      f = f + sum(misfit%value)/(2*sum(misfit%ndat))
 
 	!call OutputResiduals(freq,res,TFList,obsList)
-
-	  call date_and_time(values=tarray)
-	  etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	  ftime = etime - stime
-	  print *,'Time taken (secs) ',ftime
-	  rtime = rtime + ftime
 
 	end do
 
@@ -708,7 +780,7 @@ end program earth
 	call deall_cvector(Hj)
 	call deall_cvector(Bj)
 	call deall_cvector(dH)
-	call deall_cvector(F)
+	call deall_cvector(Fj)
 	call deall_rvector(drhoF)
 	call deall_rscalar(drho)
 	call deall_rscalar(rho1D)
@@ -718,10 +790,6 @@ end program earth
 	call deall_dataVector(psi)
 	call deall_dataVector(res)
 	call deall_dataVector(wres)
-
-	call date_and_time(values=tarray)
-	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	rtime = etime - stime
 
 
   end subroutine calc_secondary_fields	! calc_secondary_fields
@@ -733,7 +801,7 @@ end program earth
   ! * model parameters for the list of frequencies, and exit. Designed for use
   ! * by gradient-based inverse solvers.
 
-  subroutine calc_derivative(rtime)
+  subroutine calc_derivative(f,grad)
 
     use userdata
 	use jacobian
@@ -747,46 +815,27 @@ end program earth
     use dataTypes
 	implicit none
 
-	type (sensMatrix_tmp_t)					:: dR
-	real, intent(inout)						:: rtime  ! run time
-	real									:: ftime  ! run time per frequency
-	real									:: stime, etime ! start and end times
-    integer, dimension(8)					:: tarray ! utility variable
-    integer	                                :: errflag	! internal error flag
-	real(8)									:: omega  ! variable angular frequency
+    real(8), intent(out)                    :: f     ! penalty functional
+    type (modelParam_t), intent(out)        :: grad  ! penalty functional gradient
+    type (dataVectorMTX_t)                  :: allResp
 	integer									:: istat,i,j,k
     type (dataVector_t)                     :: dat,psi,res,wres
-    type (dataVectorMTX_t)                  :: allResp
-	type (solnVectorMTX_t)                      :: H
-    !type (cvector)							:: H,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero,dR
-	!type (rvector)							:: dE_real
-	!type (rscalar)							:: drho
-	!type (sparsevecc)						:: Hb
-	!type (functional_t)						:: dataType
-	type (transmitter_t)					:: freq
+	type (solnVectorMTX_t)                  :: H
 	type (modelParam_t)						:: dmisfit,dmisfitSmooth
 	integer									:: ifreq,ifunc
-	logical									:: adjoint,delta
-	character(1)							:: cfunc
-	character(80)							:: fn_err
 	real(8)									:: SS, RMS
 	integer									:: Ndata
-
-	! Start the (portable) clock
-	call date_and_time(values=tarray)
-	stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
 
     ! Call the forward solver for all frequencies
     allResp = allData
     call fwdPred(param,allResp,H)
 
+    f = R_ZERO
+
 	do ifreq=1,allData%ntx
 
-	  freq = freqList%info(ifreq)
 	  dat = allData%d(ifreq)
 	  psi = allResp%d(ifreq)
-
-	  omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
 	  ! initialize res
 	  res = psi
@@ -795,6 +844,11 @@ end program earth
 	  ! normalize residuals, compute sum of squares
 	  wres = res
 	  call normalizeData(wres,2)
+
+      !   SS = dotProd(res,wres)
+      !   Ndata = countData(res)
+      !   RMS = sqrt(SS/Ndata)
+      !   print *, 'Total RMS squared misfit for ',Ndata,' data values = ',RMS**2
 
 	  ! res = psi-dat (note: multiply by +2 to obtain derivative)
 	  !call calcResiduals(dat,psi,res)
@@ -806,24 +860,14 @@ end program earth
 
 	  ! If computing different kinds of misfits, be consistent;
 	  ! write different kinds into different data structures
-	  call calcMisfit(res,misfit,misfit%name)
+	  call calcMisfit(res,misfit)
+
+	  f = f + sum(misfit%value)/(2*sum(misfit%ndat))
 
       ! save normalized residuals for the derivative computation
 	  allResp%d(ifreq) = wres
 
 	end do
-
-!	! initialize res
-!	res = psi
-!	! compute residual: res = dat-psi
-!	call linComb(ONE,dat,MinusONE,psi,res)
-!	! normalize residuals, compute sum of squares
-!	wres = res
-!	call normalizeData(wres,2)
-!	SS = dotProd(res,wres)
-!	Ndata = countData(res)
-!	RMS = sqrt(SS/Ndata)
-!	print *, 'Total RMS squared misfit for ',Ndata,' data values = ',RMS**2
 
     if (output_level>0) then
     write(0,*)
@@ -836,13 +880,7 @@ end program earth
     end do
     end if
 
-!        if (.not. dR%allocated) then
-!            allocate(dR%dm(nfreq,nfunc),STAT=istat)
-!            dR%allocated = .true.
-!        endif
-
 	! Call multiplication by J^T
-	!call JmultT(param,allResp,dmisfit,H,dR)
     call JmultT(param,allResp,dmisfit,H)
 
 	!dmisfit = -2. * dmisfit
@@ -853,46 +891,9 @@ end program earth
     call write_modelParam(dmisfitSmooth,cUserDef%fn_gradient)
 	write(0,*) 'Gradient written into file ',trim(cUserDef%fn_gradient)
 
-!	! We can no longer store misfit%dRda - misfit derivative for each frequency,
-!	! functional and model parameter. They are now summed up internally in JmultT.
-!	! We might want to add this functionality back!!!
-!	do ifreq=1,freqList%n
-!	  do ifunc=1,nfunc
-!
-!		call scMult(TWO,dR%dm(ifreq,ifunc),dR%dm(ifreq,ifunc))
-!	    dmisfitSmooth = multBy_CmSqrt(dR%dm(ifreq,ifunc))
-!
-!		call getParamValues_modelParam(dmisfitSmooth,misfit%dRda(ifreq,ifunc,:))
-!
-!	  end do
-!	end do
-!
-!	! Output the summary and exit
-!	call misfitSumUp(p_input,misfit,misfitValue,dmisfitValue)
-!	!call misfitSumUp(res,misfit,misfitValue)
+	grad = dmisfitSmooth
 
-
-	!do i=1,freqList%n
-	!  do j=1,TFList%n
-	!	write(0,'(a40,2i3,i6,g15.7)') 'ifreq,ifunc,ndat,misfit = ',i,j,&
-	 ! 				misfit%ndat(i,j),misfit%value(i,j)/(2*misfit%ndat(i,j))
-	!  end do
-	!end do
-
-	!call outputMisfit(param,misfit,misfitValue,cUserDef)
-	!call outputDerivative(param,misfit,dmisfitValue,cUserDef)
-
-	continue
-!    if (dR%allocated) then
-!        do i = 1,size(dR%dm,1)
-!            do j = 1,size(dR%dm,2)
-!                call deall_modelParam(dR%dm(i,j))
-!            enddo
-!        enddo
-!    endif
-!    if (associated(dR%dm)) deallocate(dR%dm,STAT=istat)
-!    dR%allocated = .false.
-   	!call deall_sensMatrix(dR)
+    call deall_dataVectorMTX(allResp)
 	call deall_solnVectorMTX(H)
 	call deall_modelParam(dmisfit)
 	call deall_modelParam(dmisfitSmooth)
@@ -900,10 +901,6 @@ end program earth
     call deall_dataVector(psi)
     call deall_dataVector(res)
     call deall_dataVector(wres)
-
-	call date_and_time(values=tarray)
-	etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
-	rtime = etime - stime
 
   end subroutine calc_derivative  ! calc_derivative
 
@@ -1259,6 +1256,7 @@ end program earth
 	use DataSens
     use transmitters
     use dataTypes
+    use SymmetryTest
 	implicit none
 
 	real, intent(inout)						:: rtime  ! run time
@@ -1289,6 +1287,12 @@ end program earth
 	real(8)									:: value0,value1,value2
 	logical, dimension(:,:,:), allocatable	:: mask
 	!logical									:: verbose
+
+
+    ! Symmetry test for operators J and Jt
+    print *, 'Symmetry test for operators J and Jt'
+    call Jtest(p_input,p_delta,allData)
+
 
 !	! Start the (portable) clock
 !	call date_and_time(values=tarray)

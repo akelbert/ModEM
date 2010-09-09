@@ -38,14 +38,13 @@ Contains
   ! * Frequencies are listed in ascending order (by value)
   ! * Observatories are listed in ascending order (alphabetic)
 
-  subroutine InitGlobalData(fn_startup,da)
+  subroutine InitGlobalData(fn_startup,eps)
 
 	implicit none
     character(80), intent(inout)				:: fn_startup
 	integer										:: i,ios=0,istat=0
 	character(100)								:: label
-	real(8),dimension(:),intent(in),optional	:: da
-	type (modelParam_t)							:: p_delta
+	real(8),intent(in),optional	                :: eps
 	type (modelCoeff_t)							:: coeff
 	type (modelShell_t)                         :: crust
 
@@ -103,12 +102,11 @@ Contains
 	end if
 	!--------------------------------------------------------------------------
 	! Compute the correction (only needed if run for a test perturbation)
-	if (present(da)) then
+	if (present(eps)) then
 	  p_delta = p_input
-	  call zero(p_delta)
-	  call fillParamValues_modelParam(p_delta,da)
+	  call random_modelParam(p_delta,eps)
 	  call linComb(ONE,p_input,ONE,p_delta,p_input)
-	  call deall_modelParam(p_delta)
+	  !call deall_modelParam(p_delta)
 	  !param%p(:)%value = param%p(:)%value + da(:)
 	end if
 	!--------------------------------------------------------------------------

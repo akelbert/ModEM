@@ -241,6 +241,23 @@ Contains
    end subroutine zero_modelParam
 
 !**********************************************************************
+   subroutine random_modelParam(m,eps)
+
+     !  zeros a model space object
+
+     type(modelParam_t), intent(inout)  :: m
+     real(kind=prec), intent(in), optional :: eps
+
+     call random_number(m%v)
+     if (present(eps)) then
+        m%v = m%v * eps
+     else
+        m%v = m%v * 0.05
+     endif
+
+   end subroutine random_modelParam
+
+!**********************************************************************
    subroutine linComb_modelParam(a1,m1,a2,m2,m)
 
      !  forms the linear combination of model parameters

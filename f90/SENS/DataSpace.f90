@@ -68,6 +68,12 @@ module DataSpace
      MODULE PROCEDURE merge_dataVectorMTX
   end interface
 
+  interface random
+     MODULE PROCEDURE random_dataBlock
+     MODULE PROCEDURE random_dataVector
+     MODULE PROCEDURE random_dataVectorMTX
+  end interface
+
   interface countData
      MODULE PROCEDURE count_dataVectorMTX_f
   end interface
@@ -158,6 +164,7 @@ module DataSpace
   public			:: dotProd_dataBlock_f, dotProd_dataVector_f, dotProd_dataVectorMTX_f
   public            :: normalize_dataBlock, normalize_dataVector, normalize_dataVectorMTX
   public            :: merge_dataBlock, merge_dataVector, merge_dataVectorMTX
+  public            :: random_dataBlock, random_dataVector, random_dataVectorMTX
   ! additional operators needed for the upper level code
   public			:: count_dataVectorMTX_f, countBlock_dataVectorMTX_f
 
@@ -288,6 +295,30 @@ Contains
     endif
 
   end subroutine zero_dataBlock
+
+  ! **********************************************************************
+  ! * Creates a random perturbation in the data - used for testing
+
+  subroutine random_dataBlock(d,eps)
+
+    implicit none
+    type (dataBlock_t), intent(inout)                :: d
+    real (kind=prec), intent(in), optional           :: eps
+
+    if (.not. d%allocated) then
+      call errStop('data not allocated in random_dataBlock')
+    end if
+
+    call zero_dataBlock(d)
+
+    call random_number(d%value)
+    if (present(eps)) then
+        d%value = d%value * eps
+    else
+        d%value = d%value * 0.05
+    end if
+
+  end subroutine random_dataBlock
 
   ! **********************************************************************
   ! copy a data block from d1 to d2 ...
@@ -723,6 +754,32 @@ Contains
   end subroutine zero_dataVector
 
   ! **********************************************************************
+  ! * Creates a random perturbation in the data - used for testing
+
+  subroutine random_dataVector(d,eps)
+
+    implicit none
+    type (dataVector_t), intent(inout)               :: d
+    real (kind=prec), intent(in), optional           :: eps
+    ! local
+    integer         :: i
+
+    if (.not. d%allocated) then
+      call errStop('data not allocated in random_dataVector')
+    end if
+
+    ! now copy the components
+    do i = 1, d%nDt
+        if (present(eps)) then
+            call random_dataBlock(d%data(i),eps)
+        else
+            call random_dataBlock(d%data(i),0.05*ONE)
+        endif
+    enddo
+
+  end subroutine random_dataVector
+
+  ! **********************************************************************
   ! copy a data vector from d1 to d2 ...
   ! interface to =
   ! check for size consistency, reallocate output if needed
@@ -1070,6 +1127,32 @@ Contains
     endif
 
   end subroutine zero_dataVectorMTX
+
+  ! **********************************************************************
+  ! * Creates a random perturbation in the data - used for testing
+
+  subroutine random_dataVectorMTX(d,eps)
+
+    implicit none
+    type (dataVectorMTX_t), intent(inout)            :: d
+    real (kind=prec), intent(in), optional           :: eps
+    ! local
+    integer     :: j
+
+    if (.not. d%allocated) then
+      call errStop('data not allocated in random_dataVectorMTX')
+    end if
+
+    ! now compute the components
+    do j = 1, d%nTx
+        if (present(eps)) then
+            call random_dataVector(d%d(j),eps)
+        else
+            call random_dataVector(d%d(j),0.05*ONE)
+        endif
+    enddo
+
+  end subroutine random_dataVectorMTX
 
   ! **********************************************************************
   ! copy a data vector from d1 to d2 ...

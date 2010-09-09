@@ -47,7 +47,7 @@ module SymmetryTest
 
   implicit none
 
-  public    :: Jtest!, Ltest, Stest, Ptest, Qtest
+  public    :: Jtest, Ltest, Stest, Ptest, Qtest
 
 Contains
 
@@ -107,7 +107,7 @@ Contains
   end subroutine Jtest
 
   !**********************************************************************
-   subroutine Ltest(m0,e,d)
+   subroutine Ltest(m0,e,d,ePred)
 
    !  Tests the equality d^T L e = e^T L^T d; outputs L e and L^T d.
    !
@@ -119,6 +119,8 @@ Contains
    !   d is the input perturbation in the data vector;
    !    on output, this is L e
    type(dataVectorMTX_t), intent(inout)     :: d
+   !   eAll is the background solution vector; optional
+   type(solnVectorMTX_t), optional, intent(in) :: ePred
 
    !  local variables
    type(rhsVector_t)       :: LTd
@@ -132,12 +134,16 @@ Contains
    write(*,*) 'Symmetry test for operators L and L^T'
 
    ! initialize
-   dPred = d
    Le = d
    Conj_case = .false.
 
    ! compute background solution
-   call fwdPred(m0,dPred,eAll)
+   if (.not. present(ePred)) then
+    dPred = d
+    call fwdPred(m0,dPred,eAll)
+   else
+    eAll = ePred
+   endif
 
    do j = 1,d%nTx
 
@@ -145,6 +151,7 @@ Contains
        call Lmult(eAll%solns(j),m0,e%solns(j),Le%d(j))
 
        ! compute L^T d
+       LTd = eAll%solns(j)
        call LmultT(eAll%solns(j),m0,d%d(j),LTd)
 
        ! compute dot product #1: d^T L e
@@ -169,6 +176,7 @@ Contains
   end subroutine Ltest
 
   !**********************************************************************
+  ! NOT DEBUGGED YET
    subroutine Stest(m0,b,eAll)
 
    !  Tests the equality b^T S^{-1} b = b^T (S^{-1})^T b; outputs e = S^{-1} b.
@@ -176,7 +184,7 @@ Contains
    !   m0 is background model parameter
    type(modelParam_t), intent(in)           :: m0
    !   b is the input forcing
-   type(rhsVectorMTX_t), intent(in)         :: b
+   type(rhsVectorMTX_t), intent(inout)      :: b
    !   e is the output solution S^{-1} b
    type(solnVectorMTX_t), intent(inout)     :: eAll
 
@@ -196,28 +204,27 @@ Contains
    do j = 1,b%nTx
 
       !  initialize the temporary data vectors
-      comb = b%combs(j)
-      iTx = comb%tx
+      iTx = b%combs(j)%tx
 
       !  manage any necessary initilization for this transmitter
-      call initSolver(iTx,m0,comb%grid,eFwd)
+      call initSolver(iTx,m0,b%combs(j)%grid,eFwd)
 
       ! solve forward problem with source in comb, and save for output
-      call sensSolve(iTx,FWD,eFwd,comb)
+      call sensSolve(iTx,FWD,eFwd,b%combs(j))
       eAll%solns(j) = eFwd
 
       !  now, initialize for sensitivity ... do nothing to comb, though!
-      call initSolver(iTx,m0,comb%grid,eAdj)
+      call initSolver(iTx,m0,b%combs(j)%grid,eAdj)
 
       ! solve transpose problem with source in comb
-      call sensSolve(iTx,ADJ,eAdj,comb)
+      call sensSolve(iTx,ADJ,eAdj,b%combs(j))
 
       ! compute dot product #1: b^T S^{-1} b
-      r1 = dotProd(comb,eFwd,Conj_case)
+      r1 = dotProd(b%combs(j),eFwd,Conj_case)
       write(*,*) '... frequency #',j,' dot product #1: ',r1,'[b^T S^{-1} b]'
 
       ! compute dot product #2: b^T (S^{-1})^T b
-      r2 = dotProd(comb,eAdj,Conj_case)
+      r2 = dotProd(b%combs(j),eAdj,Conj_case)
       write(*,*) '... frequency #',j,' dot product #2: ',r2,'[b^T (S^{-1})^T b]'
 
    enddo  ! tx
@@ -232,7 +239,7 @@ Contains
 
 
   !**********************************************************************
-   subroutine Ptest(m0,dTemplate,m,e)
+   subroutine Ptest(m0,dTemplate,m,e,ePred)
 
    !  Tests the equality e^T P m = m^T P^T e; outputs P m and P^T e.
    !
@@ -246,6 +253,8 @@ Contains
    !   e is the input perturbation in the solution vector;
    !    on output, this is P m
    type(solnVectorMTX_t), intent(inout)     :: e
+   !   eAll is the background solution vector; optional
+   type(solnVectorMTX_t), optional, intent(in) :: ePred
 
    !  local variables
    type(modelParam_t)      :: PTe,mTemp
@@ -259,17 +268,22 @@ Contains
    write(*,*) 'Symmetry test for operators P and P^T'
 
    ! initialize
-   dPred = dTemplate
    mTemp = m
    call zero(mTemp)
    Conj_case = .false.
 
    ! compute background solution
-   call fwdPred(m0,dPred,eAll)
+   if (.not. present(ePred)) then
+    dPred = dTemplate
+    call fwdPred(m0,dPred,eAll)
+   else
+    eAll = ePred
+   endif
 
    do j = 1,e%nTx
 
        ! compute P m
+       Pm = eAll%solns(j)
        call Pmult(eAll%solns(j),m0,m,Pm)
 
        ! compute P^T d

@@ -187,7 +187,7 @@ Contains
     ! the old baggage is out of the door
     if(.not. newLC%allocated) then
     	write(0, *) 'The input sparsevecc has to be allocated in reall_sparsevecc'
-    	stop
+    	return
     end if
 
 	tempLC = newLC
@@ -260,7 +260,7 @@ Contains
     ! check to see if RHS (SV1) is active (allocated)
     if(.not. SV1%allocated) then
        write(0,*) 'RHS not allocated yet for copy_sparsevecc'
-       stop
+       return
     end if
 
     ! allocate output if needed, otherwise check for consistency
@@ -388,7 +388,7 @@ Contains
     if(SV2%allocated) then
        if(SV2%gridType .ne. SV1%gridType) then
           write(0,*) 'not compatible usage for scMult_sparsevecc'
-          stop
+          return
        elseif(SV2%nCoeff .ne. SV1%nCoeff) then
           call deall_sparsevecc(SV2)
           call create_sparsevecc(SV1%nCoeff,SV2,SV1%gridType)
@@ -421,12 +421,12 @@ Contains
 
     if((.not.SV%allocated).or.(.not.V%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProd_scvector_f'
-       stop
+       return
     endif
 
     if (SV%gridType /= V%gridType) then
        write(0,*) 'not compatible usage for dotProd_scvector_f'
-       stop
+       return
     endif
 
     ! sum over  non-zero terms in sparse vector (conjugate sparse)
@@ -462,7 +462,7 @@ Contains
 
        else
           write(0,*) 'IJK out of bounds for dotProd_scvector_f'
-          stop
+          return
        endif
 
     enddo
@@ -485,12 +485,12 @@ Contains
 
     if((.not.SV%allocated).or.(.not.V%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProd_csvector_f'
-       stop
+       return
     endif
 
     if (SV%gridType /= V%gridType) then
        write(0,*) 'not compatible usage for dotProd_csvector_f'
-       stop
+       return
     endif
 
     ! sum over  non-zero terms in sparse vector (conjugate full)
@@ -526,7 +526,7 @@ Contains
 
        else
           write(0,*) 'IJK out of bounds for dotProd_csvector_f'
-          stop
+          return
        endif
 
     enddo
@@ -550,12 +550,12 @@ Contains
 
     if((.not.SV%allocated).or.(.not.V%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProd_scvector_f'
-       stop
+       return
     endif
 
     if (SV%gridType /= V%gridType) then
        write(0,*) 'not compatible usage for dotProd_scvector_f'
-       stop
+       return
     endif
 
     ! sum over  non-zero terms in sparse vector
@@ -591,7 +591,7 @@ Contains
 
        else
           write(0,*) 'IJK out of bounds for dotProd_scvector_f'
-          stop
+          return
        endif
 
     enddo
@@ -616,12 +616,12 @@ Contains
 
     if((.not.SV%allocated).or.(.not.V%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProd_csvector_f'
-       stop
+       return
     endif
 
     if (SV%gridType /= V%gridType) then
        write(0,*) 'not compatible usage for dotProd_csvector_f'
-       stop
+       return
     endif
 
     ! sum over  non-zero terms in sparse vector
@@ -657,7 +657,7 @@ Contains
 
        else
           write(0,*) 'IJK out of bounds for dotProd_csvector_f'
-          stop
+          return
        endif
 
     enddo
@@ -682,12 +682,12 @@ Contains
 
     if((.not.SV%allocated).or.(.not.V%allocated)) then
        write(0,*) 'RHS not allocated yet for add_scvector'
-       stop
+       return
     endif
 
     if (SV%gridType /= V%gridType) then
        write(0,*) 'not compatible usage for add_scvector'
-       stop
+       return
     endif
 
     ! loop over non-zero terms in sparse vector, adding to
@@ -723,7 +723,7 @@ Contains
 
        else
           write(0,*) 'IJK out of bounds for add_scvector'
-          stop
+          return
        endif
 
     enddo
@@ -741,7 +741,7 @@ Contains
     ! check to see if SV1 is active (allocated)
     if(.not.SV1%allocated) then
        write(0,*) 'Input sparse vector not allocated yet for conjg_sparsevecc_f'
-       stop
+       return
     endif
 
     !  make sure SV2 is allocated and of the correct size
@@ -777,12 +777,12 @@ Contains
 
 	if (.not.SV%allocated) then
 	  write (0, *) 'Sparse vector in newValueC_sparsevecc is not allocated yet'
-	  stop
+	  return
 	end if
 
 	if (index.gt.SV%nCoeff) then !ubound(SV%c)
 	  write (0, *) 'The chosen index in newValueC_sparsevecc is not allocated yet'
-	  stop
+	  return
 	end if
 
 	SV%i(index) = i
@@ -807,12 +807,12 @@ Contains
 
 	if (.not.SV%allocated) then
 	  write (0, *) 'Sparse vector in newValueR_sparsevecc is not allocated yet'
-	  stop
+	  return
 	end if
 
 	if (index.gt.SV%nCoeff) then
 	  write (0, *) 'The chosen index in newValueR_sparsevecc is not allocated yet'
-	  stop
+	  return
 	end if
 
 	SV%i(index) = i
@@ -836,12 +836,12 @@ Contains
 
 	if (.not.SV%allocated) then
 	  write (0, *) 'Sparse vector in copyValue_csvector is not allocated yet'
-	  stop
+	  return
 	end if
 
 	if (index.gt.SV%nCoeff) then
 	  write (0, *) 'The chosen index in copyValue_csvector is not allocated yet'
-	  stop
+	  return
 	end if
 
 	SV%i(index) = i
@@ -872,17 +872,17 @@ Contains
 
     if(.not.V%allocated) then
        write(0,*) 'RHS not allocated yet for copy_csvector'
-       stop
+       return
     endif
 
     if(.not.SV%allocated) then
        write(0,*) 'LHS not allocated yet for copy_csvector'
-       stop
+       return
     endif
 
     if (SV%gridType /= V%gridType) then
        write(0,*) 'not compatible usage for copy_csvector'
-       stop
+       return
     endif
 
     if (V%gridType == EDGE) then
@@ -895,7 +895,7 @@ Contains
                 i = i + 1
                 if (i > SV%nCoeff) then
                    write(0, *) 'outside sparse vector nCoeff: copy_csvector'
-                   stop
+                   return
                 end if
                 SV%xyz(i) = 1
                 SV%i(i) = xi
@@ -914,7 +914,7 @@ Contains
                 i = i + 1
                 if (i > SV%nCoeff) then
                    write(0, *) 'outside sparse vector nCoeff: copy_csvector'
-                   stop
+                   return
                 end if
                 SV%xyz(i) = 2
                 SV%i(i) = xi
@@ -933,7 +933,7 @@ Contains
                 i = i + 1
                 if (i > SV%nCoeff) then
                    write(0, *) 'outside sparse vector nCoeff: copy_csvector'
-                   stop
+                   return
                 end if
                 SV%xyz(i) = 3
                 SV%i(i) = xi
@@ -954,7 +954,7 @@ Contains
                 i = i + 1
                 if (i > SV%nCoeff) then
                    write(0, *) 'outside sparse vector nCoeff: copy_csvector'
-                   stop
+                   return
                 end if
                 SV%xyz(i) = 1
                 SV%i(i) = xi
@@ -973,7 +973,7 @@ Contains
                 i = i + 1
                 if (i > SV%nCoeff) then
                    write(0, *) 'outside sparse vector nCoeff: copy_csvector'
-                   stop
+                   return
                 end if
                 SV%xyz(i) = 2
                 SV%i(i) = xi
@@ -992,7 +992,7 @@ Contains
                 i = i + 1
                 if (i > SV%nCoeff) then
                    write(0, *) 'outside sparse vector nCoeff: copy_csvector'
-                   stop
+                   return
                 end if
                 SV%xyz(i) = 3
                 SV%i(i) = xi

@@ -62,6 +62,7 @@ module SolverSens
    !call operatorD_Si_divide(Ej,grid)
 
    ! compute dE = diag($\bar{C}$ Hj) $\delta\rho_F$
+   dE = Ej
    call diagMult(Ej,drhoF,dE)
 
    ! compute dH = $C^\dag$ dE

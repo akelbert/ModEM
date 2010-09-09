@@ -542,7 +542,7 @@ Contains
 
       if(.not. E%allocated) then
          write(0, *) 'rvector must be allocated before call to write_rvector'
-         stop
+         return
       endif
 
       write(fid,'(3i5,a10)',iostat=istat) E%nx,E%ny,E%nz,trim(E%gridType)
@@ -603,7 +603,7 @@ Contains
 
       if(.not. E%allocated) then
          write(0, *) 'cvector must be allocated before call to write_cvector'
-         stop
+         return
       endif
 
       write(fid,'(3i5,a10)',iostat=istat) E%nx,E%ny,E%nz,trim(E%gridType)
@@ -667,7 +667,7 @@ Contains
 
       if ((Nx .ne. grid%nx) .or. (Ny .ne. grid%ny) .or. (Nz .ne. grid%nz)) then
          write(0, *) 'rvector size does not match the grid in read_rvector'
-         stop
+         return
       endif
 
       if(.not. E%allocated) then
@@ -736,7 +736,7 @@ Contains
 
       if ((Nx .ne. grid%nx) .or. (Ny .ne. grid%ny) .or. (Nz .ne. grid%nz)) then
          write(0, *) 'cvector size does not match the grid in read_cvector'
-         stop
+         return
       endif
 
       if(.not. E%allocated) then
@@ -950,6 +950,102 @@ Contains
 
 
   ! **********************************************************************
+  ! * Creates a random perturbation in rvector - used for testing
+
+  subroutine random_rvector(E,eps)
+
+    implicit none
+    type (rvector), intent(inout)                    :: E
+    real(8), intent(in), optional                    :: eps
+
+    if (.not. E%allocated) then
+      call warning('cvector not allocated in random_rvector')
+      return
+    end if
+
+    call zero_rvector(E)
+
+    call random_number(E%x)
+    call random_number(E%y)
+    call random_number(E%z)
+    if (present(eps)) then
+        E%x = E%x * eps
+        E%y = E%y * eps
+        E%z = E%z * eps
+    else
+        E%x = E%x * 0.05
+        E%y = E%y * 0.05
+        E%z = E%z * 0.05
+    end if
+
+  end subroutine random_rvector
+
+
+  ! **********************************************************************
+  ! * Creates a random perturbation in cvector - used for testing
+
+  subroutine random_cvector(E,eps)
+
+    implicit none
+    type (cvector), intent(inout)                    :: E
+    real(8), intent(in), optional                    :: eps
+    ! local
+    real (kind(E%x)), allocatable, dimension(:,:,:)  :: xr,xi,yr,yi,zr,zi
+    integer              :: Nx,Ny,Nz,istat
+
+    if (.not. E%allocated) then
+      call warning('cvector not allocated in random_cvector')
+      return
+    end if
+
+    call zero_cvector(E)
+
+    ! make some random vectors
+    Nx = E%nx
+    Ny = E%ny
+    Nz = E%nz
+    allocate(xr(Nx+1,Ny+1,Nz+1),xi(Nx+1,Ny+1,Nz+1),STAT=istat)
+    allocate(yr(Nx+1,Ny+1,Nz+1),yi(Nx+1,Ny+1,Nz+1),STAT=istat)
+    allocate(zr(Nx+1,Ny+1,Nz+1),zi(Nx+1,Ny+1,Nz+1),STAT=istat)
+    call random_number(xr)
+    call random_number(xi)
+    call random_number(yr)
+    call random_number(yi)
+    call random_number(zr)
+    call random_number(zi)
+    if (present(eps)) then
+        xr = xr * eps
+        xi = xi * eps
+        yr = yr * eps
+        yi = yi * eps
+        zr = zr * eps
+        zi = zi * eps
+    else
+        xr = xr * 0.05
+        xi = xi * 0.05
+        yr = yr * 0.05
+        yi = yi * 0.05
+        zr = zr * 0.05
+        zi = zi * 0.05
+    end if
+
+	if (E%gridType == EDGE) then
+	   E%x = cmplx(xr(1:Nx,:,:),xi(1:Nx,:,:))
+	   E%y = cmplx(yr(:,1:Ny,:),yi(:,1:Ny,:))
+	   E%z = cmplx(zr(:,:,1:Nz),zi(:,:,1:Nz))
+	else if (E%gridType == FACE) then
+	   E%x = cmplx(xr(:,1:Ny,1:Nz),xi(:,1:Ny,1:Nz))
+	   E%y = cmplx(yr(1:Nx,:,1:Nz),yi(1:Nx,:,1:Nz))
+	   E%z = cmplx(zr(1:Nx,1:Ny,:),zi(1:Nx,1:Ny,:))
+	else
+	   write (0, *) 'not a known tag'
+	end if
+
+    deallocate(xr,xi,yr,yi,zr,zi,STAT=istat)
+
+  end subroutine random_cvector
+
+  ! **********************************************************************
   ! * check two vectors for compatibility for linear operator purposes
 
   function compare_cvector_f(E1,E2) result (status)
@@ -1005,7 +1101,7 @@ Contains
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_cvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E2) is active (allocated)
@@ -1049,7 +1145,7 @@ Contains
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_cvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -1099,7 +1195,7 @@ Contains
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMultReal_cvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E2) is active (allocated)
@@ -1143,7 +1239,7 @@ Contains
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMultReal_cvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -1193,7 +1289,7 @@ Contains
 
    if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_rvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E2) is active (allocated)
@@ -1238,7 +1334,7 @@ Contains
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMult_rvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -1286,7 +1382,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_rvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E3) is active (allocated)
@@ -1330,7 +1426,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_rvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -1379,7 +1475,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_cvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E3) is active (allocated)
@@ -1423,7 +1519,7 @@ Contains
 
      if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_cvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -1472,7 +1568,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for subtract_rvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E3) is active (allocated)
@@ -1516,7 +1612,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for add_rvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -1565,7 +1661,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for subtract_cvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E2) is active (allocated)
@@ -1609,7 +1705,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for subtract_cvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -1658,7 +1754,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E3) is active (allocated)
@@ -1702,7 +1798,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -1751,7 +1847,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_cvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E3) is active (allocated)
@@ -1795,7 +1891,7 @@ Contains
 
    if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_cvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -1845,7 +1941,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_crvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E3) is active (allocated)
@@ -1890,7 +1986,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_crvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -1940,7 +2036,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rcvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E3) is active (allocated)
@@ -1985,7 +2081,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagMult_rcvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -2035,7 +2131,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagDiv_crvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E3) is active (allocated)
@@ -2080,7 +2176,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagDiv_crvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -2130,7 +2226,7 @@ Contains
 
        if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagDiv_rcvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E3) is active (allocated)
@@ -2175,7 +2271,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for diagDiv_rcvector_f'
-       stop
+       return
     endif
 
     ! In function version, appropriate data types need to be created
@@ -2227,7 +2323,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'input vectors not allocated yet for dotProd_rvector_f'
-       stop
+       return
     endif
 
 	E3 = E1
@@ -2253,7 +2349,7 @@ Contains
 	  ! do nothing
 	else
 	  write(0,*) 'unknown coordinate system ',trim(E3%grid%coords),' in dotProd_rvector_f'
-	  stop
+	  return
 	end if
 
     ! Check whether both input vectors are of the same size
@@ -2295,7 +2391,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProdCC'
-       stop
+       return
     endif
 
  	E3 = E1
@@ -2321,7 +2417,7 @@ Contains
 	  ! do nothing
 	else
 	  write(0,*) 'unknown coordinate system ',trim(E3%grid%coords),' in dotProd_cvector_f'
-	  stop
+	  return
 	end if
 
    ! Check whether both input vectors are of the same size
@@ -2363,7 +2459,7 @@ Contains
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
        write(0,*) 'RHS not allocated yet for dotProdCC'
-       stop
+       return
     endif
 
  	E3 = E1
@@ -2389,7 +2485,7 @@ Contains
 	  ! do nothing
 	else
 	  write(0,*) 'unknown coordinate system ',trim(E3%grid%coords),' in dotProd_noConj_cvector_f'
-	  stop
+	  return
 	end if
 
    ! Check whether both input vectors are of the same size
@@ -2430,12 +2526,13 @@ Contains
     type (cvector), intent(inout)          :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
-       call errStop('inputs not allocated yet for linComb_cvector')
+       call warning('inputs not allocated yet for linComb_cvector')
+       return
     endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
-       call errStop('output has to be allocated before call to linComb_cvector')
+       call warning('output has to be allocated before call to linComb_cvector')
 
     elseif (compare(E1,E2) .and. compare(E1,E3)) then
         ! form linear combinatoin
@@ -2444,7 +2541,7 @@ Contains
         E3%z = inc1*E1%z + inc2*E2%z
 
     else
-        call errStop('not compatible usage for linComb_cvector')
+        call warning('not compatible usage for linComb_cvector')
     end if
 
   end subroutine linComb_cvector ! linComb_cvector
@@ -2463,12 +2560,14 @@ Contains
     type (rvector), intent(inout)          :: E3
 
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
-       call errStop('inputs not allocated yet for linComb_rvector')
+       call warning('inputs not allocated yet for linComb_rvector')
+       return
     endif
 
     ! check to see if LHS (E3) is active (allocated)
     if(.not.E3%allocated) then
-       call errStop('output has to be allocated before call to linComb_rvector')
+       call warning('output has to be allocated before call to linComb_rvector')
+       return
 
     elseif (compare(E1,E2) .and. compare(E1,E3)) then
         ! form linear combinatoin
@@ -2477,7 +2576,8 @@ Contains
         E3%z = inc1*E1%z + inc2*E2%z
 
     else
-        call errStop('not compatible usage for linComb_rvector')
+        call warning('not compatible usage for linComb_rvector')
+        return
     end if
 
   end subroutine linComb_rvector ! linComb_rvector
@@ -2495,7 +2595,7 @@ Contains
 
     if(.not.E1%allocated) then
        write(0,*) 'RHS not allocated yet for scMultAdd_cvector'
-       stop
+       return
     endif
 
     ! check to see if LHS (E2) is active (allocated)

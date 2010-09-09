@@ -504,4 +504,36 @@ Contains
       close(fid)
       end subroutine write_solnVectorMTX
 
+******************************************************************
+!      subroutine read_solnVectorMTX(fid,cfile,eAll)
+!
+!      !  open cfile on unit fid, writes out object of
+!      !   type cvector in standard format (readable by matlab
+!      !   routine readcvector.m), closes file
+!      !  NOT coded at present to specifically write out TE/TM
+!      !    solutions, periods, etc. (can get this infor from
+!      !    eAll%solns(j)%tx, but only with access to TXdict.
+!
+!      integer, intent(in)               :: fid
+!      character(*), intent(in)          :: cfile
+!      type(solnVectorMTX_t), intent(in)               :: eAll
+!
+!      !   local variables
+!      integer           :: j,k,nMode = 2, ios
+!      character (len=20)        :: version = '',ModeNames(2)
+!      real (kind=prec)   :: omega
+!
+!      ModeNames(1) = 'Ey'
+!      ModeNames(2) = 'Ex'
+!
+!      call FileReadInit(cfile,fid,eAll%solns(1)%grid,eAll%nTX,nMode,version,ios)
+!
+!      do j = 1,eAll%nTx
+!         do k = 1,2
+!           call EfileRead(fid, j, ModeNames(k), omega, eAll%solns(j)%pol(k))
+!         enddo
+!      enddo
+!      close(fid)
+!      end subroutine read_solnVectorMTX
+
 end module ioAscii

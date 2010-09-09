@@ -22,7 +22,7 @@ interface assignment (=)
    !MODULE PROCEDURE copy_rhsVector - doesn't exist yet
    MODULE PROCEDURE copy_solnVrhsV
    MODULE PROCEDURE copy_solnVector
-   !MODULE PROCEDURE copy_solnVectorMTX - doesn't exist yet
+   MODULE PROCEDURE copy_solnVectorMTX
    !MODULE PROCEDURE copy_sparseVector - doesn't exist yet
 end interface
 
@@ -148,6 +148,54 @@ Contains
 
    end subroutine deall_solnVectorMTX
 
+  ! **********************************************************************
+  ! * Creates a random perturbation in the EM soln - used for testing
+  subroutine random_solnVectorMTX(eAll,eps)
+
+    implicit none
+    type (solnVectorMTX_t), intent(inout)            :: eAll
+    real (kind=prec), intent(in), optional           :: eps
+    ! local
+    integer     :: j
+
+    if (.not. eAll%allocated) then
+      call errStop('EM solution not allocated in random_solnVectorMTX')
+    end if
+
+    do j = 1,eAll%nTx
+      if (present(eps)) then
+        call random_solnVector(eAll%solns(j),eps)
+      else
+        call random_solnVector(eAll%solns(j),0.05*ONE)
+      end if
+    end do
+
+  end subroutine random_solnVectorMTX
+
+   !**********************************************************************
+   subroutine copy_solnVectorMTX(eOut,eIn)
+
+      type(solnVectorMTX_t), intent(inout)  :: eOut
+      type(solnVectorMTX_t), intent(in)     :: eIn
+
+      !  local variables
+      integer                   :: j, istat
+
+      if (eOut%allocated) then
+        call deall_solnVectorMTX(eOut)
+      end if
+
+      call create(eIn%nTx,eOut)
+      do j = 1,eIn%nTx
+        eOut%solns(j) = eIn%solns(j)
+      end do
+      eOut%allocated = .true.
+
+      !if (eIn%temporary) then
+      !  call deall_solnVectorMTX(eIn)
+      !end if
+
+   end subroutine copy_solnVectorMTX
 
   !****************************************************************************
   ! linComb_solnVectorMTX computes linear combination of two field solutions
@@ -364,6 +412,25 @@ Contains
 
      end subroutine zero_solnVector
 
+  ! **********************************************************************
+  ! * Creates a random perturbation in the EM soln - used for testing
+  subroutine random_solnVector(e,eps)
+
+    implicit none
+    type (solnVector_t), intent(inout)               :: e
+    real (kind=prec), intent(in), optional           :: eps
+    ! local
+    integer     :: j
+
+    if (.not. e%allocated) then
+      call errStop('EM solution not allocated in random_solnVector')
+    elseif (present(eps)) then
+      call random_cvector(e%vec,eps)
+    else
+      call random_cvector(e%vec,0.05*ONE)
+    end if
+
+  end subroutine random_solnVector
 
 !**********************************************************************
 !           Basic sparseVector methods
@@ -529,6 +596,26 @@ Contains
        endif
      end subroutine zero_rhsVector
 
+  ! **********************************************************************
+  ! * Creates a random perturbation in the EM RHS - used for testing
+  subroutine random_rhsVector(b,eps)
+
+    implicit none
+    type (rhsVector_t), intent(inout)                :: b
+    real (kind=prec), intent(in), optional           :: eps
+    ! local
+    integer     :: j
+
+    if (.not. (b%allocated .and. b%nonzero_source)) then
+      call errStop('EM RHS not allocated in random_rhsVector')
+    elseif (present(eps)) then
+      call random_cvector(b%source,eps)
+    else
+      call random_cvector(b%source,0.05*ONE)
+    end if
+
+  end subroutine random_rhsVector
+
 !**********************************************************************
 !           combined solnVector/rhsVector methods
 !**********************************************************************
@@ -627,5 +714,24 @@ Contains
       bAll%allocated = .false.
 
    end subroutine deall_rhsVectorMTX
+
+   !**********************************************************************
+   subroutine random_rhsVectorMTX(bAll,eps)
+
+    type(rhsVectorMTX_t), intent(inout)     :: bAll
+    real (kind=prec), intent(in), optional  :: eps
+
+    !  local variables
+    integer                           :: j
+
+    do j = 1,bAll%nTx
+      if (present(eps)) then
+        call random_rhsVector(bAll%combs(j),eps)
+      else
+        call random_rhsVector(bAll%combs(j),0.05*ONE)
+      end if
+    end do
+
+   end subroutine random_rhsVectorMTX
 
 end module SolnSpace

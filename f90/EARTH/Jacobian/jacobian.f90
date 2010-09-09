@@ -150,11 +150,13 @@ Contains
 	!----------------------
 	! Set the sign of omega
 	!----------------------
-	if (adjoint) then
-	  om = - omega
-	else
+    ! FOR TRN ALWAYS +omega
+    !----------------------
+	!if (adjoint) then
+	!  om = - omega
+	!else
 	  om = omega
-	end if
+	!end if
 
 	!------------------------------------------------
 	! Call the forward solver $A_{\rho,\omega} x = y$

@@ -11,10 +11,11 @@ use transmitters
 implicit none
 
 interface assignment (=)
-   !MODULE PROCEDURE copy_rhsVector - doesn't exist yet
+   !MODULE PROCEDURE copy_rhsVector
    MODULE PROCEDURE copy_solnVrhsV
+   MODULE PROCEDURE copy_solnVrhsVMTX
    MODULE PROCEDURE copy_solnVector
-   !MODULE PROCEDURE copy_solnVectorMTX - doesn't exist yet
+   MODULE PROCEDURE copy_solnVectorMTX
    !MODULE PROCEDURE copy_sparseVector - doesn't exist yet
 end interface
 
@@ -63,6 +64,7 @@ end interface
     integer			:: nTx = 0
     type(solnVector_t), pointer		:: solns(:)
     logical			:: allocated = .false.
+    logical         :: temporary = .false.
   end type solnVectorMTX_t
 
   type :: sparseVector_t
@@ -179,6 +181,29 @@ contains
 
      end subroutine zero_solnVector
 
+   !**********************************************************************
+   subroutine random_solnVector(e,eps)
+
+      type(solnVector_t), intent(inout)     :: e
+      real(kind=prec), intent(in), optional    :: eps
+
+      !  local variables
+      integer                           :: j, istat
+      real(kind=prec), dimension(:,:), allocatable :: vr,vi
+
+      allocate(vr(e%vec%N1,e%vec%N2),vi(e%vec%N1,e%vec%N2),STAT=istat)
+      call random_number(vr)
+      call random_number(vi)
+
+        if (present(eps)) then
+            e%vec%v = cmplx(vr,vi) * eps
+        else
+            e%vec%v = cmplx(vr,vi) * 0.05
+        end if
+
+      deallocate(vr,vi,STAT=istat)
+
+   end subroutine random_solnVector
 
 !**********************************************************************
 !           Basic solnVectorMTX methods
@@ -216,6 +241,50 @@ contains
       eAll%allocated = .false.
 
    end subroutine deall_solnVectorMTX
+
+   !**********************************************************************
+   subroutine random_solnVectorMTX(eAll,eps)
+
+      type(solnVectorMTX_t), intent(inout)     :: eAll
+      real(kind=prec), intent(in), optional    :: eps
+
+      !  local variables
+      integer                           :: j, istat
+
+      do j = 1,eAll%nTx
+        if (present(eps)) then
+            call random_solnVector(eAll%solns(j),eps)
+        else
+            call random_solnVector(eAll%solns(j),0.05*ONE)
+        end if
+      end do
+
+   end subroutine random_solnVectorMTX
+
+   !**********************************************************************
+   subroutine copy_solnVectorMTX(eOut,eIn)
+
+      type(solnVectorMTX_t), intent(inout)  :: eOut
+      type(solnVectorMTX_t), intent(in)     :: eIn
+
+      !  local variables
+      integer                   :: j, istat
+
+      if (eOut%allocated) then
+        call deall_solnVectorMTX(eOut)
+      end if
+
+      call create(eIn%nTx,eOut)
+      do j = 1,eIn%nTx
+        eOut%solns(j) = eIn%solns(j)
+      end do
+      eOut%allocated = .true.
+
+      !if (eIn%temporary) then
+      !  call deall_solnVectorMTX(eIn)
+      !end if
+
+   end subroutine copy_solnVectorMTX
 
 !**********************************************************************
 !           Basic sparseVector methods
@@ -486,5 +555,31 @@ contains
       bAll%allocated = .false.
 
    end subroutine deall_rhsVectorMTX
+
+   !**********************************************************************
+   subroutine copy_solnVrhsVMTX(eOut,eIn)
+
+      type(rhsVectorMTX_t), intent(inout)  :: eOut
+      type(solnVectorMTX_t), intent(in)     :: eIn
+
+      !  local variables
+      integer                   :: j, istat
+
+      if (eOut%allocated) then
+        call deall_rhsVectorMTX(eOut)
+      end if
+
+      call create(eIn%nTx,eOut)
+      do j = 1,eIn%nTx
+        eOut%combs(j)%nonzero_source = .true.
+        eOut%combs(j) = eIn%solns(j)
+      end do
+      eOut%allocated = .true.
+
+      !if (eIn%temporary) then
+      !  call deall_solnVectorMTX(eIn)
+      !end if
+
+   end subroutine copy_solnVrhsVMTX
 
 end module SolnSpace

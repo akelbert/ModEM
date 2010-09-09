@@ -24,6 +24,10 @@ module model_operators
      MODULE PROCEDURE zero_modelParam
   end interface
 
+  interface deall
+     MODULE PROCEDURE deall_modelParam
+  end interface
+
 !  INTERFACE OPERATOR (+)
 !     MODULE PROCEDURE add_modelParam_f
 !  END INTERFACE
@@ -76,7 +80,7 @@ module model_operators
   ! * EOP
 
   public			:: create_modelParam, deall_modelParam, setup_modelParam, copy_modelParam
-  public			:: fillParam_modelParam, fillParamValues_modelParam
+  public			:: fillParam_modelParam, fillParamValues_modelParam, random_modelParam
   public			:: compare_modelParam_f, compareLayers_modelParam_f, adjustLayers_modelParam
   public			:: zero_modelParam, getParamValues_modelParam
   public			:: setLayer_modelParam, setCoeffValue_modelParam, setCrust_modelParam
@@ -372,6 +376,40 @@ Contains
 	P%F = F
 
   end subroutine setup_modelParam
+
+
+  ! **********************************************************************
+  ! * Creates a random perturbation and stores in a model parametrization;
+  ! * extensively used for testing
+  subroutine random_modelParam(P,eps)
+
+    implicit none
+    type (modelParam_t), intent(inout)               :: P
+    real(8), intent(in), optional                    :: eps
+    ! local
+    real(8), allocatable :: dm(:)
+    integer              :: istat
+
+
+    if (.not. P%allocated) then
+      call errStop('model parameter not allocated in random_modelParam')
+    end if
+
+    ! this includes 'frozen' variables, but we're just testing
+    allocate(dm(P%nc),STAT=istat)
+    call random_number(dm)
+    if (present(eps)) then
+        dm = dm * eps
+    else
+        dm = dm * 0.05
+    end if
+
+    ! initialize and create the perturbation
+    call zero_modelParam(P)
+    call fillParamValues_modelParam(P,dm)
+    deallocate(dm,STAT=istat)
+
+  end subroutine random_modelParam
 
 
   ! **********************************************************************

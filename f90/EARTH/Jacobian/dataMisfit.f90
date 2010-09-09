@@ -167,11 +167,10 @@ Contains
   ! ***************************************************************************
   ! * calcMisfit performs the misfit computations per frequency
 
-  subroutine calcMisfit(res,misfit,name)
+  subroutine calcMisfit(res,misfit)
 
 	type (misfit_t), intent(inout)			:: misfit
-	type (dataVector_t), intent(in)				:: res
-	character(80), intent(in)					:: name
+	type (dataVector_t), intent(in)			:: res
 	real(8)										:: rval,ival,error
 	integer										:: iTx,iDt,j,k,nSite
 
@@ -191,12 +190,12 @@ Contains
 		error = res%data(j)%error(1,k)
 
 		! Calculate the misfit
-		select case (trim(name))
+		select case (trim(misfit%name))
 		case ('Mean Squared')
 		  misfit%value(iTx,iDt) = &
 			 misfit%value(iTx,iDt) + (rval/error)**2 + (ival/error)**2
 		case default
-		  write(0,*) 'Warning: (compute_misfit) unknown penalty functional ',trim(name)
+		  write(0,*) 'Warning: (compute_misfit) unknown penalty functional ',trim(misfit%name)
 		  return
 		end select
 	  end do

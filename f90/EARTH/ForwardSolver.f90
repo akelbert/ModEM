@@ -60,7 +60,7 @@ Contains
    initForSens = present(comb)
 
    freq => freqList%info(iTx)
-   write(*,'(a46,f9.6,a5)') &
+   write(*,'(a46,es9.3,a5)') &
         'Initializing 3D SGFD global solver for period ',freq%period,' days'
 
    if(initFwd) then
@@ -120,33 +120,7 @@ Contains
    real(kind=prec)                              :: omega
    logical                                      :: adjoint,sens
 
-   freq => freqList%info(iTx)
-
-   ! run FWD/ADJ solver
-   write(*,'(a12,a3,a20,i4,a2,es12.6,a5)') &
-    'Solving the ',FWD,' problem for period ',iTx,': ',1/freq%value,' secs'
-
-   omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
-
-   ! solve A <h> = <b> for vector <h>
-   adjoint = .false.
-   sens = .false.
-   call operatorM(h%vec,b%source,omega,resist%v,h%grid,fwdCtrls,h%errflag,adjoint,sens)
-
-   ! compute and output fields & C and D responses at cells
-   call outputSolution(freq,h%vec,slices,h%grid,cUserDef,resist%v,'h')
-
-   ! output full H-field cvector
-   if (output_level > 3) then
-      call outputField(freq,h%vec,cUserDef,'field')
-   end if
-
-   ! update pointer to the transmitter in solnVector
-   h%tx = iTx
-
-   if (output_level > 1) then
-      write (*,*) ' time taken (mins) ', elapsed_time(timer)/60.0
-   end if
+   call sensSolve(iTx,FWD,h)
 
   end subroutine fwdSolve
 
@@ -186,8 +160,14 @@ Contains
 
    omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
-   ! solve A <h> = <b> for vector <h>
+   ! solve S_m <h> = <b> for vector <h>
+   if (.not. adjoint) then
+    !call operatorD_l_mult(source,h%grid)
+   end if
    call operatorM(h%vec,source,omega,resist%v,h%grid,fwdCtrls,h%errflag,adjoint,sens)
+   if (adjoint) then
+    !call operatorD_l_divide(h%vec,h%grid)
+   end if
 
    ! compute and output fields & C and D responses at cells
    call outputSolution(freq,h%vec,slices,h%grid,cUserDef,resist%v,'h')
