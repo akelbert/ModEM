@@ -1548,7 +1548,7 @@ Contains
     integer                             :: ios,istat
     real(8)                             :: upperb,lowerb,width,depth,alpha,beta
     character(6)                        :: if_log_char,if_var_char
-    logical                             :: if_log, if_fixed
+    logical                             :: if_log, if_fixed, exists
     character(80)                       :: prmname, string
     real(8)                             :: v,min,max
 
@@ -1558,6 +1558,7 @@ Contains
     sum = 0
     sum0 = 0
 
+    inquire(FILE=trim(cfile),EXIST=exists)
     if(exists) then
       open(ioPrm,file=cfile,status='old',form='formatted',iostat=ios)
       write(6,*) 'Reading from the parametrization file ',trim(cfile)
