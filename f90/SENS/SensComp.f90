@@ -406,6 +406,7 @@ Contains
 	  savedSolns = present(emsoln)
 	  if(savedSolns) then
 	     if(d%tx .ne. emsoln%tx) then
+	        write(0,*) 'd%tx, emsoln%tx: ',d%tx,emsoln%tx
 	        call errStop('solution and data vectors do not agree in JmultT')
 	     endif
 	  endif

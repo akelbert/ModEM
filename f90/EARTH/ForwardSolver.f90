@@ -193,6 +193,12 @@ Contains
       call outputField(freq,h%vec,cUserDef,'field')
    end if
 
+   ! update pointer to the transmitter in solnVector
+   h%tx = iTx
+
+   if (output_level > 1) then
+      write (*,*) ' time taken (mins) ', elapsed_time(timer)/60.0
+   end if
   end subroutine fwdSolve
 
   !**********************************************************************
