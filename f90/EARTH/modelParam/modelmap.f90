@@ -3,8 +3,8 @@ module modelmap
   ! Module to initialize the model on the grid once the grid and parametrization
   ! information is available
 
-  !use basics
   use griddef
+  use sg_scalar
   use modeldef
   use paramfunc
   implicit none
@@ -23,14 +23,17 @@ Contains
 
     type (grid_t), intent(in)					:: grid
 	type (modelShell_t), intent(in)					:: crust
-	real(8), dimension(:,:,:), intent(out)			:: resist !(nx,ny,nz)
+    type (rscalar), intent(out)                     :: resist
+	!real(8), dimension(:,:,:), intent(out)			:: resist !(nx,ny,nz)
 	real(8)											:: crust_depth
 	integer											:: i,j,k
 
-	resist = R_ZERO
+	call create_rscalar(grid,resist,CENTER)
+
+	resist%v = R_ZERO
 
 	forall (i=1:grid%nx, j=1:grid%ny, k=1:grid%nzAir)
-	  resist(i,j,k) = 1/SIGMA_AIR
+	  resist%v(i,j,k) = 1/SIGMA_AIR
 	end forall
 
 	crust_depth = KM2M*(EARTH_R-CRUST_R)
@@ -42,7 +45,7 @@ Contains
 			write(0, *) 'Error: (initResist) negative or infinite resistivity at',i,j,k
 			stop
 		  end if
-		  resist(i,j,k) = crust_depth/crust%cond(i,j)
+		  resist%v(i,j,k) = crust_depth/crust%cond(i,j)
 		end do
 	  end do
 	end do
@@ -59,8 +62,8 @@ Contains
 
     type (grid_t), intent(in)						:: grid
     type (modelParam_t), intent(in)					:: param
-	!type (rscalar), intent(out)					:: resist
-	real(8), dimension(:,:,:), intent(inout)		:: resist !(nx,ny,nz)
+	type (rscalar), intent(out)					    :: resist
+	!real(8), dimension(:,:,:), intent(inout)		:: resist !(nx,ny,nz)
 	integer											:: i,j,k,l,istat
 	integer											:: iL,ip
 	real(8)											:: value,coeff
@@ -103,12 +106,12 @@ Contains
 		  end do
 
 		  if (this_layer%if_log) then
-			resist(i,j,k) = exp(log(10.0d0)*value)
+			resist%v(i,j,k) = exp(log(10.0d0)*value)
 		  else
-			resist(i,j,k) = value
+			resist%v(i,j,k) = value
 		  end if
 
-		  if (resist(i,j,k) <= 0.0d0) then
+		  if (resist%v(i,j,k) <= 0.0d0) then
 			write(0, *) 'Error: (initModel) negative or zero resistivity at',i,j,k
 			stop
 		  end if

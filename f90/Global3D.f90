@@ -41,7 +41,7 @@ program earth
 
   call InitGlobalData(fn_startup)
 
-  call outputModel(outFiles%fn_model,grid,rho)
+  call outputModel(outFiles%fn_model,grid,rho%v)
 
   call InitGlobalArrays()
 
@@ -437,6 +437,7 @@ end program earth
 
     complex(8)                              :: cdat,ddat  ! responses
 	complex(8),allocatable,dimension(:)		:: vectorh,vectorb
+    !real(8), allocatable, dimension(:,:,:)  :: rho  !(nx,ny,nz)
 
 	! These are the boundary conditions, that are never changed from
 	! their original values. However, if Hx,Hy,Hz are *not* global,
@@ -478,7 +479,7 @@ end program earth
 	call copyd3_d1_b(nx,ny,nz,hx,hy,hz,vectorh,x,y,z)
 
 	! compute <b> of A <h> = <b>
-	call calcb(nx,ny,nz,hx,hy,hz,vectorb,rho,x,y,z)
+	call calcb(nx,ny,nz,hx,hy,hz,vectorb,rho%v,x,y,z)
 
 
 	! ---- Initialise I/O
@@ -511,7 +512,7 @@ end program earth
 
 	  ! solve A <h> = <b> for vector <h>
 	  call mult_vec_by_l(nx,ny,nz,vectorh,x,y,z)
-	  call SolveMaxwells(vectorh,vectorb,omega,rho,fwdCtrls,errflag)
+	  call SolveMaxwells(vectorh,vectorb,omega,rho%v,fwdCtrls,errflag)
 
 	  ! <h> = l*(Hx,Hy,Hz) -> <Hx>,<Hy>,<Hz>
 	  call divide_vec_by_l(nx,ny,nz,vectorh,x,y,z)
@@ -569,6 +570,7 @@ end program earth
   subroutine calc_responses(f,allResp)
 
     use userdata
+    use global
     use jacobian
     use boundaries
     use output
@@ -695,12 +697,11 @@ end program earth
 	! Make 1D parametrization out of full, and map to grid (primary cell centers)
 	param1D = getRadial(param)
 	call create_rscalar(grid,rho1D,CENTER)
-	call initModel(grid,param1D,rho1D%v)
+	call initModel(grid,param1D,rho1D)
 
 	! Take the difference on the grid, to avoid the problem with zero resistivity
-	! call linComb_rscalar(ONE,rho,MinusONE,rho1D,drho)
 	call create_rscalar(grid,drho,CENTER)
-	drho%v = rho - rho1D%v
+	call linComb_rscalar(ONE,rho,MinusONE,rho1D,drho)
 
 	! Map the resistivity vector to primary cell faces (dual edges)
 	call operatorL(drho,drhoF,grid)
@@ -729,14 +730,14 @@ end program earth
 	  ! solve A <h> = <b> for vector <h>
 	  adjoint=.FALSE.
 	  delta=.TRUE.
-	  call operatorM(dH,Bj,omega,rho,grid,fwdCtrls,errflag,adjoint,delta)
+	  call operatorM(dH,Bj,omega,rho%v,grid,fwdCtrls,errflag,adjoint,delta)
 
 	  ! Full solution for one frequency is the sum H1D + dH
 	  Hj = dH
 	  call linComb_cvector(C_ONE,H1D%solns(ifreq)%vec,C_ONE,dH,Hj)
 
 	  ! compute and output fields; C and D responses at cells
-	  call outputSolution(freq,Hj,slices,grid,cUserDef,rho,'h')
+	  call outputSolution(freq,Hj,slices,grid,cUserDef,rho%v,'h')
 
 	  ! output full H-field cvector
 	  if (output_level > 3) then
@@ -804,6 +805,7 @@ end program earth
   subroutine calc_derivative(f,grad)
 
     use userdata
+    use global
 	use jacobian
 	use boundaries
 	use output
@@ -1030,8 +1032,8 @@ end program earth
 !		  call operatorLt(sens%drho_imag,dE_imag,grid)
 !
 !		  ! $P^T L^T D_{\bar{\e}} C A^{-1}_{\rho,-\omega} g_j$
-!		  call operatorPt(sens%drho_real,rsensTemp)
-!		  call operatorPt(sens%drho_imag,isensTemp)
+!		  call operatorPt(sens%drho_real,rsensTemp,grid,param,rho)
+!		  call operatorPt(sens%drho_imag,isensTemp,grid,param,rho)
 !
 !		  rsens = multBy_CmSqrt(rsensTemp)
 !		  isens = multBy_CmSqrt(isensTemp)
@@ -1180,7 +1182,7 @@ end program earth
 !			cycle
 !		  end if
 !
-!		  drho = vectorPj(param,index)
+!		  drho = vectorPj(param,param,index,rho,grid)
 !
 !		  call operatorL(drho,dE_real,grid)
 !		  !dE = dE_real
@@ -1306,12 +1308,12 @@ end program earth
 !	call create_rscalar(grid,drho1,CENTER)
 !	call create_rscalar(grid,drho2,CENTER)
 !	drho1%v = ONE
-!	call operatorP(param,drho2)
+!	call operatorP(param,drho2,grid,param,rho)
 !	value0 = dot_product(pack(drho1%v,mask),pack(drho2%v,mask))
 !	value1 = sum(drho1%v(:,:,grid%nzAir+1:nz-1) * drho2%v(:,:,grid%nzAir+1:nz-1))
 !	print *, "Value 1 = ",value1
 !	dparam = param
-!	call operatorPt(drho1,dparam)
+!	call operatorPt(drho1,dparam,grid,param,rho)
 !	!value2 = dot_product(param%p%value,dparam%p%value)
 !	value2 = dotProd_modelParam_f(param,dparam)
 !	print *, "Value 2 = ",value2

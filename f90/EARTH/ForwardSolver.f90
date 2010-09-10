@@ -33,11 +33,18 @@ module ForwardSolver
   type(timer_t)     :: timer
   logical           :: solverInitialized = .false.
   logical           :: secondaryField = .false.
-  logical           :: modelUpdated = .false.
-  type(rscalar)     :: resist ! resistivity on the grid
+  logical           :: newModelParam = .false.
+  type(cvector)     :: b, dh, e
+  type(rvector)     :: drhoF
+  type(rscalar)     :: rho1d, drho
+  type(modelParam_t):: m1d
+  type(rscalar)     :: rho ! resistivity on the grid
+  type(cvector)     :: source ! user-specified interior source
+  type(sparsevecc)  :: BC ! boundary conditions set from P10
+  type(modelParam_t)    :: mPrior  ! use it to get the radial 1d model for SFF
   type(modelParam_t)    :: mPrev  ! store the previous model for efficiency
   type(solnVector_t)    :: hPrev  ! store the previous forward solver solution
-  type(rhsVector_t)     :: b   ! needed to store the RHS for forward solver
+  !type(rhsVector_t)     :: b   ! needed to store the RHS for forward solver
   type(solnVectorMTX_t) :: h1d ! needed for secondary field formulation
 
 Contains
@@ -63,16 +70,12 @@ Contains
    write(*,'(a46,es9.3,a5)') &
         'Initializing 3D SGFD global solver for period ',freq%period,' days'
 
+   ! If h0 is already allocated, do not reinitialize - use the previous
+   ! forward solution as starting solution for this frequency ...
    if(initFwd) then
-     if(h0%allocated) then
-        ! use the previous forward solution as starting solution
-        ! for this frequency ... b should already exist
-     else
-        ! no forward solution computed yet... initialize
+     if(.not. h0%allocated) then
         call create_solnVector(grid,iTx,h0)
-        b%nonzero_source = .true.
-        call create_rhsVector(grid,iTx,b)
-        call initialize_fields(h0%vec,b%source,grid)
+        call initialize_fields(grid,h0%vec,BC)
      endif
    endif
 
@@ -87,20 +90,42 @@ Contains
 
    if(.not. solverInitialized) then
       ! only do this when called for the first time
-      mPrev = m0
+      mPrior = m0
       if(secondaryField) then
         call initField(cUserDef,grid,h1d)
       endif
+      if(secondaryField) then
+	    ! Make 1D parametrization out of full, and map to grid (primary cell centers)
+	    m1d = getRadial(mPrior)
+	    call create_rscalar(grid,rho1d,CENTER)
+	    call initModel(grid,m1d,rho1d)
+	  endif
       solverInitialized = .true.
    endif
 
    ! this will only be true when new model is supplied (m0 /= mPrev)
-   modelUpdated = .true.
+   mPrev = m0
+   newModelParam = .true.
 
-   if(modelUpdated) then
+   if(newModelParam) then
       ! compute the resistivity on the grid
-      call create_rscalar(grid,resist,CENTER)
-      call initModel(grid,m0,resist%v)
+      call create_rscalar(grid,rho,CENTER)
+      call initModel(grid,m0,rho)
+
+      if(secondaryField) then
+	    ! Take the difference on the grid, to avoid the problem with zero resistivity
+	    call create_rscalar(grid,drho,CENTER)
+	    call linComb_rscalar(ONE,rho,MinusONE,rho1d,drho)
+
+	    ! Map the resistivity vector to primary cell faces (dual edges)
+	    call operatorL(drho,drhoF,grid)
+	  endif
+
+   endif
+
+   ! Initialize interior source from file (currently, set to zero)
+   if(.not. source%allocated) then
+    call create_cvector(grid,source,EDGE)
    endif
 
    ! reset timer
@@ -120,7 +145,53 @@ Contains
    real(kind=prec)                              :: omega
    logical                                      :: adjoint,sens
 
-   call sensSolve(iTx,FWD,h)
+   freq => freqList%info(iTx)
+
+   ! run FWD/ADJ solver
+   write(*,'(a12,a3,a20,i4,a2,es12.6,a5)') &
+    'Solving the ',FWD,' problem for period ',iTx,': ',1/freq%value,' secs'
+
+   omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
+
+   if (secondaryField) then
+
+      write(*,*) 'Using the secondary field formulation ...'
+
+      ! Compute the RHS = - del x drho (del x H)
+      call operatorD_l_mult(H1D%solns(iTx)%vec,grid)
+      call operatorC(H1D%solns(iTx)%vec,e,grid)
+      call diagMult(drhoF,e,e)
+      call operatorCt(e,b,grid)
+      call operatorD_Si_divide(b,grid)
+      call linComb(C_MinusONE,b,C_ZERO,b,b)
+
+      ! solve S_m <h> = <b> for vector <h>
+      adjoint = .false.
+      sens = .true.
+      call linComb_cvector(C_ONE,source,C_ONE,b,b)
+      call operatorMii(dh,b,omega,rho,grid,fwdCtrls,h%errflag,adjoint)
+
+      ! Full solution for one frequency is the sum H1D + dH
+      call linComb_cvector(C_ONE,H1D%solns(iTx)%vec,C_ONE,dh,h%vec)
+
+   else
+
+      write(*,*) 'Using the forward solver ...'
+
+      ! solve S_m <h> = <s> for vector <h>
+      adjoint = .false.
+      sens = .true.
+      call operatorMii(h%vec,source,omega,rho,grid,fwdCtrls,h%errflag,adjoint,BC)
+
+   end if
+
+   ! compute and output fields & C and D responses at cells
+   call outputSolution(freq,h%vec,slices,h%grid,cUserDef,rho%v,'h')
+
+   ! output full H-field cvector
+   if (output_level > 3) then
+      call outputField(freq,h%vec,cUserDef,'field')
+   end if
 
   end subroutine fwdSolve
 
@@ -138,19 +209,7 @@ Contains
    ! local variables
    type(transmitter_t), pointer                 :: freq
    real(kind=prec)                              :: omega
-   type(cvector)                                :: source
    logical                                      :: adjoint,sens
-
-   if(.not. present(comb)) then
-    ! use b as RHS
-    adjoint = .false.
-    sens = .false.
-    source = b%source
-   else
-    adjoint = (FWDorADJ .ne. FWD)
-    sens = .true.
-    source = comb%source
-   endif
 
    freq => freqList%info(iTx)
 
@@ -160,28 +219,25 @@ Contains
 
    omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
-   ! solve S_m <h> = <b> for vector <h>
-   if (.not. adjoint) then
-    !call operatorD_l_mult(source,h%grid)
-   end if
-   call operatorM(h%vec,source,omega,resist%v,h%grid,fwdCtrls,h%errflag,adjoint,sens)
-   if (adjoint) then
-    !call operatorD_l_divide(h%vec,h%grid)
-   end if
+   ! solve S_m <h> = <s> for vector <h>
+   if(.not. present(comb)) then
 
-   ! compute and output fields & C and D responses at cells
-   call outputSolution(freq,h%vec,slices,h%grid,cUserDef,resist%v,'h')
+    ! assume interior forcing s + BC; starting solution already initialized
+    adjoint = .false.
+    sens = .false.
+    call operatorMii(h%vec,source,omega,rho,grid,fwdCtrls,h%errflag,adjoint,BC)
 
-   ! output full H-field cvector
-   if (output_level > 3) then
-      call outputField(freq,h%vec,cUserDef,'field')
-   end if
+   else
+
+    ! use comb for forcing and assume zero BC; starting solution should be zero
+    adjoint = (FWDorADJ .ne. FWD)
+    sens = .true.
+    call operatorMii(h%vec,comb%source,omega,rho,grid,fwdCtrls,h%errflag,adjoint)
+
+   endif
 
    ! update pointer to the transmitter in solnVector
    h%tx = iTx
-
-   ! clean up
-   call deall(source)
 
    if (output_level > 1) then
       write (*,*) ' time taken (mins) ', elapsed_time(timer)/60.0
@@ -192,40 +248,49 @@ Contains
 
 
   !**********************************************************************
-  subroutine exitSolver(e0,e,comb)
+  subroutine exitSolver(h0,h,comb)
    ! Cleans up after fwdSolver and deallocates all solver data. Call
    ! initSolver to update solver data; call this to exit completely.
    ! Optionally, deallocates e0,e,comb
-   type(solnVector_t), intent(inout), optional  :: e0
-   type(solnVector_t), intent(inout), optional  ::e
-   type(rhsVector_t), intent(inout), optional   ::comb
+   type(solnVector_t), intent(inout), optional  :: h0
+   type(solnVector_t), intent(inout), optional  :: h
+   type(rhsVector_t), intent(inout), optional   :: comb
 
    ! local variables
    logical          :: initForSens
 
    initForSens = present(comb)
 
-   if(present(e0)) then
-      call deall_solnVector(e0)
+   if(present(h0)) then
+      call deall_solnVector(h0)
    endif
 
    if(initForSens) then
       call deall_rhsVector(comb)
-      call deall_solnVector(e)
+      call deall_solnVector(h)
    endif
 
    if(solverInitialized) then
       ! cleanup/deallocation routines for model operators
       if(secondaryField) then
         call deall_solnVectorMTX(h1d)
-        secondaryField = .false.
+        call deall_cvector(b)
+        call deall_cvector(dh)
+        call deall_cvector(e)
+        call deall_rvector(drhoF)
+        call deall_rscalar(rho1d)
+        call deall_rscalar(drho)
+        call deall_modelParam(m1d)
       endif
-      call deall_rhsVector(b)
+      !call deall_rhsVector(b)
       call deall_solnVector(hPrev)
       call deall_modelParam(mPrev)
-      call deall_rscalar(resist)
+      call deall_modelParam(mPrior)
+      call deall_cvector(source)
+      call deall_sparsevecc(BC)
+      call deall_rscalar(rho)
       solverInitialized = .false.
-      modelUpdated = .false.
+      newModelParam = .false.
    endif
 
    ! restart the clock

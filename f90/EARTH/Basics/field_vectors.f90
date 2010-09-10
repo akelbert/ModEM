@@ -32,8 +32,6 @@ module field_vectors
   ! as the initial value. This feature is preserved from the former
   ! versions of the forward solver. It greatly speeds up the convergence.
   !complex(8),allocatable,dimension(:)		  :: vectorh,vectorb
- 
- 
 
 
 end module field_vectors

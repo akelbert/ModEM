@@ -19,6 +19,166 @@ module jacobian
 Contains
 
   ! ***************************************************************************
+  ! * This is the operator Mii (for Maxwell's equations): E_i -> E_i.
+
+  subroutine operatorMii(h,s,omega,rho,grid,fwdCtrls,errflag,adjoint,BC)
+
+	use maxwells
+	use initFields
+	implicit none
+
+    type (cvector), intent(inout)             :: h
+    type (cvector), intent(in)                :: s
+    !complex(8),dimension(np2),intent(inout)   :: vectorh
+    !complex(8),dimension(np2),intent(in)      :: vectors
+	real(8), intent(in)						  :: omega
+	type (rscalar), intent(in)	              :: rho
+	type (grid_t), intent(in)			      :: grid
+	type (fwdCtrl_t), intent(in)			  :: fwdCtrls
+	integer, intent(out)					  :: errflag
+	logical, intent(in)		                  :: adjoint
+	type (sparsevecc), intent(in), optional   :: BC
+	! local
+	real(8)									  :: om
+    complex(8),dimension(:),allocatable       :: vectorx,vectory,vectorb,vectors,vectorh
+    logical                                   :: sens
+	integer									  :: istat
+
+	! Indicator of whether the forward solver or the adjoint has been called
+	sens = .true.
+	if(adjoint .and. present(BC)) then
+	  write(0,*) 'Warning: (operatorMii) adjoint solver called; BC will not be used'
+	elseif(present(BC)) then
+	  sens = .false.
+	else
+	  sens = .true.
+	end if
+
+    ! Initialize
+    allocate(vectorx(np2),vectory(np2),STAT=istat)
+    allocate(vectorb(np2),vectors(np2),vectorh(np2),STAT=istat)
+
+    ! Check that input and output are initialized
+    if(.not. s%allocated) then
+       write(0,*) 'Error: (operatorMii) input vector not allocated, exiting...'
+       stop
+    endif
+    call copyd3_d1_d(vectors,s,grid)  ! extract interior source components
+
+    if(.not. h%allocated) then
+       ! Output vector not allocated, initializing now...
+       call create_cvector(grid,h,EDGE)
+    endif
+    call copyd3_d1_d(vectorh,h,grid)  ! extract interior field components
+
+	! If we are computing the data sensitivities start from zero
+	if (sens) then
+	  vectorh = C_ZERO
+	end if
+
+    ! Initialize all temporary vectors
+	vectorx = C_ZERO
+	vectory = C_ZERO
+	vectorb = C_ZERO
+
+	! Initialize the internal grid for SolveMaxwells
+    nx = grid%nx; ny = grid%ny; nz = grid%nz
+    nzEarth = grid%nzEarth; nzAir = grid%nzAir
+    allocate(x(nx),y(ny+1),z(nz+1),STAT=istat)
+    x = grid%x; y = grid%y; z = grid%z
+
+    !-----------------------------------
+    ! Set up the RHS <y> for A <x> = <y>
+    !-----------------------------------
+    vectory = vectors
+    if (adjoint) then
+      call divide_vec_by_l(nx,ny,nz,vectory,grid%x,grid%y,grid%z)
+    else
+      call mult_vec_by_S(nx,ny,nz,vectory,grid%x,grid%y,grid%z)
+    end if
+    ! For the forward solver, compute forcing from BCs and add to the RHS
+    ! (DO NOT ADD for data sensitivities or secondary field formulation)
+    if (.not. sens) then
+        call calcb_from_bc(nx,ny,nz,BC,vectorb,rho%v,grid%x,grid%y,grid%z,grid)
+        vectory = vectory + vectorb
+    end if
+
+
+    !------------------------------------------------
+    ! Set up the initial value of <x> for A <x> = <y>
+    !------------------------------------------------
+    vectorx = vectorh
+    if (adjoint) then
+      call divide_vec_by_S(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
+    else
+      call mult_vec_by_l(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
+    end if
+
+    !-------------------------------------------------------------------
+    ! Perform all preliminary computations for the divergence correction
+    !-------------------------------------------------------------------
+    ! Regardless of whether adjoint or not, recompute vectors for div(s)
+    ! Need to divide by unit areas in both cases. Failure to do so results
+    ! in broken code ... I forget why.
+    vectors = vectory - vectorb
+    call divide_vec_by_S(nx,ny,nz,vectors,grid%x,grid%y,grid%z)
+    call copyd1_d3_b(nx,ny,nz,sx,sy,sz,vectors,grid%x,grid%y,grid%z)
+    ! Set initial conditions for the divergence correction (stored in h)
+    call copyd1_d3_b(nx,ny,nz,hx,hy,hz,vectorh,grid%x,grid%y,grid%z)
+    ! This step is only needed while the divergence correction uses b.c.
+    if (.not. sens) then
+      ! Then use original boundary conditions for hx,hy,hz
+      call insertBoundaryValues(BC,hx,hy,hz,grid)
+    end if
+
+    !----------------------
+    ! Set the sign of omega
+    !----------------------
+    ! FOR TRN ALWAYS +omega
+    !----------------------
+    !if (adjoint) then
+    !  om = - omega
+    !else
+      om = omega
+    !end if
+
+    !------------------------------------------------
+    ! Call the forward solver $A_{\rho,\omega} x = y$
+    !------------------------------------------------
+    call SolveMaxwells(vectorx,vectory,om,rho%v,fwdCtrls,errflag)
+
+
+    !-----------------------------------------------
+    ! From <x>, compute the interior components of h
+    !-----------------------------------------------
+    vectorh = vectorx
+    if (adjoint) then
+      call mult_vec_by_S(nx,ny,nz,vectorh,grid%x,grid%y,grid%z)
+    else
+      call divide_vec_by_l(nx,ny,nz,vectorh,grid%x,grid%y,grid%z)
+    end if
+
+    !-------------------------------------------------
+    ! Just making sure the output BCs are also correct
+    !-------------------------------------------------
+    call zero_cvector(h)
+    if (.not. sens) then
+        call copyd1_d3_d(vectorh,h,grid,bc=BC)
+    else
+        call copyd1_d3_d(vectorh,h,grid)
+    end if
+
+	!--------------
+	! Done; exiting
+	!--------------
+    deallocate(vectorx,vectory,vectorh,vectorb,vectors)
+	deallocate(x,y,z,STAT=istat)
+	return
+
+  end subroutine operatorMii	! operatorMii
+
+
+  ! ***************************************************************************
   ! * This is the operator M (for Maxwell's equations). It is more general than
   ! * operator $A_{\rho,\omega}$ : E_i -> E_i (implemented as the subroutine
   ! * SolveMaxwells()). Operator $A_{\rho,\omega}$ acts on a vector defined on
@@ -49,162 +209,164 @@ Contains
 
   subroutine operatorM(Xfull,Yfull,omega,rho,grid,fwdCtrls,errflag,adjflag,sens)
 
-	use maxwells, only: SolveMaxwells
-	use field_vectors
-	use boundaries
-	implicit none
+    use maxwells
+    use field_vectors
+    use boundaries
+    implicit none
 
-	type (cvector), intent(inout)			  :: Xfull
-	type (cvector), intent(in)				  :: Yfull
-	type (sparsevecc)						  :: Xb,Yb
-	type (grid_t), intent(in)			  :: grid
-	real(8), intent(in)						  :: omega
-	real(8)									  :: om
-	real(8), dimension(:,:,:), intent(in)	  :: rho
-	type (fwdCtrl_t), intent(in)			  :: fwdCtrls
-	integer, intent(inout)					  :: errflag
-	logical, intent(inout), optional		  :: adjflag
-	logical, intent(inout), optional		  :: sens
-	logical									  :: adjoint,delta
-	complex(8),dimension(:),allocatable		  :: vectorx,vectory,vectorb,vectors,vectorh
-	integer									  :: istat,nx,ny,nz
+    type (cvector), intent(inout)             :: Xfull
+    type (cvector), intent(in)                :: Yfull
+    type (sparsevecc)                         :: Xb,Yb
+    type (grid_t), intent(in)             :: grid
+    real(8), intent(in)                       :: omega
+    real(8)                                   :: om
+    real(8), dimension(:,:,:), intent(in)     :: rho
+    type (fwdCtrl_t), intent(in)              :: fwdCtrls
+    integer, intent(inout)                    :: errflag
+    logical, intent(inout), optional          :: adjflag
+    logical, intent(inout), optional          :: sens
+    logical                                   :: adjoint,delta
+    complex(8),dimension(:),allocatable       :: vectorx,vectory,vectorb,vectors,vectorh
+    integer                                   :: istat
 
-	! Indicator of whether the forward solver or the adjoint has been called
-	if(.not.present(adjflag)) then
-	  adjoint = .FALSE.
-	else
-	  adjoint = adjflag
-	end if
-	! Indicator of whether we are computing the data sensitivities;
-	! if so, starting solution and boundary conditions are zero.
-	if(.not.present(sens)) then
-	  delta = .FALSE.
-	else
-	  delta = sens
-	end if
+    ! Indicator of whether the forward solver or the adjoint has been called
+    if(.not.present(adjflag)) then
+      adjoint = .FALSE.
+    else
+      adjoint = adjflag
+    end if
+    ! Indicator of whether we are computing the data sensitivities;
+    ! if so, starting solution and boundary conditions are zero.
+    if(.not.present(sens)) then
+      delta = .FALSE.
+    else
+      delta = sens
+    end if
 
-	! Check that input and output are initialized
+    ! Check that input and output are initialized
     if(.not.Yfull%allocated) then
        write(0,*) 'Error: (operatorM) Input vector not allocated, exiting...'
        stop
     endif
     if(.not.Xfull%allocated) then
        ! Output vector not allocated, initializing now...
-	   call create_cvector(grid,Xfull,EDGE)
+       call create_cvector(grid,Xfull,EDGE)
     endif
 
-	allocate(vectorx(np2),vectory(np2),STAT=istat)
-	allocate(vectorb(np2),vectors(np2),vectorh(np2),STAT=istat)
-	vectorx = C_ZERO
-	vectory = C_ZERO
-	vectorb = C_ZERO
-	vectors = C_ZERO
-	vectorh = C_ZERO
+    allocate(vectorx(np2),vectory(np2),STAT=istat)
+    allocate(vectorb(np2),vectors(np2),vectorh(np2),STAT=istat)
+    vectorx = C_ZERO
+    vectory = C_ZERO
+    vectorb = C_ZERO
+    vectors = C_ZERO
+    vectorh = C_ZERO
 
-	nx = grid%nx
-	ny = grid%ny
-	nz = grid%nz
+    ! Initialize the internal grid for SolveMaxwells
+    nx = grid%nx; ny = grid%ny; nz = grid%nz
+    nzEarth = grid%nzEarth; nzAir = grid%nzAir
+    allocate(x(nx),y(ny+1),z(nz+1),STAT=istat)
+    x = grid%x; y = grid%y; z = grid%z
 
-	!-----------------------------------
-	! Set up the RHS <y> for A <x> = <y>
-	!-----------------------------------
-	call copyd3_d1_d(vectors,Yfull,grid)  ! extract interior components
-	call extractBC(Yb,Yfull)			  ! extract boundary components
-	call calcb_from_bc(nx,ny,nz,Yb,vectorb,rho,grid%x,grid%y,grid%z,grid)
-	vectory = vectors
-	if (adjoint) then
-	  call divide_vec_by_l(nx,ny,nz,vectory,grid%x,grid%y,grid%z)
-	else
-	  call mult_vec_by_S(nx,ny,nz,vectory,grid%x,grid%y,grid%z)
-	  vectory = vectory + vectorb
-	end if
+    !-----------------------------------
+    ! Set up the RHS <y> for A <x> = <y>
+    !-----------------------------------
+    call copyd3_d1_d(vectors,Yfull,grid)  ! extract interior components
+    call extractBC(Yb,Yfull)              ! extract boundary components
+    call calcb_from_bc(nx,ny,nz,Yb,vectorb,rho,grid%x,grid%y,grid%z,grid)
+    vectory = vectors
+    if (adjoint) then
+      call divide_vec_by_l(nx,ny,nz,vectory,grid%x,grid%y,grid%z)
+    else
+      call mult_vec_by_S(nx,ny,nz,vectory,grid%x,grid%y,grid%z)
+      vectory = vectory + vectorb
+    end if
 
-	!------------------------------------------------
-	! Set up the initial value of <x> for A <x> = <y>
-	!------------------------------------------------
-	call copyd3_d1_d(vectorh,Xfull,grid)  ! extract interior components
-	call extractBC(Xb,Xfull)			  ! extract boundary components
-	vectorx = vectorh
-	if (adjoint) then
-	  call divide_vec_by_S(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
-	else
-	  call mult_vec_by_l(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
-	end if
+    !------------------------------------------------
+    ! Set up the initial value of <x> for A <x> = <y>
+    !------------------------------------------------
+    call copyd3_d1_d(vectorh,Xfull,grid)  ! extract interior components
+    call extractBC(Xb,Xfull)              ! extract boundary components
+    vectorx = vectorh
+    if (adjoint) then
+      call divide_vec_by_S(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
+    else
+      call mult_vec_by_l(nx,ny,nz,vectorx,grid%x,grid%y,grid%z)
+    end if
 
-	!-------------------------------------------------------------------
-	! Perform all preliminary computations for the divergence correction
-	!-------------------------------------------------------------------
-	! Regardless of whether adjoint or not, recompute vectors for div(s)
-	vectors = vectory - vectorb
-	call divide_vec_by_S(nx,ny,nz,vectors,grid%x,grid%y,grid%z)
-	call copyd1_d3_b(nx,ny,nz,sx,sy,sz,vectors,grid%x,grid%y,grid%z)
-	! Set initial conditions for the divergence correction (stored in Xfull)
-	call copyd1_d3_b(nx,ny,nz,hx,hy,hz,vectorh,grid%x,grid%y,grid%z)
-	! This step is only needed while the divergence correction uses b.c.
-	if (.not.delta) then
-	  Xb = Yb ! then use original boundary conditions for H
-	end if
-	call insertBoundaryValues(Xb,hx,hy,hz,grid)
+    !-------------------------------------------------------------------
+    ! Perform all preliminary computations for the divergence correction
+    !-------------------------------------------------------------------
+    ! Regardless of whether adjoint or not, recompute vectors for div(s)
+    vectors = vectory - vectorb
+    call divide_vec_by_S(nx,ny,nz,vectors,grid%x,grid%y,grid%z)
+    call copyd1_d3_b(nx,ny,nz,sx,sy,sz,vectors,grid%x,grid%y,grid%z)
+    ! Set initial conditions for the divergence correction (stored in Xfull)
+    call copyd1_d3_b(nx,ny,nz,hx,hy,hz,vectorh,grid%x,grid%y,grid%z)
+    ! This step is only needed while the divergence correction uses b.c.
+    if (.not.delta) then
+      Xb = Yb ! then use original boundary conditions for H
+    end if
+    call insertBoundaryValues(Xb,hx,hy,hz,grid)
 
 
-	!----------------------
-	! Set the sign of omega
-	!----------------------
+    !----------------------
+    ! Set the sign of omega
+    !----------------------
     ! FOR TRN ALWAYS +omega
     !----------------------
-	!if (adjoint) then
-	!  om = - omega
-	!else
-	  om = omega
-	!end if
+    !if (adjoint) then
+    !  om = - omega
+    !else
+      om = omega
+    !end if
 
-	!------------------------------------------------
-	! Call the forward solver $A_{\rho,\omega} x = y$
-	!------------------------------------------------
-	call SolveMaxwells(vectorx,vectory,om,rho,fwdCtrls,errflag)
+    !------------------------------------------------
+    ! Call the forward solver $A_{\rho,\omega} x = y$
+    !------------------------------------------------
+    call SolveMaxwells(vectorx,vectory,om,rho,fwdCtrls,errflag)
 
 
-	!-----------------------------------------------
-	! From <x>, compute the interior components of X
-	!-----------------------------------------------
-	vectorh = vectorx
-	if (adjoint) then
-	  call mult_vec_by_S(nx,ny,nz,vectorh,grid%x,grid%y,grid%z)
-	else
-	  call divide_vec_by_l(nx,ny,nz,vectorh,grid%x,grid%y,grid%z)
-	end if
+    !-----------------------------------------------
+    ! From <x>, compute the interior components of X
+    !-----------------------------------------------
+    vectorh = vectorx
+    if (adjoint) then
+      call mult_vec_by_S(nx,ny,nz,vectorh,grid%x,grid%y,grid%z)
+    else
+      call divide_vec_by_l(nx,ny,nz,vectorh,grid%x,grid%y,grid%z)
+    end if
 
-	!--------------------------------------------------------------------
-	! Boundary conditions: in the future, a calculation will be performed
-	!--------------------------------------------------------------------
-	if (adjoint) then
-	  ! Xb will be computed from X_i and Y_b using the expression
-	  ! $X_b = - \length{b} R_\rho^T \area{i}^{-1} X_i + Y_b$
-	  ! Since $R_\rho^T$ has not yet been implemented, and since we
-	  ! do not use X_b for computing data sensitivities, assume zero.
-	  Xb%c = C_ZERO
-	  if (.not.delta) then
-		write (0, *) 'Warning: (operatorM) Xb has been set to zero; it is not zero'
-	  end if
-	else
-	  Xb = Yb
-	end if
+    !--------------------------------------------------------------------
+    ! Boundary conditions: in the future, a calculation will be performed
+    !--------------------------------------------------------------------
+    if (adjoint) then
+      ! Xb will be computed from X_i and Y_b using the expression
+      ! $X_b = - \length{b} R_\rho^T \area{i}^{-1} X_i + Y_b$
+      ! Since $R_\rho^T$ has not yet been implemented, and since we
+      ! do not use X_b for computing data sensitivities, assume zero.
+      Xb%c = C_ZERO
+      if (.not.delta) then
+        write (0, *) 'Warning: (operatorM) Xb has been set to zero; it is not zero'
+      end if
+    else
+      Xb = Yb
+    end if
 
-	!---------------------
-	! Copy everything to X
-	!---------------------
-	call copyd1_d3_d(vectorh,Xfull,grid,bc=Xb)
+    !---------------------
+    ! Copy everything to X
+    !---------------------
+    call copyd1_d3_d(vectorh,Xfull,grid,bc=Xb)
 
-	!--------------
-	! Done; exiting
-	!--------------
-	call deall_sparsevecc(Xb)
-	call deall_sparsevecc(Yb)
-	deallocate(vectorx,vectory,vectorh,vectorb,vectors)
-	return
+    !--------------
+    ! Done; exiting
+    !--------------
+    call deall_sparsevecc(Xb)
+    call deall_sparsevecc(Yb)
+    deallocate(vectorx,vectory,vectorh,vectorb,vectors)
+    deallocate(x,y,z,STAT=istat)
+    return
 
-  end subroutine operatorM	! operatorM
-
+  end subroutine operatorM  ! operatorM
 
   ! ***************************************************************************
   ! * operator D_{S_i}^{-1}: E -> E_i represents the diagonal operator that
@@ -933,12 +1095,12 @@ Contains
   ! * vector p_j is the j'th column of P, that corresponds to \pd{\rho}{a_j}.
   ! * p_j \In G.
 
-  function vectorPj(da,n,grid) result (dm)
+  function vectorPj(m0,da,n,resist,grid) result (dm)
 
-	use global	! uses param,rho
-
+    type (modelParam_t), intent(in)                 :: m0
     type (modelParam_t), intent(inout)				:: da
 	integer, intent(in)								:: n
+    real(8), dimension(:,:,:), intent(in)           :: resist
     type (grid_t), intent(in)                       :: grid
 	type (rscalar)									:: dm !(nx,ny,nz)
 	integer											:: i,j,k,l,istat
@@ -947,11 +1109,6 @@ Contains
 	type (modelPoint_t)								:: point
 	type (modelFunc_t)								:: func
 	type (modelCoeff_t)								:: coeff
-
-	! Test to make sure no grid is defined outside the layered region
-	if (grid%r(grid%nz+1) < param%L(param%nL)%lbound) then
-	  param%L(param%nL)%lbound = grid%r(grid%nz+1)
-	end if
 
 	! Create a zero-valued output in G
 	call create_rscalar(grid,dm,CENTER)
@@ -986,7 +1143,7 @@ Contains
 		  value = F_at_point(func,point)
 
 		  if (this_layer%if_log) then
-			dm%v(i,j,k) = value*rho(i,j,k)*log(10.)
+			dm%v(i,j,k) = value*resist(i,j,k)*log(10.)
 		  else
 			dm%v(i,j,k) = value
 		  end if
@@ -1016,13 +1173,12 @@ Contains
   ! * initModel is the routine that generates the 3-D resistivity map on the
   ! * grid using the information stored in the grid and the parametrization
 
-  subroutine operatorP(da,dm,grid)
+  subroutine operatorP(da,dm,grid,m0,resist)
 
-	use global	! uses param,rho
-
+    type (modelParam_t), intent(in)                 :: m0
     type (modelParam_t), intent(in)					:: da
 	type (rscalar), intent(inout)						:: dm !(nx,ny,nz)
-	!real(8), dimension(:,:,:), intent(inout)		:: dm !(nx,ny,nz)
+	type (rscalar), intent(in)		                :: resist !(nx,ny,nz)
     type (grid_t), intent(in)                       :: grid
 	integer											:: i,j,k,l,istat
 	integer											:: iL,ip
@@ -1034,11 +1190,6 @@ Contains
 	! Create the output resistivity model on the grid
 	call create_rscalar(grid,dm,CENTER)
 
-	! Test to make sure no grid is defined outside the layered region
-	if (grid%r(grid%nz+1) < param%L(param%nL)%lbound) then
-	  param%L(param%nL)%lbound = grid%r(grid%nz+1)
-	end if
-
 	! Resistivity is constant at air layers, hence derivative is zero
 	forall (i=1:grid%nx, j=1:grid%ny, k=1:grid%nzCrust)
 	  dm%v(i,j,k) = 0.0d0
@@ -1047,9 +1198,9 @@ Contains
 	do k=grid%nzCrust+1,grid%nz
 
 	  ! Find current layer by locating the upper boundary of a cell
-	  do l=1,param%nL
-		if (in_layer(grid%r(k),param%L(l))) then
-		  this_layer => param%L(l)
+	  do l=1,m0%nL
+		if (in_layer(grid%r(k),m0%L(l))) then
+		  this_layer => m0%L(l)
 		  exit
 		end if
 	  end do
@@ -1067,7 +1218,7 @@ Contains
 
 		  ! Sum up the coeffs * F_at_point in the given layer
 		  value = 0.0d0
-		  do ip=1,param%nF
+		  do ip=1,m0%nF
 
 			if(da%c(iL,ip)%frozen) then
 			  cycle
@@ -1077,7 +1228,7 @@ Contains
 			value = F_at_point(func,point)
 
 			if (this_layer%if_log) then
-			  dm%v(i,j,k) = dm%v(i,j,k) + value*coeff*rho(i,j,k)*log(10.)
+			  dm%v(i,j,k) = dm%v(i,j,k) + value*coeff*resist%v(i,j,k)*log(10.)
 			else
 			  dm%v(i,j,k) = dm%v(i,j,k) + value*coeff
 			end if
@@ -1113,15 +1264,13 @@ Contains
   ! *	end if
   ! * end do
 
-  subroutine operatorPt(dm,da,grid)
+  subroutine operatorPt(dm,da,grid,m0,resist)
 
-	! uses: rho, param, grid
-	use global
-    implicit none
+    type (modelParam_t), intent(in)                 :: m0 !(nx,ny,nz)
 	type (rscalar), intent(in)						:: dm !(nx,ny,nz)
     type (modelParam_t), intent(inout)					:: da
     type (grid_t), intent(in)                       :: grid
-	!real(8),dimension(:,:,:),intent(in)				 :: dm  !(nx,ny,nz)
+	type (rscalar), intent(in)				         :: resist  !(nx,ny,nz)
 	!real(8),dimension(:),intent(out)				 :: da  !ncoeff
 	integer											 :: i,j,k,l
 	integer											 :: iL,ip
@@ -1145,22 +1294,22 @@ Contains
 !		stop
 !	end if
 
-	da = param
+	da = m0
 	call zero(da)
 
-	do iL = 1,param%nL
+	do iL = 1,m0%nL
 
-	  this_layer = param%L(iL)
+	  this_layer = m0%L(iL)
 
-	  do ip = 1,param%nF
+	  do ip = 1,m0%nF
 
 		! If this parameter is frozen, the derivative is zero, cycle
-		if (param%c(iL,ip)%frozen) then
+		if (m0%c(iL,ip)%frozen) then
 		  cycle
 		end if
 
 		! Otherwise find the functional
-		func = param%c(iL,ip)%F
+		func = m0%c(iL,ip)%F
 
 		! Going vertically down through the chosen layer
 		do k=grid%nzCrust+1,grid%nz
@@ -1178,7 +1327,7 @@ Contains
 
 			  tau = F_at_point(func,point)
 			  if (this_layer%if_log) then
-				tau = tau * rho(i,j,k) * log(10.0d0)
+				tau = tau * resist%v(i,j,k) * log(10.0d0)
 			  end if
 			  ! Add this expression to the output vector component
 			  da%c(iL,ip)%value = da%c(iL,ip)%value + tau * dm%v(i,j,k)

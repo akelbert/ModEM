@@ -115,12 +115,20 @@ Contains
 	!--------------------------------------------------------------------------
 	! Compute parametrization to use (for model norm we will still use p_input)
 	call linComb(ONE,param,ONE,p0_input,param)
-	!--------------------------------------------------------------------------
-	! Allocate the resistivity vector
-	allocate(rho(grid%nx,grid%ny,grid%nz),STAT=istat)
+    !--------------------------------------------------------------------------
+    ! Test to make sure no grid is defined outside the layered region
+    if (grid%r(grid%nz+1) < param%L(param%nL)%lbound) then
+      param%L(param%nL)%lbound = grid%r(grid%nz+1)
+    end if
 	!--------------------------------------------------------------------------
 	! Compute model information everywhere in the domain, including air & crust
 	call initModel(grid,param,rho)
+    !--------------------------------------------------------------------------
+    ! Check whether the optional interior source file exists; read it
+    inquire(FILE=cUserDef%fn_source,EXIST=exists)
+    if (exists) then
+        call read_modelParam(p_source,cUserDef%fn_source)
+    end if
 	!--------------------------------------------------------------------------
 	! Read the information about the frequencies
 	call initFreq(cUserDef,freqList)
@@ -237,10 +245,9 @@ Contains
 	call deall_modelParam(p0_input)
 	call deall_modelParam(p_smooth)
 	call deall_modelParam(p_diff)
-	deallocate(x,y,z,STAT=istat)
+    call deall_rscalar(rho)
 	deallocate(grid%x,grid%y,grid%z,STAT=istat)
 	deallocate(grid%ph,grid%th,grid%r,STAT=istat)
-	deallocate(rho,STAT=istat)
 	deallocate(ndat,STAT=istat)
 	deallocate(misfit%value,STAT=istat)
 	deallocate(misfit%ndat,STAT=istat)

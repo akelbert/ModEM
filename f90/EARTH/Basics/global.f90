@@ -26,7 +26,8 @@ module global
 
   ! ***************************************************************************
   ! * rho: storing the model on the grid - resistivity defined in cell centres
-  real(8), allocatable, dimension(:,:,:), save		:: rho	!(nx,ny,nz)
+  !real(8), allocatable, dimension(:,:,:), save		:: rho	!(nx,ny,nz)
+  type(rscalar), save     :: rho
 
   ! ***************************************************************************
   ! * grid: Contains the information about the user-specified grid
@@ -46,6 +47,7 @@ module global
   type (modelParam_t), save								:: param
   type (modelParam_t), save								:: param0
   type (modelParam_t), save                             :: p_delta
+  type (modelParam_t), save                             :: p_source
 
   ! ***************************************************************************
   ! *  allData: Contains all input data, saved for computations and output

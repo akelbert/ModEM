@@ -38,18 +38,19 @@ module SolverSens
    type(cvector)                        :: dH,dE,Hj,Ej
    type(rvector)                        :: drhoF
    type(sparsevecc)                     :: Hb
-   type(rscalar)                        :: drho
+   type(rscalar)                        :: drho,rho
    type(grid_t), pointer                :: grid
 
    ! allocate temporary data structures
    Hj = h0%vec
    grid => h0%grid
+   call initModel(grid,m0,rho)
 
    ! map from model parameter to faces ... all this is somewhat confusing since
    ! L \rho = l^F \rho^F (S^F)^{-1}. So, L already does multiplication by length elements
    ! division by area elements (parts of the curl on primary and dual grids). Will clean
    ! this up later; for now, keep as is.
-   call operatorP(m,drho,grid)
+   call operatorP(m,drho,grid,m0,rho)
    call operatorL(drho,drhoF,grid)
 
    ! Insert boundary conditions in Hj
@@ -103,7 +104,7 @@ module SolverSens
    type(cvector)					    :: dH,dE,Hj,Ej
    type(rvector)					    :: dE_real,dE_imag
    type(sparsevecc)                     :: Hb
-   type(rscalar)                        :: drho
+   type(rscalar)                        :: drho,rho
    type(grid_t), pointer                :: grid
 
 
@@ -111,6 +112,7 @@ module SolverSens
    Hj = h0%vec
    grid => h0%grid
    dH = h%vec
+   call initModel(grid,m0,rho)
 
    ! compute dE = $(C^\dag)^T$ dH
    call operatorD_Si_divide(dH,grid)
@@ -136,7 +138,7 @@ module SolverSens
    ! this up later; for now, keep as is.
    dE_real = real(dE)
    call operatorLt(drho,dE_real,grid)
-   call operatorPt(drho,mReal,grid)
+   call operatorPt(drho,mReal,grid,m0,rho)
    call scMult(MinusONE,mReal,mReal)
 
    if(present(mImag)) then
@@ -144,7 +146,7 @@ module SolverSens
 	   ! Map from faces back to model parameter space: imag part
 	   dE_imag = imag(dE)
 	   call operatorLt(drho,dE_imag,grid)
-	   call operatorPt(drho,mImag,grid)
+	   call operatorPt(drho,mImag,grid,m0,rho)
        call scMult(MinusONE,mImag,mImag)
 
    endif

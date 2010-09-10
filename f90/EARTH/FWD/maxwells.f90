@@ -5,13 +5,21 @@ module maxwells
   ! equations on the given grid
 
   use iotypes
-  use grid_orig
   use field_vectors ! contains global vectors for divergence correction
   use math_constants
   use coreFwd
   use wrapper
   implicit none
 
+  public
+      ! store the grid dimensions in the original format
+  integer                                       :: nx, ny, nz, nzEarth, nzAir
+      ! storing the (spherical) grid in Randie Mackie's format
+      ! when allocated, dimensions will be x(nx), y(ny+1), z(nz+1)
+  real(8), allocatable, dimension(:)            :: x,y,z
+
+
+  public        :: SolveMaxwells
 
 Contains
 
