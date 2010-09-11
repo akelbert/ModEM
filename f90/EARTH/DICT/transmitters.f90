@@ -58,7 +58,7 @@ Contains
     integer                                                 :: i,j,ios=0
     real(8)                                                 :: tmp
     real(8), dimension(:), allocatable                      :: value,days
-    character(80)                                           :: basename
+    character(80)                                           :: basename,code
 
     open(ioTX,file=cUserDef%fn_period,status='old',form='formatted',iostat=ios)
 
@@ -124,8 +124,12 @@ Contains
     end if
 
     ! Should we use secondary field formulation?
-    inquire(FILE=cUserDef%fn_field,EXIST=exists)
-    myfreq%info(1:num)%secondaryField = exists
+    basename=cUserDef%fn_field
+    do i=1,num
+        code = myfreq%info(i)%code
+        inquire(FILE=trim(basename)//'_'//trim(code)//'.field',EXIST=exists)
+        myfreq%info(i)%secondaryField = exists
+    end do
 
     return
 

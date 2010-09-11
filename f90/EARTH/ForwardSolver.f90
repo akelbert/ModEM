@@ -34,7 +34,7 @@ module ForwardSolver
   logical           :: solverInitialized = .false.
   logical           :: secondaryField = .false.
   logical           :: newModelParam = .false.
-  type(cvector)     :: b, dh, e
+  type(cvector)     :: b, e
   type(rvector)     :: drhoF
   type(rscalar)     :: rho1d, drho
   type(modelParam_t):: m1d
@@ -45,7 +45,7 @@ module ForwardSolver
   type(modelParam_t)    :: mPrev  ! store the previous model for efficiency
   type(solnVector_t)    :: hPrev  ! store the previous forward solver solution
   !type(rhsVector_t)     :: b   ! needed to store the RHS for forward solver
-  type(solnVectorMTX_t) :: h1d ! needed for secondary field formulation
+  type(solnVector_t) :: h1d, dh ! needed for secondary field formulation
 
 Contains
 
@@ -87,15 +87,16 @@ Contains
    endif
 
    secondaryField = freq%secondaryField
+   if(secondaryField) then
+      call read_solnVector(cUserDef%fn_field,grid,iTx,h1d)
+   endif
 
    if(.not. solverInitialized) then
       ! only do this when called for the first time
       mPrior = m0
       if(secondaryField) then
-        call initField(cUserDef,grid,h1d)
-      endif
-      if(secondaryField) then
 	    ! Make 1D parametrization out of full, and map to grid (primary cell centers)
+	    call read_modelParam(mPrior,cUserDef%fn_param0)
 	    m1d = getRadial(mPrior)
 	    call create_rscalar(grid,rho1d,CENTER)
 	    call initModel(grid,m1d,rho1d)
@@ -116,6 +117,7 @@ Contains
 	    ! Take the difference on the grid, to avoid the problem with zero resistivity
 	    call create_rscalar(grid,drho,CENTER)
 	    call linComb_rscalar(ONE,rho,MinusONE,rho1d,drho)
+	    !call outputModel('test.rho',grid,drho%v)
 
 	    ! Map the resistivity vector to primary cell faces (dual edges)
 	    call operatorL(drho,drhoF,grid)
@@ -145,6 +147,9 @@ Contains
    real(kind=prec)                              :: omega
    logical                                      :: adjoint,sens
 
+   ! IMPORTANT: FIRST update pointer to the transmitter in solnVector
+   h%tx = iTx
+
    freq => freqList%info(iTx)
 
    ! run FWD/ADJ solver
@@ -158,21 +163,24 @@ Contains
       write(*,*) 'Using the secondary field formulation ...'
 
       ! Compute the RHS = - del x drho (del x H)
-      call operatorD_l_mult(H1D%solns(iTx)%vec,grid)
-      call operatorC(H1D%solns(iTx)%vec,e,grid)
+      h = h1d
+      call operatorD_l_mult(h%vec,grid)
+      call operatorC(h%vec,e,grid)
       call diagMult(drhoF,e,e)
       call operatorCt(e,b,grid)
       call operatorD_Si_divide(b,grid)
       call linComb(C_MinusONE,b,C_ZERO,b,b)
 
       ! solve S_m <h> = <b> for vector <h>
+      dh = h
+      call zero_solnVector(dh)
       adjoint = .false.
       sens = .true.
       call linComb_cvector(C_ONE,source,C_ONE,b,b)
-      call operatorMii(dh,b,omega,rho,grid,fwdCtrls,h%errflag,adjoint)
+      call operatorMii(dh%vec,b,omega,rho,grid,fwdCtrls,h%errflag,adjoint)
 
       ! Full solution for one frequency is the sum H1D + dH
-      call linComb_cvector(C_ONE,H1D%solns(iTx)%vec,C_ONE,dh,h%vec)
+      call linComb_solnVector(C_ONE,h1d,C_ONE,dh,h)
 
    else
 
@@ -190,11 +198,8 @@ Contains
 
    ! output full H-field cvector
    if (output_level > 3) then
-      call outputField(freq,h%vec,cUserDef,'field')
+      call write_solnVector(cUserDef%modelname,h)
    end if
-
-   ! update pointer to the transmitter in solnVector
-   h%tx = iTx
 
    if (output_level > 1) then
       write (*,*) ' time taken (mins) ', elapsed_time(timer)/60.0
@@ -216,6 +221,9 @@ Contains
    type(transmitter_t), pointer                 :: freq
    real(kind=prec)                              :: omega
    logical                                      :: adjoint,sens
+
+   ! update pointer to the transmitter in solnVector
+   h%tx = iTx
 
    freq => freqList%info(iTx)
 
@@ -241,9 +249,6 @@ Contains
     call operatorMii(h%vec,comb%source,omega,rho,grid,fwdCtrls,h%errflag,adjoint)
 
    endif
-
-   ! update pointer to the transmitter in solnVector
-   h%tx = iTx
 
    if (output_level > 1) then
       write (*,*) ' time taken (mins) ', elapsed_time(timer)/60.0
@@ -279,9 +284,9 @@ Contains
    if(solverInitialized) then
       ! cleanup/deallocation routines for model operators
       if(secondaryField) then
-        call deall_solnVectorMTX(h1d)
+        call deall_solnVector(h1d)
+        call deall_solnVector(dh)
         call deall_cvector(b)
-        call deall_cvector(dh)
         call deall_cvector(e)
         call deall_rvector(drhoF)
         call deall_rscalar(rho1d)

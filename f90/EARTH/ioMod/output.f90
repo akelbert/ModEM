@@ -471,7 +471,7 @@ Contains
 
   subroutine outputModel(fn_model,mygrid,rho)
 
-	character(80), intent(in)		  :: fn_model
+	character(*), intent(in)		  :: fn_model
 	type (grid_t), intent(in)	  :: mygrid
 	real(8), dimension(:,:,:), intent(in)	:: rho	!(nx,ny,nz)
 	real(8)													:: lon,lat,depth

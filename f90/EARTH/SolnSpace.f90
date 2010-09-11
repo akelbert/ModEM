@@ -271,7 +271,7 @@ Contains
     type (solnVectorMTX_t), intent(inout)  :: E
     type (grid_t), intent(in), target	   :: grid
     ! local
-    integer                                :: j,nTx,ios,istat
+    integer                                :: j,iTx,nTx,ios,istat
     character(100)						   :: comment
 
     if(E%allocated) then
@@ -284,7 +284,8 @@ Contains
 	print *, 'Number of transmitters: ',nTx
     call create_solnVectorMTX(nTx,E)
 	do j = 1,nTx
-		read(ioREAD,'(i3)',iostat=istat) E%solns(j)%tx
+		read(ioREAD,'(i3)',iostat=istat) iTx
+        call create_solnVector(grid,iTx,E%solns(j))
 		call read_cvector(ioREAD,E%solns(j)%vec,grid)
 		E%solns(j)%errflag = 0
 		E%solns(j)%grid => grid
@@ -346,7 +347,7 @@ Contains
     if((.not.E1%allocated).or.(.not.E2%allocated)) then
         call errStop('inputs not allocated yet for linComb_solnVector')
     elseif (E1%tx .ne. E2%tx) then
-        call errStop('inputs of different sizes for linComb_solnVector')
+        call errStop('different transmitters on input to linComb_solnVector')
     end if
 
     ! check to see if LHS (E3) is active (allocated)
@@ -431,6 +432,71 @@ Contains
     end if
 
   end subroutine random_solnVector
+
+  !****************************************************************************
+  ! write_solnVector writes an ASCII data file containing one solnVector
+  subroutine write_solnVector(fname, E)
+
+    implicit none
+    !   input vectors
+    character(*), intent(in)               :: fname
+    type (solnVector_t), intent(in)         :: E
+    ! local
+    character(80)                          :: code
+    integer                                :: j,ios
+    character(100)                         :: fn_output
+
+    if(.not.E%allocated) then
+        call errStop('input not allocated yet for write_solnVector')
+    end if
+
+    code = freqList%info(E%tx)%code !write (code,'(i3.3)') E%tx
+    fn_output = trim(fname)//'_'//trim(code)//'.field'
+    write(*,*) 'Writing to file: ',fn_output
+    open(ioWRITE,file=fn_output,status='unknown',form='formatted',iostat=ios)
+    write(ioWRITE,'(a45,f9.3,a6)') "# Full EM field solution output for period ",   &
+                                        freqList%info(E%tx)%period,' days.'
+    write(ioWRITE,'(i3)') E%tx
+    call write_cvector(ioWRITE,E%vec)
+    close(ioWRITE)
+
+  end subroutine write_solnVector ! write_solnVector
+
+  !****************************************************************************
+  ! read_solnVector reads an ASCII data file containing one solnVector
+  subroutine read_solnVector(fname, grid, iTx, E)
+
+    implicit none
+    !   input vectors
+    character(*), intent(in)               :: fname
+    type (solnVector_t), intent(inout)  :: E
+    integer, intent(in)                 :: iTx
+    type (grid_t), intent(in), target      :: grid
+    ! local
+    integer                                :: j,ios,istat
+    character(80)                          :: code
+    character(100)                         :: comment, fn_input
+
+    if(E%allocated) then
+        call deall_solnVector(E)
+    end if
+    call create_solnVector(grid,iTx,E)
+
+    code = freqList%info(iTx)%code !write (code,'(i3.3)') iTx
+    fn_input = trim(fname)//'_'//trim(code)//'.field'
+    write(*,*) 'Reading from file: ',fn_input
+    open(ioREAD,file=fn_input,status='unknown',form='formatted',iostat=ios)
+    read(ioREAD,'(a35)',iostat=istat) comment
+    read(ioREAD,'(i3)',iostat=istat) j
+    if (j .ne. iTx) then
+        write(0,*) 'Warning: transmitter ',iTx,' is read from file ',j
+    end if
+    call read_cvector(ioREAD,E%vec,grid)
+    E%errflag = 0
+    E%grid => grid
+    close(ioREAD)
+
+  end subroutine read_solnVector ! read_solnVector
 
 !**********************************************************************
 !           Basic sparseVector methods

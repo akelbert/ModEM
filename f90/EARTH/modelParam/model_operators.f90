@@ -507,6 +507,7 @@ Contains
 	  end do
 	end do
 
+    P1%crust%allocated = .FALSE.
 	P1%temporary = .TRUE.
 
   end function getRadial_modelParam_f

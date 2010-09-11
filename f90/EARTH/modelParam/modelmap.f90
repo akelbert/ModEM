@@ -19,39 +19,40 @@ Contains
   ! * case is handled by setting grid%nzCrust=grid%nzAir, so that no resistivity
   ! * values below air layers are initialized here.
 
-  subroutine initResist(grid,crust,resist)
+  subroutine insertShell(grid,resist,crust)
 
     type (grid_t), intent(in)					:: grid
-	type (modelShell_t), intent(in)					:: crust
-    type (rscalar), intent(out)                     :: resist
+    type (rscalar), intent(inout)                     :: resist
+	type (modelShell_t), intent(in)		            :: crust
 	!real(8), dimension(:,:,:), intent(out)			:: resist !(nx,ny,nz)
 	real(8)											:: crust_depth
 	integer											:: i,j,k
 
-	call create_rscalar(grid,resist,CENTER)
-
-	resist%v = R_ZERO
-
-	forall (i=1:grid%nx, j=1:grid%ny, k=1:grid%nzAir)
-	  resist%v(i,j,k) = 1/SIGMA_AIR
-	end forall
+	if(.not. resist%allocated) then
+	   write(0, *) 'Error: (insertShell) resistivity not allocated'
+	   stop
+	end if
 
 	crust_depth = KM2M*(EARTH_R-CRUST_R)
 
 	do i=1,grid%nx
 	  do j=1,grid%ny
 		do k=grid%nzAir+1,grid%nzCrust ! if no crust, nzCrust == nzAir
-		  if(crust%cond(i,j) <= R_ZERO) then
-			write(0, *) 'Error: (initResist) negative or infinite resistivity at',i,j,k
-			stop
+		  if(crust%allocated) then
+			  if(crust%cond(i,j) <= R_ZERO) then
+				write(0, *) 'Error: (insertShell) negative or infinite resistivity at',i,j,k
+				stop
+			  end if
+			  resist%v(i,j,k) = crust_depth/crust%cond(i,j)
+		  else
+              resist%v(i,j,k) = R_ZERO
 		  end if
-		  resist%v(i,j,k) = crust_depth/crust%cond(i,j)
 		end do
 	  end do
 	end do
 
 
-  end subroutine initResist	! initResist
+  end subroutine insertShell
 
 
   ! ***************************************************************************
@@ -72,7 +73,17 @@ Contains
 	type (modelPoint_t)								:: point
 
 	! First initialize resistivity in air and possibly crust, if given
-	call initResist(grid,param%crust,resist)
+    call create_rscalar(grid,resist,CENTER)
+
+    resist%v = R_ZERO
+
+    forall (i=1:grid%nx, j=1:grid%ny, k=1:grid%nzAir)
+      resist%v(i,j,k) = 1/SIGMA_AIR
+    end forall
+
+    ! Now, insert thinsheet (or zeros) if grid%nzCrust /= grid%nzAir
+    call insertShell(grid,resist,param%crust)
+
 
 	do k=grid%nzCrust+1,grid%nz
 

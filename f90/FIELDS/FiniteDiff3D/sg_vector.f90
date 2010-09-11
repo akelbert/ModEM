@@ -578,7 +578,7 @@ Contains
       do k = 1,Nz+1
       	do j = 1,Ny+1
       		do i = 1,Nx+1
-      			write(fid,'(3i5,3es13.5)',iostat=istat) i,j,k,x(i,j,k),y(i,j,k),z(i,j,k)
+      			write(fid,'(3i5,3es14.6)',iostat=istat) i,j,k,x(i,j,k),y(i,j,k),z(i,j,k)
       		end do
       	end do
       end do
@@ -639,7 +639,7 @@ Contains
       do k = 1,Nz+1
       	do j = 1,Ny+1
       		do i = 1,Nx+1
-      			write(fid,'(3i5,6es13.5)',iostat=istat) i,j,k,x(i,j,k),y(i,j,k),z(i,j,k)
+      			write(fid,'(3i5,6es14.6)',iostat=istat) i,j,k,x(i,j,k),y(i,j,k),z(i,j,k)
       		end do
       	end do
       end do
