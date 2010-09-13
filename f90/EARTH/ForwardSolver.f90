@@ -87,9 +87,6 @@ Contains
    endif
 
    secondaryField = freq%secondaryField
-   if(secondaryField) then
-      call read_solnVector(cUserDef%fn_field,grid,iTx,h1d)
-   endif
 
    if(.not. solverInitialized) then
       ! only do this when called for the first time
@@ -102,6 +99,10 @@ Contains
 	    call initModel(grid,m1d,rho1d)
 	  endif
       solverInitialized = .true.
+   endif
+
+   if(secondaryField) then
+      call read_solnVector(cUserDef%fn_field,grid,iTx,h1d)
    endif
 
    ! this will only be true when new model is supplied (m0 /= mPrev)

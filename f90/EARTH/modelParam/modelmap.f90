@@ -45,7 +45,8 @@ Contains
 			  end if
 			  resist%v(i,j,k) = crust_depth/crust%cond(i,j)
 		  else
-              resist%v(i,j,k) = R_ZERO
+		      !Leave alone if not allocated ...
+              !resist%v(i,j,k) = R_ZERO
 		  end if
 		end do
 	  end do
@@ -81,11 +82,7 @@ Contains
       resist%v(i,j,k) = 1/SIGMA_AIR
     end forall
 
-    ! Now, insert thinsheet (or zeros) if grid%nzCrust /= grid%nzAir
-    call insertShell(grid,resist,param%crust)
-
-
-	do k=grid%nzCrust+1,grid%nz
+	do k=grid%nzAir+1,grid%nz
 
 	  ! Find current layer by locating the upper boundary of a cell
 	  do l=1,param%nL
@@ -130,6 +127,9 @@ Contains
 		end do
 	  end do
 	end do
+
+    ! Finally, insert thinsheet if allocated
+    call insertShell(grid,resist,param%crust)
 
 
   end subroutine initModel	! initModel
