@@ -452,7 +452,7 @@ Contains
 
     code = freqList%info(E%tx)%code !write (code,'(i3.3)') E%tx
     fn_output = trim(fname)//'_'//trim(code)//'.field'
-    write(*,*) 'Writing to file: ',fn_output
+    write(*,*) 'Writing to file: ',trim(fn_output)
     open(ioWRITE,file=fn_output,status='unknown',form='formatted',iostat=ios)
     write(ioWRITE,'(a45,f9.3,a6)') "# Full EM field solution output for period ",   &
                                         freqList%info(E%tx)%period,' days.'
@@ -484,7 +484,7 @@ Contains
 
     code = freqList%info(iTx)%code !write (code,'(i3.3)') iTx
     fn_input = trim(fname)//'_'//trim(code)//'.field'
-    write(*,*) 'Reading from file: ',fn_input
+    write(*,*) 'Reading from file: ',trim(fn_input)
     open(ioREAD,file=fn_input,status='unknown',form='formatted',iostat=ios)
     read(ioREAD,'(a35)',iostat=istat) comment
     read(ioREAD,'(i3)',iostat=istat) j

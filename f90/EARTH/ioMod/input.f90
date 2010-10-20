@@ -166,6 +166,7 @@ Contains
     mygrid%x(1:nx)   = x(1:nx)*d2r
     mygrid%y(1:ny+1) = y(1:ny+1)*d2r
     mygrid%z(1:nz+1) = z(1:nz+1)*1000.0D0
+    mygrid%allocated = .true.
 
 	! fill in the coordinates of cell centres; first redefine x
 	allocate(mygrid%ph(1:nx+1),mygrid%th(ny+1),mygrid%r(nz+1),STAT=istat)

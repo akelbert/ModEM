@@ -45,10 +45,10 @@
 include Makefile.local
 OBJDIR = ./objs/EARTH/Release
 F90 = ifort 
-FFLAGS = -O3 -parallel
+FFLAGS = -O3 -parallel -openmp #-heap-arrays
 MPIFLAGS = -cpp
 MODULE = -module $(OBJDIR)
-LIBS = -lblas -llapack -parallel
+LIBS = -lblas -llapack -parallel -openmp
 
 # -------------------End-macro-Defs---------------------------
 OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSpace.o $(OBJDIR)/GridDef.o $(OBJDIR)/polpak.o $(OBJDIR)/paramfunc.o $(OBJDIR)/modeldef.o $(OBJDIR)/file_units.o $(OBJDIR)/iotypes.o $(OBJDIR)/UserData.o $(OBJDIR)/model_operators.o $(OBJDIR)/sg_scalar.o $(OBJDIR)/modelmap.o $(OBJDIR)/ModelSpace.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/sg_vector.o $(OBJDIR)/sg_boundary.o $(OBJDIR)/sg_sparse_vector.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/SolnSpace.o $(OBJDIR)/dataTypes.o $(OBJDIR)/functionals.o $(OBJDIR)/responses.o $(OBJDIR)/DataFunc.o $(OBJDIR)/DataSens.o $(OBJDIR)/elements.o $(OBJDIR)/dimensions.o $(OBJDIR)/sg_spherical.o $(OBJDIR)/wrapper.o $(OBJDIR)/field_vectors.o $(OBJDIR)/iospec.o $(OBJDIR)/coreFwd.o $(OBJDIR)/maxwells.o $(OBJDIR)/ringcurrent.o $(OBJDIR)/initFields.o $(OBJDIR)/boundaries.o $(OBJDIR)/jacobian.o $(OBJDIR)/SolverSens.o $(OBJDIR)/dataMisfit.o $(OBJDIR)/input.o $(OBJDIR)/output.o $(OBJDIR)/ForwardSolver.o $(OBJDIR)/SensComp.o $(OBJDIR)/SymmetryTest.o $(OBJDIR)/datadef.o $(OBJDIR)/global.o $(OBJDIR)/grid_orig.o $(OBJDIR)/Main.o $(OBJDIR)/DataIO.o $(OBJDIR)/NLCG.o $(OBJDIR)/interp_orig.o $(OBJDIR)/output_orig.o $(OBJDIR)/Global3D.o 
