@@ -69,6 +69,7 @@ Contains
     real(8),   dimension(:),allocatable      :: sp1	!np5
     integer,   dimension(:),allocatable      :: ija1  !np5
     complex(8),dimension(:),allocatable      :: dp1	!np5
+    integer                                  :: rowlen ! used in atimes
   ! LU info
     complex(8),dimension(:),allocatable      :: sp	!np4
     integer,   dimension(:),allocatable      :: ija	!np4
@@ -255,7 +256,7 @@ Contains
 
 	! compute SP1 of SP1 <h>=<p> and its diagonal portion SP
 	call set_op3u(nx,ny,nz,sp1,ija1,sp,ija,resist,x,y,z, &
-				 omega,dp1,np)
+				 omega,dp1,np,rowlen)
 
 	! (AK) print *,'for set_op3......'
 	itest_n=0
@@ -358,7 +359,7 @@ Contains
 !-------------------------------------------------------------
 
 	! compute <d> = A <x(0)>
-      call atimes(xvec,dvec,sp1,ija1,dp1,np)
+      call atimes(xvec,dvec,sp1,ija1,dp1,np,rowlen)
 
 	! compute <r> = <y> - <d>
       rvec(1:np) = cone*(yvec(1:np)-dvec(1:np))
@@ -378,7 +379,7 @@ Contains
 	  BiCGSTAB: do ICOUNT=1,NRELMAX
 
 	  ! compute <d> = A<p(i-1)>
-		call atimes(pvec,dvec,sp1,ija1,dp1,np)
+		call atimes(pvec,dvec,sp1,ija1,dp1,np,rowlen)
 	  ! solve (LU)<q(i)> = A<p(i-1)> for <q>
 		call asolvec(dvec,qvec,sp,ija,np)
 		rHq = dot_product(rvec0(1:np),qvec(1:np))
@@ -387,7 +388,7 @@ Contains
 	  ! update vector <s(i)>
 		svec(1:np) = rvec(1:np) - alpha*qvec(1:np)
 	  ! compute <d> = A<s(i)>
-		call atimes(svec,dvec,sp1,ija1,dp1,np)
+		call atimes(svec,dvec,sp1,ija1,dp1,np,rowlen)
 	  ! solve (LU)<t(i)> = A<s(i)> for <t>
 		call asolvec(dvec,tvec,sp,ija,np)
 

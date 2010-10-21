@@ -22,7 +22,7 @@ Contains
 !    Solve Ax=b, A preconditioner, determined by incomplete
 !    Cholesky decomposition, stored in sb and ija arrays.
 !-------------------------------------------------------------
- 
+
       complex(8),dimension(np2)      :: b,x
 !toh
       complex(8)                     :: sum, xi
@@ -30,9 +30,9 @@ Contains
 !toh
       integer,dimension(np4)         :: ija
       integer                        :: i,m,k,np
- 
+
       x(1:np) = dcmplx(0.0d0,0.0d0)
- 
+
 !------forward substitution, solve L(t)*y = b, storing y in x
 !toh
       x(1)=b(1)/sb(1)
@@ -50,9 +50,9 @@ Contains
           x(i+1)=(b(i+1)-x(i+1))/sb(i+1)
 !toh
       end do
- 
+
 ! -----backward substitution, solve L*x = y -----------------
-!toh 
+!toh
       x(np)=x(np)/sb(np)
 !toh
       do i=np-1, 1, -1
@@ -66,7 +66,7 @@ Contains
           x(i)=(x(i)-sum)/sb(i)
 !toh
       end do
- 
+
       return
       end subroutine asolvec
 
@@ -76,22 +76,22 @@ Contains
 
 
       subroutine asolver(n,b,x,sb,ija)
- 
+
 !-------------------------------------------------------------
 !    Solve Ax=b, A preconditioner, determined by incomplete
 !    Cholesky decomposition, stored in sb and ija arrays.
 !-------------------------------------------------------------
- 
+
       real(8),dimension(np1)       :: b,x
       real(8)                      :: sum
       real(8),dimension(np6)       :: sb
       integer,dimension(np6)       :: ija
       integer                      :: i,k,m,n
- 
+
       x(1:n)=0.0d0
- 
+
 !------forward substitution, solve L(t)*y = b, storing y in x
- 
+
       x(1)=b(1)/sb(1)
       do i=1, n-1
           do m=ija(i), ija(i+1)-1
@@ -99,9 +99,9 @@ Contains
           end do
           x(i+1)=(b(i+1)-x(i+1))/sb(i+1)
       end do
- 
+
 ! -----backward substitution, solve L*x = y -----------------
- 
+
       x(n)=x(n)/sb(n)
       do i=n-1, 1, -1
           sum=0.0d0
@@ -110,7 +110,7 @@ Contains
           end do
           x(i)=(x(i)-sum)/sb(i)
       end do
- 
+
       return
       end subroutine asolver
 
@@ -129,7 +129,7 @@ Contains
 !   By: H. Toh & A. Schultz
 !   last mod: 18 Feb 99 by A.S.
 !-------------------------------------------------------------
- 
+
 
       integer                           :: np
 
@@ -170,7 +170,64 @@ Contains
 
 ! *****************************************************************************
 
-      subroutine atimes(x,r,sa,ija,dp,np)
+      subroutine atimes_mod(x,r,sa,ija,dp,np,nmax)
+
+!-------------------------------------------------------------
+!
+!   Multiply a matrix in row-index sparse storage arrays sa and ija by a
+!   vector x(1:n), giving a vector r(1:n).   However, note, sa only
+!   contains upper triangular part, because A is symmetric.
+!   By: H. Toh & A. Schultz
+!   last mod by A. Schultz: 18 Feb 1999
+!   Storing the the local ija indices in temporary arrays for efficiency;
+!   however, this doesn't seem to give much (if any) improvement.
+!   last mod by A. Kelbert: 21 Oct 2010
+!-------------------------------------------------------------
+
+
+      integer                           :: np,nmax
+
+      complex(8), dimension(np2)        :: r
+      real(8),    dimension(np+1:np5)   :: sa               ! sparse matrix offdiagonal elements
+      real(8),    dimension(nmax)       :: sa_row
+      complex(8), dimension(np)         :: dp               ! sparse matrix diagonal elements
+      complex(8), dimension(np2)        :: x
+      integer,    dimension(np5)        :: ija
+      integer,    dimension(nmax)       :: ija_row
+      integer                           :: i,k,istart,iend,n
+
+
+      if(ija(1).ne.np+2) then
+        write(0,*) 'Error: (atimes) mismatched vector and matrix'
+      end if
+
+      ! Initialize temporary variables for efficiency
+      ija_row(1:nmax) = 0
+      sa_row(1:nmax) = 0.0d0
+
+      r(1:np) = dp(1:np)*x(1:np)
+
+      do i=1,np
+
+         istart = ija(i)
+         iend   = ija(i+1)-1
+
+         n = ija(i+1) - ija(i)
+         ija_row(1:n) = ija(istart:iend)
+         sa_row(1:n)  = sa(istart:iend)
+
+         r(i) = r(i) + sum(sa_row(1:n) * x(ija_row(1:n)))
+ 	     r(ija_row(1:n)) = r(ija_row(1:n)) + sa_row(1:n)*x(i)
+
+      end do
+
+      return
+      end subroutine atimes_mod
+
+
+ ! *****************************************************************************
+
+      subroutine atimes(x,r,sa,ija,dp,np,nmax)
 
 !-------------------------------------------------------------
 !
@@ -180,9 +237,9 @@ Contains
 !   By: H. Toh & A. Schultz
 !   last mod: 18 Feb 99 by A.S.
 !-------------------------------------------------------------
-	  	   
 
       integer                           :: np
+      integer                           :: nmax             ! for temporary arrays; not used
 
       complex(8), dimension(np2)        :: r
       real(8),    dimension(np+1:np5)   :: sa               ! sparse matrix offdiagonal elements
@@ -193,23 +250,17 @@ Contains
 
 
       if(ija(1).ne.np+2) then
-        write(0,*) 'Error: (atimes) mismatched vector and matrix'
+        print*,'mismatched vector and matrix'
       end if
+
       r(1:np) = dp(1:np)*x(1:np)
 
       do i=1,np
-         !print *,'atimes: i=',i,'and np=',np,'  
          istart = ija(i)
          iend   = ija(i+1)-1
-
-         !AK: dot_product of real and complex causes segmentation fault
- 	 !AK: r(i) = r(i) + dot_product(sa(istart:iend),x(ija(istart:iend)))
          r(i) = r(i) + sum(sa(istart:iend) * x(ija(istart:iend)))
-
- 	 r(ija(istart:iend)) = r(ija(istart:iend)) + sa(istart:iend)*x(i)
-
+         r(ija(istart:iend)) = r(ija(istart:iend)) + sa(istart:iend)*x(i)
       end do
-      !print *,'atimes aaa'
 
 
       return
@@ -219,13 +270,13 @@ Contains
 
 
       subroutine atimesr(n,x,r,sa,ija)
- 
+
 !-------------------------------------------------------------
 !   Multiply a matrix in row-index sparse storage arrays sa and ija by a
 !   vector x(1:n), giving a vector r(1:n).   However, note, sa only
 !   contains upper triangular part, because A is symmetric.
 !-------------------------------------------------------------
- 
+
       real(8),dimension(np1)  :: r,x
       real(8),dimension(np6)  :: sa
       integer,dimension(np6)  :: ija
@@ -236,7 +287,7 @@ Contains
       end if
 
       r(1:n)=0.0d0
- 
+
       do i=1,n
          r(i)=r(i)+sa(i)*x(i)
          do k=ija(i),ija(i+1)-1
@@ -244,7 +295,7 @@ Contains
             r(ija(k))=r(ija(k))+sa(k)*x(i)
          end do
       end do
- 
+
       return
       end subroutine atimesr
 
@@ -253,7 +304,7 @@ Contains
 
 
       subroutine calc_vdivBC3(l,m,n,hx,hy,hz,divr,divi,x,y,z)
- 
+
 !-------------------------------------------------------------
 ! subroutine to calculate divH at internal nodes
 ! assume Hz=0 at k=n and above air layers
@@ -273,7 +324,7 @@ Contains
 ! conditions at all. Divergence is only defined in the interior.
 ! Date of comment: Nov 5, 2005
 !-------------------------------------------------------------
- 
+
 	  integer							:: l,m,n
       complex(8),dimension(np1)         :: hx,hy,hz
       complex(8)                        :: sumdp
@@ -801,7 +852,7 @@ Contains
 			!print *, 'd1->d3: x ',i,j,k,ii,ic,rvec(ic)
 !           rx(ii)=rvec(ic)
           end do
-        end do 
+        end do
       end do
 
       do j=1,m
@@ -991,7 +1042,7 @@ Contains
         j=1
           ic=ic+1
           r(ic)=div(ic)
- 
+
           call n_dvpotijkBC3(l,m,n,0,j,k,ii)
           if (ii.ne.ic) then
 			inquire(ioERR,OPENED=opened)
@@ -999,12 +1050,12 @@ Contains
 			  write(ioERR,*)'warning.. ii vs ic',ii,ic
 			end if
           end if
- 
+
         do j=2,m
           do i=1,l
             ic=ic+1
             r(ic)=div(ic)
- 
+
           call n_dvpotijkBC3(l,m,n,i,j,k,ii)
           if (ii.ne.ic) then
 			inquire(ioERR,OPENED=opened)
@@ -1012,13 +1063,13 @@ Contains
 			  write(ioERR,*)'warning.. ii vs ic',ii,ic
 			end if
           end if
- 
+
           end do
         end do
         j=m+1
           ic=ic+1
           r(ic)=div(ic)
- 
+
           call n_dvpotijkBC3(l,m,n,0,j,k,ii)
           if (ii.ne.ic) then
 			inquire(ioERR,OPENED=opened)
@@ -1026,9 +1077,9 @@ Contains
 			  write(ioERR,*)'warning.. ii vs ic',ii,ic
 			end if
           end if
- 
+
       end do
-              
+
       return
       end subroutine d3residpot3BC3
 
@@ -1051,7 +1102,7 @@ Contains
 
       zsum=dcmplx(0.0d0,0.0d0)
 
-      do i=1,np                                                         
+      do i=1,np
         zsum=zsum+v1(i)*v2(i)
       end do
 
@@ -1400,12 +1451,12 @@ Contains
             end do
 
          end do
-         
+
       end if
 
 ! Normalize weights so that sum of them is equal to np.
 
-      if ( iflg /= 0 ) w(1:np) = w(1:np)/sum(w(1:np))*dfloat(np)      
+      if ( iflg /= 0 ) w(1:np) = w(1:np)/sum(w(1:np))*dfloat(np)
 
       return
 
@@ -1710,7 +1761,7 @@ Contains
             sb(m)=sb(m)/sb(k)
 
           end do
- 
+
           md=ija(k+1)-ija(k)
           ii=ija(k)
 
@@ -1747,7 +1798,7 @@ Contains
       integer,dimension(np6)             :: ija
       real(8),dimension(np6)             :: sb
       integer                            :: md,i,j,k,l,m,n,ii,iii
- 
+
       do k=1, n
          if (sb(k) <= 0.0d0) then
             print *,'cholesky decomposition fails at...'
@@ -1761,7 +1812,7 @@ Contains
                ! (AK) print *,'1844 was changed!!!'
             end if
          end do
- 
+
          md=ija(k+1)-ija(k)
          ii=ija(k)
          if(md >= 1) then
@@ -1769,9 +1820,9 @@ Contains
               sb(ija(iii))=sb(ija(iii))-sb(iii)**2
             end do
          end if
- 
+
       end do
- 
+
       return
       end subroutine icdecompr
 
@@ -1780,9 +1831,9 @@ Contains
 	         subroutine initpot3uBC3(l,m,n,np,sp,sp1,ija,x,y,z)
 
 !-------------------------------------------------------------
-! subroutine to initiate the incomplete LDL decomposition of the 
-! operator used to correct the H field by a divH=0 computation. 
-! This subroutine determines the locations of the 
+! subroutine to initiate the incomplete LDL decomposition of the
+! operator used to correct the H field by a divH=0 computation.
+! This subroutine determines the locations of the
 ! non-zero elements of the operator and stores them in a form that
 ! is easy for the decomposition algorithm to access. Remember that
 ! the operator is symmetric, so that only half of the non-zero
@@ -1888,40 +1939,40 @@ Contains
             call area_sjki2(a,i,j-1,k-1,x,y,z,sjmmm)
             call area_skij2(a,i,j-1,k  ,x,y,z,skpmm)
             call area_skij2(a,i,j-1,k-1,x,y,z,skmmm)
- 
+
 ! Phi(i,j,k)
- 
+
             jj=jj+1
             sp(jj)=sipmm/xijk+sjpmm/yijk+skpmm/zijk+ &
                    simmm/xajk+sjmmm/yibk+skmmm/zijc
- 
+
 ! Phi(i+1,j,k)
- 
+
            if (d.ne.1) then
             kk=kk+1
             call n_dvpotijkBC3(l,m,n,d,j,k,ii)
             sp(kk)=-sipmm/xijk
             ija(kk)=ii
            end if
- 
+
 ! Phi(i-1,j,k)
- 
+
            if (a == L) then
             kk=kk+1
             call n_dvpotijkBC3(l,m,n,a,j,k,ii)
             sp(kk)=-simmm/xajk
             ija(kk)=ii
            end if
- 
+
 ! Phi(i,j+1,k)
- 
+
             kk=kk+1
             call n_dvpotijkBC3(l,m,n,i,j+1,k,ii)
             sp(kk)=-sjpmm/yijk
             ija(kk)=ii
- 
+
 ! Phi(i,j,k+1)
- 
+
             if(k.ne.N) then
               kk=kk+1
               call n_dvpotijkBC3(l,m,n,i,j,k+1,ii)
@@ -1968,9 +2019,9 @@ Contains
 !---- end j=M+1
 
       end do
- 
+
 ! copy sp to sp1, which is used in later calculations
-      
+
 
       sp1(1:kk)=sp(1:kk)
 
@@ -2009,9 +2060,9 @@ Contains
       integer,dimension(np6)   :: ija
 
 
-  
+
 ! clear vectors
- 
+
       nclr=(2+l*(m-1))*(n+1)
       pot(1:nclr) = 0.0d0
       wk(1:nclr)  = 0.0d0
@@ -2023,13 +2074,13 @@ Contains
       d(1:nclr)   = 0.0d0
 
 ! calculate initial residual
- 
+
       npl=(2+l*(m-1))*(n-1)
 !toh:29/FEB/2000
       cone=1.0d0
       cmone=-1.0d0
       call d3residpot3BC3(l,m,n,div,r)
- 
+
 ! begin relaxation
 ! set e1=0.0d0 (this was omitted & appears to be a bug  -  A.S. 23.2.99
 !
@@ -2039,9 +2090,9 @@ Contains
 
       do ic=1,nrel
         call asolver(npl,r,z,sp,ija)
- 
+
 ! update vectors
- 
+
         call atimesr(npl,z,q,sp1,ija)
 
         c1 = dot_product(q(1:npl),s(1:npl))
@@ -2077,11 +2128,11 @@ Contains
 
 !toh
        subroutine set_op3u(l,m,n,sp,ija,sp1,ija1,resist,x,y,z, &
-                          omega,dp,np)
+                          omega,dp,np,rowlen)
 !toh
 !-------------------------------------------------------------
 ! subroutine to initialize the sparse operator that we are trying
-! to solve. This subroutine determines the locations of the 
+! to solve. This subroutine determines the locations of the
 ! non-zero elements of the operator and stores them in a form that
 ! is easy for the decomposition algorithm to access. Remember that
 ! the operator is symmetric, so that only half of the non-zero
@@ -2095,11 +2146,15 @@ Contains
 !
 ! modified so that the boundary values for k=n+1 are fixed to their
 ! starting values
-! 
+!
 ! modified for real space values
 !
 ! modified for spherical problem (25/11/97)
 ! modified for upper triangular storage into sp (4/12/97)
+!
+! modified by Anna Kelbert (20/10/2010) to output the maximum
+! "row length" of sp, computed as max(ija(i+1)-ija(i)).
+! Use this in atimes to preallocate temporary arrays for efficiency.
 !-------------------------------------------------------------
 
       implicit none
@@ -2109,6 +2164,7 @@ Contains
       integer,dimension(np5)             :: ija
       integer,dimension(np4)             :: ija1
       integer                            :: a,b,c,d,e,f
+      integer                            :: ijalen,rowlen
 
       real(8),dimension(l,m,n)	         :: resist
       real(8)                            :: omega
@@ -2138,18 +2194,18 @@ Contains
 
       nhx=l*(m-1)*(n-1)
       nhy=l*m*(n-1)
- 
+
 !     nhz=( l*(m-1)+2 )*(n-1)
 !       nhx <-- number of variables to be determined as H(phai)
 !       nhy <-- number of variables to be determined as H(theta)
 !       nhz <-- number of variables to be determined as H(z)
 
       uw=omega * MU_0				! =	  omega*mu0
-      ciuw=dcmplx(0.0d0,uw)			! =-i*omega*mu0 
- 
+      ciuw=dcmplx(0.0d0,uw)			! =-i*omega*mu0
+
 !     uw=4.0d-7*pi*2.0d0*pi/dreal(period)
 !     ciuw=dcmplx(0.0,uw)
- 
+
 
 ! First, Hx...
 
@@ -2209,12 +2265,12 @@ Contains
 !   -----------------------------------------------------
 !             set of surface element  2
 !   -----------------------------------------------------
-            
+
             rijcy=(resist(i,j,c)*yjm+resist(i,b,c)*ybm)/2.0d0/sjci
             rijky=(resist(i,j,k)*yjp+resist(i,b,k)*ybp)/2.0d0/sjki
             rijkz=(resist(i,j,k)*zk+resist(i,j,c)*zc)/2.0d0/skij
             ribkz=(resist(i,b,k)*zk+resist(i,b,c)*zc)/2.0d0/skib
-        
+
 !----------------------------------------------------------------
 ! 0 Hxijk
             jj=jj+1
@@ -2359,7 +2415,7 @@ Contains
             rijcx=(resist(i,j,c)*xipm+resist(a,j,c)*xapm)/2.0d0/sijc
             rajkz=(resist(a,j,k)*zk+resist(a,j,c)*zc)/2.0d0/skaj
             rijkx=(resist(i,j,k)*xipp+resist(a,j,k)*xapp)/2.0d0/sijk
-        
+
 ! 0 Hyijk
             jj=jj+1
 !toh
@@ -2402,7 +2458,7 @@ Contains
 !toh
               ija(kk)=ii
               ija1(kk1)=ii
-            end if     
+            end if
 ! 3 Hzijc
             if (c.ne.1) then
 !           ----------> top Hz is fixed
@@ -2552,7 +2608,7 @@ Contains
             rijkx=(resist(i,j,k)*xipp+resist(a,j,k)*xapp)/2.0d0/sijk
             rajky=(resist(a,j,k)*yjp+resist(a,b,k)*ybp)/2.0d0/sjka
             ribkx=(resist(i,b,k)*ximp+resist(a,b,k)*xamp)/2.0d0/sibk
-        
+
 ! 0 Hzijk
             jj=jj+1
 !toh
@@ -2593,9 +2649,9 @@ Contains
 !toh
             ija(kk)=ii
             ija1(kk1)=ii
-              
-            ija(jj+1)=kk+1        
-            ija1(jj+1)=kk1+1        
+
+            ija(jj+1)=kk+1
+            ija1(jj+1)=kk1+1
 !           -----------
             end do
 !         -------------
@@ -2645,7 +2701,15 @@ Contains
 
  30   continue
 
-      ! (AK) print *,'jj+1,kk,kk1',jj+1,kk,kk1
+      ! AK: Compute the maximum "row length" = max(ija(jj+1) - ija(jj))
+      ijalen = jj+1
+      rowlen = 0
+      do jj=1,ijalen-1
+            if(ija(jj+1)-ija(jj) > rowlen) then
+                rowlen = ija(jj+1)-ija(jj)
+            end if
+      end do
+
       return
       end subroutine set_op3u
 
@@ -2726,9 +2790,9 @@ Contains
       integer                          :: a,d
       integer                          :: nijf,nijk,niek,ndjk,ic
       real(8)                          :: xx,yy,zz
- 
+
 ! update Hx
-  
+
       do i=1,l
         if (i.ne.1) then
            a=i-1
@@ -2758,9 +2822,9 @@ Contains
           end do
         end do
       end do
- 
+
 ! update Hy
- 
+
       do j=1,m
         do k=2,n
 !toh:29/FEB/2000
@@ -2780,9 +2844,9 @@ Contains
           end do
         end do
       end do
- 
+
 ! update Hz
- 
+
       do k=1,n
 !toh:29/FEB/2000
         call leng_zijk(k,z,zz)
@@ -2826,7 +2890,7 @@ Contains
             call n_allhzijk(l,m,n,0,j,k,ic)
             hz(ic)=hz(ic)+grad1
       end do
-      
+
       return
       end subroutine updateh3BC3
 
