@@ -8,7 +8,7 @@ Integer        :: taskid,numtasks,numworkers,ierr
 character*80   :: todo,from_which_operation
 Integer        :: file_id
 Integer        :: iper, ipol, istn,per_index,pol_index,stn_index,answers_to_receive,received_answers
-Integer        :: who, which_stn,which_per,which_pol,nodestate_vec(4),recv_loop 
+Integer        :: who, which_stn,which_per,which_dt,which_pol,nodestate_vec(4),recv_loop 
 Integer        :: vector_size
 integer        :: size_x,size_y,size_z,nx,ip,nComp,nSite
 integer      :: oldtypes(0:20), blockcounts(0:20),offsets(0:20) ,extent 

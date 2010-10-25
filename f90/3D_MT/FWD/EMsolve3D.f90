@@ -238,8 +238,14 @@ Contains
     if (trans) then
        QMRiter%tol = tolEMadj
     else
-       QMRiter%tol = tolEMfwd
+      if (bRHS%nonzero_BC) then
+        QMRiter%tol = tolEMfwd
+      else
+        QMRiter%tol = tolEMadj
+       end if 
     end if
+
+    
     QMRiter%niter = 0
     QMRiter%maxIt = IterPerDivCor
     allocate(QMRiter%rerr(IterPerDivCor), STAT=status)

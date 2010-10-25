@@ -145,10 +145,13 @@ program Mod3DMT
 #ifdef MPI
         	call Master_job_STOP_MESSAGE
 #endif
-     	elseif (trim(cUserDef%search) == 'DCG') then
+    	elseif (trim(cUserDef%search) == 'DCG') then
         	write(*,*) 'Starting the DCG search...'
+        	 sigma1 = dsigma
+        	 !cUserDef%lambda=500
         	call DCGsolver(allData,sigma0,sigma1,cUserDef%lambda)
-            call write_modelParam(sigma1,cUserDef%wFile_Model)
+            !call Marquardt_M_space(allData,sigma0,sigma1,cUserDef%lambda)
+        	call write_modelParam(sigma1,cUserDef%wFile_Model)
         if (write_data) then
         	call write_dataVectorMTX(allData,cUserDef%wFile_Data)
         end if

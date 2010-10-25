@@ -33,7 +33,9 @@
     call getValue_modelParam(m1,LOGE,logcond)
    
     dtime=5
+    
     call solveDiff(dtime,CmSqrt,logcond)
+    
     call setValue_modelParam(m2,LOGE,logcond)
 
  end function multBy_Cm
@@ -68,20 +70,127 @@
 
 ! *******************************************************************
   subroutine create_CmSqrt(m,cfile)
+	! Initializes CmSqrt variable stored in RecursiveAR.hd. If cfile
+  	! is specified, gets this information from file.
 
     type (modelParam_t), intent(in)     :: m
     character(*), intent(in), optional  :: cfile
+    integer                             :: istat
+    logical                             :: exists
 
-    if (present(cfile)) then
-      ! do nothing: a placeholder for other covariance operators
-    end if
-
-    call setup1DCM(m%grid,CmSqrt)
-
+	! initializing CmSqrt
+	CmSqrt%Nx = m%Nx
+	CmSqrt%Ny = m%Ny
+	CmSqrt%NzEarth = m%NzEarth
+	allocate(CmSqrt%Sx(CmSqrt%NzEarth), STAT=istat)
+	allocate(CmSqrt%Sy(CmSqrt%NzEarth), STAT=istat)
+	CmSqrt%Sx = 0.3
+	CmSqrt%Sy = 0.3
+	CmSqrt%Sz = 0.3
+	 CmSqrt%xlen=0.3
+     CmSqrt%ylen=0.3
+     CmSqrt%zlen=0.3
+ 
+	call create_iscalar(m%grid,CmSqrt%mask,CELL_EARTH)
+	CmSqrt%mask%v = FREE
+	CmSqrt%N = 2
     CmSqrt%allocated = .true.
 
-  end subroutine create_CmSqrt
+    if (.not. present(cfile)) then
+    	! CmSqrt already initialized
+    else
+		! attempt to read CmSqrt from cfile
+	    inquire(FILE=cfile,EXIST=exists)
+	    if (exists) then
+	      call read_Cm(cfile)
+	    else
+	      call errStop('Unable to find the input covariance file '//trim(cfile)//' in create_CmSqrt')
+	    end if
 
+		if ((CmSqrt%Nx /= m%Nx) .or. (CmSqrt%Ny /= m%Ny) .or. (CmSqrt%NzEarth /= m%NzEarth)) then
+	       call errStop('Grid dimensions do not match in input covariance file '//cfile)
+	    end if
+    end if
+
+    
+    call setup1DCM(m%grid,CmSqrt)
+
+
+
+  end subroutine create_CmSqrt
+  ! *******************************************************************
+ subroutine read_Cm(cfile)
+
+	! The minimal covariance information includes the AR parameters
+	! alpha(k), beta(k) for smoothing in x, y directions and gamma for
+	! the vertical smoothing. Both alpha and beta could depend on the
+	! vertical layer. The scaling is the identity when not specified.
+	! This information is read from a file. Also, we read an integer mask
+	! array that subdivides the model grid into different regions
+	! (AIR, OCEAN, EARTH) and a set of rules that overrides the default
+	! smoothing parameters across a particular surface between two
+	! distinct regions. We use this to set up the covariance CmSqrt.
+	!
+	! Strictly speaking, to define the smoothing across surfaces in
+	! full generality while maintaining efficiency, it has to be a sparse
+	! real vector defined on FACES (sparsevecr). We only have a complex
+	! sparse vector implemented (sparsevecc). We could either use that,
+	! or imitate the structure.
+
+    character(*), intent(in)                         :: cfile
+
+    ! Exception rules
+    integer, pointer, dimension(:)                   :: mask1, mask2, ii, jj, kk, xyz
+    real (kind=prec), pointer, dimension(:)  :: smoothing, S
+
+    integer       			 :: Nx, Ny, NzEarth, nrules, nS, i, j, k, n, istat
+    integer                  :: fid = 30
+
+	if (.not. CmSqrt%allocated) then
+		call errStop('Model covariance must be allocated before reading from file in read_CmSqrt')
+	end if
+
+    open(unit=fid,file=cfile,form='formatted',status='old')
+
+    ! skip the 16 lines header
+    do j = 1,16
+       read(fid,*)
+    end do
+
+	! read grid dimensions
+	read(fid,*) Nx,Ny,NzEarth
+	CmSqrt%Nx = Nx
+	CmSqrt%Ny = Ny
+	CmSqrt%NzEarth = NzEarth
+
+	! read smoothing parameters
+    read(fid,*) CmSqrt%Sx
+    read(fid,*) CmSqrt%Sy
+    read(fid,*) CmSqrt%Sz
+    
+ CmSqrt%xlen=CmSqrt%Sx(1)
+ CmSqrt%ylen=CmSqrt%Sy(1)
+ CmSqrt%zlen=CmSqrt%Sz
+ 
+	! read number of times to apply the smoothing
+	read(fid,*) CmSqrt%N
+
+	! read exception rules for smoothing across surfaces
+    read(fid,*) nrules
+    allocate(mask1(nrules),mask2(nrules),smoothing(nrules),STAT=istat)
+    do n = 1,nrules
+       read(fid,*) mask1(n), mask2(n), smoothing(n)
+    end do
+
+	! create and read the mask array
+	call read_iscalar(fid,CmSqrt%mask)
+
+	close(fid)
+
+
+
+       
+  end subroutine read_Cm
 ! *******************************************************************
   subroutine deall_CmSqrt()
 
@@ -140,12 +249,13 @@
 
      !integer, dimension(:,:,:), intent(in)   :: PMod
      type (grid_t), intent(in)             :: gd
-     type (modelCov_t), intent(out)              :: Cm
+     type (modelCov_t), intent(inout)              :: Cm
 
 
      real (kind=prec), pointer, dimension(:,:)   ::  XDF
      real (kind=prec), pointer, dimension(:,:)   ::  YDF
      real (kind=prec), pointer, dimension(:,:)   ::  ZDF
+     Integer         , pointer, dimension(:)     ::  xgd,ygd,zgd             
 
      integer                  :: jj, ix, iy, iz, Nx, Ny, NzEarth
      real (kind=prec) :: xlen, ylen, zlen
@@ -154,29 +264,33 @@
 	  Ny      = gd%Ny
 	  NzEarth = gd%Nz - gd%nzAir
 
-	  allocate(Cm%XDIF(2,Nx,Ny,NzEarth))
-	  allocate(Cm%YDIF(2,Nx,Ny,NzEarth))
-	  allocate(Cm%ZDIF(2,Nx,Ny,NzEarth))
+	  allocate(CmSqrt%XDIF(2,Nx,Ny,NzEarth))
+	  allocate(CmSqrt%YDIF(2,Nx,Ny,NzEarth))
+	  allocate(CmSqrt%ZDIF(2,Nx,Ny,NzEarth))
 
 	  allocate(XDF(2,Nx))
 	  allocate(YDF(2,Ny))
 	  allocate(ZDF(2,NzEarth))
-	  	  
-	  Cm%xlen = 0.5
-	  Cm%ylen = 0.5
-	  Cm%zlen = 0.5
+	 
+	  allocate (xgd(Nx),ygd(Ny),zgd(NzEarth)) 	  
+     
 
-	  XLen = Cm%xlen
-	  YLen = Cm%ylen
-	  ZLen = Cm%zlen
+	  XLen = CmSqrt%xlen
+	  YLen = CmSqrt%ylen
+	  ZLen = CmSqrt%zlen
 
 !>>>  X : Horizontal Diffusion
       DO iz = 1,NzEarth
         DO iy = 1,Ny
-          CALL SetupXCM(Nx,XLen,XDF)
+        
           DO ix = 1,Nx
-            Cm%XDIF(1,ix,iy,iz) = XDF(1,ix)
-            Cm%XDIF(2,ix,iy,iz) = XDF(2,ix)
+            xgd(ix) = CmSqrt%mask%v(ix,iy,iz)
+          ENDDO ! ix
+          
+          CALL SetupXCM(Nx,xgd,XLen,XDF)
+          DO ix = 1,Nx
+            CmSqrt%XDIF(1,ix,iy,iz) = XDF(1,ix)
+            CmSqrt%XDIF(2,ix,iy,iz) = XDF(2,ix)
           ENDDO ! ix
         ENDDO ! iy
       ENDDO ! iz
@@ -185,10 +299,15 @@
 !>>>  Y : Horizontal Diffusion
       DO iz = 1,NzEarth
         DO ix = 1,Nx
-          CALL SetupYCM(Ny,YLen,YDF)
+        
           DO iy = 1,Ny
-            Cm%YDIF(1,ix,iy,iz) = YDF(1,iy)
-            Cm%YDIF(2,ix,iy,iz) = YDF(2,iy)
+            ygd(iy) = CmSqrt%mask%v(ix,iy,iz)
+          ENDDO ! iy
+               
+          CALL SetupYCM(Ny,ygd,YLen,YDF)
+          DO iy = 1,Ny
+            CmSqrt%YDIF(1,ix,iy,iz) = YDF(1,iy)
+            CmSqrt%YDIF(2,ix,iy,iz) = YDF(2,iy)
           ENDDO ! iy
         ENDDO ! ix
       ENDDO ! iz
@@ -197,10 +316,16 @@
 !>>>  Vertical Diffusion
       DO ix = 1,Nx
         DO iy = 1,Ny
-          CALL SetupZCM(NzEarth,ZLen,ZDF)
+        
           DO iz = 1,NzEarth
-            Cm%ZDIF(1,ix,iy,iz) = ZDF(1,iz)
-            Cm%ZDIF(2,ix,iy,iz) = ZDF(2,iz)
+            zgd(iz) = CmSqrt%mask%v(ix,iy,iz)
+          ENDDO ! iz
+          
+             
+          CALL SetupZCM(NzEarth,zgd,ZLen,ZDF)
+          DO iz = 1,NzEarth
+            CmSqrt%ZDIF(1,ix,iy,iz) = ZDF(1,iz)
+            CmSqrt%ZDIF(2,ix,iy,iz) = ZDF(2,iz)
           ENDDO ! iy
         ENDDO ! iy
       ENDDO ! ix
@@ -214,12 +339,19 @@
 !>>>  Horizontal Diffusion : X
 !...  Copyright (C) 2006 Weerachai Siripunvaraporn. All rights reserved.
 
-  SUBROUTINE SetupXCM(Nx,xlen,XDF)
+  SUBROUTINE SetupXCM(Nx,xgd,xlen,XDF)
 
+  
+      Integer,intent(in), dimension(:)     ::  xgd
       integer Nx,info
       real (kind=prec)  XDF(2,Nx),xlen
       real (kind=prec)  cr,cl,difxc(Nx),difxr(Nx)
 
+
+
+      
+      
+      
       integer ix
       real (kind=prec)  D0,D1
 
@@ -229,6 +361,19 @@
       DO ix = 1,Nx
         cr = xlen
         cl = xlen
+        
+        
+        IF (ix.LT.Nx) THEN
+          IF ((xgd(ix) .eq. OCEAN).AND.(xgd(ix+1).eq. OCEAN)) THEN
+            cr = D0
+          ENDIF
+        ENDIF
+
+        IF (ix.GT.1) THEN
+          IF ((xgd(ix) .eq. OCEAN).AND.(xgd(ix-1).eq. OCEAN)) THEN
+            cl = D0
+          ENDIF
+        ENDIF
 
         difxc(ix) = D1 + cr + cl
         difxr(ix) = -cr
@@ -262,8 +407,9 @@
 !>>>  Horizontal Diffusion : Y
 !...  Copyright (C) 2006 Weerachai Siripunvaraporn. All rights reserved.
 
-  SUBROUTINE SetupYCM(Ny,ylen,YDF)
-
+  SUBROUTINE SetupYCM(Ny,ygd,ylen,YDF)
+  
+      Integer,intent(in), dimension(:)     ::  ygd
       integer Ny,info
       real (kind=prec)  YDF(2,Ny),ylen
       real (kind=prec)  cr,cl,difyc(Ny),difyr(Ny)
@@ -277,7 +423,19 @@
       DO iy = 1,Ny
         cr = ylen
         cl = ylen
+        
+        IF (iy.LT.Ny) THEN
+          IF ((ygd(iy) .eq. OCEAN).AND.(ygd(iy+1).eq. OCEAN)) THEN
+            cr = D0
+          ENDIF
+        ENDIF
 
+        IF (iy.GT.1) THEN
+          IF ((ygd(iy) .eq. OCEAN).AND.(ygd(iy-1).eq. OCEAN)) THEN
+            cl = D0
+          ENDIF
+        ENDIF
+        
         difyc(iy) = D1 + cr + cl
         difyr(iy) = -cr
       ENDDO ! iy
@@ -311,8 +469,9 @@
 !>>>  Vertical Diffusion : Z
 !...  Copyright (C) 2006 Weerachai Siripunvaraporn. All rights reserved.
 
-  SUBROUTINE SetupZCM(Nz,zlen,ZDF)
-
+  SUBROUTINE SetupZCM(Nz,zgd,zlen,ZDF)
+  
+      Integer,intent(in), dimension(:)     ::  zgd
       integer Nz,info
       real (kind=prec)  ZDF(2,Nz),zlen
       real (kind=prec)  cr,cl,difzc(Nz),difzr(Nz)
@@ -325,7 +484,21 @@
       DO iz = 1,Nz
         cr = zlen
         cl = zlen
+        
+        
+        IF (iz.LT.Nz) THEN
+          IF ((zgd(iz) .eq. OCEAN).AND.(zgd(iz+1).eq. OCEAN)) THEN
+            cr = D0
+          ENDIF
+        ENDIF
 
+        IF (iz.GT.1) THEN
+          IF ((zgd(iz) .eq. OCEAN).AND.(zgd(iz-1).eq. OCEAN)) THEN
+            cl = D0
+          ENDIF
+        ENDIF
+        
+        
         difzc(iz) = D1 + cr + cl
         difzr(iz) = -cr
       ENDDO ! iz
@@ -369,20 +542,44 @@ ZDF=D0
       type (rscalar), intent(inout)           :: u2
 
 
-      integer  idt
+      integer  idt,ix,iy,iz
+	  integer            :: Nx,Ny,NzEarth
 
+      Nx = u2%nx
+      Ny = u2%ny
+      NzEarth = u2%nz
+      
+      
       DO idt = 1,DTime
-        CALL X_Diff(Cm,u2)
-        CALL Y_Diff(Cm,u2)
-        CALL Z_Diff(Cm,u2)
+      write(6,*)'u2_1',idt,u2%v(1,1,1)
+        CALL X_Diff(CmSqrt,u2)
+        write(6,*)'u2_2',idt,u2%v(1,1,1)
+        CALL Y_Diff(CmSqrt,u2)
+        write(6,*)'u2_3',idt,u2%v(1,1,1)
+        CALL Z_Diff(CmSqrt,u2)
+        write(6,*)'u2_4',idt,u2%v(1,1,1)
       ENDDO ! idt
 
       DO idt = 1,DTime
-        CALL Z_Diff(Cm,u2)
-        CALL Y_Diff(Cm,u2)
-        CALL X_Diff(Cm,u2)
+      write(6,*)'u2_5',idt,u2%v(1,1,1)
+        CALL Z_Diff(CmSqrt,u2)
+        write(6,*)'u2_6',idt,u2%v(1,1,1)
+        CALL Y_Diff(CmSqrt,u2)
+        write(6,*)'u2_7',idt,u2%v(1,1,1)
+        CALL X_Diff(CmSqrt,u2)
+        write(6,*)'u2_8',idt,u2%v(1,1,1)
       ENDDO ! idt
 
+  	! apply the scaling operator C
+    do iz = 1,NzEarth
+    	do iy = 1,Ny
+    		do ix = 1,Nx
+				u2%v(ix,iy,iz) = Scaling(ix,iy,iz) * u2%v(ix,iy,iz)
+    		end do
+    	end do
+    end do      
+      
+      
   END SUBROUTINE SolveDiff ! SolveDiff
 
 
@@ -410,8 +607,8 @@ ZDF=D0
         DO iy = 1,Ny
           DO ix = 1,Nx
             ux(ix) = u2%v(ix,iy,iz)
-            XDF(1,ix) = Cm%XDIF(1,ix,iy,iz)
-            XDF(2,ix) = Cm%XDIF(2,ix,iy,iz)
+            XDF(1,ix) = CmSqrt%XDIF(1,ix,iy,iz)
+            XDF(2,ix) = CmSqrt%XDIF(2,ix,iy,iz)
           ENDDO ! ix
 
           CALL DPBTRS('U',Nx,1,1,XDF,2,ux,Nx,info)
@@ -454,8 +651,8 @@ ZDF=D0
         DO ix = 1,Nx
           DO iy = 1,Ny
             uy(iy) = u2%v(ix,iy,iz)
-            YDF(1,iy) = Cm%YDIF(1,ix,iy,iz)
-            YDF(2,iy) = Cm%YDIF(2,ix,iy,iz)
+            YDF(1,iy) = CmSqrt%YDIF(1,ix,iy,iz)
+            YDF(2,iy) = CmSqrt%YDIF(2,ix,iy,iz)
           ENDDO ! iy
 
           CALL DPBTRS('U',Ny,1,1,YDF,2,uy,Ny,info)
@@ -499,8 +696,8 @@ ZDF=D0
         DO iy = 1,Ny
           DO iz = 1,NzEarth
             uz(iz) = u2%v(ix,iy,iz)
-            ZDF(1,iz) = Cm%ZDIF(1,ix,iy,iz)
-            ZDF(2,iz) = Cm%ZDIF(2,ix,iy,iz)
+            ZDF(1,iz) = CmSqrt%ZDIF(1,ix,iy,iz)
+            ZDF(2,iz) = CmSqrt%ZDIF(2,ix,iy,iz)
           ENDDO ! iy
 
           CALL DPBTRS('U',NzEarth,1,1,ZDF,2,uz,NzEarth,info)
@@ -516,10 +713,41 @@ ZDF=D0
         ENDDO ! iy
       ENDDO ! ix
 
+      
+      
+
+        
+      
+      
       deallocate(ZDF,uz)
 
   END SUBROUTINE Z_Diff ! Z_DIFF
+! ****************************************************************************
+  function Scaling(i,j,k) result(c)
 
+  	! computes the scaling coefficient based on CmSqrt
+
+    implicit none
+    integer, intent(in)                      :: i,j,k
+    real (kind=prec)                 :: c
+
+    if ((i < 1) .or. (i > CmSqrt%Nx)) then
+    	call errStop('index i out of bounds in Scaling(i,j,k)')
+    else if ((j < 1) .or. (j > CmSqrt%Ny)) then
+    	call errStop('index j out of bounds in Scaling(i,j,k)')
+    else if ((k < 1) .or. (k > CmSqrt%NzEarth)) then
+    	call errStop('index k out of bounds in Scaling(i,j,k)')
+    end if
+
+	if (CmSqrt%mask%v(i,j,k) == AIR) then
+		c = 0.0
+	else if (CmSqrt%mask%v(i,j,k) == OCEAN) then
+		c = 0.0
+	else
+		c = 1.0
+	end if
+
+  end function Scaling
 !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 !...  Copyright (C) 2006 Weerachai Siripunvaraporn. All rights reserved.

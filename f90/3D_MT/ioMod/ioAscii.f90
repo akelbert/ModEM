@@ -504,7 +504,7 @@ Contains
       close(fid)
       end subroutine write_solnVectorMTX
 
-******************************************************************
+!******************************************************************
 !      subroutine read_solnVectorMTX(fid,cfile,eAll)
 !
 !      !  open cfile on unit fid, writes out object of
