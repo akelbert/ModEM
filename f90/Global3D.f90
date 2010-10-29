@@ -93,6 +93,12 @@ program earth
 
 	call calc_derivative(f,grad)
 
+  case ('debug_derivative')
+
+    print *,'Calculating responses and the penalty functional derivative.'
+
+    call debug_derivative()
+
   case ('jacobian')
 
 	print *,'Calculating responses and the full Jacobian.'
@@ -200,7 +206,7 @@ program earth
     !   write(0,'(2g15.7)') func2(ifunc)-func1(ifunc),dot_product(da(:),grad(ifunc,:))
     !end do
 
-    write(0,'(a100)') 'Total derivative test based on Taylor series [f(m0+dm) ~ f(m0) + df/dm|_{m0} x dm]'
+    write(0,'(a82)') 'Total derivative test based on Taylor series [f(m0+dm) ~ f(m0) + df/dm|_{m0} x dm]'
     write(0,'(a20,g15.7)') 'f(m0+dm) - f(m0): ',f2-f1
     write(0,'(a20,g15.7)') 'df/dm|_{m0} x dm: ',dotProd(p_delta,grad)
 
@@ -745,7 +751,7 @@ end program earth
 	  end if
 
 	  ! compute and output C and D responses at observatories
-	  call calcResponses(Hj,dat,psi)
+	  call calcResponses(Hj,dat,psi,param)
 	  call outputResponses(psi,outFiles,dat)
 
 	  call calcResiduals(dat,psi,res)
@@ -854,11 +860,11 @@ end program earth
 
 	  ! res = psi-dat (note: multiply by +2 to obtain derivative)
 	  !call calcResiduals(dat,psi,res)
-	  !call OutputResiduals(freq,res,TFList,obsList)
+	  !call outputResiduals(res,outFiles)
 
 	  ! compute the weighted residuals and start the derivative computations
 	  !call calcResiduals(dat,psi,wres,weighted=.TRUE.)
-
+      call outputResiduals(wres,outFiles)
 
 	  ! If computing different kinds of misfits, be consistent;
 	  ! write different kinds into different data structures
@@ -890,6 +896,10 @@ end program earth
 
 	dmisfitSmooth = multBy_CmSqrt(dmisfit)
 
+	! scale misfit derivative by the number of data
+	Ndata = countData(allResp)
+	call scMult(1.0d0/Ndata,dmisfitSmooth,dmisfitSmooth)
+
     call write_modelParam(dmisfitSmooth,cUserDef%fn_gradient)
 	write(0,*) 'Gradient written into file ',trim(cUserDef%fn_gradient)
 
@@ -905,6 +915,259 @@ end program earth
     call deall_dataVector(wres)
 
   end subroutine calc_derivative  ! calc_derivative
+
+  ! ***************************************************************************
+  ! * calc_derivative is a subroutine to calculate specified responses and the
+  ! * full derivative of the penalty functional with respect to the original
+  ! * model parameters for the list of frequencies, and exit. Designed for use
+  ! * by gradient-based inverse solvers.
+
+  subroutine debug_derivative()
+
+    use userdata
+    use global
+    use jacobian
+    use boundaries
+    use output
+    use initFields
+    use dataFunc
+    use dataMisfit
+    use transmitters
+    use dataTypes
+    use dataSens
+    implicit none
+
+    real                                    :: rtime  ! run time
+    real                                    :: ftime  ! run time per frequency
+    real                                    :: stime, etime ! start and end times
+    integer, dimension(8)                   :: tarray ! utility variable
+    integer                                 :: errflag  ! internal error flag
+    real(8)                                 :: omega  ! variable angular frequency
+    integer                                 :: istat,i,j,k
+    type (cvector)                          :: H,B,F,Hconj,B_tilde,dH,dE,Econj,Bzero,dR
+    type (rvector)                          :: dE_real
+    type (rscalar)                          :: drho
+    type (sparsevecc)                       :: Hb
+    type (functional_t)                       :: dataType
+    type (transmitter_t)                      :: freq
+    type (modelParam_t)                       :: dmisfit,dmisfit2,dmisfitSmooth
+    type (solnVector_t)                     :: SOLN
+    type (rhsVector_t)                      :: RHS
+    type (dataVector_t)                     :: dat,psi,res,wres
+    integer                                 :: ifreq,ifunc
+    logical                                 :: adjoint,delta
+    character(1)                            :: cfunc
+    character(80)                           :: fn_err
+
+    ! Start the (portable) clock
+    call date_and_time(values=tarray)
+
+    call initialize_fields(grid,H,Hb)
+    call create_cvector(grid,B,EDGE)
+    call insertBC(Hb,B)
+
+    call create(grid,drho,center)
+
+    do ifreq=1,freqList%n
+
+      dat = allData%d(ifreq)
+
+      stime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+
+      freq = freqList%info(ifreq)
+
+      omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
+
+      write(6,*) 'Solving 3D forward problem for freq ',ifreq,freq%value
+
+      ! solve A <h> = <b> for vector <h>
+      adjoint=.FALSE.
+      call operatorM(H,B,omega,rho%v,grid,fwdCtrls,errflag,adjoint)
+      !call create_V_Cnode(grid,H,edge)
+      !H%x = C1
+      !H%y = C1
+      !H%z = C1
+
+      ! compute and output fields & C and D responses at cells
+      call outputSolution(freq,H,slices,grid,cUserDef,rho%v,'h')
+
+      ! compute and output C and D responses at observatories
+      call calcResponses(H,dat,psi,param)
+      call outputResponses(psi,outFiles,dat)
+
+      ! compute and output C and D residuals
+      call calcResiduals(dat,psi,res)
+      !call outputResiduals(res,outFiles)
+
+      ! if computing different kinds of misfits, be consistent;
+      ! write different kinds into different data structures
+      call calcMisfit(res,misfit)
+
+      ! compute the weighted residuals and start the derivative computations
+      call calcResiduals(dat,psi,wres,weighted=.TRUE.)
+      call outputResiduals(wres,outFiles)
+
+      do ifunc=1,nfunc
+
+        print *
+        print *, 'Starting the derivative computations for ',&
+                  trim(TFList%info(ifunc)%name), ' responses...'
+
+        ! $G_\omega r_\omega$
+        !call operatorG(wres%v(ifreq,ifunc,:),H,F)
+        call create_solnVector(grid,ifreq,SOLN)
+        SOLN%vec = H
+        RHS%nonzero_source = .true.
+        call create_rhsVector(grid,ifreq,RHS)
+        call LmultT(SOLN,param,wres,RHS)
+        F = RHS%source
+
+        ! $M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
+        adjoint = .TRUE.
+        delta = .TRUE.
+        ! Forcing term F should not contain any non-zero boundary values
+        call operatorM(dH,F,omega,rho%v,grid,fwdCtrls,errflag,adjoint,delta)
+        !call create_V_Cnode(grid,dH,edge)
+        !dH%x = C1
+        !dH%y = C1
+        !dH%z = C1
+        call outputSolution(freq,dH,slices,grid,cUserDef,rho%v,'dh')
+
+   ! compute dE = $(C^\dag)^T$ dH
+   call operatorD_Si_divide(dH,grid)
+   call operatorC(dH,dE,grid)
+   !call operatorD_l_mult(dE,grid)
+
+   ! Insert boundary conditions in Hj
+   call createBC(Hb,grid)
+   call insertBC(Hb,H)
+
+   open(ioWrite,file='temp.h')
+   call write_cvector(ioWrite,H)
+   close(ioWrite)
+
+   ! compute Ej = $\bar{C}$ Hj ... we are taking transposes, so don't conjugate Hj
+   !Hconj = conjg_cvector_f(H)
+   Hconj = H
+   call operatorD_l_mult(Hconj,grid)
+   call operatorC(Hconj,Econj,grid)
+   !call operatorD_Si_divide(Econj,grid)
+
+   open(ioWrite,file='temp.de')
+   call write_cvector(ioWrite,dE)
+   close(ioWrite)
+
+   open(ioWrite,file='temp.econj')
+   call write_cvector(ioWrite,Econj)
+   close(ioWrite)
+
+   ! compute dE = diag($\bar{C}$ Hj) $(C^\dag)^T$ dH
+   call diagMult(Econj,dE,dE)
+
+   ! Map from faces back to model parameter space: real part
+   ! ... all this is somewhat confusing since
+   ! L \rho = l^F \rho^F (S^F)^{-1}. So, L already does multiplication by length elements
+   ! division by area elements (parts of the curl on primary and dual grids). Will clean
+   ! this up later; for now, keep as is.
+   dE_real = real(dE)
+   call operatorLt(drho,dE_real,grid)
+   call operatorPt(drho,dmisfit,grid,param,rho)
+   call scMult(MinusONE,dmisfit,dmisfit)
+   call outputModel('drho.rho',grid,drho%v)
+   call write_modelParam(dmisfit,'dmisfit.prm')
+
+!           ! Pre-divide the interior components of dH by elementary areas
+!        call operatorD_Si_divide(dH,grid)
+!
+!        ! $C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
+!        call createBC(Hb,grid)
+!        call insertBC(Hb,dH)
+!        call operatorC(dH,dE,grid)
+!
+!        !   cfunc = trim(TFList%info(ifunc)%name)
+!        !   fn_err = trim(outFiles%fn_err)//trim(cfunc)
+!        !   call initFileWrite(fn_err,ioERR)
+!        !   do i= 1,grid%nx
+!        !     do j =1,grid%ny
+!        !       do k =1,grid%nz
+!        !         if (dreal(dE%y(i,j,k)) > 1.0) then
+!        !           write(ioERR,*) i,j,k, dreal(dH%y(i,j,k)), dreal(dE%y(i,j,k))
+!        !         end if
+!        !       end do
+!        !     end do
+!        !   end do
+!        !   close(ioERR)
+!
+!        ! $\bar{\e} = C \bar{\h}$
+!        Hconj = conjg_cvector_f(H)
+!        call operatorD_l_mult(Hconj,grid)
+!        call operatorC(Hconj,Econj,grid)
+!
+!        ! $D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega )$
+!        !dE = Econj * dE
+!        call diagMult_cvector(Econj,dE,dE)
+!
+!        ! $\Re( D_{\bar{\e}} C D_{S_i}^{-1} M*^{-1}_{\rho,-\omega} ( G_\omega r_\omega ) )$
+!        dE_real = real_cvector_f(dE)
+!
+!        ! $L^T \delta{R}$
+!        call operatorLt(drho,dE_real,grid)
+!
+!        call outputModel('drho.rho',grid,drho%v)
+!
+!        ! $P^T L^T \delta{R}$
+!        call operatorPt(drho,dmisfit,grid,param,rho)
+!
+!        dmisfit%c%value = -2.0d0 * dmisfit%c%value
+!        !dmisfit = ScMultParamY_f(-2.0d0,dmisfit)
+!        !dmisfit = -2. * dmisfit
+
+            dmisfitSmooth = multBy_CmSqrt(dmisfit)
+
+        call getParamValues_modelParam(dmisfitSmooth,misfit%dRda(ifreq,ifunc,:))
+
+      end do
+
+      call date_and_time(values=tarray)
+      etime = tarray(5)*3600 + tarray(6)*60 + tarray(7) + 0.001*tarray(8)
+      ftime = etime - stime
+      print *,'Time taken (secs) ',ftime
+      print *
+      rtime = rtime + ftime
+
+    end do
+
+    ! Output the summary and exit
+    call misfitSumUp(p_input,misfit,misfitValue,dmisfitValue)
+    call write_modelParam(dmisfitSmooth,cUserDef%fn_gradient)
+    write(0,*) 'Gradient written into file ',trim(cUserDef%fn_gradient)
+
+    if (output_level>0) then
+    write(0,*)
+    do i=1,freqList%n
+      do j=1,TFList%n
+    write(6,'(a12,i3,a3,a35,i2,a2,g15.7)') 'Misfit for ',misfit%ndat(i,j),&
+            trim(TFList%info(j)%name),' responses, computed for frequency ',i,' :',&
+            misfit%value(i,j)/(2*misfit%ndat(i,j))
+      end do
+    end do
+    end if
+
+    !do i=1,freqList%n
+    !  do j=1,TFList%n
+    !   write(0,'(a40,2i3,i6,g15.7)') 'ifreq,ifunc,ndat,misfit = ',i,j,&
+     !              misfit%ndat(i,j),misfit%value(i,j)/(2*misfit%ndat(i,j))
+    !  end do
+    !end do
+
+    !call outputMisfit(param,misfit,misfitValue,cUserDef)
+    !call outputDerivative(param,misfit,dmisfitValue,cUserDef)
+
+    continue
+
+    call deall(drho)
+
+  end subroutine debug_derivative  ! calc_derivative
 
 
   ! ***************************************************************************

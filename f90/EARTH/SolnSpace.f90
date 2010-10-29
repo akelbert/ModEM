@@ -139,11 +139,14 @@ Contains
       !  local variables
       integer                   :: j, istat
 
-      do j = 1,eAll%nTx
-        call deall_solnVector(eAll%solns(j))
-      end do
+      if (eAll%allocated) then
+        do j = 1,eAll%nTx
+          call deall_solnVector(eAll%solns(j))
+        end do
+      end if
 
       if (associated(eAll%solns)) deallocate(eAll%solns, STAT=istat)
+      eAll%nTx = 0
       eAll%allocated = .false.
 
    end subroutine deall_solnVectorMTX
@@ -772,11 +775,14 @@ Contains
       !  local variables
       integer                           :: j, istat
 
-      do j = 1,bAll%nTx
-        call deall_rhsVector(bAll%combs(j))
-      end do
+      if (bAll%allocated) then
+        do j = 1,bAll%nTx
+          call deall_rhsVector(bAll%combs(j))
+        end do
+      end if
 
       if (associated(bAll%combs)) deallocate(bAll%combs, STAT=istat)
+      bAll%nTx = 0
       bAll%allocated = .false.
 
    end subroutine deall_rhsVectorMTX

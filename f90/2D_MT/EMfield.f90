@@ -1,17 +1,17 @@
 module EMfield
 !   module for basic objects used to represent solutions to
-!   the discretized equations, including basic create/destroy 
+!   the discretized equations, including basic create/destroy
 !   routines, vector space arithmetic, dot products
 !   Also contains routines for sparse vectors, allowing for
 !   similar vector space operations (including operations on
 !   full and sparse vectors together)
 
-!  Sparse vectors are used for representation of data functionals, 
+!  Sparse vectors are used for representation of data functionals,
 !  and only complex data types are supported.
 ! Only those routines needed for modeling and initial work on 2D
 !   inversion have been developed here (less than for 3D).
 !  NOTE that for 2D we only deal with scalar fields, defined either
-!   on nodes or cells ... these are distinguished through 
+!   on nodes or cells ... these are distinguished through
 !   structure field gridType, which can be either NODE or CELL
 !  For full-sparse operations full vectors are stored as type
 !   Vec2D ... gridTypes should match!
@@ -51,13 +51,13 @@ implicit none
      type (grid_t), pointer		:: grid
 
   end type sparsevecc
- 
+
   !  full storage vector routines
   public	:: create_cvector,deall_cvector
   public	:: dotProd_cvector,zero_cvector,copy_cvector
 
   !  sparse storage vector routines
-  public	:: create_sparsevecc, deall_sparsevecc 
+  public	:: create_sparsevecc, deall_sparsevecc
   public	:: linComb_sparsevecc
   public	:: copy_sparsevecc, scMult_sparsevecc
 
@@ -86,6 +86,7 @@ contains
        type (cvector), intent(inout)		:: vec
        !  local variables
        integer 					::Nz,Ny,Nza,NzEarth
+       integer                  ::istat
 
        Nz = grid%Nz
        Nza = grid%Nza
@@ -96,24 +97,24 @@ contains
           case (NODE)
             vec%N1 = Ny+1
             vec%N2 = Nz+1
-            allocate(vec%v(Ny+1,Nz+1))
+            allocate(vec%v(Ny+1,Nz+1),STAT=istat)
           case (NODE_EARTH)
             vec%N1 = Ny+1
             vec%N2 = NzEarth+1
-            allocate(vec%v(Ny+1,NzEarth+1))
+            allocate(vec%v(Ny+1,NzEarth+1),STAT=istat)
           case (CELL)
             vec%N1 = Ny
             vec%N2 = Nz
-            allocate(vec%v(Ny,Nz))
+            allocate(vec%v(Ny,Nz),STAT=istat)
           case (CELL_EARTH)
             vec%N1 = Ny
             vec%N2 = NzEarth
-            allocate(vec%v(Ny,NzEarth))
+            allocate(vec%v(Ny,NzEarth),STAT=istat)
           case (EDGE_EARTH)
             ! allocates for all edges, including boundaries
             vec%N1 = Ny+1
             vec%N2 = NzEarth+1
-            allocate(vec%v(Ny+1,NzEarth+1))
+            allocate(vec%v(Ny+1,NzEarth+1),STAT=istat)
           case default
              write(0,*) 'This gridType not coded'
              return
@@ -128,17 +129,18 @@ contains
      subroutine deall_cvector(vec)
        implicit none
        type (cvector), intent(inout)   :: vec
-       if (associated(vec%v)) deallocate(vec%v)
+       integer istat
+       if (associated(vec%v)) deallocate(vec%v,STAT=istat)
        vec%allocated = .false.
        vec%gridType = ''
-       nullify(vec%grid, vec%v)
+       nullify(vec%grid)
      end subroutine deall_cvector
 
    !**********************************************************************
    function dotProd_cvector(e1,e2,conj_Case) result(c)
 
    !   dot product of two model space (conductivity parameter)
-   !    objects; implementation for 
+   !    objects; implementation for
      type(cvector), intent(in)		:: e1,e2
      logical, intent(in)		:: conj_case
      complex(kind=prec)	:: c
@@ -147,20 +149,20 @@ contains
      integer				:: j,k
 
      if((e1%N1 .ne. e2%N1).or. (e1%N2 .ne. e2%N2)) then
-        call errStop('size of m1, m2 incompatable in EarthCondDotProd') 
+        call errStop('size of m1, m2 incompatable in EarthCondDotProd')
      endif
 
      c = C_ZERO
      if(conj_case) then
         do k = 1,e1%N2
            do j = 1,e1%N1
-              c = c + conjg(e1%v(j,k))*e2%v(j,k) 
+              c = c + conjg(e1%v(j,k))*e2%v(j,k)
            enddo
         enddo
      else
         do k = 1,e1%N2
            do j = 1,e1%N1
-              c = c + e1%v(j,k)*e2%v(j,k) 
+              c = c + e1%v(j,k)*e2%v(j,k)
            enddo
         enddo
      endif
@@ -183,7 +185,7 @@ contains
 
      type(cvector), intent(in)		:: eIn
      type(cvector), intent(inout)	:: eOut
-   
+
      ! make sure eOut is allocated, and of same size; if not same
      !   size, deallocate and allocate as correct size; otherwise
      !   do nothing (use m as input ... allowing m to overwrite m1)
@@ -199,7 +201,7 @@ contains
 
    end subroutine copy_cvector
 
-!   Sparse vector routines 
+!   Sparse vector routines
 ! **********************************************************************
   ! delete/ deallocate the sparse vector
   subroutine deall_sparsevecc(oldLC)
@@ -225,23 +227,23 @@ contains
   ! create an object of type sparsevecc of length nCoeff
   subroutine create_sparsevecc(grid,gridType,nCoeff,newLC)
 
-    implicit none	
+    implicit none
     type(grid_t), intent(in), target	:: grid
     character (len=80), intent(in)     	:: gridType
     integer, intent(in) 		:: nCoeff
     type (sparsevecc), intent(inout) 	:: newLC
     integer				:: status
-    
+
     if(newLC%allocated) then
        call deall_sparsevecc(newLC)
     endif
 
     newLC%allocated = .true.
-    allocate(newLC%j(nCoeff),STAT=status) 
+    allocate(newLC%j(nCoeff),STAT=status)
     newLC%allocated = newLC%allocated .and. (status .eq. 0)
-    allocate(newLC%k(nCoeff),STAT=status) 
+    allocate(newLC%k(nCoeff),STAT=status)
     newLC%allocated = newLC%allocated .and. (status .eq. 0)
-    allocate(newLC%c(nCoeff),STAT=status) 
+    allocate(newLC%c(nCoeff),STAT=status)
     newLC%allocated = newLC%allocated .and. (status .eq. 0)
 
     newLC%nCoeff = nCoeff
@@ -309,7 +311,7 @@ contains
       endif
     enddo
   end subroutine linComb_sparsevecc
-  
+
   ! **********************************************************************
   ! multiplication of a sparse vector by a scalar, output as a sparse vector
   ! allocates (or reallocates) output sparse vector Loc
@@ -335,7 +337,7 @@ contains
     Loc%c(1:nm) = cs*Lic%c
 
   end subroutine scMult_sparsevecc
-  
+
   ! **********************************************************************
   ! copy a sparse 2D complex vector from SV1 to SV2 ...
   ! 		can interface to =
@@ -372,7 +374,7 @@ contains
     complex(kind=prec)			:: c
     integer					:: i
     integer					:: yi, zi
-    
+
     if(FV%gridType == SV%gridType) then
        c = C_ZERO
        ! sum over  non-zero terms in sparse vector (conjugate sparse)
@@ -398,11 +400,11 @@ contains
 
   end function dotProd_scvector
   ! **********************************************************************
-  ! compute sum cs*SV + V where SV is a complex sparse vector. V is 
-  ! a complex 2D array of type cvector, and cs is a complex scalar; result 
-  ! overwrites V. Can also be used to construct a complex full vector 
+  ! compute sum cs*SV + V where SV is a complex sparse vector. V is
+  ! a complex 2D array of type cvector, and cs is a complex scalar; result
+  ! overwrites V. Can also be used to construct a complex full vector
   ! from a sparse complex vector if cs = (1.0, 0.0) and V = 0 (initially)
-  ! or copy from a sparse vector to a full vector 
+  ! or copy from a sparse vector to a full vector
   subroutine add_scvector(cs,SV,FV)
 
     implicit none
@@ -414,7 +416,7 @@ contains
 
     if(FV%gridType == SV%gridType) then
        ! loop over non-zero terms in sparse vector, adding to
-       ! corresponding terms in full vector 
+       ! corresponding terms in full vector
        do i = 1,SV%nCoeff
           yi = SV%j(i)
           zi = SV%k(i)

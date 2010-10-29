@@ -10,6 +10,7 @@ module dataMisfit
   use SolnSpace
   use DataSpace
   use dataTypes
+  use DataFunc
   implicit none
 
   ! ***************************************************************************
@@ -79,13 +80,15 @@ Contains
   ! ***************************************************************************
   ! * calcResponses is the subroutine to compute the values of data functionals
 
-  subroutine calcResponses(H,dat,psi)
+  subroutine calcResponses(H,dat,psi,m0)
 
 	!uses: TFList,obsList
 
 	type (dataVector_t), intent(in)			:: dat
 	type (dataVector_t), intent(inout)		:: psi
 	type (cvector), intent(in)				:: H
+	type (modelParam_t), intent(in)         :: m0
+	complex(8)                              :: Resp
 	integer									:: i,j,k,itype,iobs,nSite
 
     psi = dat
@@ -94,21 +97,31 @@ Contains
 	do j=1,dat%ndt
 	  itype = dat%data(j)%dataType
 	  nSite = dat%data(j)%nSite
+!	  do k=1,nSite
+!	      iobs = psi%data(j)%rx(k)
+!	      call dataResp(H,m0,itype,iobs,psi%data(j)%value(:,k))
+!          psi%data(j)%error = 0.0d0
+!          psi%data(j)%errorBar = .FALSE.
+!	  end do
 	  select case ( TFList%info(itype)%name )
 	  case ('C')
 		do k=1,nSite
 		  iobs = psi%data(j)%rx(k)
-		  psi%data(j)%value = dataResp_rx(C_ratio,obsList%info(iobs),H)
-		  psi%data(j)%error = 0.0d0
-          psi%data(j)%errorBar = .FALSE.
+		  Resp = dataResp_rx(C_ratio,obsList%info(iobs),H)
+		  psi%data(j)%value(1,k) = dreal(Resp)
+          psi%data(j)%value(2,k) = dimag(Resp)
+		  psi%data(j)%error(:,k) = 0.0d0
 		end do
+        psi%data(j)%errorBar = .FALSE.
 	  case ('D')
 		do k=1,nSite
           iobs = psi%data(j)%rx(k)
-          psi%data(j)%value = dataResp_rx(D_ratio,obsList%info(iobs),H)
-          psi%data(j)%error = 0.0d0
-          psi%data(j)%errorBar = .FALSE.
+          Resp = dataResp_rx(D_ratio,obsList%info(iobs),H)
+          psi%data(j)%value(1,k) = dreal(Resp)
+          psi%data(j)%value(2,k) = dimag(Resp)
+          psi%data(j)%error(:,k) = 0.0d0
 		end do
+        psi%data(j)%errorBar = .FALSE.
 	  case default
 		write(0,*) 'Warning: no transfer functions specified to compute'
 		stop
@@ -143,7 +156,7 @@ Contains
 	! Cycle over functional types and the observatories for this frequency
     do j=1,dat%ndt
       itype = dat%data(j)%dataType
-      res%data(j)%value = psi%data(j)%value - dat%data(j)%value
+      res%data(j)%value = dat%data(j)%value - psi%data(j)%value
 	end do
 
 	! If instead weighted responses are required, divide by error squared

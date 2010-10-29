@@ -191,6 +191,10 @@ contains
       integer                           :: j, istat
       real(kind=prec), dimension(:,:), allocatable :: vr,vi
 
+      if (.not. e%allocated) then
+        call errStop('input solution vector not allocated in random_solnVector')
+      end if
+
       allocate(vr(e%vec%N1,e%vec%N2),vi(e%vec%N1,e%vec%N2),STAT=istat)
       call random_number(vr)
       call random_number(vi)
@@ -233,11 +237,14 @@ contains
       !  local variables
       integer                           :: j, istat
 
-	  do j = 1,eAll%nTx
-	  	call deall_solnVector(eAll%solns(j))
-	  end do
+      if (eAll%allocated) then
+	    do j = 1,eAll%nTx
+	  	  call deall_solnVector(eAll%solns(j))
+	    end do
+	  end if
 
       if (associated(eAll%solns)) deallocate(eAll%solns, STAT=istat)
+      eAll%nTx = 0
       eAll%allocated = .false.
 
    end subroutine deall_solnVectorMTX
@@ -250,6 +257,10 @@ contains
 
       !  local variables
       integer                           :: j, istat
+
+      if (.not. eAll%allocated) then
+        call errStop('input solution vector not allocated in random_solnVector')
+      end if
 
       do j = 1,eAll%nTx
         if (present(eps)) then
@@ -547,11 +558,14 @@ contains
       !  local variables
       integer                           :: j, istat
 
-      do j = 1,bAll%nTx
-        call deall_rhsVector(bAll%combs(j))
-      end do
+      if (bAll%allocated) then
+        do j = 1,bAll%nTx
+          call deall_rhsVector(bAll%combs(j))
+        end do
+      end if
 
       if (associated(bAll%combs)) deallocate(bAll%combs, STAT=istat)
+      bAll%nTx = 0
       bAll%allocated = .false.
 
    end subroutine deall_rhsVectorMTX

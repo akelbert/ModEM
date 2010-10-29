@@ -11,6 +11,9 @@ module model_operators
   use file_units
   use utilities
   use modeldef
+#ifdef MPI
+  use MPI_declaration
+#endif
   implicit none
 
   ! * BOP
@@ -95,6 +98,11 @@ module model_operators
   public			:: multBy_CmSqrt, multBy_Cm
 
 Contains
+
+#ifdef MPI
+#include "model_operators_MPI.inc"
+#endif
+
 
   ! **********************************************************************
   ! * BOP
@@ -1354,11 +1362,11 @@ Contains
 	end if
 
 	if (verbose>0) then
-  		write(0,'(a50,i3)') 'Number of layers in script: ',P%nL
+  		write(0,'(a50,i4)') 'Number of layers in script: ',P%nL
 		do j=1,P%nL
-    		write(0,'(a46,i2,a2,i3)') 'Number of coefficients in layer ',j,': ',count(.not.P%c(j,:)%frozen)
+    		write(0,'(a46,i2,a2,i4)') 'Number of coefficients in layer ',j,': ',count(.not.P%c(j,:)%frozen)
 		end do
-  		write(0,'(a50,i3)') 'Number of variable parameters in script: ',count(.not.P%c%frozen)
+  		write(0,'(a50,i4)') 'Number of variable parameters in script: ',count(.not.P%c%frozen)
 		write(0,*)
 	end if
 
