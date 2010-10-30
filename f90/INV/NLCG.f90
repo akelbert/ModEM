@@ -600,11 +600,10 @@ Contains
    	    dataFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.imp'
         call write_dataVectorMTX(dHat,trim(dataFile))
       end if
-      ! compute residual for output: res = (d-dHat)/err
+      ! compute residual for output: res = d-dHat; do not normalize by errors
    	  if (output_level > 2) then
         res = d
         call linComb(ONE,d,MinusONE,dHat,res)
-        call normalize_dataVectorMTX(res,1)
    	    resFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.res'
         call write_dataVectorMTX(res,trim(resFile))
       end if

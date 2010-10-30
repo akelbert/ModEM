@@ -130,6 +130,9 @@ module modeldef
 
 	  logical											  :: allocated=.FALSE.
 
+      ! this is needed for output: true only after CmSqrt has been applied to the model
+      logical                                             :: smoothed=.FALSE.
+
 	  ! temporary:  .true. for function outputs only; necessary to avoid memory leaks
 	  ! (probably will not be needed in the future when compilers will support
 	  ! ISO/IEC 15581 - the "allocatable array extension")

@@ -125,6 +125,7 @@ Contains
 	P%nF = 0
 	P%nL = 0
 	P%nc = 0
+	P%smoothed  = .FALSE.
 	P%allocated = .FALSE.
 
   end subroutine deall_modelParam
@@ -352,6 +353,7 @@ Contains
 	end do
 
 	P%nc = 0
+	P%smoothed = .FALSE.
 	P%allocated = .TRUE.
 
   end subroutine create_modelParam
@@ -846,6 +848,7 @@ Contains
 	  end do
 	end do
 
+    P2%smoothed  = P1%smoothed
 	P2%allocated = P1%allocated
 
 	if (P1%temporary) then
@@ -1069,6 +1072,7 @@ Contains
 	end if
 
 	P%c%value = v * P1%c%value
+	P%smoothed = P1%smoothed
 
 
   end subroutine scMult_modelParam
@@ -1092,6 +1096,7 @@ Contains
     end if
 
     P%c%value = P%c%value + v * P1%c%value
+    P%smoothed = P1%smoothed
 
 
   end subroutine scMultAdd_modelParam
@@ -1118,7 +1123,7 @@ Contains
 	end if
 
 	P%c%value = P1%c%value / v
-
+    P%smoothed = P1%smoothed
 	P%temporary = .true.
 
   end function scDiv_modelParam_f
@@ -1165,6 +1170,8 @@ Contains
 	    end if
 	  end do
 	end do
+
+	P%smoothed = P1%smoothed .or. P2%smoothed
 
   end subroutine linComb_modelParam
 
@@ -1268,6 +1275,7 @@ Contains
 	call smoothH_modelParam(P)
 	call smoothV_modelParam(P)
 
+	P%smoothed = .true.
 	P%temporary = .true.
 
   end function multBy_CmSqrt
@@ -1403,19 +1411,20 @@ Contains
   ! * This is an essential subroutine that is used to output the model
   ! * solution in e.g. NLCG. This solution is then used as the prior/initial
   ! * model, or to compute the fields.
-  ! * Important: since we do not have an "un-smooth" subroutine Cm^{-1},
-  ! * we output the "final" smooth model mhat instead of m. This means
-  ! * that we should not write the regularisation parameters. If we do,
-  ! * and then use the model as input, the forward solver will smooth
-  ! * the input according to the information in the file. We do not want
-  ! * this to happen. Thus, we output the final model, and no regularisation.
-  ! * BOP
+  ! * We output both the final "smooth" model m = Cm^{1/2} mhat + m0,
+  ! * and the "rough" model mhat, which is the result of the inverse search.
+  ! * The smooth model m is best used to save and to plot the model; while
+  ! * the rough model mhat is best used in conjunction with the prior to
+  ! * restart the inversion, or compute the responses / derivatives.
+  ! * Therefore, to avoid confusion we DO NOT write the regularization
+  ! * parameters for a model if the smoothing has already been applied.
+  ! * Regularization parameters are only needed to smooth a rough model,
+  ! * so we leave them out for m (and leave them in for mhat).
   subroutine write_modelParam(P,cfile)
 
     implicit none
     type (modelParam_t), intent(in)         :: P
 	character(*), intent(in)				:: cfile
-    ! * EOP
 
 	integer									:: lmax,i,j,k,istat
     character(6)							:: if_log_char,if_var_char
@@ -1437,10 +1446,13 @@ Contains
 		write(ioPrm,'(a6)',advance='no') if_log_char
 		write(ioPrm,'(a8,i2)',advance='no') ' degree ',lmax
 		write(ioPrm,'(a7,g10.5)',advance='no') ' layer ',P%L(j)%depth
-		! DO NOT WRITE THE REGULARISATION PARAMETERS...
-		!write(ioPrm,'(a5,2g10.5)') ' reg ',P%L(j)%alpha, P%L(j)%beta
-		! INSTEAD, START NEW LINE:
-		write(ioPrm,*)
+		if (P%smoothed) then
+          ! OUTPUT SMOOTH MODEL SO DO NOT WRITE THE REGULARISATION PARAMETERS...
+		  ! INSTEAD, START NEW LINE:
+		  write(ioPrm,*)
+		else
+		  write(ioPrm,'(a5,2g10.5)') ' reg ',P%L(j)%alpha, P%L(j)%beta
+		end if
 		write(ioPrm,*) '  l   m   value  	  min     	max'
 		do i=1,P%nF
 			if (.not.P%c(j,i)%exists) then
@@ -1502,10 +1514,13 @@ Contains
         write(ioSens,'(a6)',advance='no') if_log_char
         write(ioSens,'(a8,i2)',advance='no') ' degree ',lmax
         write(ioSens,'(a7,g10.5)',advance='no') ' layer ',P(1)%L(j)%depth
-        ! DO NOT WRITE THE REGULARISATION PARAMETERS...
-        !write(ioSens,'(a5,2g10.5)') ' reg ',P(1)%L(j)%alpha, P(1)%L(j)%beta
-        ! INSTEAD, START NEW LINE:
-        write(ioSens,*)
+        if (P(1)%smoothed) then
+          ! OUTPUT SMOOTH MODEL SO DO NOT WRITE THE REGULARISATION PARAMETERS...
+          ! INSTEAD, START NEW LINE:
+          write(ioPrm,*)
+        else
+          write(ioPrm,'(a5,2g10.5)') ' reg ',P(1)%L(j)%alpha, P(1)%L(j)%beta
+        end if
         write(ioSens,*) '  l   m   value       min       max'
         do i=1,P(1)%nF
             if (.not.P(1)%c(j,i)%exists) then
@@ -1667,6 +1682,8 @@ Contains
     write(6,*)
 
     close(ioPrm)
+
+    P%smoothed = .FALSE.
 
     return
 
