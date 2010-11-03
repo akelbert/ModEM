@@ -31,8 +31,8 @@ Subroutine MPI_constructor(ctrl)
      
           call MPI_INIT( ierr )
           call MPI_COMM_RANK( MPI_COMM_WORLD, taskid, ierr )
-          call MPI_COMM_SIZE( MPI_COMM_WORLD, numtasks, ierr )
-          numworkers = numtasks-1
+          call MPI_COMM_SIZE( MPI_COMM_WORLD, toatl_number_of_Proc, ierr )
+          number_of_workers = toatl_number_of_Proc-1
           
 call create_worker_job_task_mpi
 call initUserCtrl(ctrl)
@@ -57,6 +57,8 @@ Subroutine Master_Job_fwdPred(sigma,d_pred,eAll)
    integer nTx,ndata,ndt
    logical keep_soln
    type(dataVector_t)                 :: d_temp_TX
+   Integer        :: iper
+   Integer        :: per_index,pol_index,stn_index
    
    keep_soln = present(eAll)
 
@@ -101,7 +103,7 @@ Subroutine Master_Job_fwdPred(sigma,d_pred,eAll)
                           dest=dest+1                          
                           call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
                           write(file_id,*) 'FWD: Send Per. # ',per_index , 'to node # ',dest    
-                          if (dest .ge. numworkers) then
+                          if (dest .ge. number_of_workers) then
                             goto 10
                           end if 
                           
@@ -173,9 +175,11 @@ Subroutine Master_Job_Compute_J(d,sigma,dsigma,eAll)
    type(sensMatrix_t), pointer	:: sens(:)
    type(solnVectorMTX_t), intent(inout), optional	:: eAll
    
-   integer nTx,nTot,ii,j,row_index,total_stn,jj,dt_index,idt
+   integer nTx,nTot,ii,j,row_index,total_stn,jj,dt_index
    logical savedSolns
    type(dataVectorMTX_t)       	:: d_pred
+   Integer        :: iper,istn,idt
+   Integer        :: per_index,pol_index,stn_index
    
      savedSolns = present(eAll)
      
@@ -235,7 +239,7 @@ Subroutine Master_Job_Compute_J(d,sigma,dsigma,eAll)
                          
 		                             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
 		                             write(file_id,1000) per_index , dt_index,stn_index, dest    
-					                          if (dest .ge. numworkers) then
+					                          if (dest .ge. number_of_workers) then
 					                            goto 11
 					                          end if 
 		                        end do !istn
@@ -370,6 +374,8 @@ Subroutine Master_job_JmultT(sigma,d,dsigma,eAll,s_hat)
    type(rhsVector_t) 		:: comb
    character(3)         :: iterChar
    character*2          			:: mode
+   Integer        :: iper
+   Integer        :: per_index,pol_index,stn_index
    savedSolns = present(eAll)
    returne_m_vectors= present(s_hat)
   ! nTX is number of transmitters;
@@ -411,7 +417,7 @@ Subroutine Master_job_JmultT(sigma,d,dsigma,eAll,s_hat)
                           
                           call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                   
                           write(file_id,*) 'JmultT: Send Per. # ',per_index , 'to node # ',dest    
-                          if (dest .ge. numworkers) then
+                          if (dest .ge. number_of_workers) then
                             goto 20
                           end if 
                           
@@ -498,6 +504,8 @@ Subroutine Master_job_Jmult(mHat,m,d,eAll)
    
    integer nTx,nTot,m_dimension,iDT,iTx,ndata,ndt
    logical savedSolns
+   Integer        :: iper
+   Integer        :: per_index,pol_index,stn_index
 
    savedSolns = present(eAll)
   ! nTX is number of transmitters;
@@ -525,7 +533,7 @@ Subroutine Master_job_Jmult(mHat,m,d,eAll)
                           
                           call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                   
                           write(file_id,*) 'Jmult: Send Per. # ',per_index , 'to node # ',dest    
-                          if (dest .ge. numworkers) then
+                          if (dest .ge. number_of_workers) then
                             goto 20
                           end if 
                           
@@ -598,12 +606,13 @@ Subroutine Master_job_Distribute_Data(d)
     integer nTx,nTot,ndata
     DOUBLE PRECISION ,pointer:: buffer(:)
      integer buffer_size,ndt
+     Integer        :: iper
    ! nTX is number of transmitters;
    nTx = d%nTx
    ! nTot total number of data points
    nTot = countData(d)
 
-        do dest=1,numworkers
+        do dest=1,number_of_workers
             worker_job_task%what_to_do='Distribute Data'
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
@@ -641,11 +650,12 @@ Subroutine Master_job_Distribute_Model(sigma,delSigma)
     Integer,pointer:: buffer(:)
     integer buffer_size,m_dimension
     logical send_delSigma
+    Integer        :: iper
     
  send_delSigma = present(delSigma) 
  
  if (send_delSigma) then
-         do dest=1,numworkers
+         do dest=1,number_of_workers
             worker_job_task%what_to_do='Distribute delSigma'
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
@@ -655,7 +665,7 @@ Subroutine Master_job_Distribute_Model(sigma,delSigma)
          call MPI_BCAST(model_para_vec(1),buffer_size,MPI_REAL8,0, MPI_COMM_WORLD,ierr)
         
  
-        do dest=1,numworkers
+        do dest=1,number_of_workers
             worker_job_task%what_to_do='Distribute Model'
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
@@ -666,7 +676,7 @@ Subroutine Master_job_Distribute_Model(sigma,delSigma)
          call MPI_BCAST(model_para_vec(1),buffer_size,MPI_REAL8,0, MPI_COMM_WORLD,ierr)
 
 else
-        do dest=1,numworkers
+        do dest=1,number_of_workers
             worker_job_task%what_to_do='Distribute Model'
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
@@ -688,18 +698,19 @@ Subroutine Master_job_Distribute_eAll(d,eAll)
    type(dataVectorMTX_t), intent(in)		:: d
    type(solnVectorMTX_t), intent(in)  	:: eAll
        integer nTx,nTot
+       Integer        :: iper
        
        
     nTx = d%nTx
     nTot = countData(d) !d%Ndata 
-        do dest=1,numworkers
+        do dest=1,number_of_workers
             worker_job_task%what_to_do='Distribute eAll'
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
 
   do iper=1,d%nTx
        which_per=iper
-       do dest=1,numworkers
+       do dest=1,number_of_workers
          call create_eAll_mpi(eAll)
          call MPI_SEND(eAll,1,eAll_mpi,dest, FROM_MASTER,MPI_COMM_WORLD, ierr)
          call MPI_TYPE_FREE (eAll_mpi, IERR)   
@@ -719,6 +730,7 @@ Subroutine Master_job_Collect_eAll(d,eAll)
    type(solnVectorMTX_t), intent(inout)	:: eAll
    type(solnVector_t)           		:: e0 
    integer nTx,nTot,iTx
+   Integer        :: iper
        
     nTx = d%nTx
 
@@ -766,7 +778,7 @@ subroutine Master_job_keep_prev_eAll
     implicit none
     include 'mpif.h'
 
-        do dest=1,numworkers
+        do dest=1,number_of_workers
             worker_job_task%what_to_do='keep_prev_eAll'
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
@@ -791,7 +803,7 @@ Subroutine Master_job_Distribute_Data_Size(d,sigma0)
      !call create_modelParam_t_mpi(sigma0)
      !modelParam_t_mpi_sing=modelParam_t_mpi
 
-        do dest=1,numworkers
+        do dest=1,number_of_workers
             worker_job_task%what_to_do='Distribute Data_Size'
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
         end do
@@ -813,7 +825,7 @@ Subroutine Master_job_Distribute_userdef_control(ctrl)
        write(6,*)'MASTER: ctrl%output_level ',ctrl%output_level
        write(6,*)'MASTER: ctrl%rFile_fwdCtrl ',trim(ctrl%rFile_fwdCtrl)
        write(6,*)'MASTER: ctrl%rFile_invCtrl ',trim(ctrl%rFile_invCtrl)
-        do dest=1,numworkers
+        do dest=1,number_of_workers
            worker_job_task%what_to_do='Distribute userdef control'
            call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                   
         end do
@@ -835,7 +847,7 @@ Subroutine Master_job_Clean_Memory
     
           write(file_id,*)'Sending Clean memory message to all nodes' 
       
-       do dest=1,numworkers
+       do dest=1,number_of_workers
            worker_job_task%what_to_do='Clean memory'
            call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)  
            call MPI_RECV(worker_job_task,1,worker_job_task_mpi, dest, FROM_WORKER, MPI_COMM_WORLD, STATUS, ierr)                                 
@@ -853,7 +865,7 @@ Subroutine Master_job_Stop_MESSAGE
     
           write(file_id,*)'FWD: Sending stop message to all nodes' 
       
-       do dest=1,numworkers
+       do dest=1,number_of_workers
            worker_job_task%what_to_do='STOP'
            !call MPI_SEND(per_index,1,MPI_INTEGER,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)  
            call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)  
@@ -904,6 +916,8 @@ Subroutine Worker_job (sigma0,d)
    character(80) 		  :: paramType,previous_message
    type(modelParam_t), pointer   :: dsigma_sens(:)
    character*80,pointer,dimension(:)          :: ctrl_vector
+   Integer        :: iper
+   Integer        :: per_index,pol_index,stn_index
 
      real(kind=prec) :: vAir
 
@@ -911,7 +925,6 @@ Subroutine Worker_job (sigma0,d)
 
 nTx=d%nTx
 recv_loop=0
-per_index_vector=0
 previous_message=''
  do 
           recv_loop=recv_loop+1
@@ -1048,7 +1061,7 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'JmultT') then
                        !call MPI_SEND(sigma0,1,modelParam_t_mpi_sing,0, FROM_WORKER,MPI_COMM_WORLD, ierr)
 ! Get back sigma0                        
                        !sigma0 = sigma_temp
-   per_index_vector=0     
+  
                         
 elseif (trim(worker_job_task%what_to_do) .eq. 'Jmult') then
                                    
@@ -1232,7 +1245,7 @@ subroutine create_dvecMTX_mpi(d)
 
     !include 'mpif.h'    
      type(dataVectorMTX_t), intent(in)	:: d
-     integer ii,I1,extent_int,extent_real,extent_logic,extent,ndata
+     integer ii,I1,extent_int,extent_real,extent_logic,extent,ndata,nrx
      
         
 
@@ -1299,7 +1312,7 @@ subroutine create_dvec_mpi(d)
 
     !include 'mpif.h'    
      type(dataVectorMTX_t), intent(in)	:: d
-     integer ii,I1,extent_int,extent_real,extent_logic,ndata
+     integer ii,I1,extent_int,extent_real,extent_logic,ndata,nrx
      
         
 
@@ -1403,72 +1416,6 @@ integer(MPI_ADDRESS_KIND) address1(0:20)
 end subroutine create_worker_job_task_mpi
 
 !##########################################################################
-!Creating an MPI version of userdef_control_MPI 
-subroutine create_userdef_control_MPI(ctrl) 
-    implicit none
-    include 'mpif.h'
-    
-	type(userdef_control), intent(in)   :: ctrl
-	integer :: ii,intex,CHARACTERex,sum1
-	integer(MPI_ADDRESS_KIND) address1(0:20)
-
-	
-   offsets(0) = 0
-   oldtypes(0) = MPI_CHARACTER
-   blockcounts(0) =  80*15
-
-   call MPI_TYPE_EXTENT(MPI_CHARACTER, extent, ierr)
-   offsets(1) = (80*15 * extent)+offsets(0)
-   oldtypes(1) = MPI_REAL8
-   blockcounts(1) = 2
-   		
-   call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION, extent, ierr)
-   offsets(2) = (2* extent)+offsets(1)
-   oldtypes(2) = MPI_CHARACTER
-   blockcounts(2) = 80*2
-   
-   call MPI_TYPE_EXTENT(MPI_CHARACTER, extent, ierr)
-   offsets(3) = (80*2* extent)+offsets(2)
-   oldtypes(3) = MPI_INTEGER
-   blockcounts(3) = 1
-   
-     call MPI_TYPE_STRUCT(4, blockcounts, offsets, oldtypes,userdef_control_MPI, ierr)
-     call MPI_TYPE_COMMIT(userdef_control_MPI, ierr)
-    
-
-      
-   
-      typelist(0) = MPI_CHARACTER                                                 
-      typelist(1) = MPI_REAL8
-      typelist(2) = MPI_CHARACTER
-      typelist(3) = MPI_INTEGER
-
-      
-      block_lengths(0) = 80*13 
-      block_lengths(1) = 2  
-      block_lengths(2) = 80*2
-      block_lengths(3) = 1
-      
-      call MPI_Address(ctrl,                	address1(0), ierr)
-      call MPI_Address(ctrl%job,             	address1(1), ierr)
-      call MPI_Address(ctrl%lambda,          	address1(2), ierr)
-      call MPI_Address(ctrl%rFile_Cov,        	address1(3), ierr)
-      call MPI_Address(ctrl%output_level,       address1(4), ierr)
-
-
-     do ii=0,3
-       displacements(ii) = address1(ii+1) - address1(0)
-     end do   
-     
-     !call MPI_TYPE_STRUCT(4, block_lengths, displacements,typelist, userdef_control_MPI, ierr)   
-     ! call MPI_TYPE_COMMIT(userdef_control_MPI, ierr) 
-
-
-
-
-
-
-end  subroutine create_userdef_control_MPI
 
 
 

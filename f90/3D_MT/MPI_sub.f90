@@ -89,6 +89,41 @@ use ForwardSolver
 
 
 end subroutine create_eAll_mpi
+
+!*************************************************************************
+!Creating an MPI version of userdef_control_MPI 
+subroutine create_userdef_control_MPI(ctrl) 
+    implicit none
+    include 'mpif.h'
+    
+	type(userdef_control), intent(in)   :: ctrl
+	integer :: ii,intex,CHARACTERex,sum1
+	integer(MPI_ADDRESS_KIND) address1(0:20)
+
+	
+   offsets(0) = 0
+   oldtypes(0) = MPI_CHARACTER
+   blockcounts(0) =  80*15
+
+   call MPI_TYPE_EXTENT(MPI_CHARACTER, extent, ierr)
+   offsets(1) = (80*15 * extent)+offsets(0)
+   oldtypes(1) = MPI_REAL8
+   blockcounts(1) = 2
+   		
+   call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION, extent, ierr)
+   offsets(2) = (2* extent)+offsets(1)
+   oldtypes(2) = MPI_CHARACTER
+   blockcounts(2) = 80*2
+   
+   call MPI_TYPE_EXTENT(MPI_CHARACTER, extent, ierr)
+   offsets(3) = (80*2* extent)+offsets(2)
+   oldtypes(3) = MPI_INTEGER
+   blockcounts(3) = 1
+   
+     call MPI_TYPE_STRUCT(4, blockcounts, offsets, oldtypes,userdef_control_MPI, ierr)
+     call MPI_TYPE_COMMIT(userdef_control_MPI, ierr)
+
+end  subroutine create_userdef_control_MPI
 #endif
 
 end module MPI_sub
