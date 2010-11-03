@@ -1,7 +1,8 @@
 ! *****************************************************************************
 module UserCtrl
   ! This module defines the derived data type structure with all filenames
-
+  use utilities
+  
   implicit none
 
   character*1, parameter  :: READ_WRITE = 'R'
@@ -109,6 +110,7 @@ Contains
      character*80, dimension(:), pointer :: temp
      character(*), intent(in)            :: program
      type(userdef_control), intent(out)  :: ctrl
+     logical :: res
 
      call initUserCtrl(ctrl)
 
@@ -361,7 +363,8 @@ Contains
 	    end if
 	    if (narg > 3) then
           read(temp(4),*,iostat=istat) ctrl%lambda
-          if (istat .ne. 0) then
+          res=is_letter(temp(4))
+          if (res) then
             ! check for the inverse solver configuration file
             ctrl%rFile_invCtrl = temp(4)
             inquire(FILE=ctrl%rFile_invCtrl,EXIST=exists)
@@ -374,7 +377,8 @@ Contains
         end if
         if (narg > 4) then
           read(temp(5),*,iostat=istat) ctrl%eps
-          if (istat .ne. 0) then
+          res=is_letter(temp(5))
+          if (res) then
             ! check for the forward solver configuration file
             ctrl%rFile_fwdCtrl = temp(5)
             inquire(FILE=ctrl%rFile_fwdCtrl,EXIST=exists)
@@ -556,5 +560,4 @@ Contains
      ctrl%job = job
 
   end subroutine parseArgs
-
 end module UserCtrl

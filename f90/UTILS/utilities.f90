@@ -341,7 +341,7 @@ Contains
 
   end function isnan
 
-  ! Some Fortran Character String Utilities:
+  ! Some Fortran Character Utilities:
   ! See http://gbenthien.net/strings/Strings.pdf  for more information and addtional subroutines
   !#############################################################################################
   subroutine compact(str)
@@ -518,4 +518,38 @@ subroutine removebksl(str)
 	str=adjustl(outstr)
 
 end subroutine removebksl
+!**********************************************************************
+function is_letter(ch) result(res)
+
+	! Returns .true. if ch is a letter and .false. otherwise
+	
+	character :: ch
+	logical :: res
+	
+	select case(ch)
+	case('A':'Z','a':'z')
+	  res=.true.
+	case default
+	  res=.false.
+	end select
+	return
+
+end function is_letter
+!**********************************************************************
+function is_digit(ch) result(res)
+
+	! Returns .true. if ch is a digit (0,1,...,9) and .false. otherwise
+	
+	character :: ch
+	logical :: res
+	
+	select case(ch)
+	case('0':'9')
+	  res=.true.
+	case default
+	  res=.false.
+	end select
+	return
+
+end function is_digit
 end module utilities
