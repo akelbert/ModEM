@@ -35,7 +35,6 @@ Subroutine MPI_constructor(ctrl)
           number_of_workers = toatl_number_of_Proc-1
           
 call create_worker_job_task_mpi
-call initUserCtrl(ctrl)
 call create_userdef_control_MPI(ctrl)
 
 End Subroutine MPI_constructor
@@ -702,7 +701,6 @@ Subroutine Master_job_Distribute_eAll(d,eAll)
        
        
     nTx = d%nTx
-    nTot = countData(d) !d%Ndata 
         do dest=1,number_of_workers
             worker_job_task%what_to_do='Distribute eAll'
             call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
@@ -711,9 +709,9 @@ Subroutine Master_job_Distribute_eAll(d,eAll)
   do iper=1,d%nTx
        which_per=iper
        do dest=1,number_of_workers
-         call create_eAll_mpi(eAll)
-         call MPI_SEND(eAll,1,eAll_mpi,dest, FROM_MASTER,MPI_COMM_WORLD, ierr)
-         call MPI_TYPE_FREE (eAll_mpi, IERR)   
+          call create_eAll_param_place_holder(eAll)
+          call get_eAll_para_vec(eAll)
+          call MPI_SEND(eAll_para_vec, Nbytes, MPI_PACKED,dest, FROM_MASTER,MPI_COMM_WORLD, ierr) 
         end do
   end do  
 end Subroutine Master_job_Distribute_eAll
@@ -723,10 +721,6 @@ Subroutine Master_job_Collect_eAll(d,eAll)
     implicit none
     include 'mpif.h'
    type(dataVectorMTX_t), intent(in)		:: d
-   type(dataVectorMTX_t)            		:: d_local
-
-   type(solnVectorMTX_t)              	:: eAll_local
-   type(solnVectorMTX_t)              	:: eAll_temp
    type(solnVectorMTX_t), intent(inout)	:: eAll
    type(solnVector_t)           		:: e0 
    integer nTx,nTot,iTx
@@ -751,24 +745,15 @@ Subroutine Master_job_Collect_eAll(d,eAll)
       
             
 
-                      call create_solnVectorMTX(1,eAll_local)
-                      call create_solnVector(grid,1,e0)
-                      call copy_solnVector(eAll_local%solns(1),e0)
-
       do iper=1,d%nTx
             worker_job_task%what_to_do='Send eAll to Master'
             worker_job_task%per_index=iper
             who= eAll_location(iper)
-            which_per=1
-            write(6,*)'Will recv', iper, ' from ', who
-            write(6,*) taskid,eAll%solns(1)%grid%nx
-            
-                   call MPI_SEND(worker_job_task,1,worker_job_task_mpi,who, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
-                   call create_eAll_mpi(eAll_local)
-                   call MPI_RECV(eAll_local%solns(1),1,eAll_mpi ,who, FROM_WORKER,MPI_COMM_WORLD,STATUS, ierr)
-                   call copy_solnVector(eAll%solns(iper),eAll_local%solns(1))
-                   call MPI_TYPE_FREE (eAll_mpi, IERR)
-        
+            which_per=iper
+            call MPI_SEND(worker_job_task,1,worker_job_task_mpi,who, FROM_MASTER, MPI_COMM_WORLD, ierr)                                     
+            call create_eAll_param_place_holder(eAll)
+            call MPI_RECV(eAll_para_vec, Nbytes, MPI_PACKED, who, FROM_WORKER,MPI_COMM_WORLD, STATUS, ierr) 
+            call set_eAll_para_vec(eAll) 
       end do
       
    
@@ -817,14 +802,11 @@ Subroutine Master_job_Distribute_userdef_control(ctrl)
     include 'mpif.h'
     
     type(userdef_control), intent(in)		:: ctrl
-       write(6,*)'MASTER: ctrl%wFile_Sens ',trim(ctrl%wFile_Sens) 
-       write(6,*)'MASTER: ctrl%lambda ',(ctrl%lambda)      
-       write(6,*)'MASTER: ctrl%eps ',(ctrl%eps)    
-       write(6,*)'MASTER: ctrl%rFile_Cov ',trim(ctrl%rFile_Cov)
-       write(6,*)'MASTER: ctrl%search ',trim(ctrl%search)
-       write(6,*)'MASTER: ctrl%output_level ',ctrl%output_level
-       write(6,*)'MASTER: ctrl%rFile_fwdCtrl ',trim(ctrl%rFile_fwdCtrl)
-       write(6,*)'MASTER: ctrl%rFile_invCtrl ',trim(ctrl%rFile_invCtrl)
+    character(20)                               :: which_proc
+       
+        which_proc='Master'
+        call check_userdef_control_MPI (which_proc,ctrl)
+        
         do dest=1,number_of_workers
            worker_job_task%what_to_do='Distribute userdef control'
            call MPI_SEND(worker_job_task,1,worker_job_task_mpi,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)                                   
@@ -917,7 +899,8 @@ Subroutine Worker_job (sigma0,d)
    type(modelParam_t), pointer   :: dsigma_sens(:)
    character*80,pointer,dimension(:)          :: ctrl_vector
    Integer        :: iper
-   Integer        :: per_index,pol_index,stn_index
+   Integer        :: per_index,pol_index,stn_index,eAll_vec_size
+    character(20)                               :: which_proc
 
      real(kind=prec) :: vAir
 
@@ -1111,9 +1094,9 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute Data') then
    call create_solnVectorMTX(nTx,eAll)
               do iper=1,d%nTx
                   which_per=iper
-                  call create_eAll_mpi(eAll)
-                  call MPI_RECV(eAll,1,eAll_mpi ,0, FROM_MASTER,MPI_COMM_WORLD,STATUS, ierr)
-                  call MPI_TYPE_FREE (eAll_mpi, IERR)                   
+                  call create_eAll_param_place_holder(eAll)
+                  call MPI_RECV(eAll_para_vec, Nbytes, MPI_PACKED ,0, FROM_MASTER,MPI_COMM_WORLD,STATUS, ierr)
+                  call set_eAll_para_vec(eAll)                   
               end do  
          eAll_exist=.true.
               
@@ -1141,21 +1124,13 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Distribute userdef control') then
         !call initUserCtrl(ctrl)
 		!call create_userdef_control_MPI(ctrl)
 	  call MPI_BCAST(ctrl,1,userdef_control_MPI,0, MPI_COMM_WORLD,ierr)
-
 	  
+	  if (taskid==1 ) then
+        which_proc='Worker'
+        call check_userdef_control_MPI (which_proc,ctrl)  
+	   end if
+	   
       call initGlobalData(ctrl)
-  	  if (taskid==1 ) then
-       write(6,*)'WORKER: ctrl%wFile_Sens ',trim(ctrl%wFile_Sens) 
-       write(6,*)'WORKER: ctrl%lambda ',(ctrl%lambda)      
-       write(6,*)'WORKER: ctrl%eps ',(ctrl%eps)    
-       write(6,*)'WORKER: ctrl%rFile_Cov ',trim(ctrl%rFile_Cov)
-       write(6,*)'WORKER: ctrl%search ',trim(ctrl%search)
-       write(6,*)'WORKER: ctrl%output_level ',ctrl%output_level
-       write(6,*)'WORKER: ctrl%rFile_fwdCtrl ',trim(ctrl%rFile_fwdCtrl)
-       write(6,*)'MASTER: ctrl%rFile_invCtrl ',trim(ctrl%rFile_invCtrl)
-	  end if
-      
-      
       call setGrid(grid)
       call copy_dataVectorMTX(d ,allData)
       call copy_dataVectorMTX(measu_data ,d)
@@ -1184,20 +1159,14 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Send eAll to Master' ) then
 
 
 
-                       per_index=worker_job_task%per_index
-                       worker_job_task%taskid=taskid
+                   per_index=worker_job_task%per_index
+                   worker_job_task%taskid=taskid
       
-
-                      call create_solnVectorMTX(1,eAll_local)
-                      call create_solnVector(grid,1,e0)
-                      call copy_solnVector(eAll_local%solns(1),e0)
-                      
-
-                      which_per=1
-                      call create_eAll_mpi(eAll_local)
-                      call copy_solnVector(eAll_local%solns(1),eAll1%solns(per_index))                     
-                      call MPI_SEND(eAll_local%solns(which_per),1,eAll_mpi,0, FROM_WORKER,MPI_COMM_WORLD, ierr)
-                      call MPI_TYPE_FREE (eAll_mpi, IERR)
+                   which_per=per_index
+                   call create_eAll_param_place_holder(eAll1)
+                   call get_eAll_para_vec(eAll1)
+                   call MPI_SEND(eAll_para_vec, Nbytes, MPI_PACKED, 0,FROM_WORKER, MPI_COMM_WORLD, ierr) 
+                       
                        
 elseif (trim(worker_job_task%what_to_do) .eq. 'Clean memory' ) then   
          
@@ -1212,6 +1181,7 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'Clean memory' ) then
          !call deall_solnVectorMTX(eAll_local1)    
          call deall_solnVectorMTX(eAll)
          call deall_solnVectorMTX(eAll_local)
+          deallocate (eAll_para_vec)
          
          worker_job_task%what_to_do='Cleaned Memory and Waiting'
          worker_job_task%taskid=taskid
@@ -1236,127 +1206,6 @@ end do
 
 
 End Subroutine Worker_job
-
-
-
-subroutine create_dvecMTX_mpi(d)
-
-    implicit none
-
-    !include 'mpif.h'    
-     type(dataVectorMTX_t), intent(in)	:: d
-     integer ii,I1,extent_int,extent_real,extent_logic,extent,ndata,nrx
-     
-        
-
-
-            ndata=size(d%d(which_per)%data(1)%value)
-            nrx=size(d%d(which_per)%data(1)%rx)
-
-    
-    !goto 10
-
-      typelist(0) = MPI_INTEGER
-      !typelist(1) = MPI_INTEGER
-      typelist(1) = MPI_INTEGER
-      !typelist(3) = MPI_INTEGER
-      typelist(2) = MPI_DOUBLE_PRECISION
-      typelist(3) = MPI_DOUBLE_PRECISION
-      typelist(4) = MPI_INTEGER
-      typelist(5) = MPI_INTEGER
-      typelist(6) = MPI_LOGICAL
-      !typelist(9) = MPI_LOGICAL
-      
-      block_lengths(0) =2  
-      !block_lengths(1) =1
-      block_lengths(1) =2  
-      !block_lengths(3) =1
-      block_lengths(2) = ndata
-      block_lengths(3) = ndata
-      block_lengths(4) = nrx
-      block_lengths(5) = 2
-      block_lengths(6) = 2
-      !block_lengths(9) = 1
-
-    
-      call MPI_Address(d%nTX,                                          address(0), ierr)
-      !call MPI_Address(d%Ndata,                                        address(1), ierr)
-      call MPI_Address(d%d(which_per),                                 address(1), ierr)
-      call MPI_Address(d%d(which_per)%data(1)%nComp,                           address(2), ierr)
-      !call MPI_Address(d%d(which_per)%nSite,                           address(4), ierr)
-      call MPI_Address(d%d(which_per)%data(1)%value(1,1),                       address(3), ierr)
-      call MPI_Address(d%d(which_per)%data(1)%error(1,1),                        address(4), ierr)
-      call MPI_Address(d%d(which_per)%data(1)%rx(1),                           address(5), ierr)
-      call MPI_Address(d%d(which_per)%tx,                              address(6), ierr)
-      call MPI_Address(d%d(which_per)%allocated,                       address(7), ierr)
-      !call MPI_Address(d%d(which_per)%errorBar,                        address(10), ierr)
-
-
-    !write(6,*) taskid,ndata,nrx,which_per,address(0),address(1),address(2),address(3)
-
-     do ii=0,6
-       displacements(ii) = address(ii+1) - address(0)
-     end do   
-     
-      call MPI_TYPE_STRUCT(7, block_lengths, displacements,typelist, dvecMTX_mpi, ierr)   
-      call MPI_TYPE_COMMIT(dvecMTX_mpi, ierr)
-  
- 10 continue     
- 
-  
-
-end subroutine create_dvecMTX_mpi
-
-subroutine create_dvec_mpi(d)
-    implicit none
-
-    !include 'mpif.h'    
-     type(dataVectorMTX_t), intent(in)	:: d
-     integer ii,I1,extent_int,extent_real,extent_logic,ndata,nrx
-     
-        
-
-
-            ndata=size(d%d(which_per)%data(1)%value)
-            nrx=size(d%d(which_per)%data(1)%rx)
-            
-            
-   offsets(0) = 0
-   oldtypes(0) = MPI_INTEGER
-   blockcounts(0) = 2
-
-   call MPI_TYPE_EXTENT(MPI_INTEGER, extent, ierr)
-   offsets(1) = 2 * extent
-   oldtypes(1) = MPI_DOUBLE_PRECISION
-   blockcounts(1) = ndata
-
-   call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION, extent, ierr)
-   offsets(2) = ndata* extent
-   oldtypes(2) = MPI_DOUBLE_PRECISION
-   blockcounts(2) = ndata  
-   
-      
-   call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION, extent, ierr)
-   offsets(3) = ndata* extent
-   oldtypes(3) = MPI_INTEGER
-   blockcounts(3) = nrx  
-   
-   call MPI_TYPE_EXTENT(MPI_INTEGER, extent, ierr)
-   offsets(4) = nrx * extent
-   oldtypes(4) = MPI_INTEGER
-   blockcounts(4) = 2
-   
-   call MPI_TYPE_EXTENT(MPI_INTEGER, extent, ierr)
-   offsets(5) = 2 *extent
-   oldtypes(5) = MPI_LOGICAL
-   blockcounts(5) = 2     
-   
-   call MPI_TYPE_STRUCT(6, blockcounts, offsets, oldtypes,dvec_mpi, ierr)
-   call MPI_TYPE_COMMIT(dvec_mpi, ierr)
-
-
-end subroutine create_dvec_mpi
-
 
 subroutine create_worker_job_task_mpi
 
@@ -1385,31 +1234,7 @@ integer(MPI_ADDRESS_KIND) address1(0:20)
        call MPI_TYPE_COMMIT(worker_job_task_mpi, ierr)
       
    
-     
 
-      typelist(0) = MPI_CHARACTER
-      typelist(1) = MPI_INTEGER
-      typelist(2) = MPI_LOGICAL
-
-
-      
-      block_lengths(0) = 80  
-      block_lengths(1) = 5
-      block_lengths(2) = 2
-
-
-      call MPI_Address(worker_job_task,                   address1(0), ierr)
-      call MPI_Address(worker_job_task%what_to_do,        address1(1), ierr)
-      call MPI_Address(worker_job_task%per_index,         address1(2), ierr)
-      call MPI_Address(worker_job_task%keep_E_soln,        address1(3), ierr)
-      
-
-     do ii=0,2
-       displacements(ii) = address1(ii+1) - address1(0)
-     end do   
-     
-      !call MPI_TYPE_STRUCT(3, block_lengths, displacements,typelist, worker_job_task_mpi, ierr)   
-      !call MPI_TYPE_COMMIT(worker_job_task_mpi, ierr) 
      
 
 

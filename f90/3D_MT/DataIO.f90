@@ -364,16 +364,17 @@ Reading_all_file_loop: &
      ! local variables
      type(dataBlock_t), dimension(:), pointer :: Data
      integer      							:: nBlocks,nTx,nDt,nSite,nComp,nData
-     integer                                :: iTx,iRx,iDt,i,j,k,istat
-     character(10), pointer,dimension(:)    :: siteIDs
+     integer                                :: iTx,iRx,iDt,i,j,k,k1,istat
+     character(10), pointer,dimension(:)    :: siteIDs,Ref_siteIDs
      real(kind=prec), pointer, dimension(:,:) :: siteLoc
      real(kind=prec), pointer, dimension(:) :: SI_factor
      real(kind=prec)                        :: Period
      logical      							:: conjugate, errorBar, isComplex,new_receiver
      character(400) 						:: temp,header
      character(100)                         :: args(50)
-     integer								:: nargs,refe_site_index
+     integer								:: nargs
      character(100)                         :: Ref_site
+     integer								:: refe_site_index(1000)
 
 
       ! First, set up the data type dictionary, if it's not in existence yet
@@ -418,7 +419,7 @@ Reading_all_file_loop: &
          read(ioDat,*) Period,nComp,nSite
 
          ! read in site locations
-         allocate(siteLoc(nSite,3),siteIDs(nSite),STAT=istat)
+         allocate(siteLoc(nSite,3),siteIDs(nSite),Ref_siteIDs(nSite),STAT=istat)
 
          read(ioDat,*) (siteLoc(j,1),j=1,nSite)
          read(ioDat,*) (siteLoc(j,2),j=1,nSite)
@@ -445,8 +446,13 @@ Reading_all_file_loop: &
          end do
 
          do k=1,nSite
-         	read(ioDat,*) siteIDs(k), (Data(i)%value(j,k),j=1,nComp)
-         	read(ioDat,*)             (Data(i)%error(j,k),j=1,nComp)
+         	read(ioDat,*) temp, (Data(i)%value(j,k),j=1,nComp)
+         	read(ioDat,*)       (Data(i)%error(j,k),j=1,nComp)
+         	call parse(temp,'-',args,nargs)
+         	siteIDs(k)=args(1)
+         	if (nargs == 2) then
+         	 Ref_siteIDs(k)=args(2)
+         	end if
          end do
 
          ! convert data to SI units
@@ -481,14 +487,17 @@ Reading_all_file_loop: &
     ! Update the receiver dictionary with the refernace site, if required
          if (Ref_site .ne. '') then
     !First, get the refe site index in the receiver dictionary
-    refe_site_index=0
+             do k1=1,size(rxDict)
+               refe_site_index(k1)=0
 	           do k=1,size(rxDict)
-	             if (rxDict(k)%id == Ref_site) then
-	              refe_site_index=k
+	             if (rxDict(k)%id == Ref_siteIDs(k1)) then
+	              refe_site_index(k1)=k
 	             end if
 	           end do
+	         end do  
+	           
 	           do k=1,size(rxDict)
-	               call update_rxDict(rxDict(k)%x,rxDict(k)%id,iRx,new_receiver,rxDict(refe_site_index)%x,Ref_site)
+	               call update_rxDict(rxDict(k)%x,rxDict(k)%id,iRx,new_receiver,rxDict(refe_site_index(k))%x,Ref_siteIDs(k))
 	           end do
          end if
 

@@ -6,6 +6,7 @@ use math_constants
 use utilities
 use ForwardSolver
 use MPI_declaration
+use userctrl
 
 
 
@@ -14,81 +15,7 @@ use MPI_declaration
 
 Contains
 
-subroutine create_eAll_mpi(eAll)
-use math_constants
-use utilities 
-use ForwardSolver
 
-
-
-    implicit none
-
-
-
-      type(solnVectorMTX_t), intent(in)	:: eAll
-      integer :: nx1,ny1,nz1,ii
-      
-     write(6,*) taskid,eAll%solns(1)%grid%nx
-     
-     
-      nx1=eAll%solns(which_per)%grid%nx
-      ny1=eAll%solns(which_per)%grid%ny
-      nz1=eAll%solns(which_per)%grid%nz
-     write(6,*) taskid, nx1,ny1,nz1
-     
-      typelist(0) = MPI_INTEGER
-      typelist(1) = MPI_CHARACTER
-      typelist(2) = MPI_DOUBLE_COMPLEX
-      typelist(3) = MPI_DOUBLE_COMPLEX
-      typelist(4) = MPI_DOUBLE_COMPLEX
-      typelist(5) = MPI_DOUBLE_COMPLEX
-      typelist(6) = MPI_DOUBLE_COMPLEX
-      typelist(7) = MPI_DOUBLE_COMPLEX
-      typelist(8) = MPI_INTEGER
-      typelist(9) = MPI_LOGICAL
-      typelist(10) = MPI_LOGICAL
-      typelist(11) = MPI_INTEGER
-       
-      block_lengths(0) =1
-      block_lengths(1) = 80
-      block_lengths(2) = (nx1*(ny1+1)*(nz1+1))
-      block_lengths(3) = ((nx1+1)*ny1*(nz1+1))
-      block_lengths(4) = ((nx1+1)*(ny1+1)*nz1)
-      block_lengths(5) = (nx1*(ny1+1)*(nz1+1))
-      block_lengths(6) = ((nx1+1)*ny1*(nz1+1))
-      block_lengths(7) = ((nx1+1)*(ny1+1)*nz1)
-      block_lengths(8) = 3
-      block_lengths(9) = 1
-      block_lengths(10) = 1
-      block_lengths(11) = 1
-      
-      call MPI_Address(eAll%solns(which_per),                          address(0), ierr)
-      call MPI_Address(eAll%solns(which_per)%nPol,                     address(1), ierr)
-      call MPI_Address(eAll%solns(which_per)%pol(1)%gridType,          address(2), ierr)
-      call MPI_Address(eAll%solns(which_per)%pol(1)%x(1,1,1),          address(3), ierr)
-      call MPI_Address(eAll%solns(which_per)%pol(1)%y(1,1,1),          address(4), ierr)
-      call MPI_Address(eAll%solns(which_per)%pol(1)%z(1,1,1),          address(5), ierr)
-      call MPI_Address(eAll%solns(which_per)%pol(2)%x(1,1,1),          address(6), ierr)
-      call MPI_Address(eAll%solns(which_per)%pol(2)%y(1,1,1),          address(7), ierr)
-      call MPI_Address(eAll%solns(which_per)%pol(2)%z(1,1,1),          address(8), ierr)
-      call MPI_Address(eAll%solns(which_per)%pol(1)%nx,                address(9),ierr)
-      call MPI_Address(eAll%solns(which_per)%pol(1)%allocated,         address(10),ierr)
-      call MPI_Address(eAll%solns(which_per)%pol(1)%temporary,         address(11),ierr)
-      call MPI_Address(eAll%solns(which_per)%tx,                       address(12),ierr)
-      
-     do ii=0,11
-       displacements(ii) = address(ii+1) - address(0)
-     end do   
-     
-      call MPI_TYPE_STRUCT(12, block_lengths, displacements,typelist, eAll_mpi, ierr)   
-      call MPI_TYPE_COMMIT(eAll_mpi, ierr)  
-      write(6,*) taskid,eAll_mpi
-
-
- 
-
-
-end subroutine create_eAll_mpi
 
 !*************************************************************************
 !Creating an MPI version of userdef_control_MPI 
@@ -103,20 +30,20 @@ subroutine create_userdef_control_MPI(ctrl)
 	
    offsets(0) = 0
    oldtypes(0) = MPI_CHARACTER
-   blockcounts(0) =  80*15
+   blockcounts(0) =  80*16
 
    call MPI_TYPE_EXTENT(MPI_CHARACTER, extent, ierr)
-   offsets(1) = (80*15 * extent)+offsets(0)
+   offsets(1) = (80*16 * extent)+offsets(0)
    oldtypes(1) = MPI_REAL8
-   blockcounts(1) = 2
+   blockcounts(1) = 3
    		
    call MPI_TYPE_EXTENT(MPI_DOUBLE_PRECISION, extent, ierr)
-   offsets(2) = (2* extent)+offsets(1)
+   offsets(2) = (3* extent)+offsets(1)
    oldtypes(2) = MPI_CHARACTER
-   blockcounts(2) = 80*2
+   blockcounts(2) = 80*3
    
    call MPI_TYPE_EXTENT(MPI_CHARACTER, extent, ierr)
-   offsets(3) = (80*2* extent)+offsets(2)
+   offsets(3) = (80*3* extent)+offsets(2)
    oldtypes(3) = MPI_INTEGER
    blockcounts(3) = 1
    
@@ -124,6 +51,112 @@ subroutine create_userdef_control_MPI(ctrl)
      call MPI_TYPE_COMMIT(userdef_control_MPI, ierr)
 
 end  subroutine create_userdef_control_MPI
+!********************************************************************
+subroutine check_userdef_control_MPI (which_proc,ctrl)
+
+	type(userdef_control), intent(in)   :: ctrl
+	character(20), intent(in)           :: which_proc
+	
+       write(6,*)trim(which_proc),' : ctrl%wFile_Sens ',trim(ctrl%wFile_Sens) 
+       write(6,*)trim(which_proc),' : ctrl%lambda ',(ctrl%lambda)      
+       write(6,*)trim(which_proc),' : ctrl%eps ',(ctrl%eps)    
+       write(6,*)trim(which_proc),' : ctrl%rFile_Cov ',trim(ctrl%rFile_Cov)
+       write(6,*)trim(which_proc),' : ctrl%search ',trim(ctrl%search)
+       write(6,*)trim(which_proc),' : ctrl%output_level ',ctrl%output_level
+       write(6,*)trim(which_proc),' : ctrl%rFile_fwdCtrl ',trim(ctrl%rFile_fwdCtrl)
+       write(6,*)trim(which_proc),' : ctrl%rFile_invCtrl ',trim(ctrl%rFile_invCtrl)
+       
+
+end subroutine check_userdef_control_MPI
+!********************************************************************
+subroutine create_eAll_param_place_holder(eAll)
+
+     implicit none
+     type(solnVectorMTX_t), intent(in)	:: eAll
+     integer index,Ex_size,Ey_size,Ez_size,Nbytes1,Nbytes2,Nbytes3
+ 
+
+      
+       Ex_size=size(eAll%solns(which_per)%pol(1)%x)
+       CALL MPI_PACK_SIZE(Ex_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes1,  ierr)
+       Ey_size=size(eAll%solns(which_per)%pol(1)%y)
+       CALL MPI_PACK_SIZE(Ey_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes2,  ierr)
+       Ez_size=size(eAll%solns(which_per)%pol(1)%z)
+       CALL MPI_PACK_SIZE(Ez_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes3,  ierr)
+       
+         Nbytes=2*(Nbytes1+Nbytes2+Nbytes3)  ! Multiple by 2 for both polarizations
+
+         if(associated(eAll_para_vec)) then
+             deallocate(eAll_para_vec)
+         end if
+             allocate(eAll_para_vec(Nbytes)) 
+             
+             
+ end subroutine create_eAll_param_place_holder 
+ 
+ 
+ 
+!********************************************************************
+subroutine get_eAll_para_vec(eAll)
+    implicit none
+
+     type(solnVectorMTX_t), intent(in)	:: eAll
+     integer index,Ex_size,Ey_size,Ez_size
+ 
+
+      
+       Ex_size=size(eAll%solns(which_per)%pol(1)%x)
+       Ey_size=size(eAll%solns(which_per)%pol(1)%y)
+       Ez_size=size(eAll%solns(which_per)%pol(1)%z)
+       
+ 
+         
+index=1 
+
+        call MPI_Pack(eAll%solns(which_per)%pol(1)%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
+        call MPI_Pack(eAll%solns(which_per)%pol(1)%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
+        call MPI_Pack(eAll%solns(which_per)%pol(1)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
+
+        call MPI_Pack(eAll%solns(which_per)%pol(2)%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
+        call MPI_Pack(eAll%solns(which_per)%pol(2)%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
+        call MPI_Pack(eAll%solns(which_per)%pol(2)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)                
+
+end subroutine get_eAll_para_vec 
+
+!********************************************************************
+subroutine set_eAll_para_vec(eAll)
+    implicit none
+
+     type(solnVectorMTX_t), intent(inout)	:: eAll
+
+     integer index,Ex_size,Ey_size,Ez_size
+ 
+
+
+
+       Ex_size=size(eAll%solns(which_per)%pol(1)%x)
+       Ey_size=size(eAll%solns(which_per)%pol(1)%y)
+       Ez_size=size(eAll%solns(which_per)%pol(1)%z)
+       index=1
+
+        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(1)%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(1)%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(1)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+
+        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(2)%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(2)%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(2)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+        	   
+      
+    
+end subroutine set_eAll_para_vec
+
+
+
+
+
+
+
 #endif
 
 end module MPI_sub

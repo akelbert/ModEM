@@ -44,7 +44,7 @@
       end if
 
 	  ! No information about the air layers in file. Hardcoded here.
-	  nzAir = 6
+	  nzAir = 10
 
 	  ! Initialize and read in the grid
       call create_grid(Nx,Ny,NzAir,NzEarth,grid)

@@ -38,9 +38,11 @@ integer        :: typelist(0:21)
 !********************************************************************   
 Integer        :: answers_to_receive,received_answers,recv_loop 
 Integer        :: who, which_stn,which_per,which_dt,which_pol 
-Integer , pointer, dimension(:) :: eAll_location
-logical                         :: eAll_exist=.false.
-real*8,   pointer, dimension(:) :: model_para_vec
+Integer , pointer, dimension(:)  :: eAll_location
+logical                          :: eAll_exist=.false.
+real*8,   pointer, dimension(:)  :: model_para_vec
+character, pointer, dimension(:) :: eAll_para_vec   !! needed for MPI_pack/MPI_unpack; counted in bytes
+Integer                          :: Nbytes
 !********************************************************************     
 
 

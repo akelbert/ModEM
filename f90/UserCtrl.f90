@@ -45,7 +45,9 @@ module UserCtrl
 
 	! Misfit tolerance for the forward solver
 	real(8)             :: eps
-
+  ! Specify the magnitude for random perturbations
+  real(8)             :: delta
+  
 	! Specify covariance configuration
 	character(80)       :: rFile_Cov
 
@@ -55,8 +57,7 @@ module UserCtrl
   ! Choose the sort of test you wish to perform
   character(80)       :: test
 
-  ! Specify the magnitude for random perturbations
-  real(8)             :: delta
+
 
 	! Indicate how much output you want
 	integer             :: output_level
