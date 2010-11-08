@@ -83,13 +83,14 @@ subroutine create_eAll_param_place_holder(eAll)
        CALL MPI_PACK_SIZE(Ey_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes2,  ierr)
        Ez_size=size(eAll%solns(which_per)%pol(1)%z)
        CALL MPI_PACK_SIZE(Ez_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes3,  ierr)
-       
-         Nbytes=2*(Nbytes1+Nbytes2+Nbytes3)  ! Multiple by 2 for both polarizations
+             
+         Nbytes=(2*(Nbytes1+Nbytes2+Nbytes3))+1  ! Multiple by 2 for both polarizations
 
          if(associated(eAll_para_vec)) then
              deallocate(eAll_para_vec)
          end if
              allocate(eAll_para_vec(Nbytes)) 
+
              
              
  end subroutine create_eAll_param_place_holder 
@@ -109,6 +110,9 @@ subroutine get_eAll_para_vec(eAll)
        Ey_size=size(eAll%solns(which_per)%pol(1)%y)
        Ez_size=size(eAll%solns(which_per)%pol(1)%z)
        
+
+       
+
  
          
 index=1 
@@ -119,7 +123,8 @@ index=1
 
         call MPI_Pack(eAll%solns(which_per)%pol(2)%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
         call MPI_Pack(eAll%solns(which_per)%pol(2)%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
-        call MPI_Pack(eAll%solns(which_per)%pol(2)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)                
+        call MPI_Pack(eAll%solns(which_per)%pol(2)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)  
+             
 
 end subroutine get_eAll_para_vec 
 
