@@ -71,7 +71,7 @@ Contains
   subroutine initCoords(cUserDef,myobs)
 
     implicit none
-    type (input_info), intent(in)                           :: cUserDef
+    type (userdef_control), intent(in)                           :: cUserDef
     type (Obs_List), intent(out)                            :: myobs
     integer                                                 :: num
     integer                                                 :: i,j,ios=0

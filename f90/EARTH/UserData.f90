@@ -17,7 +17,7 @@ module UserData
   ! * fwdCtrls: User-specified information about the forward solver relaxations
   type (dataVectorMTX_t), save  :: allData
   type (output_info), save      :: outFiles
-  type (input_info), save       :: cUserDef
+  type (userdef_control), save       :: cUserDef
   type (fwdCtrl_t), save        :: fwdCtrls
 
   type (grid_t), save                              :: grid

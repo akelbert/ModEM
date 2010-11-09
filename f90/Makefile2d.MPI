@@ -24,8 +24,8 @@
 # include Makefile.local
 # OBJDIR = ./objs/3D_MT/IFortDebug
 # F90 = ifort
-# FFLAGS = -O3
-# FFLAGS = -debug all -check bounds
+# FFLAGS = -O3 -parallel -openmp #-heap-arrays
+# FFLAGS = -debug all -check bounds -traceback -heap-arrays
 # MPIFLAGS = -cpp # for serial code
 # MODULE = -module $(OBJDIR)
 # LIBS = -lblas -llapack
@@ -134,7 +134,7 @@ $(OBJDIR)/SensComp.o:SENS/SensComp.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/util
 $(OBJDIR)/SymmetryTest.o:SENS/SymmetryTest.f90 $(OBJDIR)/SensComp.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) SENS/SymmetryTest.f90 -o $(OBJDIR)/SymmetryTest.o
 
-$(OBJDIR)/UserCtrl.o:./UserCtrl.f90  
+$(OBJDIR)/UserCtrl.o:./UserCtrl.f90 $(OBJDIR)/utilities.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) ./UserCtrl.f90 -o $(OBJDIR)/UserCtrl.o
 
 $(OBJDIR)/ioAscii.o:2D_MT/ioMod/ioAscii.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/EMfield.o $(OBJDIR)/DataSpace.o $(OBJDIR)/ForwardSolver.o $(OBJDIR)/utilities.o $(OBJDIR)/transmitters.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o 

@@ -19,6 +19,7 @@ module main
   use transmitters
   use receivers
   use senscomp
+
   implicit none
 
 Contains
@@ -38,10 +39,10 @@ Contains
   ! * Frequencies are listed in ascending order (by value)
   ! * Observatories are listed in ascending order (alphabetic)
 
-  subroutine InitGlobalData(fn_startup,eps)
+  subroutine InitGlobalData(cUserDef,eps)
 
 	implicit none
-    character(80), intent(inout)				:: fn_startup
+    type (userdef_control), intent(inout)			:: cUserDef
 	integer										:: i,ios=0,istat=0
 	character(100)								:: label
 	real(8),intent(in),optional	                :: eps
@@ -53,7 +54,7 @@ Contains
 	!call init_const(pi,d2r,r2d,mu0,rair,Rearth)
 	!--------------------------------------------------------------------------
 	! Initialize the user-defined switches and file names
-    call readStartFile(fn_startup,cUserDef)
+    !call readStartFile(fn_startup,cUserDef)
 	!--------------------------------------------------------------------------
 	! Initialize preconditioning information
 	call initFunctional(cUserDef,misfitType)

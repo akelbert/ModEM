@@ -22,6 +22,8 @@ program Mod3DMT
      type (timer_t)         :: timer
 
 
+     call initUserCtrl(cUserDef)
+
 #ifdef MPI
               call  MPI_constructor(cUserDef)
 			  if (taskid==0) then

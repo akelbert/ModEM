@@ -16,7 +16,7 @@ module UserCtrl
   character*1, parameter  :: TEST_SENS = 'S'
 
   ! ***************************************************************************
-  ! * input_info contains the list of all essential input information currently
+  ! * userdef_control contains the list of all essential input information currently
   ! * read in from fn_startup.
   type :: userdef_control
 

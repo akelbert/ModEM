@@ -40,7 +40,7 @@ Contains
   subroutine readStartFile(fn_startup,cUserDef)
 
     character(80), intent(inout)  		:: fn_startup
-	type (input_info), intent(out)		:: cUserDef
+	type (userdef_control), intent(out)		:: cUserDef
     integer								:: ios
 	character(20)						:: string
 
@@ -107,7 +107,7 @@ Contains
 
   subroutine initGrid(cUserDef,mygrid)
 
-    type (input_info), intent(in)					:: cUserDef
+    type (userdef_control), intent(in)					:: cUserDef
     type (grid_t) , intent(out)					:: mygrid
     integer				                            :: ios,istat,i
     integer				                            :: nx,ny,nz,nzAir,nzCrust
@@ -204,7 +204,7 @@ Contains
 
   subroutine initField(cUserDef,mygrid,H)
 
-    type (input_info), intent(in)					:: cUserDef
+    type (userdef_control), intent(in)					:: cUserDef
     type (grid_t) , intent(in)						:: mygrid
     type (solnVectorMTX_t) , intent(inout)				:: H
     ! local
@@ -232,7 +232,7 @@ Contains
 
   subroutine initCrust(cUserDef,mygrid,mycrust)
 
-    type (input_info), intent(in)					:: cUserDef
+    type (userdef_control), intent(in)					:: cUserDef
     type (grid_t) , intent(in)					:: mygrid
     type (modelShell_t) , intent(out)					:: mycrust
     integer				                            :: ios,istat,i
@@ -309,7 +309,7 @@ Contains
   subroutine initFunctional(cUserDef,misfitType)
 
 	implicit none
-	type (input_info), intent(in)					:: cUserDef
+	type (userdef_control), intent(in)					:: cUserDef
 	type (misfitDef_t), intent(out)					:: misfitType
 
 	misfitType%name = 'Mean Squared'  ! Default data functional
@@ -326,7 +326,7 @@ Contains
   subroutine initData(cUserDef,allData,obsList,freqList,TFList)
 
 	implicit none
-    type (input_info), intent(in)							:: cUserDef
+    type (userdef_control), intent(in)							:: cUserDef
 	type (dataVectorMTX_t), intent(inout)					:: allData
 	type (Obs_List), target, intent(inout)					:: obsList
 	type (Freq_List), target, intent(inout)					:: freqList
@@ -583,7 +583,7 @@ Contains
 
 	use model_operators
 
-    type (input_info), intent(in)					:: cUserDef
+    type (userdef_control), intent(in)					:: cUserDef
     type (modelParam_t), intent(inout)					:: myparam
 	logical, intent(in), optional		:: p0
 
@@ -605,7 +605,7 @@ Contains
   subroutine initControls(cUserDef,fwdCtrls)
 
 	implicit none
-	type (input_info), intent(in)						:: cUserDef
+	type (userdef_control), intent(in)						:: cUserDef
 	type (fwdCtrl_t), intent(out)						:: fwdCtrls
 
 	  open(ioFwdCtrl,file=cUserDef%fn_ctrl,form='formatted',status='old')
@@ -624,12 +624,12 @@ Contains
 
   ! ***************************************************************************
   ! * initOutput initialises all the output file names stored in outFiles
-  ! * Assuming type (output_info) outFiles and type (input_info) cUserDef are
+  ! * Assuming type (output_info) outFiles and type (userdef_control) cUserDef are
   ! * not available.
   subroutine initOutput(cUserDef,outFiles)
 
 	implicit none
-    type (input_info) ,intent(in)					:: cUserDef
+    type (userdef_control) ,intent(in)					:: cUserDef
     type (output_info),intent(out)					:: outFiles
 	integer											:: i
 

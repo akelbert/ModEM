@@ -24,9 +24,9 @@ module iotypes
   end type fwdCtrl_t
 
   ! ***************************************************************************
-  ! * input_info contains the list of all essential input information currently
+  ! * userdef_control contains the list of all essential input information currently
   ! * read in from fn_startup.
-  type :: input_info
+  type :: userdef_control
 
 	character(80)				:: paramname  ! 'harmonic'/'mixed'/'grid' parametrization
 	character(80)				:: modelname  ! specify how to call the output files
@@ -54,7 +54,7 @@ module iotypes
 	real(8)             		:: damping ! the value of damping parameter mu
 	real(8)             		:: step_size ! initial step size parameter for inversion
 
-  end type input_info ! input_info
+  end type userdef_control ! userdef_control
 
 
   ! ***************************************************************************
@@ -104,7 +104,7 @@ Contains
   subroutine initSlices(cUserDef,slices)
 
     implicit none
-    type (input_info), intent(in)                           :: cUserDef
+    type (userdef_control), intent(in)                           :: cUserDef
     type (Rad_List), intent(out)                            :: slices
     integer                                                 :: num,i,ios
 

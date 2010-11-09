@@ -52,7 +52,7 @@ Contains
 
     ! Not sure yet, whether freq, period or omega will be required
     implicit none
-    type (input_info), intent(in)                           :: cUserDef
+    type (userdef_control), intent(in)                           :: cUserDef
     type (Freq_List), intent(out)                           :: myfreq
     integer                                                 :: num
     integer                                                 :: i,j,ios=0

@@ -29,7 +29,7 @@ Contains
 
   subroutine outputField(freq,H,cUserDef,extension)
 
-	type (input_info), intent(in)			  :: cUserDef
+	type (userdef_control), intent(in)			  :: cUserDef
 	type (transmitter_t), intent(in)			  :: freq
 	type (cvector), intent(in)				  :: H
 	integer									  :: i,j,k,n,ios,istat
@@ -61,7 +61,7 @@ Contains
 
   subroutine outputSolution(freq,H,slices,grid,cUserDef,rho,extension)
 
-	type (input_info), intent(in)			  :: cUserDef
+	type (userdef_control), intent(in)			  :: cUserDef
 	type (transmitter_t), intent(in)			  :: freq
 	type (Rad_List), intent(in)				  :: slices
 	type (grid_t), intent(in)			  :: grid
@@ -250,7 +250,7 @@ Contains
 
   subroutine outputMisfit(param,misfit,misfitValue,cUserDef)
 
-	type (input_info), intent(in)			  :: cUserDef
+	type (userdef_control), intent(in)			  :: cUserDef
 	type (misfit_t), intent(in)			  :: misfit
 	type (modelParam_t), intent(in)			  :: param
 	real(8),dimension(:),intent(in)			  :: misfitValue
@@ -273,7 +273,7 @@ Contains
 
   subroutine outputDerivative(param,misfit,dmisfitValue,cUserDef)
 
-	type (input_info), intent(in)			  :: cUserDef
+	type (userdef_control), intent(in)			  :: cUserDef
 	type (misfit_t), intent(in)			  :: misfit
 	type (modelParam_t), intent(in)			  :: param
 	real(8),dimension(:,:),intent(in)		  :: dmisfitValue
@@ -394,7 +394,7 @@ Contains
 	type (modelParam_t), intent(in), optional		    :: param
 	!type (output_info), intent(in)					:: outFiles
 	type (modelCoeff_t)								:: coeff
-	type (input_info), intent(in)			  :: cUserDef
+	type (userdef_control), intent(in)			  :: cUserDef
 	character(3)							  :: ichar
 	character(10)							  :: echar
 	character(80)									:: fn_jacobian

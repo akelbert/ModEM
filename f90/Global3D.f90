@@ -7,6 +7,9 @@ program earth
   use output
   use senscomp
   use nlcg
+#ifdef MPI
+  use MPI_main
+#endif
 
   use global ! for symmetry testing only
 
@@ -39,7 +42,32 @@ program earth
   !fn_startup=''
   eps = 0.01
 
-  call InitGlobalData(fn_startup)
+  call readStartFile(fn_startup,cUserDef)
+
+#ifdef MPI
+      call  MPI_constructor(cUserDef)
+      if (taskid==0) then
+          write(6,*) 'Modular global code running in: PARALLEL [', number_of_workers,' nodes]'
+      else
+        call Worker_job(p_input,allData)
+        if (trim(worker_job_task%what_to_do) .eq. 'STOPED')  then
+             call DeleteGlobalData()
+             call DeleteGlobalArrays()
+             stop
+        end if
+     end if
+#else
+     write(6,*) 'Modular global code running in: SERIAL'
+#endif
+
+  call InitGlobalData(cUserDef)
+
+#ifdef MPI
+    call Master_job_Distribute_userdef_control(cUserDef)
+    call Master_job_Distribute_Data_Size(allData,p_input)
+    call Master_job_Distribute_Data(allData)
+    call Master_job_Distribute_Model(p_input)
+#endif
 
   call outputModel(outFiles%fn_model,grid,rho%v)
 
@@ -49,9 +77,14 @@ program earth
     call write_modelParam(param,'testOutput.prm')
 	call DeleteGlobalData()
 	call DeleteGlobalArrays()
+#ifdef MPI
+     call Master_job_STOP_MESSAGE
+     call MPI_destructor
+#endif
 	print *,'Successfully initialized the model. Exiting...'
 	stop
   end if
+
 
   ! Start the (portable) clock
   call clear_time(t)
@@ -116,7 +149,7 @@ program earth
     eps = 0.005
     write(0,*) 'Model perturbation used is uniform random times ',eps
 
-    call InitGlobalData(fn_startup,eps)
+    call InitGlobalData(cUserDef,eps)
     call InitGlobalArrays()
 
 	!call calc_symmetry(runtime)
@@ -195,7 +228,7 @@ program earth
 	eps = 0.005
     write(0,*) 'Model perturbation used is uniform random times ',eps
 
-	call InitGlobalData(fn_startup,eps)
+	call InitGlobalData(cUserDef,eps)
 	call InitGlobalArrays()
 
     ! compute misfit after the perturbation (m0+dm)
@@ -278,7 +311,7 @@ program earth
 	call DeleteGlobalArrays()
 
     eps = 0.005
-	call InitGlobalData(fn_startup,eps)
+	call InitGlobalData(cUserDef,eps)
 	call InitGlobalArrays()
 
   ! Run Jacobian computations after the perturbation (a+da)
@@ -382,6 +415,11 @@ program earth
 
   call DeleteGlobalArrays()
   call DeleteGlobalData()
+
+#ifdef MPI
+     call Master_job_STOP_MESSAGE
+     call MPI_destructor
+#endif
 
 
 end program earth

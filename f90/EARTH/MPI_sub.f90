@@ -4,82 +4,150 @@ module MPI_sub
 
 use math_constants
 use utilities
-use ForwardSolver
+use SolnSpace
+use ioTypes
 use MPI_declaration
 
-
+implicit none
 
 
 
 
 Contains
 
-subroutine create_eAll_mpi(eAll)
-use math_constants
-use utilities
-use ForwardSolver
+!*************************************************************************
+!Creating an MPI version of userdef_control_MPI
+subroutine create_userdef_control_MPI(ctrl)
+    implicit none
+    include 'mpif.h'
+
+    type(userdef_control), intent(in)   :: ctrl
+    integer :: ii,intex,CHARACTERex,sum1
+    integer(MPI_ADDRESS_KIND) address1(0:20)
+
+
+   offsets(0) = 0
+   oldtypes(0) = MPI_CHARACTER
+   blockcounts(0) =  80*23
+
+   call MPI_TYPE_EXTENT(MPI_CHARACTER, extent, ierr)
+   offsets(1) = (80*23 * extent)+offsets(0)
+   oldtypes(1) = MPI_REAL8
+   blockcounts(1) = 2
+
+     call MPI_TYPE_STRUCT(2, blockcounts, offsets, oldtypes,userdef_control_MPI, ierr)
+     call MPI_TYPE_COMMIT(userdef_control_MPI, ierr)
+
+end  subroutine create_userdef_control_MPI
+
+!********************************************************************
+subroutine check_userdef_control_MPI (which_proc,ctrl)
+
+    type(userdef_control), intent(in)   :: ctrl
+    character(20), intent(in)           :: which_proc
+
+       write(6,*) '[',trim(which_proc),'] Parametrization: ', trim(ctrl%paramname)
+       write(6,*) '[',trim(which_proc),'] Output filename: ', trim(ctrl%modelname)
+       write(6,*) '[',trim(which_proc),'] Level of output: ', trim(ctrl%verbose)
+       write(6,*) '[',trim(which_proc),'] What to compute: ', trim(ctrl%calculate)
+       write(6,*) '[',trim(which_proc),'] R_d + mu * R_m : ', ctrl%damping
+       write(6,*) '[',trim(which_proc),'] Grid specified : ', trim(ctrl%fn_grid)
+       write(6,*) '[',trim(which_proc),'] Grid base model: ', trim(ctrl%fn_rho)
+       write(6,*) '[',trim(which_proc),'] Thinshell distr: ', trim(ctrl%fn_shell)
+       write(6,*) '[',trim(which_proc),'] Radial EM field: ', trim(ctrl%fn_field)
+       write(6,*) '[',trim(which_proc),'] Period filename: ', trim(ctrl%fn_period)
+       write(6,*) '[',trim(which_proc),'] Obs coordinates: ', trim(ctrl%fn_coords)
+       write(6,*) '[',trim(which_proc),'] Functional info: ', trim(ctrl%fn_func)
+       write(6,*) '[',trim(which_proc),'] Forward control: ', trim(ctrl%fn_ctrl)
+       write(6,*) '[',trim(which_proc),'] Inverse control: ', trim(ctrl%fn_invctrl)
+       write(6,*) '[',trim(which_proc),'] Radii to output: ', trim(ctrl%fn_slices)
+       write(6,*) '[',trim(which_proc),'] Base model info: ', trim(ctrl%fn_param0)
+       write(6,*) '[',trim(which_proc),'] Parameters info: ', trim(ctrl%fn_param)
+       write(6,*) '[',trim(which_proc),'] Interior source: ', trim(ctrl%fn_source)
+       write(6,*) '[',trim(which_proc),'] Field data info: ', trim(ctrl%fn_cdata)
+       write(6,*) '[',trim(which_proc),'] Field data info: ', trim(ctrl%fn_ddata)
+       write(6,*) '[',trim(which_proc),'] Data misfit fn : ', trim(ctrl%fn_misfit)
+       write(6,*) '[',trim(which_proc),'] Gradient fname : ', trim(ctrl%fn_gradient)
+       write(6,*) '[',trim(which_proc),'] Point filename : ', trim(ctrl%fn_point)
+
+
+end subroutine check_userdef_control_MPI
+
+
+!********************************************************************
+subroutine create_eAll_param_place_holder(eAll)
+
+     implicit none
+     type(solnVectorMTX_t), intent(in)  :: eAll
+     integer index,Ex_size,Ey_size,Ez_size,Nbytes1,Nbytes2,Nbytes3
 
 
 
+       Ex_size=size(eAll%solns(which_per)%vec%x)
+       CALL MPI_PACK_SIZE(Ex_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes1,  ierr)
+       Ey_size=size(eAll%solns(which_per)%vec%y)
+       CALL MPI_PACK_SIZE(Ey_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes2,  ierr)
+       Ez_size=size(eAll%solns(which_per)%vec%z)
+       CALL MPI_PACK_SIZE(Ez_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes3,  ierr)
+
+         Nbytes=Nbytes1+Nbytes2+Nbytes3+1
+
+         if(associated(eAll_para_vec)) then
+             deallocate(eAll_para_vec)
+         end if
+         allocate(eAll_para_vec(Nbytes))
+
+
+
+ end subroutine create_eAll_param_place_holder
+
+
+
+!********************************************************************
+subroutine get_eAll_para_vec(eAll)
     implicit none
 
+     type(solnVectorMTX_t), intent(in)  :: eAll
+     integer index,Ex_size,Ey_size,Ez_size
 
 
-      type(solnVectorMTX_t), intent(in)	:: eAll
-      integer :: nx1,ny1,nz1,ii
 
-     write(6,*) taskid,eAll%solns(1)%grid%nx
+       Ex_size=size(eAll%solns(which_per)%vec%x)
+       Ey_size=size(eAll%solns(which_per)%vec%y)
+       Ez_size=size(eAll%solns(which_per)%vec%z)
+       index=1
 
+        call MPI_Pack(eAll%solns(which_per)%vec%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
+        call MPI_Pack(eAll%solns(which_per)%vec%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
+        call MPI_Pack(eAll%solns(which_per)%vec%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
 
-      nx1=eAll%solns(which_per)%grid%nx
-      ny1=eAll%solns(which_per)%grid%ny
-      nz1=eAll%solns(which_per)%grid%nz
-     write(6,*) taskid, nx1,ny1,nz1
+end subroutine get_eAll_para_vec
 
-      typelist(0) = MPI_INTEGER
-      typelist(1) = MPI_CHARACTER
-      typelist(2) = MPI_DOUBLE_COMPLEX
-      typelist(3) = MPI_DOUBLE_COMPLEX
-      typelist(4) = MPI_DOUBLE_COMPLEX
-      typelist(5) = MPI_INTEGER
-      typelist(6) = MPI_LOGICAL
-      typelist(7) = MPI_LOGICAL
-      typelist(8) = MPI_INTEGER
+!********************************************************************
+subroutine set_eAll_para_vec(eAll)
+    implicit none
 
-      block_lengths(0) =1
-      block_lengths(1) = 80
-      block_lengths(2) = (nx1*(ny1+1)*(nz1+1))
-      block_lengths(3) = ((nx1+1)*ny1*(nz1+1))
-      block_lengths(4) = ((nx1+1)*(ny1+1)*nz1)
-      block_lengths(5) = 3
-      block_lengths(6) = 1
-      block_lengths(7) = 1
-      block_lengths(8) = 1
+     type(solnVectorMTX_t), intent(inout)   :: eAll
 
-      call MPI_Address(eAll%solns(which_per),                          address(0), ierr)
-      call MPI_Address(eAll%solns(which_per)%errflag,                     address(1), ierr)
-      call MPI_Address(eAll%solns(which_per)%vec%gridType,          address(2), ierr)
-      call MPI_Address(eAll%solns(which_per)%vec%x(1,1,1),          address(3), ierr)
-      call MPI_Address(eAll%solns(which_per)%vec%y(1,1,1),          address(4), ierr)
-      call MPI_Address(eAll%solns(which_per)%vec%z(1,1,1),          address(5), ierr)
-      call MPI_Address(eAll%solns(which_per)%vec%nx,                address(6),ierr)
-      call MPI_Address(eAll%solns(which_per)%vec%allocated,         address(7),ierr)
-      call MPI_Address(eAll%solns(which_per)%vec%temporary,         address(8),ierr)
-      call MPI_Address(eAll%solns(which_per)%tx,                       address(9),ierr)
-
-     do ii=0,8
-       displacements(ii) = address(ii+1) - address(0)
-     end do
-
-      call MPI_TYPE_STRUCT(9, block_lengths, displacements,typelist, eAll_mpi, ierr)
-      call MPI_TYPE_COMMIT(eAll_mpi, ierr)
-      write(6,*) taskid,eAll_mpi
+     integer index,Ex_size,Ey_size,Ez_size
 
 
 
 
+       Ex_size=size(eAll%solns(which_per)%vec%x)
+       Ey_size=size(eAll%solns(which_per)%vec%y)
+       Ez_size=size(eAll%solns(which_per)%vec%z)
+       index=1
 
-end subroutine create_eAll_mpi
+        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%vec%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%vec%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%vec%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+
+
+end subroutine set_eAll_para_vec
+
+
+
 #endif
 
 end module MPI_sub

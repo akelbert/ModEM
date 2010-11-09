@@ -50,7 +50,7 @@ Contains
   subroutine initTF(cUserDef,TFList)
 
     implicit none
-    type (input_info), intent(in)                           :: cUserDef
+    type (userdef_control), intent(in)                           :: cUserDef
     type (TF_List), intent(out)                             :: TFList
     integer                                                 :: num,i,ios
 
