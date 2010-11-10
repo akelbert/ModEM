@@ -39,15 +39,6 @@ module UserCtrl
 	character(80)       :: wFile_Grid, wFile_Model, wFile_Data
 	character(80)       :: wFile_dModel
 	character(80)       :: wFile_EMsoln, wFile_EMrhs, wFile_Sens
-
-	! Specify damping parameter for the inversion
-	real(8)             :: lambda
-
-	! Misfit tolerance for the forward solver
-	real(8)             :: eps
-  ! Specify the magnitude for random perturbations
-  real(8)             :: delta
-  
 	! Specify covariance configuration
 	character(80)       :: rFile_Cov
 
@@ -58,6 +49,16 @@ module UserCtrl
   character(80)       :: test
 
 
+
+  
+	! Specify damping parameter for the inversion
+	real(8)             :: lambda
+
+	! Misfit tolerance for the forward solver
+	real(8)             :: eps
+  ! Specify the magnitude for random perturbations
+  real(8)             :: delta
+  
 
 	! Indicate how much output you want
 	integer             :: output_level

@@ -41,8 +41,10 @@ Integer        :: who, which_stn,which_per,which_dt,which_pol
 Integer , pointer, dimension(:)  :: eAll_location
 logical                          :: eAll_exist=.false.
 real*8,   pointer, dimension(:)  :: model_para_vec
-character, pointer, dimension(:) :: eAll_para_vec   !! needed for MPI_pack/MPI_unpack; counted in bytes
-Integer                          :: Nbytes
+character, pointer, dimension(:) :: eAll_para_vec       !! needed for MPI_pack/MPI_unpack; counted in bytes
+character, pointer, dimension(:) :: worker_job_package  !! needed for MPI_pack/MPI_unpack; counted in bytes
+character, pointer, dimension(:) :: userdef_control_package !! needed for MPI_pack/MPI_unpack; counted in bytes
+Integer                          :: Nbytes              !! used in all MPI_pack/MPI_unpack
 !********************************************************************     
 
 

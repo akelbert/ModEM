@@ -301,9 +301,9 @@ Contains
 		       tempZ(1) = EE(1,1)*BB(1,2)+EE(1,2)*BB(2,2)
 		       tempZ(2) = EE(2,1)*BB(1,1)+EE(2,2)*BB(2,1)
 		       Z(1)   = abs(tempZ(1))**2*MU_0/omega
-		       z(2)   = atan2(ISIGN*imag(tempZ(1)),real(tempZ(1)))*R2D
+		       z(2)   = atan2(ISIGN*dimag(tempZ(1)),real(tempZ(1)))*R2D
 		       Z(3)   = abs(tempZ(2))**2*MU_0/omega
-		       Z(4)   = atan2(ISIGN*imag(tempZ(2)),real(tempZ(2)))*R2D
+		       Z(4)   = atan2(ISIGN*dimag(tempZ(2)),real(tempZ(2)))*R2D
   end select
 
   !  copy responses in Z (possibly complex) into real output vector Resp
@@ -314,7 +314,7 @@ Contains
 	       iComp = iComp + 1
 	       Resp(iComp) = real(Z(iFunc))
 	       iComp = iComp + 1
-	       Resp(iComp) = imag(Z(iFunc))
+	       Resp(iComp) = dimag(Z(iFunc))
 	    else
 	       iComp = iComp + 1
 	       Resp(iComp) = real(Z(iFunc))

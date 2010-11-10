@@ -100,7 +100,7 @@ Contains
 	        if(isComplex) then
 	           d%data(j)%value(iComp,iSite) = real(Z)
 	           iComp = iComp + 1
-	           d%data(j)%value(iComp,iSite) = imag(Z)
+	           d%data(j)%value(iComp,iSite) = dimag(Z)
 	           iComp = iComp + 1
 	        else
 	           d%data(j)%value(iComp,iSite) = real(Z)
