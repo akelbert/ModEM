@@ -624,6 +624,7 @@ end program earth
     use senscomp
     use transmitters
     use dataTypes
+    use MPI_Main
     implicit none
 
     real(8), intent(out)                    :: f  ! penalty functional
@@ -638,7 +639,12 @@ end program earth
 
     ! Call the forward solver for all frequencies
     allResp = allData
+
+#ifdef MPI
+    call Master_job_fwdPred(param,allResp)
+#else
     call fwdPred(param,allResp)
+#endif
 
     f = R_ZERO
 
@@ -859,6 +865,7 @@ end program earth
 	use senscomp
     use transmitters
     use dataTypes
+    use MPI_main
 	implicit none
 
     real(8), intent(out)                    :: f     ! penalty functional
@@ -874,7 +881,13 @@ end program earth
 
     ! Call the forward solver for all frequencies
     allResp = allData
+
+#ifdef MPI
+    call Master_job_fwdPred(param,allResp,H)
+    call Master_job_Collect_eAll(allResp,H)
+#else
     call fwdPred(param,allResp,H)
+#endif
 
     f = R_ZERO
 
@@ -927,7 +940,12 @@ end program earth
     end if
 
 	! Call multiplication by J^T
+#ifdef MPI
+    call Master_job_JmultT(param,allResp,dmisfit,H)
+    call Master_job_STOP_MESSAGE
+#else
     call JmultT(param,allResp,dmisfit,H)
+#endif
 
 	!dmisfit = -2. * dmisfit
 	call scMult(MinusTWO,dmisfit,dmisfit)
