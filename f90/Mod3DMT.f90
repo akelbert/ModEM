@@ -23,7 +23,7 @@ program Mod3DMT
 
 
 #ifdef MPI
-              call  MPI_constructor(cUserDef)
+              call  MPI_constructor
 			  if (taskid==0) then
 			      write(6,*)'I am a PARALLEL version'
 			      call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)

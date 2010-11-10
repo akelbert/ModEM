@@ -23,10 +23,9 @@ Contains
 
 !###########################################  MPI_initialization   ############################################################
 
-Subroutine MPI_constructor(ctrl)
+Subroutine MPI_constructor
 
     implicit none
-    type(userdef_control), intent(inout)   :: ctrl
     include 'mpif.h'
      
           call MPI_INIT( ierr )
