@@ -100,7 +100,7 @@ Subroutine Master_Job_fwdPred(sigma,d_pred,eAll)
             call create_worker_job_task_place_holder
             call Pack_worker_job_task
             call MPI_SEND(worker_job_package,Nbytes, MPI_PACKED,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)
-                          write(file_id,*) 'FWD: Send Per. # ',per_index , 'to node # ',dest
+                          write(ioMPI,*) 'FWD: Send Per. # ',per_index , 'to node # ',dest
                           if (dest .ge. number_of_workers) then
                             goto 10
                           end if
@@ -135,7 +135,7 @@ Subroutine Master_Job_fwdPred(sigma,d_pred,eAll)
                end do
                    eAll_location(which_per)=who
 
-                  write(file_id,*)'FWD: Recv. Resp. for Per # ',which_per ,' from ', who
+                  write(ioMPI,*)'FWD: Recv. Resp. for Per # ',which_per ,' from ', who
 
         ! Check if we send all transmitters, if not then send the next transmitter to the node who is free now....
         ! This part is very important if we have less nodes than transmitters.
@@ -148,7 +148,7 @@ Subroutine Master_Job_fwdPred(sigma,d_pred,eAll)
             call create_worker_job_task_place_holder
             call Pack_worker_job_task
             call MPI_SEND(worker_job_package,Nbytes, MPI_PACKED,who, FROM_MASTER, MPI_COMM_WORLD, ierr)
-                           write(file_id,*) 'FWD_CONT: Send Per. # ',per_index , 'to node # ',who
+                           write(ioMPI,*) 'FWD_CONT: Send Per. # ',per_index , 'to node # ',who
                        end if
 
 
@@ -156,11 +156,11 @@ Subroutine Master_Job_fwdPred(sigma,d_pred,eAll)
                        received_answers=received_answers+1
         end do
 
-        write(file_id,*)'FWD: Finished calculating for (', d_pred%nTx , ') Transmitters '
+        write(ioMPI,*)'FWD: Finished calculating for (', d_pred%nTx , ') Transmitters '
 
                 endtime=MPI_Wtime()
                 time_used = endtime-starttime
-        write(file_id,*)'FWD: TIME REQUIERED: ',time_used ,'s'
+        write(ioMPI,*)'FWD: TIME REQUIERED: ',time_used ,'s'
 
 end subroutine Master_Job_fwdPred
 
@@ -212,7 +212,7 @@ Subroutine Master_Job_Compute_J(d,sigma,dsigma,eAll)
   end do
  !nTot = countData(d) !d%Ndata
 
-  write(file_id,*)'Computing the Sens. for ',nTot, 'Data points '
+  write(ioMPI,*)'Computing the Sens. for ',nTot, 'Data points '
 
 
      starttime = MPI_Wtime()
@@ -242,7 +242,7 @@ Subroutine Master_Job_Compute_J(d,sigma,dsigma,eAll)
             call create_worker_job_task_place_holder
             call Pack_worker_job_task
             call MPI_SEND(worker_job_package,Nbytes, MPI_PACKED,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)
-		                             write(file_id,1000) per_index , dt_index,stn_index, dest
+		                             write(ioMPI,1000) per_index , dt_index,stn_index, dest
 					                          if (dest .ge. number_of_workers) then
 					                            goto 11
 					                          end if
@@ -293,7 +293,7 @@ Subroutine Master_Job_Compute_J(d,sigma,dsigma,eAll)
 
 
 
-                  write(file_id,1001)received_answers,which_per,which_dt,which_stn, who
+                  write(ioMPI,1001)received_answers,which_per,which_dt,which_stn, who
 
 
 
@@ -334,7 +334,7 @@ Subroutine Master_Job_Compute_J(d,sigma,dsigma,eAll)
             call create_worker_job_task_place_holder
             call Pack_worker_job_task
             call MPI_SEND(worker_job_package,Nbytes, MPI_PACKED,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)
-                           write(file_id,1002) per_index , dt_index,stn_index, dest
+                           write(ioMPI,1002) per_index , dt_index,stn_index, dest
 
 
 13     continue
@@ -347,11 +347,11 @@ Subroutine Master_Job_Compute_J(d,sigma,dsigma,eAll)
 
 
         !DONE: Received soln for all transmitter from all nodes
-        write(file_id,*)'COMPUTE_J: Finished calculating for (', d%nTx , ') Transmitters '
+        write(ioMPI,*)'COMPUTE_J: Finished calculating for (', d%nTx , ') Transmitters '
 
                 endtime=MPI_Wtime()
                 time_used = endtime-starttime
-        write(file_id,*)'COMPUTE_J: TIME REQUIERED: ',time_used ,'s'
+        write(ioMPI,*)'COMPUTE_J: TIME REQUIERED: ',time_used ,'s'
 
   1000 format ('SENS: Send Per # ',i6,' and  DataType # ', i6, ' and  Sta # ', i6 , ' to node # ',i6)
   1001 format (i6,'SENS: Recv soln for Per # ',i6,' and  DataType # ', i6,' and Sta # ',i6,' from ', i6)
@@ -426,7 +426,7 @@ Subroutine Master_job_JmultT(sigma,d,dsigma,eAll,s_hat)
             call create_worker_job_task_place_holder
             call Pack_worker_job_task
             call MPI_SEND(worker_job_package,Nbytes, MPI_PACKED,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)
-                          write(file_id,*) 'JmultT: Send Per. # ',per_index , 'to node # ',dest
+                          write(ioMPI,*) 'JmultT: Send Per. # ',per_index , 'to node # ',dest
                           if (dest .ge. number_of_workers) then
                             goto 20
                           end if
@@ -467,7 +467,7 @@ Subroutine Master_job_JmultT(sigma,d,dsigma,eAll,s_hat)
                   call linComb_modelParam(ONE,dsigma,ONE,dsigma_temp,dsigma)
 
 
-                  write(file_id,*)'JmultT: Recv. dsigma. for Per # ',which_per ,' from ', who
+                  write(ioMPI,*)'JmultT: Recv. dsigma. for Per # ',which_per ,' from ', who
 
 
 
@@ -485,7 +485,7 @@ Subroutine Master_job_JmultT(sigma,d,dsigma,eAll,s_hat)
             call create_worker_job_task_place_holder
             call Pack_worker_job_task
             call MPI_SEND(worker_job_package,Nbytes, MPI_PACKED,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)
-                           write(file_id,*) 'JmultT_CONT: Send Per. # ',per_index , 'to node # ',dest
+                           write(ioMPI,*) 'JmultT_CONT: Send Per. # ',per_index , 'to node # ',dest
                        end if
 
 
@@ -497,10 +497,10 @@ Subroutine Master_job_JmultT(sigma,d,dsigma,eAll,s_hat)
                 endtime=MPI_Wtime()
                 time_used = endtime-starttime
         !DONE: Received soln for all transmitter from all nodes
-        write(file_id,*)'JmultT: Finished calculating for (', d%nTx , ') Transmitters '
+        write(ioMPI,*)'JmultT: Finished calculating for (', d%nTx , ') Transmitters '
         endtime=MPI_Wtime()
         time_used = endtime-starttime
-        write(file_id,*)'JmultT: TIME REQUIERED: ',time_used ,'s'
+        write(ioMPI,*)'JmultT: TIME REQUIERED: ',time_used ,'s'
 
 
 
@@ -548,7 +548,7 @@ Subroutine Master_job_Jmult(mHat,m,d,eAll)
             call create_worker_job_task_place_holder
             call Pack_worker_job_task
             call MPI_SEND(worker_job_package,Nbytes, MPI_PACKED,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)
-                          write(file_id,*) 'Jmult: Send Per. # ',per_index , 'to node # ',dest
+                          write(ioMPI,*) 'Jmult: Send Per. # ',per_index , 'to node # ',dest
                           if (dest .ge. number_of_workers) then
                             goto 20
                           end if
@@ -581,7 +581,7 @@ Subroutine Master_job_Jmult(mHat,m,d,eAll)
                   call MPI_RECV(d%d(which_per)%data(ndt)%errorbar,1,MPI_LOGICAL, who, FROM_WORKER,MPI_COMM_WORLD, STATUS, ierr)
               end do
 
-                  write(file_id,*)'Jmult: Recv. data for Per # ',which_per ,' from ', who
+                  write(ioMPI,*)'Jmult: Recv. data for Per # ',which_per ,' from ', who
 
 
 
@@ -600,7 +600,7 @@ Subroutine Master_job_Jmult(mHat,m,d,eAll)
             call create_worker_job_task_place_holder
             call Pack_worker_job_task
             call MPI_SEND(worker_job_package,Nbytes, MPI_PACKED,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)
-                           write(file_id,*) 'Jmult_CONT: Send Per. # ',per_index , 'to node # ',dest
+                           write(ioMPI,*) 'Jmult_CONT: Send Per. # ',per_index , 'to node # ',dest
                        end if
 
 
@@ -610,11 +610,11 @@ Subroutine Master_job_Jmult(mHat,m,d,eAll)
 
 
         !DONE: Received soln for all transmitter from all nodes
-        write(file_id,*)'Jmult: Finished calculating for (', d%nTx , ') Transmitters '
+        write(ioMPI,*)'Jmult: Finished calculating for (', d%nTx , ') Transmitters '
 
                 endtime=MPI_Wtime()
                 time_used = endtime-starttime
-        write(file_id,*)'Jmult: TIME REQUIERED: ',time_used ,'s'
+        write(ioMPI,*)'Jmult: TIME REQUIERED: ',time_used ,'s'
 end Subroutine Master_job_Jmult
 
 !############################################## Master_job_Distribute_Data #########################################################
@@ -871,7 +871,7 @@ Subroutine Master_job_Clean_Memory
     implicit none
     include 'mpif.h'
 
-          write(file_id,*)'Sending Clean memory message to all nodes'
+          write(ioMPI,*)'Sending Clean memory message to all nodes'
 
        do dest=1,number_of_workers
            worker_job_task%what_to_do='Clean memory'
@@ -880,7 +880,7 @@ Subroutine Master_job_Clean_Memory
             call MPI_SEND(worker_job_package,Nbytes, MPI_PACKED,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)
             call MPI_RECV(worker_job_package, Nbytes, MPI_PACKED ,dest, FROM_WORKER,MPI_COMM_WORLD,STATUS, ierr)
             call Unpack_worker_job_task
-           write(file_id,*)'Node       :',worker_job_task%taskid, ' status=  ', trim(worker_job_task%what_to_do)
+           write(ioMPI,*)'Node       :',worker_job_task%taskid, ' status=  ', trim(worker_job_task%what_to_do)
 
         end do
 
@@ -892,7 +892,7 @@ Subroutine Master_job_Stop_MESSAGE
     implicit none
     include 'mpif.h'
 
-          write(file_id,*)'FWD: Sending stop message to all nodes'
+          write(ioMPI,*)'FWD: Sending stop message to all nodes'
 
        do dest=1,number_of_workers
            worker_job_task%what_to_do='STOP'
@@ -901,7 +901,7 @@ Subroutine Master_job_Stop_MESSAGE
             call MPI_SEND(worker_job_package,Nbytes, MPI_PACKED,dest, FROM_MASTER, MPI_COMM_WORLD, ierr)
             call MPI_RECV(worker_job_package, Nbytes, MPI_PACKED ,dest, FROM_WORKER,MPI_COMM_WORLD,STATUS, ierr)
             call Unpack_worker_job_task
-           write(file_id,*)'Node       :',worker_job_task%taskid, ' status=  ', trim(worker_job_task%what_to_do)
+           write(ioMPI,*)'Node       :',worker_job_task%taskid, ' status=  ', trim(worker_job_task%what_to_do)
 
         end do
 

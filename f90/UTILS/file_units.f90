@@ -16,6 +16,9 @@ module file_units
   ! Log file
   integer, parameter							:: ioLog=111
 
+  ! MPI Log file
+  integer, parameter                            :: ioMPI=2000
+
   ! Grid, model, data
   integer, parameter							:: ioPrm=1
   integer, parameter							:: ioGrd=2
