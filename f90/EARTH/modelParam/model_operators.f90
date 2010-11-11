@@ -1366,33 +1366,33 @@ Contains
 
 	write(0,*)
 	if(present(comment)) then
-		write(0,*) comment
+		write(0,*) node_info,comment
 	end if
 
 	if (verbose>0) then
-  		write(0,'(a50,i4)') 'Number of layers in script: ',P%nL
+  		write(0,'(a12,a50,i4)') node_info,'Number of layers in script: ',P%nL
 		do j=1,P%nL
-    		write(0,'(a46,i2,a2,i4)') 'Number of coefficients in layer ',j,': ',count(.not.P%c(j,:)%frozen)
+    		write(0,'(a12,a46,i2,a2,i4)') node_info,'Number of coefficients in layer ',j,': ',count(.not.P%c(j,:)%frozen)
 		end do
-  		write(0,'(a50,i4)') 'Number of variable parameters in script: ',count(.not.P%c%frozen)
+  		write(0,'(a12,a50,i4)') node_info,'Number of variable parameters in script: ',count(.not.P%c%frozen)
 		write(0,*)
 	end if
 
 	do j=1,P%nL
-    	write(0,'(a46,i2,a2,g15.7)') 'Degree and order zero coefficient in layer ',j,': ',P%c(j,1)%value
+    	write(0,'(a12,a46,i2,a2,g15.7)') node_info,'Degree and order zero coefficient in layer ',j,': ',P%c(j,1)%value
 		end do
 	write(0,*)
 
 	if (verbose>0) then
 		do j=1,P%nL
-    		write(0,'(a46,i2,a2,g10.5)') 'Horizontal regularization in layer ',j,': ',P%L(j)%alpha
+    		write(0,'(a12,a46,i2,a2,g10.5)') node_info,'Horizontal regularization in layer ',j,': ',P%L(j)%alpha
 		end do
 		write(0,*)
 	end if
 
 	if (verbose>0) then
 		do j=1,P%nL
-    		write(0,'(a46,i2,a2,g10.5)') 'Vertical regularization in layer ',j,': ',P%L(j)%beta
+    		write(0,'(a12,a46,i2,a2,g10.5)') node_info,'Vertical regularization in layer ',j,': ',P%L(j)%beta
 		end do
 		write(0,*)
 	end if
@@ -1400,7 +1400,7 @@ Contains
 	if (verbose>3) then
 		do i=1,P%nc
 	  		coeff=getCoeff_modelParam(P,i)
-	  		write (0,'(2i8,g17.9)') coeff%L%num,coeff%F%num,coeff%value
+	  		write (0,'(a12,2i8,g17.9)') node_info,coeff%L%num,coeff%F%num,coeff%value
 		end do
 	end if
 
@@ -1585,23 +1585,23 @@ Contains
     inquire(FILE=trim(cfile),EXIST=exists)
     if(exists) then
       open(ioPrm,file=cfile,status='old',form='formatted',iostat=ios)
-      write(6,*) 'Reading from the parametrization file ',trim(cfile)
+      write(6,*) node_info,'Reading from the parametrization file ',trim(cfile)
     else
-      write(0,*) 'Error: (read_modelParam) input file does not exist'
+      write(0,*) node_info,'Error: (read_modelParam) input file does not exist'
       stop
     end if
 
     read(ioPrm,'(a8,a80)') string,prmname
 
     if (index(prmname,'harmonic')==0) then
-       write(0, *) 'Error: (read_modelParam) not a spherical harmonic parametrization'
+       write(0, *) node_info,'Error: (read_modelParam) not a spherical harmonic parametrization'
        stop
     else
       i = index(prmname,'layers')
       read(prmname(i+7:len(prmname)),'(i2)') nL
       i = index(prmname,'degree')
       read(prmname(i+7:len(prmname)),'(i2)') degree
-      write(6,*) prmname
+      write(6,*) node_info,trim(prmname)
     end if
 
 

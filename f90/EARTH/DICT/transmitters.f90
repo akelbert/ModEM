@@ -62,7 +62,7 @@ Contains
 
     open(ioTX,file=cUserDef%fn_period,status='old',form='formatted',iostat=ios)
 
-    write(6,*) 'Reading from the periods file ',trim(cUserDef%fn_period)
+    write(6,*) node_info,'Reading from the periods file ',trim(cUserDef%fn_period)
     read(ioTX,'(a)') label
     ! write(6,*) label
 

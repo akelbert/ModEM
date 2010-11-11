@@ -119,7 +119,7 @@ Contains
 
     open(ioRad,file=cUserDef%fn_slices,status='old',form='formatted',iostat=ios)
 
-    write(6,*) 'Reading from the output radii file ',trim(cUserDef%fn_slices)
+    write(6,*) node_info,'Reading from the output radii file ',trim(cUserDef%fn_slices)
     read(ioRad,'(a)') label
 
     read(ioRad,*) num

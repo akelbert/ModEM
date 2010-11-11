@@ -242,10 +242,10 @@ Contains
         QMRiter%tol = tolEMfwd
       else
         QMRiter%tol = tolEMadj
-       end if 
+       end if
     end if
 
-    
+
     QMRiter%niter = 0
     QMRiter%maxIt = IterPerDivCor
     allocate(QMRiter%rerr(IterPerDivCor), STAT=status)
@@ -295,8 +295,8 @@ Contains
     end do loop
 
     if (output_level > 1) then
-       write (*,*) 'finished solving:', nIterTotal, EMrelErr(nIterTotal)
-	   write (*,*) ' time taken (mins) ', elapsed_time(timer)/60.0
+       write (*,'(a12,a20,i8,g15.7)') node_info, 'finished solving:', nIterTotal, EMrelErr(nIterTotal)
+	   write (*,'(a12,a22,f12.6)')    node_info, ' time taken (mins) ', elapsed_time(timer)/60.0
     end if
 
     !  After solving symetrized system, need to do different things for
@@ -396,7 +396,8 @@ subroutine SdivCorr(inE,outE,phi0)
   DivCorRelErr(:,nDivCor) = PCGiter%rerr
 
   if (output_level > 2) then
-     write (*,*) 'finished divergence correction:', PCGiter%niter, PCGiter%rerr(PCGiter%niter)
+     write (*,'(a12,a32,i5,g15.7)') node_info, &
+        'finished divergence correction:', PCGiter%niter, PCGiter%rerr(PCGiter%niter)
   end if
 
   ! compute gradient of phiSol (Divergence correction for inE)
@@ -419,8 +420,8 @@ subroutine SdivCorr(inE,outE,phi0)
 
   ! output level defined in basic file_units module
   if (output_level > 3) then
-     write(*,*) 'divergence of currents before correction: ', divJ(1, nDivCor)
-     write(*,*) 'divergence of currents  after correction: ', divJ(2, nDivCor)
+     write(*,'(a12,a47,g15.7)') node_info, 'divergence of currents before correction: ', divJ(1, nDivCor)
+     write(*,'(a12,a47,g15.7)') node_info, 'divergence of currents  after correction: ', divJ(2, nDivCor)
   end if
 
   ! deallocate the temporary work arrays
@@ -539,13 +540,13 @@ end subroutine SdivCorr ! SdivCorr
        return
     else
        solverControl%UseDefaults = .false.
-       write(*,*) 'Reading EM solver configuration from file ',trim(rFile)
+       write(*,*) node_info,'Reading EM solver configuration from file ',trim(rFile)
     end if
 
     open (unit=ioFwdCtrl,file=rFile,status='old',iostat=ios)
 
     if(ios/=0) then
-       write(0,*) 'Error opening file: ', rFile
+       write(0,*) node_info,'Error opening file: ', rFile
     end if
 
     ! This is the list of options specified in the startup file
@@ -553,27 +554,27 @@ end subroutine SdivCorr ! SdivCorr
     read (ioFwdCtrl,'(a47,i5)') string,solverControl%IterPerDivCor
     if (output_level > 2) then
        write (*,*)
-       write (*,'(a47,i5)') string,solverControl%IterPerDivCor
+       write (*,'(a12,a47,i5)') node_info,string,solverControl%IterPerDivCor
     end if
     read (ioFwdCtrl,'(a47,i5)') string,solverControl%MaxDivCor
     if (output_level > 2) then
-       write (*,'(a47,i5)') string,solverControl%MaxDivCor
+       write (*,'(a12,a47,i5)') node_info,string,solverControl%MaxDivCor
     end if
     read (ioFwdCtrl,'(a47,i5)') string,solverControl%MaxIterDivCor
     if (output_level > 2) then
-       write (*,'(a47,i5)') string,solverControl%MaxIterDivCor
+       write (*,'(a12,a47,i5)') node_info,string,solverControl%MaxIterDivCor
     end if
     read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolEMfwd
     if (output_level > 2) then
-       write (*,'(a47,g15.7)') string,solverControl%tolEMfwd
+       write (*,'(a12,a47,g15.7)') node_info,string,solverControl%tolEMfwd
     end if
     read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolEMadj
     if (output_level > 2) then
-       write (*,'(a47,g15.7)') string,solverControl%tolEMadj
+       write (*,'(a12,a47,g15.7)') node_info,string,solverControl%tolEMadj
     end if
     read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolDivCor
     if (output_level > 2) then
-       write (*,'(a47,g15.7)') string,solverControl%tolDivCor
+       write (*,'(a12,a47,g15.7)') node_info,string,solverControl%tolDivCor
        write (*,*)
     end if
 

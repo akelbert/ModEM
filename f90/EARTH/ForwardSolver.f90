@@ -67,7 +67,7 @@ Contains
    initForSens = present(comb)
 
    freq => freqList%info(iTx)
-   write(*,'(a46,es9.3,a5)') &
+   write(*,'(a12,a46,es9.3,a5)') node_info, &
         'Initializing 3D SGFD global solver for period ',freq%period,' days'
 
    ! If h0 is already allocated, do not reinitialize - use the previous
@@ -157,14 +157,14 @@ Contains
    grid = h%grid
 
    ! run FWD/ADJ solver
-   write(*,'(a12,a3,a20,i4,a2,es12.6,a5)') &
+   write (*,'(a12,a12,a3,a20,i4,a2,es12.6,a5)') node_info, &
     'Solving the ',FWD,' problem for period ',iTx,': ',1/freq%value,' secs'
 
    omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
 
    if (secondaryField) then
 
-      write(*,*) 'Using the secondary field formulation ...'
+      write(*,*) node_info, 'Using the secondary field formulation ...'
 
       ! Compute the RHS = - del x drho (del x H)
       h = h1d
@@ -188,7 +188,7 @@ Contains
 
    else
 
-      write(*,*) 'Using the forward solver ...'
+      write(*,*) node_info, 'Using the forward solver ...'
 
       ! solve S_m <h> = <s> for vector <h>
       adjoint = .false.
@@ -206,7 +206,7 @@ Contains
    end if
 
    if (output_level > 1) then
-      write (*,*) ' time taken (mins) ', elapsed_time(timer)/60.0
+      write (*,*) node_info, ' time taken (mins) ', elapsed_time(timer)/60.0
    end if
   end subroutine fwdSolve
 
@@ -235,7 +235,7 @@ Contains
    grid = h%grid
 
    ! run FWD/ADJ solver
-   write(*,'(a12,a3,a20,i4,a2,es12.6,a5)') &
+   write (*,'(a12,a12,a3,a20,i4,a2,es12.6,a5)') node_info, &
     'Solving the ',FWDorADJ,' problem for period ',iTx,': ',1/freq%value,' secs'
 
    omega  = 2.0d0*pi*freq%value     ! angular frequency (radians/sec)
@@ -258,7 +258,7 @@ Contains
    endif
 
    if (output_level > 1) then
-      write (*,*) ' time taken (mins) ', elapsed_time(timer)/60.0
+      write (*,*) node_info, ' time taken (mins) ', elapsed_time(timer)/60.0
    end if
 
 

@@ -56,7 +56,7 @@ Contains
 
     open(ioDT,file=cUserDef%fn_func,status='old',form='formatted',iostat=ios)
 
-    write(6,*) 'Reading from the transfer functions file ',trim(cUserDef%fn_func)
+    write(6,*) node_info,'Reading from the transfer functions file ',trim(cUserDef%fn_func)
     read(ioDT,'(a)') label
 
     read(ioDT,*) num

@@ -7,6 +7,7 @@ program earth
   use output
   use senscomp
   use nlcg
+
 #ifdef MPI
   use MPI_main
 #endif
@@ -43,6 +44,9 @@ program earth
           fn_startup = 'fwd_startup'
           call readStartFile(fn_startup,cUserDef)
           write(6,*) 'Modular global code running in: PARALLEL [', number_of_workers,' nodes]'
+          file_id=2000
+          open(file_id,file='Nodes_Status.info')
+          write(file_id,*) 'Total Number of nodes= ', number_of_workers
       else
         call Worker_job(p_input,allData)
         if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
@@ -410,6 +414,7 @@ program earth
 #ifdef MPI
      call Master_job_STOP_MESSAGE
      call MPI_destructor
+     close(file_id)
 #endif
 
 

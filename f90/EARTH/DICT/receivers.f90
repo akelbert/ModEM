@@ -78,7 +78,7 @@ Contains
 
     open(ioRX,file=cUserDef%fn_coords,status='old',form='formatted',iostat=ios)
 
-    write(6,*) 'Reading from the coordinates file ',trim(cUserDef%fn_coords)
+    write(6,*) node_info,'Reading from the coordinates file ',trim(cUserDef%fn_coords)
     read(ioRX,'(a)') label
     ! write(6,*) label
 

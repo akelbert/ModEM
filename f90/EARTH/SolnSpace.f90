@@ -288,7 +288,7 @@ Contains
 	open(ioREAD,file=fname,status='unknown',form='formatted',iostat=ios)
 	read(ioREAD,'(a35)',iostat=istat,advance='no') comment
 	read(ioREAD,*,iostat=istat) nTx
-	print *, 'Number of transmitters: ',nTx
+	print *, node_info,'Number of transmitters: ',nTx
     call create_solnVectorMTX(nTx,E)
 	do j = 1,nTx
 		read(ioREAD,'(i3)',iostat=istat) iTx
@@ -491,12 +491,12 @@ Contains
 
     code = freqList%info(iTx)%code !write (code,'(i3.3)') iTx
     fn_input = trim(fname)//'_'//trim(code)//'.field'
-    write(*,*) 'Reading from file: ',trim(fn_input)
+    write(*,*) node_info,'Reading from file: ',trim(fn_input)
     open(ioREAD,file=fn_input,status='unknown',form='formatted',iostat=ios)
     read(ioREAD,'(a35)',iostat=istat) comment
     read(ioREAD,'(i3)',iostat=istat) j
     if (j .ne. iTx) then
-        write(0,*) 'Warning: transmitter ',iTx,' is read from file ',j
+        write(0,*) node_info,'Warning: transmitter ',iTx,' is read from file ',j
     end if
     call read_cvector(ioREAD,E%vec,grid)
     E%errflag = 0

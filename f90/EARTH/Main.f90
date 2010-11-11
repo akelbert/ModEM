@@ -92,15 +92,15 @@ Contains
 		call adjustLayers_modelParam(p0_input,grid%r)
 		! NOTE: regularization information is taken from the prior model!!!
 		if (.not. compare(p_input,p0_input)) then
-			write(0,*) 'Warning: Using the layer structure from the prior model'
+			write(0,*) node_info,'Warning: Using the layer structure from the prior model'
 			p_input%L = p0_input%L
 			if (.not. compare(p_input,p0_input)) then
-				write(0,*) 'Warning: Base parametrization incompatible with main model'
+				write(0,*) node_info,'Warning: Base parametrization incompatible with main model'
 				stop
 			end if
 		end if
 	else
-	  write(0,*) 'Warning: No base parametrization found; zero model will be used'
+	  write(0,*) node_info,'Warning: No base parametrization found; zero model will be used'
 	  p0_input = p_input
 	  call zero(p0_input)
 	end if
@@ -162,22 +162,22 @@ Contains
 
 	select case (cUserDef%verbose)
 	case ('debug')
-	  print *,'Output all information including debugging lines.'
+	  print *,node_info,'Output all information including debugging lines.'
 	  output_level = 5
 	case ('full')
-	  print *,'Output full information to screen and to files.'
+	  print *,node_info,'Output full information to screen and to files.'
 	  output_level = 4
 	case ('regular')
-	  print *,'Output information to files, and progress report to screen (default).'
+	  print *,node_info,'Output information to files, and progress report to screen (default).'
 	  output_level = 3
 	case ('compact')
-	  print *,'Output information to files, and compact summary to screen.'
+	  print *,node_info,'Output information to files, and compact summary to screen.'
 	  output_level = 2
 	case ('result')
-	  print *,'Output information to files, and result to screen.'
+	  print *,node_info,'Output information to files, and result to screen.'
 	  output_level = 1
 	case ('none')
-	  print *,'Output nothing at all except result to screen and to files.'
+	  print *,node_info,'Output nothing at all except result to screen and to files.'
 	  output_level = 0
 	case default
 	  output_level = 3
@@ -226,9 +226,9 @@ Contains
 	end if
 
     ! Output the frequencies
-    write(0,*) 'nfreq =',nfreq
+    write(0,*) node_info,'nfreq =',nfreq
     do i=1,nfreq
-	  write(0,*)' freq(',trim(freqList%info(i)%code),')=',freqList%info(i)%value
+	  write(0,*)node_info,' freq(',trim(freqList%info(i)%code),')=',freqList%info(i)%value
 	end do
 
 	! Too complicated to rewrite input to all subroutines that use x,y,z,nx,ny,nz

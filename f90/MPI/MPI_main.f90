@@ -3,6 +3,7 @@ module MPI_main
 #ifdef MPI
 
   use math_constants
+  use file_units
   use utilities
   use datasens	 !!!!  inherits : dataspace, dataFunc, SolnSpace
   use SolverSens  !!!  inherits : modelspace, soln2d
@@ -956,6 +957,8 @@ Subroutine Worker_job (sigma0,d)
 nTx=d%nTx
 recv_loop=0
 previous_message=''
+write(node_info,'(a5,i3.3,a4)') 'node[',taskid,']:  '
+
  do
           recv_loop=recv_loop+1
 
@@ -967,9 +970,9 @@ previous_message=''
           !call MPI_RECV(worker_job_task,1,worker_job_task_mpi,0, FROM_MASTER,MPI_COMM_WORLD, STATUS, ierr)
 
 
-			if (taskid==1) then
-			write(6,*) taskid,' TODO: ',trim(worker_job_task%what_to_do),(worker_job_task%keep_E_soln),worker_job_task%several_Tx
-			end if
+			write(6,'(a12,a12,a30,a10)') node_info,' MPI TASK [',trim(worker_job_task%what_to_do),'] received'
+			!write(6,*) node_info,' MPI INFO [keep soln = ',(worker_job_task%keep_E_soln), &
+			! '; several TX = ',worker_job_task%several_Tx,']'
 
 if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
 
@@ -1011,7 +1014,7 @@ if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
             call create_worker_job_task_place_holder
             call Pack_worker_job_task
             call MPI_SEND(worker_job_package,Nbytes, MPI_PACKED,0,FROM_WORKER, MPI_COMM_WORLD, ierr)
-            write(6,*) 'SEND worker_job_package OK', taskid
+            !write(6,*) node_info,' MPI SEND [worker job package] successful'
             ! Send predicted data
                    do nDt=1, d_temp_TX%ndt
                        ndata=size(d_temp_TX%data(nDt)%value)
@@ -1261,9 +1264,7 @@ elseif (trim(worker_job_task%what_to_do) .eq. 'STOP' ) then
 
 end if
 previous_message=trim(worker_job_task%what_to_do)
-if (taskid==1) then
-write(6,*) taskid,' Finish: ',trim(worker_job_task%what_to_do)
-end if
+write(6,'(a12,a12,a30,a12)') node_info,' MPI TASK [',trim(worker_job_task%what_to_do),'] successful'
 
 end do
 

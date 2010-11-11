@@ -312,7 +312,7 @@ Contains
 
 	if (output_level>2) then
 	  print*
-	  print*,'initial divH =',errdiv0
+	  print*,trim(node_info),'initial divH =',errdiv0
 	end if
 
 !-------------------------------------------------------------
@@ -346,8 +346,8 @@ Contains
 !-------------------------------------------------------------
 	  if (cdabs(yHy) < eps) then
 		if (output_level>2) then
-			print*,'initial forcing norm =',yHy
-			print*,'exiting with zero solution...'
+			print*,trim(node_info),'initial forcing norm =',yHy
+			print*,trim(node_info),'exiting with zero solution...'
 		end if
 		xvec = czero
 		exitflg=0
@@ -420,7 +420,7 @@ Contains
 		erre = cdabs( dot_product(rvec(1:np),rvec(1:np)) )/yHy
 
 		if (output_level>2) then
-		  print *, ICOUNT, erre, dreal(herr)
+		  print *, trim(node_info), ICOUNT, erre, dreal(herr)
 		end if
 
 		ICTPOT=ICTPOT+1
@@ -449,7 +449,7 @@ Contains
 
 			call sum_divBC3(nx,ny,nz,divr,divi,z,errdiv)
 			if (output_level>2) then
-			  print*,'divH before update =',errdiv,IPOTLOOP
+			  print*,trim(node_info),'divH before update =',errdiv,IPOTLOOP
 			end if
 
 			call relaxpot_chol3BC3(nx,ny,nz,pot,divr,rpot,zpot,qpot,ppot,spot, &
@@ -468,7 +468,7 @@ Contains
 
 			call sum_divBC3(nx,ny,nz,divr,divi,z,errdiv)
 			if (output_level>2) then
-			  print*,'divH after  update =',errdiv,IPOTLOOP
+			  print*,trim(node_info),'divH after  update =',errdiv,IPOTLOOP
 			end if
 
 			call copyd3_d1_b(nx,ny,nz,hx,hy,hz,xvec,x,y,z)

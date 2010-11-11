@@ -116,7 +116,7 @@ Contains
 
 	open(ioGrd,file=cUserDef%fn_grid,status='old',iostat=ios)
 
-    write(6,*) 'Reading from the grid file ',trim(cUserDef%fn_grid)
+    write(6,*) node_info,'Reading from the grid file ',trim(cUserDef%fn_grid)
 	read(ioGrd,*) nx,ny,nz
 	! model grid and resistivity memory allocation
 	allocate(x(nx+1),y(ny+1),z(nz+1))
@@ -144,7 +144,7 @@ Contains
 	inquire(FILE=cUserDef%fn_shell,EXIST=exists)
 	! If no thin shell information present, assume no crust for model computations
 	if (.not.exists) then
-	  write(0,*) 'Warning: No thin shell conductance distribution specified; assume no crust'
+	  write(0,*) node_info,'Warning: No thin shell conductance distribution specified; assume no crust'
 	  nzCrust = nzAir
 	else
 	  do i=1,nz
@@ -210,11 +210,11 @@ Contains
     ! local
     integer				                            :: ios,istat,i
 
-    write(6,*) 'Reading from the EM solution file ',trim(cUserDef%fn_field)
+    write(6,*) node_info,'Reading from the EM solution file ',trim(cUserDef%fn_field)
 
 	inquire(FILE=cUserDef%fn_field,EXIST=exists)
 	if(.not.exists) then
-      write(6,*) 'Field solution will not be initialized: ',trim(cUserDef%fn_field)," not found"
+      write(6,*) node_info,'Field solution will not be initialized: ',trim(cUserDef%fn_field)," not found"
 	  call deall_solnVectorMTX(H)
 	  return
 	end if
@@ -248,7 +248,7 @@ Contains
 
 	open(ioShell,file=cUserDef%fn_shell,status='old',iostat=ios)
 
-    write(6,*) 'Reading from the thin sheet conductance file ',trim(cUserDef%fn_shell)
+    write(6,*) node_info,'Reading from the thin sheet conductance file ',trim(cUserDef%fn_shell)
 
 	do i=1,mygrid%nx
 	  read(ioShell,*,iostat=ios) mycrust%cond(i,1:mygrid%ny)
@@ -345,15 +345,15 @@ Contains
         ! Read C responses into a data vector with a single data type (cdata)
         call initDataList(cUserDef%fn_cdata,cdata,iDt,obsList,freqList)
         if (.not. cdata%allocated) then
-          write(0,*) 'Warning: Data misfit will not be calculated for C responses: data file not available'
+          write(0,*) node_info,'Warning: Data misfit will not be calculated for C responses: data file not available'
         end if
         do i=1,cdata%ntx
           do k=1,cdata%d(i)%data(1)%nSite
                 iRx = cdata%d(i)%data(1)%rx(k)
                 theta = obsList%info(iRx)%colat*d2r;
                 if ((theta >= pi/2-EPS_GRID).and.(theta <= pi/2+EPS_GRID)) then
-                  write(0,*) 'Error: (initData) receiver ',trim(obsList%info(iRx)%code),' located too close to equator;'
-                  write(0,*) 'Error: (initData) please delete this receiver from the list and try again.'
+                  write(0,*) node_info,'Error: (initData) receiver ',trim(obsList%info(iRx)%code),' located too close to equator;'
+                  write(0,*) node_info,'Error: (initData) please delete this receiver from the list and try again.'
                     exit
                 end if
                 ! convert from C responses to C ratios
@@ -366,15 +366,15 @@ Contains
         ! Read D responses into a data vector with a single data type (ddata)
         call initDataList(cUserDef%fn_ddata,ddata,iDt,obsList,freqList)
         if (.not. ddata%allocated) then
-          write(0,*) 'Warning: Data misfit will not be calculated for D responses: data file not available'
+          write(0,*) node_info,'Warning: Data misfit will not be calculated for D responses: data file not available'
         end if
         do i=1,ddata%ntx
           do k=1,ddata%d(i)%data(1)%nSite
                 iRx = ddata%d(i)%data(1)%rx(k)
                 theta = obsList%info(iRx)%colat*d2r;
                 if ((theta >= pi/2-EPS_GRID).and.(theta <= pi/2+EPS_GRID)) then
-                  write(0,*) 'Error: (initData) receiver ',trim(obsList%info(iRx)%code),' located too close to equator;'
-                  write(0,*) 'Error: (initData) please delete this receiver from the list and try again.'
+                  write(0,*) node_info,'Error: (initData) receiver ',trim(obsList%info(iRx)%code),' located too close to equator;'
+                  write(0,*) node_info,'Error: (initData) please delete this receiver from the list and try again.'
                     exit
                 end if
                 ! convert from D responses to D ratios
@@ -385,7 +385,7 @@ Contains
 
       case default
 
-        write(0,*) 'Please specify correct transfer functions in the file ',trim(cUserDef%fn_func)
+        write(0,*) node_info,'Please specify correct transfer functions in the file ',trim(cUserDef%fn_func)
         stop
 
       end select
@@ -452,7 +452,7 @@ Contains
 
     open(ioDat,file=trim(fname),status='old',form='formatted',iostat=ios)
 
-    write(6,*) 'Reading from the data file ',trim(fname)
+    write(6,*) node_info,'Reading from the data file ',trim(fname)
     read(ioDat,'(a)') label
     write(6,*) label
     read(ioDat,'(a)') label
@@ -480,7 +480,7 @@ Contains
 	  if (new) then
 	    ifreq = getFreq(freqList,freq)
 	    if (ifreq > 0) then
-	       print *, 'Reading data for the frequency ',ifreq, freq !freqList%info(i)%value
+	       write(6,'(a12,a32,i6,a2,es12.6,a5)') node_info,'Reading data for the period ',ifreq,': ',days,' days'!freqList%info(i)%value
 	       countFreq = countFreq + 1
 		end if
 	  end if
@@ -512,9 +512,9 @@ Contains
 	close(ioDat)
 
 	if (countData==0) then
-  	  write(0,*) 'Warning: No data matches given frequencies and observatories'
+  	  write(0,*) node_info,'Warning: No data matches given frequencies and observatories'
 	else
-  	  write(0,*) 'Number of complex data values in total: ',countData
+  	  write(0,*) node_info,'Number of complex data values in total: ',countData
 	end if
 
 	! Finally, store the data in the data vector
@@ -610,7 +610,7 @@ Contains
 
 	  open(ioFwdCtrl,file=cUserDef%fn_ctrl,form='formatted',status='old')
 
-      write(6,*) 'Reading from the forward solver controls file ',trim(cUserDef%fn_ctrl)
+      write(6,*) node_info,'Reading from the forward solver controls file ',trim(cUserDef%fn_ctrl)
       read(ioFwdCtrl,*) fwdCtrls%ipotloopmax
       read(ioFwdCtrl,*) fwdCtrls%errend
       read(ioFwdCtrl,*) fwdCtrls%nrelmax
@@ -634,7 +634,7 @@ Contains
 	integer											:: i
 
     if (cUserDef%modelname == '') then
-       write(0, *) 'modelname not specified yet for FileInfoInit'
+       write(0, *) node_info,'modelname not specified yet for FileInfoInit'
        stop
     end if
 
