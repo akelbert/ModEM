@@ -16,29 +16,77 @@ implicit none
 Contains
 
 !*************************************************************************
-!Creating an MPI version of userdef_control_MPI
-subroutine create_userdef_control_MPI(ctrl)
+!Packing userdef_control in a Package
+  !1- Allocate a place holder
+ subroutine create_userdef_control_place_holder
+
+     implicit none
+     integer Nbytes1,Nbytes2,Nbytes3,Nbytes4
+
+       CALL MPI_PACK_SIZE(80*23, MPI_CHARACTER,        MPI_COMM_WORLD, Nbytes1,  ierr)
+       CALL MPI_PACK_SIZE(2,     MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, Nbytes2,  ierr)
+        Nbytes=(Nbytes1+Nbytes2)+1
+
+         if(associated(userdef_control_package)) then
+             deallocate(userdef_control_package)
+         end if
+         allocate(userdef_control_package(Nbytes))
+
+ end subroutine create_userdef_control_place_holder
+
+    !*************************************************************************
+    !2- Pack ctrl into userdef_control_package
+ subroutine pack_userdef_control(ctrl)
     implicit none
-    include 'mpif.h'
 
-    type(userdef_control), intent(in)   :: ctrl
-    integer :: ii,intex,CHARACTERex,sum1
-    integer(MPI_ADDRESS_KIND) address1(0:20)
+        type(userdef_control), intent(in)   :: ctrl
+        integer index
 
+       index=1
 
-   offsets(0) = 0
-   oldtypes(0) = MPI_CHARACTER
-   blockcounts(0) =  80*23
+        call MPI_Pack(ctrl%paramname,80*23, MPI_CHARACTER, userdef_control_package, Nbytes, index, MPI_COMM_WORLD, ierr)
+        call MPI_Pack(ctrl%damping,2, MPI_DOUBLE_PRECISION, userdef_control_package, Nbytes, index, MPI_COMM_WORLD, ierr)
 
-   call MPI_TYPE_EXTENT(MPI_CHARACTER, extent, ierr)
-   offsets(1) = (80*23 * extent)+offsets(0)
-   oldtypes(1) = MPI_REAL8
-   blockcounts(1) = 2
+end subroutine pack_userdef_control
 
-     call MPI_TYPE_STRUCT(2, blockcounts, offsets, oldtypes,userdef_control_MPI, ierr)
-     call MPI_TYPE_COMMIT(userdef_control_MPI, ierr)
+    !*************************************************************************
+    !3- Unpack userdef_control_package into ctrl
+ subroutine unpack_userdef_control(ctrl)
+    implicit none
 
-end  subroutine create_userdef_control_MPI
+        type(userdef_control), intent(in)   :: ctrl
+        integer index
+
+       index=1
+
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%paramname,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%modelname,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%verbose,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%calculate,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_grid,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_rho,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_shell,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_period,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_coords,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_func,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_ctrl,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_invctrl,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_slices,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_field,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_precond,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_param0,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_param,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_source,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_cdata,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_ddata,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_misfit,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_gradient,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%fn_point,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%damping,1, MPI_DOUBLE_PRECISION,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%step_size,1, MPI_DOUBLE_PRECISION,MPI_COMM_WORLD, ierr)
+
+end subroutine unpack_userdef_control
 
 !********************************************************************
 subroutine check_userdef_control_MPI (which_proc,ctrl)

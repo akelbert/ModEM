@@ -145,6 +145,7 @@ Contains
    type(solnVector_t), intent(inout)            :: h
    ! local variables
    type(transmitter_t), pointer                 :: freq
+   type(grid_t)                                 :: grid
    real(kind=prec)                              :: omega
    logical                                      :: adjoint,sens
 
@@ -152,6 +153,8 @@ Contains
    h%tx = iTx
 
    freq => freqList%info(iTx)
+
+   grid = h%grid
 
    ! run FWD/ADJ solver
    write(*,'(a12,a3,a20,i4,a2,es12.6,a5)') &
@@ -220,6 +223,7 @@ Contains
    type(rhsVector_t), intent(inout), optional    :: comb
    ! local variables
    type(transmitter_t), pointer                 :: freq
+   type(grid_t)                                 :: grid
    real(kind=prec)                              :: omega
    logical                                      :: adjoint,sens
 
@@ -227,6 +231,8 @@ Contains
    h%tx = iTx
 
    freq => freqList%info(iTx)
+
+   grid = h%grid
 
    ! run FWD/ADJ solver
    write(*,'(a12,a3,a20,i4,a2,es12.6,a5)') &

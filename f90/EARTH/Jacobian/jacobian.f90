@@ -82,6 +82,7 @@ Contains
 	vectorb = C_ZERO
 
 	! Initialize the internal grid for SolveMaxwells
+    write(0,*) 'Preparing SolveMaxwells - initializing the grid; nzEarth =',grid%nzEarth
     nx = grid%nx; ny = grid%ny; nz = grid%nz
     nzEarth = grid%nzEarth; nzAir = grid%nzAir
     allocate(x(nx),y(ny+1),z(nz+1),STAT=istat)
@@ -102,7 +103,6 @@ Contains
         call calcb_from_bc(nx,ny,nz,BC,vectorb,rho%v,grid%x,grid%y,grid%z,grid)
         vectory = vectory + vectorb
     end if
-
 
     !------------------------------------------------
     ! Set up the initial value of <x> for A <x> = <y>
@@ -145,8 +145,11 @@ Contains
     !------------------------------------------------
     ! Call the forward solver $A_{\rho,\omega} x = y$
     !------------------------------------------------
+    write(0,*) 'Starting SolveMaxwells'
+
     call SolveMaxwells(vectorx,vectory,om,rho%v,fwdCtrls,errflag)
 
+    write(0,*) 'Completed SolveMaxwells'
 
     !-----------------------------------------------
     ! From <x>, compute the interior components of h

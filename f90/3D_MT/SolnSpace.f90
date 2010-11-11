@@ -347,8 +347,12 @@ contains
        call create_solnVectorMTX(eIn%nTx,eOut)
 
        do j = 1,eIn%nTx
-          call copy_solnVector(eOut%solns(j),eIn%solns(j))
-       enddo
+         if (eIn%solns(j)%allocated) then
+            eOut%solns(j) = eIn%solns(j)
+         else
+            eOut%solns(j)%allocated = .false.
+         end if
+       end do
 
        eOut%allocated = eIn%allocated
 

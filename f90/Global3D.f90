@@ -36,29 +36,30 @@ program earth
   integer									:: ifreq,ifunc,iobs
   real(8), dimension(2)                         :: value1, value2, delta
 
-  runtime = 0.0d0
-
-  fn_startup='fwd_startup'
-  !fn_startup=''
-  eps = 0.01
-
-  call readStartFile(fn_startup,cUserDef)
 
 #ifdef MPI
-      call  MPI_constructor(cUserDef)
+      call  MPI_constructor()
       if (taskid==0) then
+          fn_startup = 'fwd_startup'
+          call readStartFile(fn_startup,cUserDef)
           write(6,*) 'Modular global code running in: PARALLEL [', number_of_workers,' nodes]'
       else
         call Worker_job(p_input,allData)
-        if (trim(worker_job_task%what_to_do) .eq. 'STOPED')  then
+        if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
              call DeleteGlobalData()
-             call DeleteGlobalArrays()
              stop
         end if
      end if
 #else
+     fn_startup = 'fwd_startup'
+     call readStartFile(fn_startup,cUserDef)
      write(6,*) 'Modular global code running in: SERIAL'
 #endif
+
+  runtime = 0.0d0
+
+  eps = 0.01
+
 
   call InitGlobalData(cUserDef)
 
@@ -71,12 +72,9 @@ program earth
 
   call outputModel(outFiles%fn_model,grid,rho%v)
 
-  call InitGlobalArrays()
-
   if (cUserDef%calculate == 'nothing') then
     call write_modelParam(param,'testOutput.prm')
 	call DeleteGlobalData()
-	call DeleteGlobalArrays()
 #ifdef MPI
      call Master_job_STOP_MESSAGE
      call MPI_destructor
@@ -143,14 +141,12 @@ program earth
 	print *,'Perform the symmetry test and exit.'
 
     call DeleteGlobalData()
-    call DeleteGlobalArrays()
 
     ! compute random model parturbation ...
     eps = 0.005
     write(0,*) 'Model perturbation used is uniform random times ',eps
 
     call InitGlobalData(cUserDef,eps)
-    call InitGlobalArrays()
 
 	!call calc_symmetry(runtime)
 	call calc_symmetric_operators(runtime)
@@ -222,14 +218,12 @@ program earth
 	call calc_derivative(f1,grad)
 
 	call DeleteGlobalData()
-	call DeleteGlobalArrays()
 
 	! compute random model parturbation ...
 	eps = 0.005
     write(0,*) 'Model perturbation used is uniform random times ',eps
 
 	call InitGlobalData(cUserDef,eps)
-	call InitGlobalArrays()
 
     ! compute misfit after the perturbation (m0+dm)
 	call calc_responses(f2,allResp)
@@ -308,11 +302,9 @@ program earth
 !	psi1 = psi%v(:,:,:)%resp%value
 
 	call DeleteGlobalData()
-	call DeleteGlobalArrays()
 
     eps = 0.005
 	call InitGlobalData(cUserDef,eps)
-	call InitGlobalArrays()
 
   ! Run Jacobian computations after the perturbation (a+da)
 	call calc_jacobian(runtime)
@@ -414,7 +406,6 @@ program earth
   call CloseOutFiles()
 
   call DeleteGlobalArrays()
-  call DeleteGlobalData()
 
 #ifdef MPI
      call Master_job_STOP_MESSAGE

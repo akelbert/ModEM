@@ -287,7 +287,11 @@ contains
 
       call create(eIn%nTx,eOut)
       do j = 1,eIn%nTx
-        eOut%solns(j) = eIn%solns(j)
+        if (eIn%solns(j)%allocated) then
+            eOut%solns(j) = eIn%solns(j)
+        else
+            eOut%solns(j)%allocated = .false.
+        end if
       end do
       eOut%allocated = .true.
 

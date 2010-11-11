@@ -39,7 +39,7 @@ Contains
 
   subroutine readStartFile(fn_startup,cUserDef)
 
-    character(80), intent(inout)  		:: fn_startup
+    character(*), intent(inout)  		:: fn_startup
 	type (userdef_control), intent(out)		:: cUserDef
     integer								:: ios
 	character(20)						:: string

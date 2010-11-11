@@ -32,7 +32,7 @@ program Mod3DMT
 	              write(file_id,*) 'Total Number of nodes= ', number_of_workers
 			  else
 			    call Worker_job(sigma0,allData)
-	            if (trim(worker_job_task%what_to_do) .eq. 'STOPED')  then
+	            if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
 	               	 call deallGlobalData()
 		             call cleanUp()
 	                 call MPI_destructor

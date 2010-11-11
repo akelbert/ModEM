@@ -39,10 +39,10 @@ Contains
   ! * Frequencies are listed in ascending order (by value)
   ! * Observatories are listed in ascending order (alphabetic)
 
-  subroutine InitGlobalData(cUserDef,eps)
+  subroutine InitGlobalData(ctrl,eps)
 
 	implicit none
-    type (userdef_control), intent(inout)			:: cUserDef
+    type (userdef_control), intent(inout)			:: ctrl
 	integer										:: i,ios=0,istat=0
 	character(100)								:: label
 	real(8),intent(in),optional	                :: eps
@@ -55,6 +55,9 @@ Contains
 	!--------------------------------------------------------------------------
 	! Initialize the user-defined switches and file names
     !call readStartFile(fn_startup,cUserDef)
+    !--------------------------------------------------------------------------
+    ! Initialize the global user control and file names structure
+    cUserDef = ctrl
 	!--------------------------------------------------------------------------
 	! Initialize preconditioning information
 	call initFunctional(cUserDef,misfitType)
@@ -182,9 +185,17 @@ Contains
 
 	!--------------------------------------------------------------------------
 	! Helpful output
+#ifdef MPI
+    if (taskid==0) then
+        call print_modelParam(p0_input,output_level-1,"Prior model m_0 = ")
+        call print_modelParam(p_input,output_level-1,"Input model \hat{m} = ")
+        call print_modelParam(param,output_level-1,"Final model m = ")
+    end if
+#else
 	call print_modelParam(p0_input,output_level-1,"Prior model m_0 = ")
 	call print_modelParam(p_input,output_level-1,"Input model \hat{m} = ")
 	call print_modelParam(param,output_level-1,"Final model m = ")
+#endif
 	!--------------------------------------------------------------------------
 
 	! If this information is required, initialize data functionals
@@ -227,6 +238,8 @@ Contains
 	nzEarth = grid%nzEarth; nzAir = grid%nzAir
 	allocate(x(nx),y(ny+1),z(nz+1),STAT=istat)
 	x = grid%x; y = grid%y; z = grid%z
+
+	call InitGlobalArrays()
 
 	return
 
@@ -272,6 +285,8 @@ Contains
 	if (allocated(dmisfitValue)) then
 	  deallocate(dmisfitValue)
 	end if
+
+	call DeleteGlobalArrays()
 
   end subroutine DeleteGlobalData	! DeleteGlobalData
 
