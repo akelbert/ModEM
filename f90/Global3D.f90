@@ -7,9 +7,8 @@ program earth
   use output
   use senscomp
   use nlcg
-
 #ifdef MPI
-  use MPI_main
+  use MPI_Main
 #endif
 
   use global ! for symmetry testing only
@@ -620,7 +619,9 @@ end program earth
     use senscomp
     use transmitters
     use dataTypes
+#ifdef MPI
     use MPI_Main
+#endif
     implicit none
 
     real(8), intent(out)                    :: f  ! penalty functional
@@ -861,7 +862,9 @@ end program earth
 	use senscomp
     use transmitters
     use dataTypes
-    use MPI_main
+#ifdef MPI
+    use MPI_Main
+#endif
 	implicit none
 
     real(8), intent(out)                    :: f     ! penalty functional
