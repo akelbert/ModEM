@@ -80,6 +80,7 @@ program earth
 #ifdef MPI
      call Master_job_STOP_MESSAGE
      call MPI_destructor
+     close(ioMPI)
 #endif
 	print *,'Successfully initialized the model. Exiting...'
 	stop
@@ -940,7 +941,6 @@ end program earth
 	! Call multiplication by J^T
 #ifdef MPI
     call Master_job_JmultT(param,allResp,dmisfit,H)
-    call Master_job_STOP_MESSAGE
 #else
     call JmultT(param,allResp,dmisfit,H)
 #endif

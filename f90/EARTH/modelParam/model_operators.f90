@@ -875,6 +875,9 @@ Contains
 	! Set all values to zero
 	P%c%value = R_ZERO
 
+	! All logicals except allocated should be false again
+	P%smoothed = .false.
+
   end subroutine zero_modelParam
 
 

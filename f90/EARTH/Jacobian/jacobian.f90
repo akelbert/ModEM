@@ -82,7 +82,7 @@ Contains
 	vectorb = C_ZERO
 
 	! Initialize the internal grid for SolveMaxwells
-    write(0,*) 'Preparing SolveMaxwells - initializing the grid; nzEarth =',grid%nzEarth
+    !write(0,*) 'Preparing SolveMaxwells - initializing the grid; nzEarth =',grid%nzEarth
     nx = grid%nx; ny = grid%ny; nz = grid%nz
     nzEarth = grid%nzEarth; nzAir = grid%nzAir
     allocate(x(nx),y(ny+1),z(nz+1),STAT=istat)
