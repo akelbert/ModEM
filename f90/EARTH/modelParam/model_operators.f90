@@ -27,6 +27,10 @@ module model_operators
      MODULE PROCEDURE zero_modelParam
   end interface
 
+  interface iszero
+     MODULE PROCEDURE iszero_modelParam
+  end interface
+
   interface deall
      MODULE PROCEDURE deall_modelParam
   end interface
@@ -126,6 +130,7 @@ Contains
 	P%nL = 0
 	P%nc = 0
 	P%smoothed  = .FALSE.
+	P%zeroValued = .FALSE.
 	P%allocated = .FALSE.
 
   end subroutine deall_modelParam
@@ -354,6 +359,7 @@ Contains
 
 	P%nc = 0
 	P%smoothed = .FALSE.
+	P%zeroValued = .FALSE.
 	P%allocated = .TRUE.
 
   end subroutine create_modelParam
@@ -452,6 +458,7 @@ Contains
 	end do
 
 	P%nc = count(P%c%exists)
+	P%zeroValued = .false.
 
 
   end subroutine fillParam_modelParam
@@ -487,6 +494,8 @@ Contains
 	  end do
 	end do
 
+	P%zeroValued = .false.
+
   end subroutine fillParamValues_modelParam
 
   ! **********************************************************************
@@ -518,6 +527,7 @@ Contains
 	end do
 
     P1%crust%allocated = .FALSE.
+    P1%zeroValued = P%zeroValued
 	P1%temporary = .TRUE.
 
   end function getRadial_modelParam_f
@@ -686,6 +696,7 @@ Contains
 	P%c(iL,iV)%frozen = frozen
 
 	P%nc = P%nc + 1
+	P%zeroValued = .false.
 
 	P%c(iL,iV)%exists = .TRUE.
 
@@ -849,6 +860,7 @@ Contains
 	end do
 
     P2%smoothed  = P1%smoothed
+    P2%zeroValued = P1%zeroValued
 	P2%allocated = P1%allocated
 
 	if (P1%temporary) then
@@ -875,11 +887,26 @@ Contains
 	! Set all values to zero
 	P%c%value = R_ZERO
 
-	! All logicals except allocated should be false again
+	! Update the logical
+	P%zeroValued = .true.
+
+	! All logicals except allocated and zeroValued should be false again
 	P%smoothed = .false.
 
   end subroutine zero_modelParam
 
+  ! **********************************************************************
+  ! * Get zeroValued logical from model parameter
+  ! * BOP
+  logical function iszero_modelParam(P) result (zeroValued)
+
+    implicit none
+    type (modelParam_t), intent(inout)  :: P
+    ! * EOP
+
+    zeroValued = P%zeroValued
+
+  end function iszero_modelParam
 
   ! **********************************************************************
   ! * We can add or subtract values with exists==.FALSE. (they equal zero)
@@ -911,6 +938,7 @@ Contains
 	end do
 
 	P%temporary = .true.
+	P%zeroValued = P1%zeroValued .and. P2%zeroValued
 
   end function add_modelParam_f
 
@@ -945,6 +973,7 @@ Contains
 	end do
 
 	P%temporary = .true.
+    P%zeroValued = P1%zeroValued .and. P2%zeroValued
 
   end function subtract_modelParam_f
 
@@ -979,6 +1008,7 @@ Contains
 	end do
 
 	P%temporary = .true.
+    P%zeroValued = P1%zeroValued .and. P2%zeroValued
 
   end function mult_modelParam_f
 
@@ -1000,6 +1030,10 @@ Contains
 	end if
 
     r = R_ZERO
+
+    if (P1%zeroValued .and. P2%zeroValued) then
+        return
+    end if
 
 	do j=1,P2%nL
 	  do i=1,P2%nF
@@ -1075,6 +1109,7 @@ Contains
 	end if
 
 	P%c%value = v * P1%c%value
+	P%zeroValued = P1%zeroValued
 	P%smoothed = P1%smoothed
 
 
@@ -1099,6 +1134,7 @@ Contains
     end if
 
     P%c%value = P%c%value + v * P1%c%value
+    P%zeroValued = P%zeroValued .and. P1%zeroValued
     P%smoothed = P1%smoothed
 
 
@@ -1126,6 +1162,7 @@ Contains
 	end if
 
 	P%c%value = P1%c%value / v
+	P%zeroValued = P1%zeroValued
     P%smoothed = P1%smoothed
 	P%temporary = .true.
 
@@ -1174,6 +1211,7 @@ Contains
 	  end do
 	end do
 
+    P%zeroValued = P1%zeroValued .and. P2%zeroValued
 	P%smoothed = P1%smoothed .or. P2%smoothed
 
   end subroutine linComb_modelParam
@@ -1274,9 +1312,11 @@ Contains
 	P = P1
 
 	! make the smoothing operator symmetric
-	call smoothV_modelParam(P)
-	call smoothH_modelParam(P)
-	call smoothV_modelParam(P)
+	if (.not. P%zeroValued) then
+	   call smoothV_modelParam(P)
+	   call smoothH_modelParam(P)
+	   call smoothV_modelParam(P)
+	end if
 
 	P%smoothed = .true.
 	P%temporary = .true.
@@ -1686,6 +1726,7 @@ Contains
 
     close(ioPrm)
 
+    P%zeroValued = .FALSE.
     P%smoothed = .FALSE.
 
     return

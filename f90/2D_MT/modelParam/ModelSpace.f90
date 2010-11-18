@@ -45,6 +45,8 @@ type ::  modelParam_t
    real (kind=prec), pointer, dimension(:,:) :: v
    real (kind=prec)		:: AirCond = SIGMA_AIR
    logical           			:: allocated = .false.
+     !  this logical is set true by zero_modelParam ONLY
+     logical                    :: zeroValued = .false.
    !   necessary to avoid memory leaks; only true for function outputs
    logical						:: temporary = .false.
    !   parameter types supported:
@@ -59,6 +61,10 @@ end interface
 
 interface zero
    MODULE PROCEDURE zero_modelParam
+end interface
+
+interface iszero
+   MODULE PROCEDURE iszero_modelParam
 end interface
 
 interface scMult ! operator (*)
@@ -161,6 +167,7 @@ Contains
         cond%v = R_ZERO
      end if
      cond%allocated = .true.
+     cond%zeroValued = .false.
 
      if (present(airCond)) then
         cond%AirCond = airCond
@@ -180,6 +187,7 @@ Contains
         !nullify(cond%v)
         nullify(cond%grid)
         cond%allocated = .false.
+        cond%zeroValued = .false.
         cond%paramType = ''
      endif
 
@@ -202,6 +210,12 @@ Contains
      endif
 
      r = R_ZERO
+
+     ! if m1 and m2 are zero valued, no need to compute r
+     if (m1%zeroValued .and. m2%zeroValued) then
+        return
+     endif
+
      do k = 1,m1%NzEarth
         do j = 1,m1%Ny
            r = r + m1%v(j,k)*m2%v(j,k)
@@ -237,8 +251,19 @@ Contains
      type(modelParam_t), intent(inout)	:: m
 
      m%v = R_ZERO
+     m%zeroValued = .true.
 
    end subroutine zero_modelParam
+
+!**********************************************************************
+
+   logical function iszero_modelParam(m) result (zeroValued)
+
+     type(modelParam_t), intent(in)      :: m
+
+     zeroValued = m%zeroValued
+
+   end function iszero_modelParam
 
 !**********************************************************************
    subroutine random_modelParam(m,eps)
@@ -254,6 +279,7 @@ Contains
      else
         m%v = m%v * 0.05
      endif
+     m%zeroValued = .false.
 
    end subroutine random_modelParam
 
@@ -289,6 +315,8 @@ Contains
         call create_modelParam(m1%grid,m1%paramtype,m)
      endif
      m%v = a1*m1%v + a2*m2%v
+     ! m is zero is both m1 and m2 are (ignoring the constants)
+     m%zeroValued = m1%zeroValued .and. m2%zeroValued
      !  we are implicitly assuming that if m1 and m2 are the same
      !   size other parameters are of the same type
      m%AirCond = m1%AirCond
@@ -308,7 +336,12 @@ Contains
        call errStop('input not allocated on call to scMult_modelParam')
     endif
 
-	call linComb_modelParam(R_ZERO,mIn,a,mIn,mOut)
+    ! if mIn is zero, no need to compute mOut
+    if (mIn%zeroValued) then
+        mOut = mIn
+    else
+	   call linComb_modelParam(R_ZERO,mIn,a,mIn,mOut)
+	endif
 
   end subroutine scMult_modelParam
 
@@ -325,7 +358,10 @@ Contains
        call errStop('input not allocated on call to scMultAdd_modelParam')
     endif
 
-    call linComb_modelParam(a,mIn,ONE,mOut,mOut)
+    ! if mIn is zero valued, no need to compute mOut
+    if (.not. mIn%zeroValued) then
+        call linComb_modelParam(a,mIn,ONE,mOut,mOut)
+    endif
 
   end subroutine scMultAdd_modelParam
 
@@ -348,6 +384,7 @@ Contains
      endif
      mOut%v = mIn%v
      mOut%AirCond = mIn%AirCond
+     mOut%zeroValued = mIn%zeroValued
 
      if(mIn%temporary) then
      	call deall_modelParam(mIn)

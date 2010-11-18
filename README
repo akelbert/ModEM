@@ -49,6 +49,13 @@ INSTALLATION
   directly in the Makefiles. Configure scripts have to be rerun if the module
   usage dependencies change or if new source code is added.
   
+  Running the programs with command line arguments as follows
+  > ./Mod3DMT
+
+  and
+  > ./Mod2DMT
+  will print the basic usage summary on screen. That should get you started.
+
   Subdirectory ModEM/examples contains sample input files with instructions.
   These should be sufficient to test your installation.
 

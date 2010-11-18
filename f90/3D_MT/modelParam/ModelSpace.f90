@@ -55,6 +55,8 @@ module ModelSpace
      type(grid_t),pointer    :: grid
      real (kind=prec)   :: AirCond
      logical			:: allocated = .false.
+     !  this logical is set true by zero_modelParam ONLY
+     logical            :: zeroValued = .false.
      !  necessary to avoid memory leaks; only true for function outputs
      logical			:: temporary = .false.
      !  another logical that gets set to true every time the model
@@ -71,6 +73,10 @@ end interface
 
 interface zero
    MODULE PROCEDURE zero_modelParam
+end interface
+
+interface iszero
+   MODULE PROCEDURE iszero_modelParam
 end interface
 
 interface scMult ! operator (*)
@@ -178,6 +184,7 @@ Contains
      endif
 
      m%updated = .true.
+     m%zeroValued = .false.
 
    end subroutine create_modelParam
 
@@ -190,6 +197,7 @@ Contains
         call deall_rscalar(m%cellCond)
         nullify(m%grid)
         m%allocated = .false.
+        m%zeroValued = .false.
         m%paramType = ''
      endif
 
@@ -245,7 +253,11 @@ Contains
         call errStop('size of m1, m2 incompatable in dotProd_modelParam')
      endif
 
-     r = dotProd_rscalar_f(m1%cellCond, m2%cellCond)
+     ! if one of the model parameters is zero valued, no need to compute r
+     r = R_ZERO
+     if(.not. m1%zeroValued .and. .not. m2%zeroValued) then
+        r = dotProd_rscalar_f(m1%cellCond, m2%cellCond)
+     endif
 
    end function dotProd_modelParam
 
@@ -260,8 +272,20 @@ Contains
      call zero_rscalar(m%cellCond)
 
      m%updated = .true.
+     m%zeroValued = .true.
 
    end subroutine zero_modelParam
+
+
+!**********************************************************************
+
+   logical function iszero_modelParam(m) result (zeroValued)
+
+     type(modelParam_t), intent(in)      :: m
+
+     zeroValued = m%zeroValued
+
+   end function iszero_modelParam
 
 !**********************************************************************
 
@@ -301,6 +325,7 @@ Contains
      !  we are implicitly assuming that if m1 and m2 are the same
      !   size other parameters are of the same type
      m%AirCond = m1%AirCond
+     m%zeroValued = m1%zeroValued .and. m2%zeroValued
      m%updated = .true.
 
    end subroutine linComb_modelParam
@@ -318,7 +343,12 @@ Contains
        call errStop('input not allocated on call to scMult_modelParam')
     endif
 
-	call linComb_modelParam(R_ZERO,mIn,a,mIn,mOut)
+    ! if mIn is zero valued, no need to compute mOut
+    if (mIn%zeroValued) then
+        mOut = mIn
+    else
+    	call linComb_modelParam(R_ZERO,mIn,a,mIn,mOut)
+    endif
 
   end subroutine scMult_modelParam
 
@@ -335,7 +365,10 @@ Contains
        call errStop('input not allocated on call to scMultAdd_modelParam')
     endif
 
-    call linComb_modelParam(a,mIn,ONE,mOut,mOut)
+    ! if mIn is zero valued, no need to compute mOut
+    if (.not. mIn%zeroValued) then
+        call linComb_modelParam(a,mIn,ONE,mOut,mOut)
+    endif
 
   end subroutine scMultAdd_modelParam
 
@@ -370,6 +403,7 @@ Contains
 	    m%AirCond=vAir
 	 endif
      m%updated = .true.
+     m%zeroValued = .false.
 
    end subroutine setValue_modelParam
 
@@ -439,6 +473,7 @@ Contains
      endif
      mOut%cellCond%v = mIn%cellCond%v
      mOut%AirCond = mIn%AirCond
+     mOut%zeroValued = mIn%zeroValued
 
      ! no need to set updated to TRUE - this just makes a copy.
      ! clean up the memory if this is used with an "=" sign.

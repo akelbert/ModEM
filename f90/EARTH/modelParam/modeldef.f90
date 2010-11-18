@@ -130,6 +130,9 @@ module modeldef
 
 	  logical											  :: allocated=.FALSE.
 
+      !  this logical is set to true by zero_modelParam ONLY
+      logical                                             :: zeroValued = .FALSE.
+
       ! this is needed for output: true only after CmSqrt has been applied to the model
       logical                                             :: smoothed=.FALSE.
 
