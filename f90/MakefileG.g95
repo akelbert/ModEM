@@ -15,7 +15,7 @@
 # include Makefile.local
 # OBJDIR = ./objs/3D_MT/G95Debug
 # F90 = g95
-# FFLAGS = -O2
+FFLAGS = -O2
 # FFLAGS = -g -ftrace=frame -fbounds-check
 # MPIFLAGS = -cpp # for serial code
 # MODULE = -fmod=$(OBJDIR)
@@ -43,9 +43,9 @@
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-OBJDIR = ./objs/EARTH/G95Debug
+OBJDIR = ./objs/EARTH/G95Release
 F90 = g95 
-FFLAGS = -g -ftrace=frame -fbounds-check
+#FFLAGS = -g -ftrace=frame -fbounds-check
 MPIFLAGS = -cpp
 MODULE = -fmod=$(OBJDIR)
 LIBS = -lblas -llapack
