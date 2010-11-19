@@ -256,6 +256,8 @@
 
     call EdgeToModelParam(Econd,m,m0)
 
+    m%zeroValued = .false.
+
   end subroutine dEdgeToModelParam
 
   !**********************************************************************
@@ -367,6 +369,8 @@
     else
        m%cellCond%v = temp
     endif
+
+    m%zeroValued = .false.
 
     deallocate(temp)
 

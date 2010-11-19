@@ -142,6 +142,9 @@
          CellCond%v = CellCond%v*exp(Sigma0%v)
       endif
 
+      CellCond%zeroValued = .false.
+
+
       end subroutine dNodeToModelParam
 
       !**********************************************************************
@@ -310,6 +313,8 @@
       CellCond%v = - CellCond%v/(sigma0%v*sigma0%v)
    endif
 
+   CellCond%zeroValued = .false.
+
    end subroutine dEdgeToModelParam
 
    !**********************************************************************
@@ -356,5 +361,10 @@
          endif
       endif
    enddo
+
+   dsigmaReal%zeroValued = .false.
+   if(present(dsigmaImag)) then
+      dsigmaImag%zeroValued = .false.
+   endif
 
    end subroutine SparseCellToModelParam
