@@ -26,6 +26,9 @@ module SensComp
   public	:: fwdPred, fwdPred_TX
   public	:: setGrid, cleanUp
 
+  ! local timer
+  type (timer_t), save, private         :: timer
+
   ! numerical discretization used to compute the EM solution
   !  (may be different from the grid stored in model parameter)
   type (grid_t), target, save, private     :: grid
@@ -65,6 +68,7 @@ Contains
    integer 		:: istat,ii,nFunc,nComp,iFunc
    type(sparseVector_t), pointer	:: L(:)
    type(modelParam_t), pointer    :: Qreal(:),Qimag(:)
+   logical      :: Qzero
 
    ! the vectors Jreal, Jimag have to be allocated
    if((.not. associated(Jreal)) .or. (.not. associated(Jimag))) then
@@ -98,7 +102,7 @@ Contains
    call Lrows(e0,sigma0,iDt,iRx,L)
 
    ! compute linearized data functional(s) : Q
-   call Qrows(e0,sigma0,iDt,iRx,Qreal,Qimag)
+   call Qrows(e0,sigma0,iDt,iRx,Qzero,Qreal,Qimag)
 
    ! loop over functionals  (e.g., for 2D TE/TM impedances nFunc = 1)
    do iFunc = 1,nFunc
@@ -111,8 +115,10 @@ Contains
 
       ! multiply by P^T and add the rows of Q
       call PmultT(e0,sigma0,e,Jreal(iFunc),Jimag(iFunc))
-      call scMultAdd(ONE,Qreal(iFunc),Jreal(iFunc))
-      call scMultAdd(ONE,Qimag(iFunc),Jimag(iFunc))
+      if (.not. Qzero) then
+        call scMultAdd(ONE,Qreal(iFunc),Jreal(iFunc))
+        call scMultAdd(ONE,Qimag(iFunc),Jimag(iFunc))
+      endif
 
       ! deallocate temporary vectors
       call deall_sparseVector(L(iFunc))

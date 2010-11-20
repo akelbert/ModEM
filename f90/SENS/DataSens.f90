@@ -232,7 +232,7 @@ Contains
   !  local variables
   integer                   :: iSite, ncomp, iTx, &
                     nFunc, iDt, iRx, iComp, iFunc, j, istat
-  logical                   :: isComplex, zeroQreal, zeroQimag
+  logical                   :: isComplex, zeroQ
   real(kind=prec)           :: Zreal, Zimag
   type (modelParam_t), pointer  :: sigmaQreal(:), sigmaQimag(:)
 
@@ -276,20 +276,18 @@ Contains
 	     ! elements at one site and for one data type
 	     !   Qrows returns complex sigmaQ for each of nFunc functionals
 	     iRx = d%data(j)%rx(iSite)
-	     call Qrows(e0,Sigma0,iDt,iRx,sigmaQreal,sigmaQimag)
+	     call Qrows(e0,Sigma0,iDt,iRx,zeroQ,sigmaQreal,sigmaQimag)
 	     iComp = 1
 	     do iFunc  = 1, nFunc
 	        if(isComplex) then
-	           zeroQreal = iszero_modelParam(sigmaQreal(iFunc))
-	           if (zeroQreal) then
+	           if (zeroQ) then
 	               Zreal = R_ZERO
 	           else
 	               Zreal = dotProd_modelParam(sigmaQreal(iFunc),dSigma)
 	           endif
 	           d%data(j)%value(iComp,iSite) = Zreal
 	           iComp = iComp + 1
-               zeroQimag = iszero_modelParam(sigmaQimag(iFunc))
-               if (zeroQimag) then
+               if (zeroQ) then
                    Zimag = R_ZERO
                else
                    Zimag = dotProd_modelParam(sigmaQimag(iFunc),dSigma)
@@ -297,8 +295,7 @@ Contains
 	           d%data(j)%value(iComp,iSite) = Zimag
 	           iComp = iComp + 1
 	        else
-               zeroQreal = iszero_modelParam(sigmaQreal(iFunc))
-               if (zeroQreal) then
+               if (zeroQ) then
                    Zreal = R_ZERO
                else
 	               Zreal = dotProd_modelParam(sigmaQreal(iFunc),dSigma)
@@ -350,7 +347,7 @@ Contains
   !  local variables
   integer                   :: iSite, ncomp, iTx, &
                     nFunc, iDt, iRx, iComp, iFunc, j, istat
-  logical                   :: isComplex, zeroQreal, zeroQimag
+  logical                   :: isComplex, zeroQ
   real(kind=prec)           :: Zreal, Zimag
   type (modelParam_t)       :: sigmaTemp
   type (modelParam_t), pointer  :: sigmaQreal(:), sigmaQimag(:)
@@ -399,16 +396,14 @@ Contains
 	     ! elements at one site and for one data type
 	     !   Qrows returns one sigmaQ for each of nFunc functionals
 	     iRx = d%data(j)%rx(iSite)
-	     call Qrows(e0,Sigma0,iDt,iRx,sigmaQreal,sigmaQimag)
+	     call Qrows(e0,Sigma0,iDt,iRx,zeroQ,sigmaQreal,sigmaQimag)
 	     iComp = 1
 	     do iFunc  = 1, nFunc
 	        if(isComplex) then
-	           zeroQreal = iszero(sigmaQreal(iFunc))
-	           zeroQimag = iszero(sigmaQimag(iFunc))
 		       ! implement the real variant of Q^T conj(d), where conj(d) is component-wise
 		       ! complex conjugate... the data are stored as real, so don't use complex
 		       ! multiplication here
-		       if (.not. (zeroQreal .and. zeroQimag)) then
+		       if (.not. zeroQ) then
 		           Zreal = d%data(j)%value(iComp,iSite)
 		           Zimag = d%data(j)%value(iComp+1,iSite)
 		           ! Re( Q^T conj(d) ) = Re(Q^T) Re(d) + Im(Q^T) Im(d)
@@ -422,8 +417,7 @@ Contains
                endif
 	           iComp = iComp + 2
 	        else
-               zeroQreal = iszero(sigmaQreal(iFunc))
-               if (.not. zeroQreal) then
+               if (.not. zeroQ) then
 	               Zreal = d%data(j)%value(iComp,iSite)
 	               call scMultAdd(Zreal,sigmaQreal(iFunc),QcombReal)
 	           endif

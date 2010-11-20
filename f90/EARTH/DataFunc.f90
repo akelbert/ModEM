@@ -148,7 +148,7 @@ Contains
 
 !
 !****************************************************************************
-  subroutine Qrows(e0,m0,iDt,iRx,Qreal,Qimag)
+  subroutine Qrows(e0,m0,iDt,iRx,zeroValued,Qreal,Qimag)
   !  given input background solution vector (e0) and model parameter (Sigma0)
   !  and indices into data type and receiver dictionaries
   !  compute derivative of data functional with respect to model parameters
@@ -158,6 +158,7 @@ Contains
   type (solnVector_t), intent(in)       :: e0
   type (modelParam_t), intent(in)       :: m0
   integer, intent(in)                   :: iDt, iRx
+  logical, intent(out)                  :: zeroValued
   !   NOTE: Qreal and Qimag have to be declared as arrays for
   !     consistency with calling program (in general the
   !     number nFunc of complex data functionals that will
@@ -179,12 +180,16 @@ Contains
   if((size(Qreal) .ne. dataType%nComp) .or. (size(Qimag) .ne. dataType%nComp)) then
     call errStop('incorrect output size in Qrows')
   endif
-  do iComp = 1, dataType%nComp
-    Qreal(iComp) = m0
-    call zero(Qreal(iComp))
-    Qimag(iComp) = m0
-    call zero(Qimag(iComp))
-  enddo
+
+  ! for efficiency, if vectors are zero just set the logical to true and exit
+  zeroValued = .true.
+
+  !do iComp = 1, dataType%nComp
+  !  Qreal(iComp) = m0
+  !  call zero(Qreal(iComp))
+  !  Qimag(iComp) = m0
+  !  call zero(Qimag(iComp))
+  !enddo
 
   end subroutine Qrows
 
