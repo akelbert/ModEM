@@ -60,6 +60,7 @@ end interface
     !! allows a variable number of polarizations to accommodate other uses
     !! e.g. active source applications
     integer					:: nPol = 2
+    integer                 :: Pol_index(2)
     type(cvector), pointer  :: pol(:)
 
     !! tx points to information in the transmitter dictionary about the source
@@ -159,7 +160,7 @@ contains
        type (solnVector_t), intent(inout)		:: e
 
        ! local variables
-       integer				:: k,istat
+       integer				:: k,istat,iPol
 
        if (e%allocated) then
           if (associated(e%grid, target=grid) .and. (e%tx == iTx)) then
@@ -171,6 +172,11 @@ contains
        end if
 
        e%nPol = txDict(iTx)%nPol
+       
+       do iPol=1,e%nPol
+        e%Pol_index(iPol)=iPol
+       end do
+       
        allocate(e%pol(e%nPol), STAT=istat)
        do k = 1,e%nPol
           call create_cvector(grid,e%pol(k),EDGE)

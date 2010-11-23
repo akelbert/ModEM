@@ -386,18 +386,7 @@ Reading_all_file_loop: &
       read(ioDat,'(a7,a20)') temp,units_in_file
       read(ioDat,'(a17,i3)') temp,sign_in_file
       read(ioDat,*)
-!***********************************************************************************************
-       !Check if the header (the info_in_file string) contains info. about the referenace site
-      ! NOTE: this will not effect the old format.
-              Ref_site=''
-   		      call COMPACT(info_in_file)                           !Removes spaces between arrguments of the line
-		      call parse(info_in_file,' ',args,nargs)              !Counts and finds out the arrguments and number of arrguemnts in the line
-              do i=1,nargs
-               if (trim(args(i))== 'Ref_site=') then
-               Ref_site=args(i+1)
-               end if
-              end do
- !***********************************************************************************************
+
       if (sign_in_file == ISIGN) then
         conjugate = .false.
       else if (abs(sign_in_file) == 1) then
@@ -448,11 +437,17 @@ Reading_all_file_loop: &
          do k=1,nSite
          	read(ioDat,*) temp, (Data(i)%value(j,k),j=1,nComp)
          	read(ioDat,*)       (Data(i)%error(j,k),j=1,nComp)
+        if (findstr(trim(header),'Mxy') > 0  ) then 	
          	call parse(temp,'-',args,nargs)
          	siteIDs(k)=args(1)
          	if (nargs == 2) then
          	 Ref_siteIDs(k)=args(2)
          	end if
+        else
+            siteIDs(k)=trim(temp)
+        end if  
+         	
+         	
          end do
 
          ! convert data to SI units
@@ -485,7 +480,7 @@ Reading_all_file_loop: &
          	end do
          end if
     ! Update the receiver dictionary with the refernace site, if required
-         if (Ref_site .ne. '') then
+         if (findstr(trim(header),'Mxy') > 0 ) then 
     !First, get the refe site index in the receiver dictionary
              do k1=1,size(rxDict)
                refe_site_index(k1)=0

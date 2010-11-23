@@ -1,7 +1,27 @@
 !-------------------------------------------------------------------!
 ! 2D_MT model covariance by Weerachai Siripunvaraporn: procedures.  !
 !-------------------------------------------------------------------!
+  function multBy_Cm(m1) result (m2)
 
+   ! Multiplies by the square root of the model covariance,
+   ! which is viewed as a smoothing operator. Intended
+   ! to be used to compute m = C_m^{1/2} \tilde{m} + m_0.
+   ! For efficiency, CmSqrt is a saved, private variable inside
+   ! the modelParam module. Before this routine can be called,
+   ! it has to be initialized by calling create_CmSqrt(m).
+
+    type (modelParam_t), intent(in)     :: m1
+    type (modelParam_t)				    :: m2
+
+    if (.not. CmSqrt%allocated) then
+    	call create_CmSqrt(m1)
+    end if
+
+    m2 = m1
+    call solveDiff(CmSqrt,m2)
+    m2%temporary = .true.
+
+  end function multBy_Cm
 ! *******************************************************************
   function multBy_CmSqrt(m1) result (m2)
 

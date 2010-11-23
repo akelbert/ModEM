@@ -82,7 +82,7 @@ program Mod3DMT
 #ifdef MPI
    if (write_EMsoln) then
         call Master_job_fwdPred(sigma0,allData,eAll)
-        call Master_job_Collect_eAll(allData,eAll)
+        !call Master_job_Collect_eAll(allData,eAll)
    else
         call Master_job_fwdPred(sigma0,allData)
    end if

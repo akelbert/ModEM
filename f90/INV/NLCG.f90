@@ -850,10 +850,10 @@ Contains
    if (starting_guess) then
    	alpha = alpha_1
    	dHat = dHat_1
-#ifdef MPI
-#else
+
+
    	eAll = eAll_1
-#endif
+
 
    	mHat = mHat_1
    	rms = rms_1
@@ -1000,10 +1000,10 @@ Contains
 	starting_guess = .true.
   	alpha = alpha_1
    	dHat = dHat_1
-#ifdef MPI
-#else
-   	eAll = eAll_1
-#endif
+
+
+       eAll = eAll_1
+
    	mHat = mHat_1
    	rms = rms_1
    	f = f_1
@@ -1037,10 +1037,10 @@ Contains
    		starting_guess = .true.
    		alpha = alpha_1
    		dHat = dHat_1
-#ifdef MPI
-#else
+
+
      	eAll = eAll_1
-#endif
+
    		mHat = mHat_1
    		rms = rms_1
    		f = f_1
@@ -1052,6 +1052,7 @@ Contains
    		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms)
    		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms,logFile)
    	end if
+
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
 	print *, 'Gradient computed, exiting line search'
 	call deall_dataVectorMTX(dHat_1)
@@ -1123,10 +1124,10 @@ Contains
    if (starting_guess) then
    	alpha = alpha_1
    	dHat = dHat_1
-#ifdef MPI
-#else
+
+
    	eAll = eAll_1
-#endif
+
    	mHat = mHat_1
    	rms = rms_1
    	f = f_1

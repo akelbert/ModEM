@@ -14,6 +14,11 @@ program Mod2DMT
      use SymmetryTest
      use Main
      use NLCG
+     use DCG
+     
+#ifdef MPI
+     Use MPI_main
+#endif
 
      implicit none
 
@@ -34,12 +39,38 @@ program Mod2DMT
      type (solnVectorMTX_t) :: ePred
      type (rhsVectorMTX_t)  :: bAll
 
-     call parseArgs('Mod2DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
+#ifdef MPI
+              call  MPI_constructor
+			  if (taskid==0) then
+			      write(6,*)'I am a PARALLEL version'
+			      call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
+	              open(ioMPI,file='Nodes_Status.info')
+	              write(ioMPI,*) 'Total Number of nodes= ', number_of_workers
+			  else
+			    call Worker_job(sigma0,allData)
+	            if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
+	               	 call deallGlobalData()
+		             call cleanUp()
+	                 call MPI_destructor
+	              stop
+	            end if
+			 end if
+
+#else
+			 write(6,*)'I am a SERIAL version'
+             call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
+#endif
 
      call initGlobalData(cUserDef)
 
      ! set the grid for the numerical computations
      call setGrid(grid)
+#ifdef MPI
+       call Master_job_Distribute_userdef_control(cUserDef)
+       call Master_job_Distribute_Data_Size(allData,sigma0)
+       call Master_job_Distribute_Data(allData)
+       call Master_job_Distribute_Model(sigma0)
+#endif
 
 	 ! Start the (portable) clock
 	 call reset_time(timer)
@@ -86,8 +117,25 @@ program Mod2DMT
      	if (trim(cUserDef%search) == 'NLCG') then
             ! sigma1 contains mHat on input (zero = starting from the prior)
         	write(*,*) 'Starting the NLCG search...'
-        	sigma1 = dsigma
-        	call NLCGsolver(allData,cUserDef%lambda,sigma0,sigma1,cUserDef%rFile_invCtrl)
+            sigma1 = dsigma
+           	call NLCGsolver(allData,cUserDef%lambda,sigma0,sigma1,cUserDef%rFile_invCtrl)
+
+#ifdef MPI
+        	call Master_job_STOP_MESSAGE
+#endif
+    	elseif (trim(cUserDef%search) == 'DCG') then
+        	write(*,*) 'Starting the DCG search...'
+        	 sigma1 = dsigma
+        	 !cUserDef%lambda=500
+        	call DCGsolver(allData,sigma0,sigma1,cUserDef%lambda)
+            !call Marquardt_M_space(allData,sigma0,sigma1,cUserDef%lambda)
+        	call write_modelParam(sigma1,cUserDef%wFile_Model)
+        if (write_data) then
+        	call write_dataVectorMTX(allData,cUserDef%wFile_Data)
+        end if
+#ifdef MPI
+        	call Master_job_STOP_MESSAGE
+#endif       	
         else
         	write(*,*) 'Inverse search ',trim(cUserDef%search),' not yet implemented. Exiting...'
         	stop
@@ -149,12 +197,22 @@ program Mod2DMT
         write(0,*) 'No job ',trim(cUserDef%job),' defined.'
 
      end select
+9999 continue
+#ifdef MPI
+		close(ioMPI)
+#endif
 
 	 ! cleaning up
 	 call deallGlobalData()
 
 	 call cleanUp()
 
+
+#ifdef MPI
 	 write(0,*) ' elapsed time (mins) ',elapsed_time(timer)/60.0
+	 call MPI_destructor
+#else
+	 write(0,*) ' elapsed time (mins) ',elapsed_time(timer)/60.0
+#endif
 
 end program

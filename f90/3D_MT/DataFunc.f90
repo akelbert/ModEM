@@ -30,6 +30,10 @@ module dataFunc
   !   Names of these routines must be as here, as these are called by
   !    top-level inversion routines
   public                        :: dataResp, Lrows, Qrows
+  
+
+  !Keep the model responses as complex numbers (Z) which are required in Lrows subroutine. 
+  complex(kind=prec),save, private	:: Z(6)
 
 
 Contains
@@ -49,7 +53,9 @@ Contains
   integer, intent(in)			:: iDT
   integer, intent(in) 			:: iRX
   real(kind=prec), intent(inout)	:: Resp(:)
-  complex(kind=prec), allocatable :: Z(:)
+
+
+  
 
   ! Definition of the impedance elements:
   !   iDT=Full_Impedance
@@ -92,7 +98,7 @@ Contains
      !  data are treated as real
      nFunc = ncomp
   endif
-  allocate(Z(nFunc))
+  !allocate(Z(nFunc))
 
   selectcase (iDT)
      case(Full_Impedance)
@@ -337,7 +343,7 @@ Contains
   call deall_sparsevecc(Lbz)
   call deall_sparsevecc(Lrx)
   call deall_sparsevecc(Lry)
-  deallocate(Z)
+  !deallocate(Z)
 
   end subroutine dataResp
 !
@@ -361,12 +367,13 @@ Contains
 
   !  local variables
   complex(kind=prec)	:: Binv(2,2)
-  complex (kind=prec)	:: Z(6), i_omega,c1,c2
+  complex (kind=prec)	:: i_omega,c1,c2
   real(kind=prec)	:: Resp(12),x(3),x_ref(3),omega
   type(sparsevecc)		:: L1
   integer			:: i,j,k,nComp,IJ(3,6),xyz,n, iComp,predictedComp
   type(sparsevecC)		:: Lex,Ley,Lbx,Lby,Lbz,Lrx,Lry
   logical			:: ComputeHz
+
 
   omega = txDict(e0%tx)%omega
   	 x     = rxDict(iRX)%x
@@ -385,6 +392,8 @@ Contains
   !                     Ex = 1; Ey =2; Bz = 3; (Bx = 4; By = 5,  at referance site)
   !						(can add more cases)
   !
+  
+
   select case(iDT)
      case(Full_Impedance)
         nComp = 4
@@ -459,17 +468,9 @@ Contains
      call BfromESetUp(e0%grid,omega,x,xyz,Lbz)
   endif
 
-  !  convert responses to complex Z
-  iComp = 1
-  do n  = 1,nComp
-        if(typeDict(iDT)%isComplex) then
-           Z(n) = cmplx(Resp(iComp),Resp(iComp+1))
-           iComp = iComp + 2
-        else
-           Z(n) = Resp(iComp)
-           iComp = iComp + 1
-        endif
-  enddo
+
+
+  
 
   !  compute sparse vector representations of linearized functionals
   do n = 1,nComp

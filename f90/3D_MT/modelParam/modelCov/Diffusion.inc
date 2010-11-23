@@ -62,7 +62,7 @@
     
     call getValue_modelParam(m1,LOGE,logcond)
    
-    dtime=5
+    dtime=1
     call solveDiff(dtime,CmSqrt,logcond)
     call setValue_modelParam(m2,LOGE,logcond)
 

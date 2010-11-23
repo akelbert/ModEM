@@ -6,11 +6,46 @@ use math_constants
 use utilities
 use SolnSpace
 use UserCtrl
+
+
+
+  
 use MPI_declaration
 
+  type (grid_t), target, save, private  :: grid
+  type(solnVector_t), save, private		:: e,e0
+  type(rhsVector_t) , save, private		:: comb 
 
 
+  
 Contains
+
+
+
+!*****************************************************************************************
+subroutine set_e_soln(pol_index,e)
+    Integer, intent(in)                :: pol_index
+    type(solnVector_t), intent(inout)  :: e
+            
+            e%nPol=1
+		    e%Pol_index(1)=pol_index 
+
+end subroutine set_e_soln
+!*****************************************************************************************
+
+subroutine get_nPol_MPI(eAll)
+
+   type(solnVectorMTX_t), intent(in)	:: eAll
+
+            
+            nPol_MPI= eAll%solns(1)%nPol
+
+end subroutine get_nPol_MPI
+
+
+
+
+
 !*************************************************************************
 !Packing userdef_control in a Package
   !1- Allocate a place holder
@@ -104,7 +139,78 @@ subroutine check_userdef_control_MPI (which_proc,ctrl)
 
 
 end subroutine check_userdef_control_MPI
+!********************************************************************
+subroutine create_e_param_place_holder(e)
 
+     implicit none
+     type(solnVector_t), intent(in)	:: e
+     integer                        :: Ex_size,Ey_size,Ez_size,Nbytes1,Nbytes2,Nbytes3
+                  
+
+
+
+
+
+       Ex_size=size(e%pol(1)%x)
+       CALL MPI_PACK_SIZE(Ex_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes1,  ierr)
+       Ey_size=size(e%pol(1)%y)
+       CALL MPI_PACK_SIZE(Ey_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes2,  ierr)
+       Ez_size=size(e%pol(1)%z)
+       CALL MPI_PACK_SIZE(Ez_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes3,  ierr)
+
+         Nbytes=((Nbytes1+Nbytes2+Nbytes3))+1  
+
+         if(associated(e_para_vec)) then
+             deallocate(e_para_vec)
+         end if
+             allocate(e_para_vec(Nbytes))
+             
+             
+ end subroutine create_e_param_place_holder
+ !********************************************************************
+ subroutine Pack_e_para_vec(e)
+    implicit none
+
+     type(solnVector_t), intent(in)	:: e
+     integer index,Ex_size,Ey_size,Ez_size
+
+
+
+       Ex_size=size(e%pol(1)%x)
+       Ey_size=size(e%pol(1)%y)
+       Ez_size=size(e%pol(1)%z)
+       index=1
+
+        call MPI_Pack(e%pol(1)%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX, e_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
+        call MPI_Pack(e%pol(1)%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX, e_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
+        call MPI_Pack(e%pol(1)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX, e_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
+
+
+
+end subroutine Pack_e_para_vec
+!********************************************************************
+subroutine Unpack_e_para_vec(e)
+    implicit none
+
+     type(solnVector_t), intent(inout)	:: e
+
+     integer index,Ex_size,Ey_size,Ez_size
+
+
+       Ex_size=size(e%pol(1)%x)
+       Ey_size=size(e%pol(1)%y)
+       Ez_size=size(e%pol(1)%z)
+       index=1
+
+        call MPI_Unpack(e_para_vec, Nbytes, index, e%pol(which_pol)%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+        call MPI_Unpack(e_para_vec, Nbytes, index, e%pol(which_pol)%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+        call MPI_Unpack(e_para_vec, Nbytes, index, e%pol(which_pol)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+
+      
+
+
+
+end subroutine Unpack_e_para_vec
 
 !********************************************************************
 subroutine create_eAll_param_place_holder(eAll)
@@ -136,7 +242,7 @@ subroutine create_eAll_param_place_holder(eAll)
 
 
 !********************************************************************
-subroutine get_eAll_para_vec(eAll)
+subroutine pack_eAll_para_vec(eAll)
     implicit none
 
      type(solnVectorMTX_t), intent(in)	:: eAll
@@ -148,7 +254,8 @@ subroutine get_eAll_para_vec(eAll)
        Ey_size=size(eAll%solns(which_per)%pol(1)%y)
        Ez_size=size(eAll%solns(which_per)%pol(1)%z)
        index=1
-
+              
+            
         call MPI_Pack(eAll%solns(which_per)%pol(1)%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
         call MPI_Pack(eAll%solns(which_per)%pol(1)%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
         call MPI_Pack(eAll%solns(which_per)%pol(1)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
@@ -158,11 +265,11 @@ subroutine get_eAll_para_vec(eAll)
         call MPI_Pack(eAll%solns(which_per)%pol(2)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX, eAll_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
 
 
-end subroutine get_eAll_para_vec
+end subroutine pack_eAll_para_vec
 
 
 !********************************************************************
-subroutine set_eAll_para_vec(eAll)
+subroutine Unpack_eAll_para_vec(eAll)
     implicit none
 
      type(solnVectorMTX_t), intent(inout)	:: eAll
@@ -175,17 +282,19 @@ subroutine set_eAll_para_vec(eAll)
        Ez_size=size(eAll%solns(which_per)%pol(1)%z)
        index=1
 
+            
+       
         call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(1)%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
         call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(1)%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
         call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(1)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
 
-        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(2)%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
-        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(2)%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
-        call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(2)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+       call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(2)%x(1,1,1),Ex_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+       call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(2)%y(1,1,1),Ey_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
+       call MPI_Unpack(eAll_para_vec, Nbytes, index, eAll%solns(which_per)%pol(2)%z(1,1,1),Ez_size, MPI_DOUBLE_COMPLEX,MPI_COMM_WORLD, ierr)
 
 
 
-end subroutine set_eAll_para_vec
+end subroutine Unpack_eAll_para_vec
 
 
 #endif
