@@ -53,6 +53,7 @@ program Mod3DMT
       call setGrid(grid)
 
 
+
 #ifdef MPI
        call Master_job_Distribute_userdef_control(cUserDef)
        call Master_job_Distribute_Data_Size(allData,sigma0)
@@ -80,12 +81,7 @@ program Mod3DMT
      write(*,*) 'Calculating predicted data...'
 
 #ifdef MPI
-   if (write_EMsoln) then
         call Master_job_fwdPred(sigma0,allData,eAll)
-        !call Master_job_Collect_eAll(allData,eAll)
-   else
-        call Master_job_fwdPred(sigma0,allData)
-   end if
         call Master_job_STOP_MESSAGE
 #else
         call fwdPred(sigma0,allData,eAll)

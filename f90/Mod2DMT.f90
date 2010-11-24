@@ -89,7 +89,12 @@ program Mod2DMT
 
      case (FORWARD)
         write(*,*) 'Calculating predicted data...'
+#ifdef MPI
+        call Master_job_fwdPred(sigma0,allData,eAll)
+        call Master_job_STOP_MESSAGE
+#else
         call fwdPred(sigma0,allData,eAll)
+#endif
         if (write_EMsoln) then
         	! write out EM solutions
         	write(*,*) 'Saving the EM solution...'
@@ -100,17 +105,32 @@ program Mod2DMT
 
      case (COMPUTE_J)
         write(*,*) 'Calculating the full sensitivity matrix...'
+#ifdef MPI
+        !call Master_job_COMPUTE_J(allData,sigma0,sens)
+        call Master_job_STOP_MESSAGE
+#else
         call calcJ(allData,sigma0,sens)
+#endif
         call write_sensMatrixMTX(sens,cUserDef%wFile_Sens)
 
      case (MULT_BY_J)
         write(*,*) 'Multiplying by J...'
-        call Jmult(dsigma,sigma0,allData)
+#ifdef MPI
+            !call Master_job_Jmult(dsigma,sigma0,allData)
+            call Master_job_STOP_MESSAGE
+#else
+            call Jmult(dsigma,sigma0,allData)
+#endif
         call write_dataVectorMTX(allData,cUserDef%wFile_Data)
 
      case (MULT_BY_J_T)
         write(*,*) 'Multiplying by J^T...'
-        call JmultT(sigma0,allData,dsigma)
+#ifdef MPI
+         call Master_job_JmultT(sigma0,allData,dsigma)
+         call Master_job_STOP_MESSAGE
+#else
+         call JmultT(sigma0,allData,dsigma)
+#endif
         call write_modelParam(dsigma,cUserDef%wFile_dModel)
 
      case (INVERSE)
