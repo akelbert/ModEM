@@ -21,6 +21,7 @@ module MPI_main
   type(solnVector_t), save, private		:: e,e0
   type(rhsVector_t) , save, private		:: comb 
   
+  
 Contains
 
 
@@ -57,7 +58,7 @@ Subroutine Master_Job_fwdPred(sigma,d,eAll)
     include 'mpif.h'
    type(modelParam_t), intent(in)	    :: sigma
    type(dataVectorMTX_t), intent(inout)	:: d
-   type(solnVectorMTX_t), intent(inout), optional	:: eAll
+   type(solnVectorMTX_t), intent(inout)	:: eAll
    integer nTx
 
 
@@ -87,17 +88,20 @@ Subroutine Master_Job_fwdPred(sigma,d,eAll)
      ! First, distribute the current model to all workers
        call Master_job_Distribute_Model(sigma)
        call Master_job_Distribute_Data(d)
-               
+            
 
              if(eAll%allocated) then
                call deall (eAll)
               end if
               call create_solnVectorMTX(nTx,eAll)
+ 
               
+            
        		  do iTx=1,nTx
          		call create_solnVector(grid,iTx,e0)
          		call copy_solnVector(eAll%solns(iTx),e0)
-        	  end do         
+        	  end do   
+        
     
         job_name= 'FORWARD'      
         call Master_job_Distribute_Taskes(job_name,nTx,eAll)   
