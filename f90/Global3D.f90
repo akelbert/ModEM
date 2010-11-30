@@ -43,7 +43,7 @@ program earth
           fn_startup = 'fwd_startup'
           call readStartFile(fn_startup,cUserDef)
           write(6,*) 'Modular global code running in: PARALLEL [', number_of_workers,' nodes]'
-          open(ioMPI,file='Nodes_Status.info')
+          open(ioMPI,file=trim(cUserDef%modelname)//'_Nodes_Status.info')
           write(ioMPI,*) 'Total Number of nodes= ', number_of_workers
       else
         call Worker_job(p_input,allData)
@@ -72,7 +72,7 @@ program earth
     call Master_job_Distribute_Model(p_input)
 #endif
 
-  call outputModel(outFiles%fn_model,grid,rho%v)
+  call outputModel(outFiles%fn_model,rho%grid,rho%v)
 
   if (cUserDef%calculate == 'nothing') then
     call write_modelParam(param,'testOutput.prm')
@@ -186,7 +186,7 @@ program earth
     call create_rhsVectorMTX(allData%ntx,b)
     do j = 1,allData%ntx
         b%combs(j)%nonzero_source = .true.
-        call create_rhsVector(grid,j,b%combs(j))
+        call create_rhsVector(rho%grid,j,b%combs(j))
     end do
     call random_rhsVectorMTX(b,eps)
     call Stest(p_input,b,H)
@@ -638,7 +638,7 @@ end program earth
     allResp = allData
 
 #ifdef MPI
-    call Master_job_fwdPred(param,allResp)
+    call Master_job_fwdPred(param,allResp,H)
 #else
     call fwdPred(param,allResp)
 #endif
@@ -730,6 +730,7 @@ end program earth
 	type (rvector)							:: drhoF
 	type (rscalar)							:: rho1D, drho
 	type (modelParam_t)                     :: param1D
+	type (grid_t)                           :: grid
     !type (cvector)							:: H,B,F
 	!type (sparsevecc)						:: Hb
 	!type (functional_t)						:: dataType
@@ -740,6 +741,8 @@ end program earth
 
 	! Don't need to initialize fields: initial dH and boundary conditions are zero
 	! call initialize_fields(dH,Bj)
+
+	grid = rho%grid
 
 	! Make 1D parametrization out of full, and map to grid (primary cell centers)
 	param1D = getRadial(param)
@@ -1008,6 +1011,7 @@ end program earth
     type (solnVector_t)                     :: SOLN
     type (rhsVector_t)                      :: RHS
     type (dataVector_t)                     :: dat,psi,res,wres
+    type (grid_t)                           :: grid
     integer                                 :: ifreq,ifunc
     logical                                 :: adjoint,delta
     character(1)                            :: cfunc
@@ -1015,6 +1019,8 @@ end program earth
 
     ! Start the (portable) clock
     call date_and_time(values=tarray)
+
+    grid = rho%grid
 
     call initialize_fields(grid,H,Hb)
     call create_cvector(grid,B,EDGE)
@@ -1561,7 +1567,7 @@ end program earth
   ! * calc_symmetric_operators is a subroutine to run a symmetry test for each
   ! * of the operators involved in the calculation
 
-  subroutine calc_symmetric_operators(rtime)
+  subroutine calc_symmetric_operators(rtime,grid)
 
     use userdata
 	use global
@@ -1583,6 +1589,7 @@ end program earth
 	real									:: stime, etime ! start and end times
     integer, dimension(8)					:: tarray ! utility variable
     integer	                                :: errflag	! internal error flag
+    type (grid_t), intent(in)               :: grid
 	real(8)									:: omega  ! variable angular frequency
 	integer									:: istat,i,j,kk
     type (cvector)							:: H,H1,H2,H3,B,F,F1,F2,F3,F1conj,F2conj

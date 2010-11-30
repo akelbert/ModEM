@@ -58,7 +58,7 @@ all: Mod2DMT
 
 # Here is the link step 
 Mod2DMT: $(OBJDIR) $(OBJ) 
-	 $(F90) -o $(OUTDIR)/Mod2DMT $(OBJ) $(LIBS) 
+	 $(F90) -o $(OUTDIR)/Mod2DMT_MPI $(OBJ) $(LIBS) 
 
 # Here are the compile steps 
 

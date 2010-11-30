@@ -66,6 +66,11 @@ Contains
    initFwd = present(h0)
    initForSens = present(comb)
 
+   ! First of all, initialize a local copy of the GRID.
+   ! All vectors will point to that grid, which should be
+   ! local to each processor.
+   !grid = igrid
+
    freq => freqList%info(iTx)
    write(*,'(a12,a46,es9.3,a5)') node_info, &
         'Initializing 3D SGFD global solver for period ',freq%period,' days'
@@ -145,7 +150,6 @@ Contains
    type(solnVector_t), intent(inout)            :: h
    ! local variables
    type(transmitter_t), pointer                 :: freq
-   type(grid_t)                                 :: grid
    real(kind=prec)                              :: omega
    logical                                      :: adjoint,sens
 
@@ -153,8 +157,6 @@ Contains
    h%tx = iTx
 
    freq => freqList%info(iTx)
-
-   grid = h%grid
 
    ! run FWD/ADJ solver
    write (*,'(a12,a12,a3,a20,i4,a2,es12.6,a5)') node_info, &
@@ -168,11 +170,11 @@ Contains
 
       ! Compute the RHS = - del x drho (del x H)
       h = h1d
-      call operatorD_l_mult(h%vec,grid)
-      call operatorC(h%vec,e,grid)
+      call operatorD_l_mult(h%vec,h%grid)
+      call operatorC(h%vec,e,h%grid)
       call diagMult(drhoF,e,e)
-      call operatorCt(e,b,grid)
-      call operatorD_Si_divide(b,grid)
+      call operatorCt(e,b,h%grid)
+      call operatorD_Si_divide(b,h%grid)
       call linComb(C_MinusONE,b,C_ZERO,b,b)
 
       ! solve S_m <h> = <b> for vector <h>
@@ -181,7 +183,7 @@ Contains
       adjoint = .false.
       sens = .true.
       call linComb_cvector(C_ONE,source,C_ONE,b,b)
-      call operatorMii(dh%vec,b,omega,rho,grid,fwdCtrls,h%errflag,adjoint)
+      call operatorMii(dh%vec,b,omega,rho,h%grid,fwdCtrls,h%errflag,adjoint)
 
       ! Full solution for one frequency is the sum H1D + dH
       call linComb_solnVector(C_ONE,h1d,C_ONE,dh,h)
@@ -193,7 +195,7 @@ Contains
       ! solve S_m <h> = <s> for vector <h>
       adjoint = .false.
       sens = .true.
-      call operatorMii(h%vec,source,omega,rho,grid,fwdCtrls,h%errflag,adjoint,BC)
+      call operatorMii(h%vec,source,omega,rho,h%grid,fwdCtrls,h%errflag,adjoint,BC)
 
    end if
 
@@ -223,7 +225,6 @@ Contains
    type(rhsVector_t), intent(inout), optional    :: comb
    ! local variables
    type(transmitter_t), pointer                 :: freq
-   type(grid_t)                                 :: grid
    real(kind=prec)                              :: omega
    logical                                      :: adjoint,sens
 
@@ -231,8 +232,6 @@ Contains
    h%tx = iTx
 
    freq => freqList%info(iTx)
-
-   grid = h%grid
 
    ! run FWD/ADJ solver
    write (*,'(a12,a12,a3,a20,i4,a2,es12.6,a5)') node_info, &
@@ -246,14 +245,14 @@ Contains
     ! assume interior forcing s + BC; starting solution already initialized
     adjoint = .false.
     sens = .false.
-    call operatorMii(h%vec,source,omega,rho,grid,fwdCtrls,h%errflag,adjoint,BC)
+    call operatorMii(h%vec,source,omega,rho,h%grid,fwdCtrls,h%errflag,adjoint,BC)
 
    else
 
     ! use comb for forcing and assume zero BC; starting solution should be zero
     adjoint = (FWDorADJ .ne. FWD)
     sens = .true.
-    call operatorMii(h%vec,comb%source,omega,rho,grid,fwdCtrls,h%errflag,adjoint)
+    call operatorMii(h%vec,comb%source,omega,rho,h%grid,fwdCtrls,h%errflag,adjoint)
 
    endif
 

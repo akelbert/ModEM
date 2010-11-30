@@ -31,7 +31,7 @@ module global
 
   ! ***************************************************************************
   ! * grid: Contains the information about the user-specified grid
-  !type (grid_t), save								:: grid
+  !type (grid_t), target, save							:: targetGrid
 
   ! ***************************************************************************
   ! * shell: Contains the information about thin-shell conductance

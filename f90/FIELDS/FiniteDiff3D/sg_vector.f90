@@ -401,6 +401,8 @@ Contains
        E%x = R_ZERO
        E%y = R_ZERO
        E%z = R_ZERO
+    else
+        write (0, *) 'Warning: unable to allocate rvector - invalid grid supplied'
     end if
 
   end subroutine create_rvector  ! create_rvector
@@ -473,8 +475,9 @@ Contains
        E%x = C_ZERO
        E%y = C_ZERO
        E%z = C_ZERO
+    else
+        write (0, *) 'Warning: unable to allocate cvector - invalid grid supplied'
     end if
-    ! print *, 'E%allocated', E%allocated
 
   end subroutine create_cvector  ! create_cvector
 

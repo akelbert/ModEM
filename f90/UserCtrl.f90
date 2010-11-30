@@ -2,7 +2,7 @@
 module UserCtrl
   ! This module defines the derived data type structure with all filenames
   use utilities
-  
+
   implicit none
 
   character*1, parameter  :: READ_WRITE = 'R'
@@ -30,6 +30,9 @@ module UserCtrl
 	! File to set up forward solver controls
 	character(80)       :: rFile_fwdCtrl
 
+    ! Output file name for MPI nodes status info
+    character(80)       :: wFile_MPI
+
 	! Input files
 	character(80)       :: rFile_Grid, rFile_Model, rFile_Data
 	character(80)       :: rFile_dModel
@@ -50,7 +53,7 @@ module UserCtrl
 
 
 
-  
+
 	! Specify damping parameter for the inversion
 	real(8)             :: lambda
 
@@ -58,7 +61,7 @@ module UserCtrl
 	real(8)             :: eps
   ! Specify the magnitude for random perturbations
   real(8)             :: delta
-  
+
 
 	! Indicate how much output you want
 	integer             :: output_level
@@ -74,6 +77,10 @@ Contains
   subroutine initUserCtrl(ctrl)
 
   	type(userdef_control), intent(out)   :: ctrl
+
+    character(8) date
+    character(10) time
+  	integer(4) pid
 
   	ctrl%job = ''
   	ctrl%rFile_invCtrl = 'n'
@@ -98,6 +105,16 @@ Contains
   	ctrl%test = 'J'
   	ctrl%delta = 0.05
   	ctrl%output_level = 3
+
+    ! Using process ID in MPI output file name has the advantage that
+    ! the user may run several instances of the program in one directory
+    ! simultaneously. Unfortunately, getpid is one of the portability
+    ! routines that is not universally supported. Use start time instead.
+    ! pid = getpid()
+    ! write(ctrl%wFile_MPI,'(a13,i6.6,a5)') 'Nodes_Status_',pid,'.info'
+
+    call date_and_time(date,time)
+    write(ctrl%wFile_MPI,'(a13,a8,a1,a10,a5)') 'Nodes_Status_',date,'T',time,'.info'
 
   end subroutine initUserCtrl
 

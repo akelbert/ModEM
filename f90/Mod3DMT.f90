@@ -27,7 +27,7 @@ program Mod3DMT
 			  if (taskid==0) then
 			      write(6,*)'I am a PARALLEL version'
 			      call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
-	              open(ioMPI,file='Nodes_Status.info')
+	              open(ioMPI,file=cUserDef%wFile_MPI)
 	              write(ioMPI,*) 'Total Number of nodes= ', number_of_workers
 			  else
 			    call Worker_job(sigma0,allData)

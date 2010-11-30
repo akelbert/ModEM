@@ -9,15 +9,9 @@ use UserCtrl
 
 
 
-  
+
 use MPI_declaration
 
-  type (grid_t), target, save, private  :: grid
-  type(solnVector_t), save, private		:: e,e0
-  type(rhsVector_t) , save, private		:: comb 
-
-
-  
 Contains
 
 
@@ -26,7 +20,7 @@ Contains
 subroutine set_e_soln(pol_index,e)
     Integer, intent(in)                :: pol_index
     type(solnVector_t), intent(inout)  :: e
-            
+
 
 
 end subroutine set_e_soln
@@ -36,7 +30,7 @@ subroutine get_nPol_MPI(eAll)
 
    type(solnVectorMTX_t), intent(in)	:: eAll
 
-            
+
             nPol_MPI= 1
 
 end subroutine get_nPol_MPI
@@ -55,7 +49,7 @@ end subroutine get_nPol_MPI
 
 
 
-       CALL MPI_PACK_SIZE(80*19, MPI_CHARACTER,        MPI_COMM_WORLD, Nbytes1,  ierr)
+       CALL MPI_PACK_SIZE(80*20, MPI_CHARACTER,        MPI_COMM_WORLD, Nbytes1,  ierr)
        CALL MPI_PACK_SIZE(3,     MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, Nbytes2,  ierr)
        CALL MPI_PACK_SIZE(1,     MPI_INTEGER,          MPI_COMM_WORLD, Nbytes3,  ierr)
         Nbytes=(Nbytes1+Nbytes2+Nbytes3)+1
@@ -77,7 +71,7 @@ end subroutine get_nPol_MPI
 
        index=1
 
-        call MPI_Pack(ctrl%job,80*19, MPI_CHARACTER, userdef_control_package, Nbytes, index, MPI_COMM_WORLD, ierr)
+        call MPI_Pack(ctrl%job,80*20, MPI_CHARACTER, userdef_control_package, Nbytes, index, MPI_COMM_WORLD, ierr)
         call MPI_Pack(ctrl%lambda,3, MPI_DOUBLE_PRECISION, userdef_control_package, Nbytes, index, MPI_COMM_WORLD, ierr)
         call MPI_Pack(ctrl%output_level,1, MPI_INTEGER, userdef_control_package, Nbytes, index, MPI_COMM_WORLD, ierr)
 
@@ -96,6 +90,7 @@ end subroutine pack_userdef_control
    call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%job,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
    call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%rFile_invCtrl,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
    call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%rFile_fwdCtrl,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%wFile_MPI,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
    call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%rFile_Grid,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
    call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%rFile_Model,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
    call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%rFile_Data,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
@@ -144,7 +139,7 @@ subroutine create_e_param_place_holder(e)
      implicit none
      type(solnVector_t), intent(in)	:: e
      integer                        ::v_size,Nbytes1
-                  
+
 
 
 
@@ -153,14 +148,14 @@ subroutine create_e_param_place_holder(e)
          v_size=size(e%vec%v)
          CALL MPI_PACK_SIZE(v_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes1,  ierr)
 
-         Nbytes=((Nbytes1))+1  
+         Nbytes=((Nbytes1))+1
 
          if(associated(e_para_vec)) then
              deallocate(e_para_vec)
          end if
              allocate(e_para_vec(Nbytes))
-             
-             
+
+
  end subroutine create_e_param_place_holder
  !********************************************************************
  subroutine Pack_e_para_vec(e)
@@ -177,7 +172,7 @@ subroutine create_e_param_place_holder(e)
 
         call MPI_Pack(e%vec%v(1,1),v_size, MPI_DOUBLE_COMPLEX, e_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
 
-        
+
 end subroutine Pack_e_para_vec
 !********************************************************************
 subroutine Unpack_e_para_vec(e)
@@ -202,11 +197,11 @@ subroutine create_eAll_param_place_holder(eAll)
      type(solnVectorMTX_t), intent(in)	:: eAll
      integer v_size,Nbytes1
 
-     
+
          v_size=size(eAll%solns(which_per)%vec%v)
          CALL MPI_PACK_SIZE(v_size, MPI_DOUBLE_COMPLEX, MPI_COMM_WORLD, Nbytes1,  ierr)
 
-         Nbytes=((Nbytes1))+1  
+         Nbytes=((Nbytes1))+1
 
 
 

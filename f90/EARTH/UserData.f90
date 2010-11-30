@@ -5,7 +5,6 @@ module UserData
 	! These are initialized in module Main.
 
   use DataSpace
-  use GridDef
   use ModelDef
   use iotypes
   implicit none
@@ -19,8 +18,6 @@ module UserData
   type (output_info), save      :: outFiles
   type (userdef_control), save       :: cUserDef
   type (fwdCtrl_t), save        :: fwdCtrls
-
-  type (grid_t), save                              :: grid
 
   ! ***************************************************************************
   ! * misfitType: preconditioning and regularisation parameters
