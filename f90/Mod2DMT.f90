@@ -1,20 +1,13 @@
 ! *****************************************************************************
 program Mod2DMT
-!  program for linking 2D TE forward modeling/data functional
-!       etc. modules to matlab inversion drivers
-!     Modified from FWDtestTE
-!     Idea: a self contained program called with one or
-!        more command line options to execute specific mappings
-!        from model parameter space to data space.  A matlab
-!        script writes files, executes this program (which reads
-!        input data from these files, and outputs to other files),
-!        and then reads the outputs.  Generalize to a mex file!
+!  program for running 3D MT forward, sensitivity and inverse modelling
 
      use SensComp
      use SymmetryTest
      use Main
      use NLCG
      use DCG
+     !use mtinvsetup
 
 #ifdef MPI
      Use MPI_main
@@ -25,41 +18,20 @@ program Mod2DMT
      ! Character-based information specified by the user
      type (userdef_control)	:: cUserDef
 
-     ! Numerical grid used to set target grids
-     type(grid_t)           :: grid
-
-     ! Impedance data structure
-     type(dataVectorMTX_t)  :: allData
-
      ! Variable required for storing the date and time
      type (timer_t)         :: timer
 
-     integer                :: nData
-!     integer (kind=4) :: Nzb, IER, i, iy,iz,iPer,nSigma,nTx
-!     integer (kind=4) :: iargc,narg,k
-!     integer (kind=4) :: nMode=1,nComp=2
-!     character*80  gridType, header,arg, paramtype
-!     character*80, dimension(:), pointer :: temp
-
-     ! needed for symmetry testing
-     type (solnVectorMTX_t) :: ePred
-     type (rhsVectorMTX_t)  :: bAll
 
 #ifdef MPI
               call  MPI_constructor
 			  if (taskid==0) then
 			      write(6,*)'I am a PARALLEL version'
-			      call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
-	              open(ioMPI,file='Nodes_Status.info')
+			      call parseArgs('Mod2DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
+			      call Master_job_Distribute_userdef_control(cUserDef)
+	              open(ioMPI,file=cUserDef%wFile_MPI)
 	              write(ioMPI,*) 'Total Number of nodes= ', number_of_workers
 			  else
-			    call Worker_job(sigma0,allData)
-	            if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
-	               	 call deallGlobalData()
-		             call cleanUp()
-	                 call MPI_destructor
-	              stop
-	            end if
+			       call RECV_cUserDef(cUserDef)
 			 end if
 
 #else
@@ -67,21 +39,31 @@ program Mod2DMT
              call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
 #endif
 
-     call initGlobalData(cUserDef,grid,allData)
 
-#ifdef MPI
-     ! set the private target grid for MPI main
-      call Master_Job_setGrid(grid)
-#else
-     ! set the private target grid for sensitivity computations
+
+
+      call initGlobalData(cUserDef)
+      ! set the grid for the numerical computations
+      
+#ifdef MPI    
+      call setGrid_MPI(grid)
+#else      
       call setGrid(grid)
 #endif
-
-
-
+      
+      
 #ifdef MPI
-       call Master_job_Distribute_userdef_control(cUserDef)
+    if (taskid.gt.0) then
+			    call Worker_job(sigma0,allData)
+	            if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
+	               	 call deallGlobalData()
+		             call cleanUp()
+	                 call MPI_destructor
+	              stop
+	            end if
+    end if
 #endif
+    
 
 
 	 ! Start the (portable) clock
@@ -100,20 +82,24 @@ program Mod2DMT
 		end if
 
      case (FORWARD)
-        write(*,*) 'Calculating predicted data...'
+
+     write(*,*) 'Calculating predicted data...'
+
 #ifdef MPI
         call Master_job_fwdPred(sigma0,allData,eAll)
         call Master_job_STOP_MESSAGE
 #else
         call fwdPred(sigma0,allData,eAll)
 #endif
+
+        ! write out all impedances
+        call write_dataVectorMTX(allData,cUserDef%wFile_Data)
+
         if (write_EMsoln) then
         	! write out EM solutions
         	write(*,*) 'Saving the EM solution...'
         	call write_solnVectorMTX(fidWrite,cUserDef%wFile_EMsoln,eAll)
         end if
-        ! write out all impedances
-        call write_dataVectorMTX(allData,cUserDef%wFile_Data)
 
      case (COMPUTE_J)
         write(*,*) 'Calculating the full sensitivity matrix...'
@@ -127,12 +113,15 @@ program Mod2DMT
 
      case (MULT_BY_J)
         write(*,*) 'Multiplying by J...'
+
 #ifdef MPI
             !call Master_job_Jmult(dsigma,sigma0,allData)
             call Master_job_STOP_MESSAGE
 #else
             call Jmult(dsigma,sigma0,allData)
 #endif
+
+
         call write_dataVectorMTX(allData,cUserDef%wFile_Data)
 
      case (MULT_BY_J_T)
@@ -143,7 +132,8 @@ program Mod2DMT
 #else
          call JmultT(sigma0,allData,dsigma)
 #endif
-        call write_modelParam(dsigma,cUserDef%wFile_dModel)
+
+         call write_modelParam(dsigma,cUserDef%wFile_dModel)
 
      case (INVERSE)
      	if (trim(cUserDef%search) == 'NLCG') then
@@ -168,7 +158,8 @@ program Mod2DMT
 #ifdef MPI
         	call Master_job_STOP_MESSAGE
 #endif
-        else
+
+       else
         	write(*,*) 'Inverse search ',trim(cUserDef%search),' not yet implemented. Exiting...'
         	stop
         end if
@@ -177,52 +168,29 @@ program Mod2DMT
         	call write_dataVectorMTX(allData,cUserDef%wFile_Data)
         end if
 
+     case (TEST_COV)
+        write(*,*) 'Multiplying input model parameter by covariance ...'
+        sigma1 = multBy_CmSqrt(sigma0)
+        call write_modelParam(sigma1,cUserDef%wFile_Model)
+
      case (TEST_ADJ)
        select case (cUserDef%test)
            case('J')
                call Jtest(sigma0,dsigma,allData)
-           case('L')
-               !call fwdPred(sigma0,allData,eAll)
-			   !ePred = eAll
-			   call random_solnVectorMTX(eAll,cUserDef%delta)
-			   call random_dataVectorMTX(allData,cUserDef%delta)
-			   !call Ltest(sigma0,eAll,allData,ePred)
-			   !call deall_solnVectorMTX(ePred)
-               call Ltest(sigma0,eAll,allData)
-           case('S')
-               call random_solnVectorMTX(eAll,cUserDef%delta)
-               bAll = eAll
-               call Stest(sigma0,bAll,eAll)
            case('Q')
                call Qtest(sigma0,dsigma,allData)
-
-           case('m')
-               call random_modelParam(sigma0,cUserDef%delta)
-               call write_modelParam(sigma0,cUserDef%wFile_Model)
-               write_model = .false.
-               write_data = .false.
-           case('d')
-               call random_dataVectorMTX(allData,cUserDef%delta)
-               call write_dataVectorMTX(allData,cUserDef%wFile_Data)
-               write_model = .false.
-               write_data = .false.
-           case('e')
-               call random_solnVectorMTX(eAll,cUserDef%delta)
-               call write_solnVectorMTX(ioWrite,cUserDef%wFile_EMsoln,eAll)
-               write_model = .false.
-               write_data = .false.
 
            case default
                write(0,*) 'Symmetry test for operator ',trim(cUserDef%test),' not yet implemented.'
        end select
-	     if (write_model .and. write_data) then
-	        write(*,*) 'Writing model and data files and exiting...'
-	        call write_modelParam(dsigma,cUserDef%wFile_Model)
-	        call write_dataVectorMTX(allData,cUserDef%wFile_Data)
-	     else if (write_model) then
-	        write(*,*) 'Writing model and exiting...'
-	        call write_modelParam(dsigma,cUserDef%wFile_Model)
-	     end if
+         if (write_model .and. write_data) then
+            write(*,*) 'Writing model and data files and exiting...'
+            call write_modelParam(dsigma,cUserDef%wFile_Model)
+            call write_dataVectorMTX(allData,cUserDef%wFile_Data)
+         else if (write_model) then
+            write(*,*) 'Writing model and exiting...'
+            call write_modelParam(dsigma,cUserDef%wFile_Model)
+         end if
 
      case default
 
@@ -234,11 +202,10 @@ program Mod2DMT
 		close(ioMPI)
 #endif
 
+
 	 ! cleaning up
 	 call deallGlobalData()
-
 	 call cleanUp()
-
 
 #ifdef MPI
 	 write(0,*) ' elapsed time (mins) ',elapsed_time(timer)/60.0
@@ -247,4 +214,7 @@ program Mod2DMT
 	 write(0,*) ' elapsed time (mins) ',elapsed_time(timer)/60.0
 #endif
 
+
+
 end program
+

@@ -45,7 +45,7 @@
 include Makefile.local
 OBJDIR = ./objs/EARTH/Release
 F90 = ifort 
-FFLAGS = -O3 -parallel #-heap-arrays
+FFLAGS = -O3 -parallel -heap-arrays
 MPIFLAGS = -cpp
 MODULE = -module $(OBJDIR)
 LIBS = -lblas -llapack -parallel
@@ -92,7 +92,7 @@ $(OBJDIR)/file_units.o:UTILS/file_units.f90
 $(OBJDIR)/iotypes.o:EARTH/ioMod/iotypes.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) EARTH/ioMod/iotypes.f90 -o $(OBJDIR)/iotypes.o
 
-$(OBJDIR)/UserData.o:EARTH/UserData.f90 $(OBJDIR)/DataSpace.o $(OBJDIR)/GridDef.o $(OBJDIR)/modeldef.o $(OBJDIR)/iotypes.o 
+$(OBJDIR)/UserData.o:EARTH/UserData.f90 $(OBJDIR)/DataSpace.o $(OBJDIR)/modeldef.o $(OBJDIR)/iotypes.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) EARTH/UserData.f90 -o $(OBJDIR)/UserData.o
 
 $(OBJDIR)/model_operators.o:EARTH/modelParam/model_operators.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/utilities.o $(OBJDIR)/modeldef.o 

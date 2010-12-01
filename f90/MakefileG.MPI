@@ -221,7 +221,7 @@ $(OBJDIR)/DataIO.o:EARTH/DataIO.f90 $(OBJDIR)/UserData.o $(OBJDIR)/input.o $(OBJ
 $(OBJDIR)/MPI_sub.o:EARTH/MPI_sub.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/SolnSpace.o $(OBJDIR)/iotypes.o $(OBJDIR)/MPI_declaration.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) EARTH/MPI_sub.f90 -o $(OBJDIR)/MPI_sub.o
 
-$(OBJDIR)/MPI_main.o:MPI/MPI_main.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSens.o $(OBJDIR)/SolverSens.o $(OBJDIR)/ForwardSolver.o $(OBJDIR)/SensComp.o $(OBJDIR)/MPI_declaration.o $(OBJDIR)/MPI_sub.o $(OBJDIR)/Main.o 
+$(OBJDIR)/MPI_main.o:MPI/MPI_main.f90 $(OBJDIR)/math_constants.o $(OBJDIR)/file_units.o $(OBJDIR)/utilities.o $(OBJDIR)/DataSens.o $(OBJDIR)/SolverSens.o $(OBJDIR)/ForwardSolver.o $(OBJDIR)/MPI_declaration.o $(OBJDIR)/MPI_sub.o 
 	 $(F90) -c $(MODULE) $(FFLAGS) $(MPIFLAGS) MPI/MPI_main.f90 -o $(OBJDIR)/MPI_main.o
 
 $(OBJDIR)/NLCG.o:INV/NLCG.f90 $(OBJDIR)/SensComp.o $(OBJDIR)/DataIO.o $(OBJDIR)/MPI_main.o $(OBJDIR)/MPI_sub.o 

@@ -18,12 +18,6 @@ program Mod3DMT
      ! Character-based information specified by the user
      type (userdef_control)	:: cUserDef
 
-     ! Numerical grid used to set target grids
-     type(grid_t)           :: grid
-
-     ! Impedance data structure
-     type(dataVectorMTX_t)  :: allData
-
      ! Variable required for storing the date and time
      type (timer_t)         :: timer
 
@@ -33,16 +27,11 @@ program Mod3DMT
 			  if (taskid==0) then
 			      write(6,*)'I am a PARALLEL version'
 			      call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
+			      call Master_job_Distribute_userdef_control(cUserDef)
 	              open(ioMPI,file=cUserDef%wFile_MPI)
 	              write(ioMPI,*) 'Total Number of nodes= ', number_of_workers
 			  else
-			    call Worker_job(sigma0,allData)
-	            if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
-	               	 call deallGlobalData()
-		             call cleanUp()
-	                 call MPI_destructor
-	              stop
-	            end if
+			       call RECV_cUserDef(cUserDef)
 			 end if
 
 #else
@@ -53,22 +42,29 @@ program Mod3DMT
 
 
 
-
-      call initGlobalData(cUserDef,grid,allData)
-
-#ifdef MPI
-     ! set the private target grid for MPI main
-      call Master_Job_setGrid(grid)
-#else
-     ! set the private target grid for sensitivity computations
+      call initGlobalData(cUserDef)
+      ! set the grid for the numerical computations
+      
+#ifdef MPI    
+      call setGrid_MPI(grid)
+#else      
       call setGrid(grid)
 #endif
-
-
-
+      
+      
 #ifdef MPI
-       call Master_job_Distribute_userdef_control(cUserDef)
+    if (taskid.gt.0) then
+			    call Worker_job(sigma0,allData)
+	            if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
+	               	 call deallGlobalData()
+		             call cleanUp()
+	                 call MPI_destructor
+	              stop
+	            end if
+    end if
 #endif
+    
+
 
 	 ! Start the (portable) clock
 	 call reset_time(timer)

@@ -20,7 +20,7 @@ program earth
   implicit none
 
   type(timer_t)                             :: t
-  type(grid_t), target                      :: targetGrid
+  !type(grid_t), target                      :: targetGrid
   type(modelParam_t)                        :: grad
   type(dataVectorMTX_t)                     :: allResp,d_delta
   type(solnVectorMTX_t)                     :: H,h_delta
@@ -37,45 +37,64 @@ program earth
   real(8), dimension(2)                         :: value1, value2, delta
 
 
+
+
+
+
 #ifdef MPI
-      call  MPI_constructor()
-      if (taskid==0) then
-          fn_startup = 'fwd_startup'
-          call readStartFile(fn_startup,cUserDef)
-          write(6,*) 'Modular global code running in: PARALLEL [', number_of_workers,' nodes]'
-          open(ioMPI,file=trim(cUserDef%modelname)//'_Nodes_Status.info')
-          write(ioMPI,*) 'Total Number of nodes= ', number_of_workers
-      else
-        call Worker_job(p_input,allData)
-        if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
-             call DeleteGlobalData()
-             stop
-        end if
-     end if
+              call  MPI_constructor
+			  if (taskid==0) then
+			   fn_startup = 'fwd_startup'
+               call readStartFile(fn_startup,cUserDef)
+               write(6,*) 'Modular global code running in: PARALLEL [', number_of_workers,' nodes]'
+			      call Master_job_Distribute_userdef_control(cUserDef)
+	             open(ioMPI,file=trim(cUserDef%modelname)//'_Nodes_Status.info')
+	              write(ioMPI,*) 'Total Number of nodes= ', number_of_workers
+			  else
+			       call RECV_cUserDef(cUserDef)
+			 end if
+
 #else
      fn_startup = 'fwd_startup'
      call readStartFile(fn_startup,cUserDef)
      write(6,*) 'Modular global code running in: SERIAL'
 #endif
 
+
+
+
+     
+
+
+
+
   runtime = 0.0d0
 
   eps = 0.01
 
 
-  call InitGlobalData(cUserDef,targetGrid,allData)
-
-#ifdef MPI
-  ! set the private target grid for MPI main
-  call Master_Job_setGrid(targetGrid)
-#else
-  ! set the private target grid for sensitivity computations
-  call setGrid(targetGrid)
+      call initGlobalData(cUserDef)
+      ! set the grid for the numerical computations
+      
+#ifdef MPI    
+      call setGrid_MPI(targetGrid)
+#else      
+      call setGrid(targetGrid)
 #endif
 
+
 #ifdef MPI
-    call Master_job_Distribute_userdef_control(cUserDef)
+    if (taskid.gt.0) then
+			    call Worker_job(p_input,allData)
+	            if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
+	               	   call DeleteGlobalData()
+	                   call MPI_destructor
+	              stop
+	            end if
+    end if
 #endif
+
+
 
   call outputModel(outFiles%fn_model,rho%grid,rho%v)
 
@@ -155,7 +174,7 @@ program earth
     eps = 0.005
     write(0,*) 'Model perturbation used is uniform random times ',eps
 
-    call InitGlobalData(cUserDef,targetGrid,allData,eps)
+    call InitGlobalData(cUserDef,eps)
 
 	!call calc_symmetry(runtime)
 	call calc_symmetric_operators(runtime)
@@ -232,7 +251,7 @@ program earth
 	eps = 0.005
     write(0,*) 'Model perturbation used is uniform random times ',eps
 
-	call InitGlobalData(cUserDef,targetGrid,allData,eps)
+	call InitGlobalData(cUserDef,eps)
 
     ! compute misfit after the perturbation (m0+dm)
 	call calc_responses(f2,allResp)
@@ -313,7 +332,7 @@ program earth
 	call DeleteGlobalData()
 
     eps = 0.005
-	call InitGlobalData(cUserDef,targetGrid,allData,eps)
+	call InitGlobalData(cUserDef,eps)
 
   ! Run Jacobian computations after the perturbation (a+da)
 	call calc_jacobian(runtime)

@@ -24,7 +24,7 @@ module main
 
   ! ***************************************************************************
   ! * targetGrid: Target for all grid pointers for use in the main program
-  !type (grid_t), target, save                   :: targetGrid
+  type (grid_t), target, save                   :: targetGrid
 
 Contains
 
@@ -43,12 +43,10 @@ Contains
   ! * Frequencies are listed in ascending order (by value)
   ! * Observatories are listed in ascending order (alphabetic)
 
-  subroutine InitGlobalData(ctrl,grid,data,eps)
+  subroutine InitGlobalData(ctrl,eps)
 
 	implicit none
     type (userdef_control), intent(inout)			:: ctrl
-    type (grid_t), intent(inout)                :: grid
-    type (dataVectorMTX_t), intent(inout)       :: data
 	integer										:: i,ios=0,istat=0
 	character(100)								:: label
 	real(8),intent(in),optional	                :: eps
@@ -69,10 +67,13 @@ Contains
 	call initFunctional(cUserDef,misfitType)
 	!--------------------------------------------------------------------------
 	! Read and compute grid information
-	call initGrid(cUserDef,grid)
+	call initGrid(cUserDef,targetGrid)
+    !--------------------------------------------------------------------------
+    ! Read and compute grid information
+    call setGrid(targetGrid)
 	!--------------------------------------------------------------------------
 	! Read and save thin shell conductance information, if present
-	call initCrust(cUserDef,grid,crust)
+	call initCrust(cUserDef,targetGrid,crust)
 	!--------------------------------------------------------------------------
 	! Read main parametrization
 	call initModelParam(cUserDef,p_input)
@@ -81,7 +82,7 @@ Contains
 	call setCrust_modelParam(crust,p_input)
 	!--------------------------------------------------------------------------
 	! Adjust the layer boundaries to match the grid
-	call adjustLayers_modelParam(p_input,grid%r)
+	call adjustLayers_modelParam(p_input,targetGrid%r)
 	!--------------------------------------------------------------------------
 	! Check whether base parametrization exists
 	inquire(FILE=cUserDef%fn_param0,EXIST=exists)
@@ -92,7 +93,7 @@ Contains
 	    ! Initialize thin shell conductance in the model parameter
 	    call setCrust_modelParam(crust,p0_input)
 		! Adjust the layer boundaries to match the grid
-		call adjustLayers_modelParam(p0_input,grid%r)
+		call adjustLayers_modelParam(p0_input,targetGrid%r)
 		! NOTE: regularization information is taken from the prior model!!!
 		if (.not. compare(p_input,p0_input)) then
 			write(0,*) node_info,'Warning: Using the layer structure from the prior model'
@@ -124,12 +125,12 @@ Contains
 	call linComb(ONE,param,ONE,p0_input,param)
     !--------------------------------------------------------------------------
     ! Test to make sure no grid is defined outside the layered region
-    if (grid%r(grid%nz+1) < param%L(param%nL)%lbound) then
-      param%L(param%nL)%lbound = grid%r(grid%nz+1)
+    if (targetGrid%r(targetGrid%nz+1) < param%L(param%nL)%lbound) then
+      param%L(param%nL)%lbound = targetGrid%r(targetGrid%nz+1)
     end if
 	!--------------------------------------------------------------------------
 	! Compute model information everywhere in the domain, including air & crust
-	call initModel(grid,param,rho)
+	call initModel(targetGrid,param,rho)
     !--------------------------------------------------------------------------
     ! Check whether the optional interior source file exists; read it
     inquire(FILE=cUserDef%fn_source,EXIST=exists)
@@ -144,7 +145,7 @@ Contains
 	call initCoords(cUserDef,obsList)
 	!--------------------------------------------------------------------------
 	! Compute the observatory locations on the grid and interpolation weights
-	call initObsList(grid,obsList)
+	call initObsList(targetGrid,obsList)
 	!--------------------------------------------------------------------------
 	! Initialize transfer function information
 	call initTF(cUserDef,TFList)
@@ -220,8 +221,8 @@ Contains
 		allocate(dmisfitValue(nfunc,ncoeff))
 		!call create_dataVectorMTX(nfreq,nfunc,nobs,wres) ! weighted residuals
 		allocate(misfit%dRda(nfreq,nfunc,ncoeff),STAT=istat)
-		call create_rscalar(grid,sens%drho_real,CENTER)
-		call create_rscalar(grid,sens%drho_imag,CENTER)
+		call create_rscalar(targetGrid,sens%drho_real,CENTER)
+		call create_rscalar(targetGrid,sens%drho_imag,CENTER)
 		allocate(sens%da_real(nfreq,nfunc,nobs,ncoeff),STAT=istat)
 		allocate(sens%da_imag(nfreq,nfunc,nobs,ncoeff),STAT=istat)
 		allocate(sens%da(nfreq,nfunc,nobs,ncoeff),STAT=istat)
@@ -237,13 +238,10 @@ Contains
 	! Too complicated to rewrite input to all subroutines that use x,y,z,nx,ny,nz
 	! in terms of the grid variable, but that would be the way to do it in the
 	! future. Currently, use this patch instead. x,y,z stored in module griddef
-	nx = grid%nx; ny = grid%ny; nz = grid%nz
-	nzEarth = grid%nzEarth; nzAir = grid%nzAir
+	nx = targetGrid%nx; ny = targetGrid%ny; nz = targetGrid%nz
+	nzEarth = targetGrid%nzEarth; nzAir = targetGrid%nzAir
 	allocate(x(nx),y(ny+1),z(nz+1),STAT=istat)
-	x = grid%x; y = grid%y; z = grid%z
-
-	! Set output to allData
-	data = allData
+	x = targetGrid%x; y = targetGrid%y; z = targetGrid%z
 
 	call InitGlobalArrays()
 
@@ -282,6 +280,9 @@ Contains
 	call deall_obsList()
 	call deall_freqList()
 	call deall_TFList()
+
+	! Deallocate the forward solver
+	call cleanUp()
 
 	if (allocated(misfitValue)) then
 	  deallocate(misfitValue)
