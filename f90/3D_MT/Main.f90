@@ -27,12 +27,6 @@ module Main
   ! forward solver control defined in EMsolve3D
   type(EMsolve_control)  :: solverParams
 
-  ! this is used to set up the numerical grid in SensMatrix
-  type(grid_t), save	        :: grid
-
-  ! impedance data structure
-  type(dataVectorMTX_t), save		:: allData
-
   !  storage for the "background" conductivity parameter
   type(modelParam_t), save		:: sigma0
   !  storage for a perturbation to conductivity
@@ -63,10 +57,12 @@ Contains
   ! * 5) forward solver controls
   ! * 6) output file names
 
-  subroutine initGlobalData(cUserDef)
+  subroutine initGlobalData(cUserDef,grid,allData)
 
 	implicit none
 	type (userdef_control), intent(in)          :: cUserDef
+	type (grid_t), intent(inout)                :: grid
+    type (dataVectorMTX_t), intent(inout)       :: allData
 	integer										:: i,ios=0,istat=0
 	logical                                     :: exists
 	character(80)                               :: paramtype,header
@@ -202,16 +198,6 @@ Contains
 	integer	:: i, istat
 
 	! Deallocate global variables that have been allocated by InitGlobalData()
-	if (output_level > 3) then
-	   write(0,*) 'Cleaning up grid...'
-	endif
-	call deall_grid(grid)
-
-	if (output_level > 3) then
-	   write(0,*) 'Cleaning up data...'
-	endif
-	call deall_dataVectorMTX(allData)
-
 	if (output_level > 3) then
 	   write(0,*) 'Cleaning up EM soln...'
 	endif

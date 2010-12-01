@@ -15,7 +15,7 @@ program Mod2DMT
      use Main
      use NLCG
      use DCG
-     
+
 #ifdef MPI
      Use MPI_main
 #endif
@@ -24,6 +24,12 @@ program Mod2DMT
 
      ! Character-based information specified by the user
      type (userdef_control)	:: cUserDef
+
+     ! Numerical grid used to set target grids
+     type(grid_t)           :: grid
+
+     ! Impedance data structure
+     type(dataVectorMTX_t)  :: allData
 
      ! Variable required for storing the date and time
      type (timer_t)         :: timer
@@ -61,16 +67,22 @@ program Mod2DMT
              call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
 #endif
 
-     call initGlobalData(cUserDef)
+     call initGlobalData(cUserDef,grid,allData)
 
-     ! set the grid for the numerical computations
-     call setGrid(grid)
+#ifdef MPI
+     ! set the private target grid for MPI main
+      call Master_Job_setGrid(grid)
+#else
+     ! set the private target grid for sensitivity computations
+      call setGrid(grid)
+#endif
+
+
+
 #ifdef MPI
        call Master_job_Distribute_userdef_control(cUserDef)
-       call Master_job_Distribute_Data_Size(allData,sigma0)
-       call Master_job_Distribute_Data(allData)
-       call Master_job_Distribute_Model(sigma0)
 #endif
+
 
 	 ! Start the (portable) clock
 	 call reset_time(timer)
@@ -155,7 +167,7 @@ program Mod2DMT
         end if
 #ifdef MPI
         	call Master_job_STOP_MESSAGE
-#endif       	
+#endif
         else
         	write(*,*) 'Inverse search ',trim(cUserDef%search),' not yet implemented. Exiting...'
         	stop

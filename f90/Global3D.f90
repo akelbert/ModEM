@@ -20,12 +20,12 @@ program earth
   implicit none
 
   type(timer_t)                             :: t
+  type(grid_t), target                      :: targetGrid
   type(modelParam_t)                        :: grad
   type(dataVectorMTX_t)                     :: allResp,d_delta
   type(solnVectorMTX_t)                     :: H,h_delta
   type(rhsVectorMTX_t)                      :: b
-  real(8)                                   :: f,f1,f2,eps
-  real										:: runtime
+  real(8)                                   :: f,f1,f2,eps,runtime
   character(80)								:: fn_startup=''
   character(80)								:: fn_model='rho.out'
   integer									:: i,j,k,ios,ii
@@ -63,13 +63,18 @@ program earth
   eps = 0.01
 
 
-  call InitGlobalData(cUserDef)
+  call InitGlobalData(cUserDef,targetGrid,allData)
+
+#ifdef MPI
+  ! set the private target grid for MPI main
+  call Master_Job_setGrid(targetGrid)
+#else
+  ! set the private target grid for sensitivity computations
+  call setGrid(targetGrid)
+#endif
 
 #ifdef MPI
     call Master_job_Distribute_userdef_control(cUserDef)
-    call Master_job_Distribute_Data_Size(allData,p_input)
-    call Master_job_Distribute_Data(allData)
-    call Master_job_Distribute_Model(p_input)
 #endif
 
   call outputModel(outFiles%fn_model,rho%grid,rho%v)
@@ -77,6 +82,7 @@ program earth
   if (cUserDef%calculate == 'nothing') then
     call write_modelParam(param,'testOutput.prm')
 	call DeleteGlobalData()
+    call cleanUp()
 #ifdef MPI
      call Master_job_STOP_MESSAGE
      call MPI_destructor
@@ -149,7 +155,7 @@ program earth
     eps = 0.005
     write(0,*) 'Model perturbation used is uniform random times ',eps
 
-    call InitGlobalData(cUserDef,eps)
+    call InitGlobalData(cUserDef,targetGrid,allData,eps)
 
 	!call calc_symmetry(runtime)
 	call calc_symmetric_operators(runtime)
@@ -226,7 +232,7 @@ program earth
 	eps = 0.005
     write(0,*) 'Model perturbation used is uniform random times ',eps
 
-	call InitGlobalData(cUserDef,eps)
+	call InitGlobalData(cUserDef,targetGrid,allData,eps)
 
     ! compute misfit after the perturbation (m0+dm)
 	call calc_responses(f2,allResp)
@@ -307,7 +313,7 @@ program earth
 	call DeleteGlobalData()
 
     eps = 0.005
-	call InitGlobalData(cUserDef,eps)
+	call InitGlobalData(cUserDef,targetGrid,allData,eps)
 
   ! Run Jacobian computations after the perturbation (a+da)
 	call calc_jacobian(runtime)
@@ -409,6 +415,8 @@ program earth
   call CloseOutFiles()
 
   call DeleteGlobalArrays()
+
+  call cleanUp()
 
 #ifdef MPI
      call Master_job_STOP_MESSAGE
