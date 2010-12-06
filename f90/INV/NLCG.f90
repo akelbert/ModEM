@@ -216,8 +216,8 @@ Contains
    type(modelParam_t), intent(in)           :: m0
    type(modelParam_t), intent(in)           :: mHat
    real(kind=prec), intent(out) :: F, mNorm
-   type(dataVectorMTX_t), optional, intent(out)   :: dHat
-   type(solnVectorMTX_t), optional, intent(out) :: eAll
+   type(dataVectorMTX_t), optional, intent(inout)   :: dHat
+   type(solnVectorMTX_t), optional, intent(inout) :: eAll
    real(kind=prec), optional, intent(out) :: RMS
 
    !  local variables
@@ -293,9 +293,9 @@ Contains
    type(dataVectorMTX_t), intent(in)              :: d
    type(modelParam_t), intent(in)           :: m0
    type(modelParam_t), intent(in)           :: mHat
-   type(modelParam_t), intent(out)          :: grad
-   type(dataVectorMTX_t), intent(in)              :: dHat
-   type(solnVectorMTX_t), intent(in)            :: eAll
+   type(modelParam_t), intent(inout)          :: grad
+   type(dataVectorMTX_t), intent(inout)              :: dHat
+   type(solnVectorMTX_t), intent(inout)            :: eAll
 
    !  local variables
    real(kind=prec)       :: Ndata
@@ -343,7 +343,7 @@ Contains
    call deall_modelParam(m)
    call deall_modelParam(JTd)
    call deall_modelParam(CmJTd)
-
+   !call deall(eAll)
    end subroutine gradient
 
 !**********************************************************************
@@ -564,8 +564,10 @@ Contains
 	  select case (flavor)
 	  case ('Cubic')
 	  	call lineSearchCubic(lambda,d,m0,h,alpha,mHat,value,grad,rms,nLS,dHat,eAll)
+	  	!call deall(eAll)
 	  case ('Quadratic')
 	  	call lineSearchQuadratic(lambda,d,m0,h,alpha,mHat,value,grad,rms,nLS,dHat,eAll)
+	  	!call deall(eAll)
 	  case default
         call errStop('Unknown line search requested in NLCG')
 	  end select
@@ -737,7 +739,7 @@ Contains
    real(kind=prec), intent(out)    :: rms
    integer,intent(out)                     :: niter
    type(dataVectorMTX_t), intent(out)         :: dHat
-   type(solnVectorMTX_t), intent(out)          :: eAll
+   type(solnVectorMTX_t), intent(inout)          :: eAll
 
    ! optionally add relaxation (e.g. for Renormalised Steepest Descent)
    real(kind=prec), intent(in), optional :: gamma
@@ -932,7 +934,7 @@ Contains
    real(kind=prec), intent(out)    :: rms
    integer, intent(out)                    :: niter
    type(dataVectorMTX_t), intent(out)         :: dHat
-   type(solnVectorMTX_t), intent(out)          :: eAll
+   type(solnVectorMTX_t), intent(inout)          :: eAll
 
    ! optionally add relaxation (e.g. for Renormalised Steepest Descent)
    real(kind=prec), intent(in), optional :: gamma

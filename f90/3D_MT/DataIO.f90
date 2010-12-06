@@ -541,6 +541,7 @@ Reading_all_file_loop: &
 	     call deall_dataBlock(Data(i))
 	  end do
 	  deallocate(Data,STAT=istat)
+	  deallocate(siteLoc,siteIDs,Ref_siteIDs,STAT=istat)
 
 
   end subroutine read_Z

@@ -132,6 +132,13 @@ subroutine set_e_soln(pol_index,e)
 
 end subroutine set_e_soln
 !*****************************************************************************************
+subroutine reset_e_soln(emsoln)
+    type(solnVector_t), intent(inout)  :: emsoln
+
+ ! Empty stub for global code
+
+end subroutine reset_e_soln
+!*****************************************************************************************
 
 subroutine get_nPol_MPI(eAll)
 

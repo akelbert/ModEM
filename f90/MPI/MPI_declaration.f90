@@ -43,6 +43,7 @@ real*8,   pointer, dimension(:)  :: model_para_vec
 character, pointer, dimension(:) :: eAll_para_vec       !! needed for MPI_pack/MPI_unpack; counted in bytes
 character, pointer, dimension(:) :: e_para_vec          !! needed for MPI_pack/MPI_unpack; counted in bytes
 character, pointer, dimension(:) :: sigma_para_vec      !! needed for MPI_pack/MPI_unpack; counted in bytes
+character, pointer, dimension(:) :: data_para_vec      !! needed for MPI_pack/MPI_unpack; counted in bytes
 character, pointer, dimension(:) :: worker_job_package  !! needed for MPI_pack/MPI_unpack; counted in bytes
 character, pointer, dimension(:) :: userdef_control_package !! needed for MPI_pack/MPI_unpack; counted in bytes
 
@@ -92,10 +93,10 @@ subroutine create_worker_job_task_place_holder
 
          Nbytes=(Nbytes1+Nbytes2+Nbytes3)+1
 
-         if(associated(worker_job_package)) then
-             deallocate(worker_job_package)
+         if(.not. associated(worker_job_package)) then
+            allocate(worker_job_package(Nbytes))
          end if
-             allocate(worker_job_package(Nbytes))
+             
 
 end subroutine create_worker_job_task_place_holder
 !*******************************************************************************

@@ -25,7 +25,14 @@ subroutine set_e_soln(pol_index,e)
 
 end subroutine set_e_soln
 !*****************************************************************************************
+!*****************************************************************************************
+subroutine reset_e_soln(emsoln)
+    type(solnVector_t), intent(inout)  :: emsoln
 
+
+
+end subroutine reset_e_soln
+!*****************************************************************************************
 subroutine get_nPol_MPI(eAll)
 
    type(solnVectorMTX_t), intent(in)	:: eAll

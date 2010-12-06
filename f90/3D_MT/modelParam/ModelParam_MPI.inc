@@ -16,7 +16,8 @@ subroutine create_model_param_place_holder(sigma_mpi)
          if(associated(sigma_para_vec)) then
              deallocate(sigma_para_vec)
          end if
-             allocate(sigma_para_vec(Nbytes))
+              allocate(sigma_para_vec(Nbytes))
+            
 
 end subroutine create_model_param_place_holder
 !#####################################################################################
