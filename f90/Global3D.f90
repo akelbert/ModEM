@@ -913,7 +913,6 @@ end program earth
 
 #ifdef MPI
     call Master_job_fwdPred(param,allResp,H)
-    call Master_job_Collect_eAll(allResp,H)
 #else
     call fwdPred(param,allResp,H)
 #endif
