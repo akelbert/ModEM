@@ -828,9 +828,9 @@ subroutine Master_job_Distribute_Taskes(job_name,nTx,sigma,eAll_out,eAll_in)
 
         
         
- !call get_nPol_MPI(eAll_out) 
+ call get_nPol_MPI(eAll_out) 
 
-        nPol_MPI=2
+  
                 dest=0
                 per_index=0
                 worker_job_task%what_to_do=trim(job_name) 
