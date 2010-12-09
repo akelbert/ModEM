@@ -57,7 +57,7 @@ program Mod2DMT
 			    call Worker_job(sigma0,allData)
 	            if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
 	               	 call deallGlobalData()
-		             call cleanUp()
+		             call cleanUp_MPI()
 	                 call MPI_destructor
 	              stop
 	            end if
@@ -198,14 +198,17 @@ program Mod2DMT
 
      end select
 9999 continue
-#ifdef MPI
-		close(ioMPI)
-#endif
+
 
 
 	 ! cleaning up
 	 call deallGlobalData()
-	 call cleanUp()
+#ifdef MPI
+            close(ioMPI)
+	    call cleanUp_MPI()
+#else
+            call cleanUp()
+#endif
 
 #ifdef MPI
 	 write(0,*) ' elapsed time (mins) ',elapsed_time(timer)/60.0

@@ -88,6 +88,7 @@ program earth
 			    call Worker_job(p_input,allData)
 	            if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
 	               	   call DeleteGlobalData()
+	               	    call cleanUp_MPI()
 	                   call MPI_destructor
 	              stop
 	            end if
@@ -435,7 +436,11 @@ program earth
 
   call DeleteGlobalArrays()
 
-  call cleanUp()
+#ifdef MPI
+	    call cleanUp_MPI()
+#else
+            call cleanUp()
+#endif
 
 #ifdef MPI
      call Master_job_STOP_MESSAGE
@@ -913,6 +918,7 @@ end program earth
 
 #ifdef MPI
     call Master_job_fwdPred(param,allResp,H)
+    call Master_job_Collect_eAll(allResp,H)
 #else
     call fwdPred(param,allResp,H)
 #endif

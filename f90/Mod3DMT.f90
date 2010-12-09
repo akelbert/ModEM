@@ -22,6 +22,7 @@ program Mod3DMT
      type (timer_t)         :: timer
 
 
+
 #ifdef MPI
               call  MPI_constructor
 			  if (taskid==0) then
@@ -57,7 +58,7 @@ program Mod3DMT
 			    call Worker_job(sigma0,allData)
 	            if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
 	               	 call deallGlobalData()
-		             call cleanUp()
+		             call cleanUp_MPI()
 	                 call MPI_destructor
 	              stop
 	            end if
@@ -127,7 +128,8 @@ program Mod3DMT
      case (MULT_BY_J_T)
         write(*,*) 'Multiplying by J^T...'
 #ifdef MPI
-         call Master_job_JmultT(sigma0,allData,dsigma)
+         call Master_job_fwdPred(sigma0,allData,eAll)
+         call Master_job_JmultT(sigma0,allData,dsigma,eAll)
          call Master_job_STOP_MESSAGE
 #else
          call JmultT(sigma0,allData,dsigma)
@@ -197,15 +199,19 @@ program Mod3DMT
         write(0,*) 'No job ',trim(cUserDef%job),' defined.'
 
      end select
-9999 continue
+	 ! cleaning up
+	 call deallGlobalData()
+	 
 #ifdef MPI
-		close(ioMPI)
+            close(ioMPI)
+	    call cleanUp_MPI()
+#else
+            call cleanUp()
 #endif
 
 
-	 ! cleaning up
-	 call deallGlobalData()
-	 call cleanUp()
+
+
 
 #ifdef MPI
 	 write(0,*) ' elapsed time (mins) ',elapsed_time(timer)/60.0
