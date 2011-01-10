@@ -84,6 +84,10 @@ Contains
 
        ! the basic grid information is also stored in the header
        ! (don't we need to allocate first???)
+       ! NM: Yes we do
+
+       call create_grid(fileGrid%nx,fileGrid%ny,fileGrid%nzAir,fileGrid%nz-fileGrid%nzAir,fileGrid)
+       
        read(ioNum) fileGrid%dx
        read(ioNum) fileGrid%dy
        read(ioNum) fileGrid%dz

@@ -58,14 +58,13 @@ module fwdtemod
 
       !  local variables
       integer	::  iy,iz
-
+!Bug fixing:
+! In case of Nx > Ny the current version creates a deallocation error in UpdateCondTE. 
+! This is because the Initializition is done ONLY once using Ny=Nx and dy=dx (from the first mode).
+! However, for the 2nd mode Ny=Ny and dy=dy
+! Fixing this problem is done by moving the defintion of Ny,Nz,Nza,Dy,Dz ouside the if statement
 
       if(.not.Initialized) then
-         ! initialize ... 
-         !  first set array sizes using WS names
-         Ny = TEgrid%Ny
-         Nz = TEgrid%Nz
-         Nza = TEgrid%Nza
 
          ! allocate arrays for use within module
          allocate(Dz(NZ0MX))
@@ -77,18 +76,7 @@ module fwdtemod
          allocate(BTE(MMBMX))
          allocate(AII(NZ3MX,MMIMX))
          allocate(EXI(MMIMX))
-         allocate(ipiv(MMIMX))
-
-         do iy = 1,Ny
-            Dy(iy) = TEgrid%Dy(iy)
-         enddo
-         do iz = 1,Nz
-            Dz(iz) = TEgrid%Dz(iz)
-         enddo
-         ! compute block center differences (actually 2xDistance!)
-         Call DistanceBetweenBlocks(Nz,Dz,Cz)
-	 Call DistanceBetweenBlocks(Ny,Dy,Cy)
-      
+         allocate(ipiv(MMIMX))      
          ! set Initialization flag
          Initialized = .true.
          IER = 0
@@ -97,6 +85,25 @@ module fwdtemod
          ! return error: already initialized
          IER = -1
       endif
+      
+         ! initialize ... 
+         !  first set array sizes using WS names
+         Ny = TEgrid%Ny
+         Nz = TEgrid%Nz
+         Nza = TEgrid%Nza
+             
+          do iy = 1,Ny
+            Dy(iy) = TEgrid%Dy(iy)
+         enddo
+         do iz = 1,Nz
+            Dz(iz) = TEgrid%Dz(iz)
+         enddo
+         ! compute block center differences (actually 2xDistance!)
+         Call DistanceBetweenBlocks(Nz,Dz,Cz)
+	     Call DistanceBetweenBlocks(Ny,Dy,Cy)     
+      
+      
+      
       end subroutine FWD2DsetupTE
 
 

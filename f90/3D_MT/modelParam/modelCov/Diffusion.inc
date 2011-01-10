@@ -15,28 +15,32 @@
   function multBy_Cm(m1) result (m2)
    ! Multiplies by the model covariance,
    ! which is viewed as a smoothing operator. Intended
-   ! to be used to compute m = C_m^{1/2} \tilde{m} + m_0.
+   ! to be used to compute m = C_m \tilde{m} + m_0.
    ! For efficiency, CmSqrt is a saved, private variable inside
    ! the modelParam module. Before this routine can be called,
    ! it has to be initialized by calling create_CmSqrt(m).
 
     type (modelParam_t), intent(in)     :: m1
-    type (modelParam_t), intent(out)    :: m2
-    type (rscalar)                     :: logcond
+    type (modelParam_t)                 :: m2
+    type (rscalar)                      :: logcond
+    character(80)                       :: paramType
     Integer dtime
+    
+
     
     if (.not. CmSqrt%allocated) then
     	call create_CmSqrt(m1)
     end if
     m2=m1
+    paramType = LOGE
     
-    call getValue_modelParam(m1,LOGE,logcond)
+    call getValue_modelParam(m1,paramType,logcond)
    
     dtime=5
     
     call solveDiff(dtime,CmSqrt,logcond)
     
-    call setValue_modelParam(m2,LOGE,logcond)
+    call setValue_modelParam(m2,paramType,logcond)
 
  end function multBy_Cm
 
@@ -52,19 +56,22 @@
    ! it has to be initialized by calling create_CmSqrt(m).
 
     type (modelParam_t), intent(in)     :: m1
-    type (modelParam_t), intent(out)    :: m2
-    type (rscalar)                     :: logcond
+    type (modelParam_t)                 :: m2
+    type (rscalar)                      :: logcond
+    character(80)                       :: paramType
     Integer dtime
+    
     if (.not. CmSqrt%allocated) then
     	call create_CmSqrt(m1)
     end if
     m2=m1
-    
-    call getValue_modelParam(m1,LOGE,logcond)
+
+    paramType = LOGE
+    call getValue_modelParam(m1,paramType,logcond)
    
     dtime=1
     call solveDiff(dtime,CmSqrt,logcond)
-    call setValue_modelParam(m2,LOGE,logcond)
+    call setValue_modelParam(m2,paramType,logcond)
 
  end function multBy_CmSqrt
 
@@ -84,16 +91,16 @@
 	CmSqrt%NzEarth = m%NzEarth
 	allocate(CmSqrt%Sx(CmSqrt%NzEarth), STAT=istat)
 	allocate(CmSqrt%Sy(CmSqrt%NzEarth), STAT=istat)
-	CmSqrt%Sx = 0.3
-	CmSqrt%Sy = 0.3
-	CmSqrt%Sz = 0.3
-	 CmSqrt%xlen=0.3
-     CmSqrt%ylen=0.3
-     CmSqrt%zlen=0.3
+	CmSqrt%Sx = 0.5
+	CmSqrt%Sy = 0.5
+	CmSqrt%Sz = 0.5
+	 CmSqrt%xlen=0.5
+     CmSqrt%ylen=0.5
+     CmSqrt%zlen=0.5
  
 	call create_iscalar(m%grid,CmSqrt%mask,CELL_EARTH)
 	CmSqrt%mask%v = FREE
-	CmSqrt%N = 2
+	CmSqrt%N = 5
     CmSqrt%allocated = .true.
 
     if (.not. present(cfile)) then
@@ -202,39 +209,7 @@
 
   end subroutine deall_CmSqrt
 
-! *******************************************************************
-!
-!...  Copyright (C) 2006 Weerachai Siripunvaraporn. All rights reserved.
-!
-!----------------------------------------------------------------------
-!
-!     SOLVING DIFFUSION EQU. IN EXPLICIT WAY.
-!...  Copyright (C) 2006 Weerachai Siripunvaraporn. All rights reserved.
 
-! *****************************************************************************
-! Model covariance operators;
-! currently only contains the WS model covariance,
-!**********************************************************************
-! Note that only the driver subroutine requires knowledge of modelParam.
-! Without it, we would only need to include sg_scalar & grid3d.
-
-  subroutine WScov(m)
-
-	type (modelParam_t), intent(inout) :: m
-	type (modelCov_t)                      :: Cm
-	type (rscalar)                     :: logcond
-	Integer dtime
-
-	call getValue_modelParam(m,LOGE,logcond)
-
-	call setup1DCM(logcond%grid,Cm)
-
-	dtime = 5
-	call solveDiff(dtime,Cm,logcond)
-
-	call setValue_modelParam(m,LOGE,logcond)
-
-  end subroutine WScov
 
 !...  Copyright (C) 2006 Weerachai Siripunvaraporn. All rights reserved.
 
@@ -551,23 +526,15 @@ ZDF=D0
       
       
       DO idt = 1,DTime
-      write(6,*)'u2_1',idt,u2%v(1,1,1)
         CALL X_Diff(CmSqrt,u2)
-        write(6,*)'u2_2',idt,u2%v(1,1,1)
         CALL Y_Diff(CmSqrt,u2)
-        write(6,*)'u2_3',idt,u2%v(1,1,1)
         CALL Z_Diff(CmSqrt,u2)
-        write(6,*)'u2_4',idt,u2%v(1,1,1)
       ENDDO ! idt
 
       DO idt = 1,DTime
-      write(6,*)'u2_5',idt,u2%v(1,1,1)
         CALL Z_Diff(CmSqrt,u2)
-        write(6,*)'u2_6',idt,u2%v(1,1,1)
         CALL Y_Diff(CmSqrt,u2)
-        write(6,*)'u2_7',idt,u2%v(1,1,1)
         CALL X_Diff(CmSqrt,u2)
-        write(6,*)'u2_8',idt,u2%v(1,1,1)
       ENDDO ! idt
 
   	! apply the scaling operator C

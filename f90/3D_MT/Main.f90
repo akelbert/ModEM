@@ -25,7 +25,7 @@ module Main
   !type (inverse_control), save								:: invCtrls
 
   ! forward solver control defined in EMsolve3D
-  type(EMsolve_control)  :: solverParams
+  type(EMsolve_control),save  :: solverParams
 
   ! this is used to set up the numerical grid in SensMatrix
   type(grid_t), save	        :: grid
@@ -71,7 +71,14 @@ Contains
 	logical                                     :: exists
 	character(80)                               :: paramtype,header
 	integer                                     :: nTx
-
+! Variables used to read E solution from a file.
+	integer                    					:: filePer
+    integer			                            :: fileMode,ioNum
+    character (len=20)                          :: fileVersion
+    character (len=80)			                :: inFile
+    Integer                                     :: iTx,iMod
+    type(solnVector_t)                          :: e_temp
+    real (kind=prec)                        	:: Omega
 	!--------------------------------------------------------------------------
 	! Set global output level stored with the file units
 	output_level = cUserDef%output_level
@@ -106,6 +113,33 @@ Contains
        call warning('No input data file - unable to set up dictionaries')
     end if
 
+
+    ! Check if a larg grid file with E field is defined:
+    ! NOTE: right now both grids share the same transmitters. 
+    ! This why, reading and setting the large grid and its E solution comes after setting the trasnmitters Dictionary.
+     
+     if (solverParams%read_E0_from_File) then
+        write(6,*) 'Reading E field from: ',trim(solverParams%E0fileName)
+        inFile = trim(solverParams%E0fileName)
+        ioNum  = solverParams%ioE0
+        call FileReadInit(inFile,ioNum,Larg_Grid,filePer,fileMode,fileVersion,ios)
+        call setup_grid(Larg_Grid)
+        call create_solnVectorMTX(filePer,eAll_larg)
+            do iTx=1,filePer
+         		call create_solnVector(Larg_Grid,iTx,e_temp)
+        		call copy_solnVector(eAll_larg%solns(iTx),e_temp) 
+        	 end do 
+      	 
+        do iTx = 1,eAll_larg%nTx
+         do iMod = 1,fileMode
+           call EfileRead(ioNum, iTx, iMod, omega, eAll_larg%solns(iTx)%pol(iMod))
+         enddo
+      enddo
+      close(ioNum)
+     end if    
+    
+    
+    
 	!--------------------------------------------------------------------------
 	!  Initialize additional data as necessary
 	select case (cUserDef%job)

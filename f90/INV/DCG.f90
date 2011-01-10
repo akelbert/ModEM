@@ -954,8 +954,8 @@ fwd_calls=1
  if (update_proj_sys) then 
      call update_sys (k_step,m_start,d_start,beta_kstep_plus_1,u,T_matrix,q)
  else
-     ! call bidiag_JJT (b_start,m_start,d_start,k_step,DS_iter,lambda,T_matrix,q,beta_1,beta_kstep_plus_1,u)
-      call Arnold_bidiag_JJT(b_start,m_start,m0,d_start,k_step,DS_iter,lambda,T_matrix,q,beta_1,beta_kstep_plus_1,u)
+      call bidiag_JJT (b_start,m_start,d_start,k_step,DS_iter,lambda,T_matrix,q,beta_1,beta_kstep_plus_1,u)
+     ! call Arnold_bidiag_JJT(b_start,m_start,m0,d_start,k_step,DS_iter,lambda,T_matrix,q,beta_1,beta_kstep_plus_1,u)
  end if
 
 !call bidiag_1 (b,m,d,k_step,T_matrix,q,v,beta_1) 
@@ -976,10 +976,9 @@ write(6,*),DS_iter,' Final Ksteps ', k_step
 
 
 
-if (Desired_rms .le. 1.05) then
+if (Desired_rms .lt. 1.05) then
   Desired_rms=1.05
 end if
-
 
 	   	   go_right=.true.
 	       central=.true.
@@ -998,27 +997,27 @@ end if
 if (central) then
   call get_model(k_step,T_matrix,q,m0,mhat,b,Lambda_c,beta_1,m_c)
   call Calc_FWD(Lambda_c,d,m_c,d_Pred,res_c,eAll,F,mNorm_c,rms_c)
-                   !write(iterChar,'(i3.3)') fwd_calls
-  				   file_name_suffix='Hybrid'
-		           call write_output_files(DS_iter,d_Pred,m_c,file_name_suffix,fwd_calls) 
+                   write(iterChar,'(i3.3)') fwd_calls
+  				   file_name_suffix='Hybrid_'//iterChar
+		           call write_output_files(DS_iter,d_Pred,m_c,file_name_suffix) 
   fwd_calls=fwd_calls +1
 end if  
 !right Lambda 
 if (go_right) then
   call get_model(k_step,T_matrix,q,m0,mhat,b,Lambda_r,beta_1,m_r)
   call Calc_FWD(Lambda_r,d,m_r,d_Pred,res_r,eAll,F,mNorm_r,rms_r)
-                   !write(iterChar,'(i3.3)') fwd_calls
-  				   file_name_suffix='Hybrid'
-		           call write_output_files(DS_iter,d_Pred,m_r,file_name_suffix,fwd_calls) 
+                   write(iterChar,'(i3.3)') fwd_calls
+  				   file_name_suffix='Hybrid_'//iterChar
+		           call write_output_files(DS_iter,d_Pred,m_r,file_name_suffix) 
   fwd_calls=fwd_calls +1
 end if  
 !left Lambda 
 if (go_left) then
   call get_model(k_step,T_matrix,q,m0,mhat,b,Lambda_l,beta_1,m_l)
   call Calc_FWD(Lambda_l,d,m_l,d_Pred,res_l,eAll,F,mNorm_l,rms_l)
-                   !write(iterChar,'(i3.3)') fwd_calls
-  				   file_name_suffix='Hybrid'
-		           call write_output_files(DS_iter,d_Pred,m_l,file_name_suffix,fwd_calls)     
+                   write(iterChar,'(i3.3)') fwd_calls
+  				   file_name_suffix='Hybrid_'//iterChar
+		           call write_output_files(DS_iter,d_Pred,m_l,file_name_suffix)     
   fwd_calls=fwd_calls +1
 end if  
 
@@ -1140,7 +1139,7 @@ if (rms_c .lt. Desired_rms)then
 				   write(10,*)
 				   Desired_rms=rms/2
 				    search_min_model=.false.
-				   file_name_suffix='Hybrid'
+				   file_name_suffix='Hybrid_end'
 		           call write_output_files(DS_iter,d_Pred,m,file_name_suffix)  
 				  close(10)
 				  goto 999
@@ -1215,7 +1214,7 @@ if (rms_c .lt. Desired_rms)then
 		   write(10,*)
 		   Desired_rms=rms/2
 		    search_min_model=.false.
-		   file_name_suffix='Hybrid'
+		   file_name_suffix='Hybrid_end'
            call write_output_files(DS_iter,d_Pred,m,file_name_suffix)  
 		  close(10)
 		  goto 999
@@ -1264,7 +1263,7 @@ if (rms_c .lt. Desired_rms)then
 				   write(10,*) '2- Exit this Iteration with:'
 				   write(10,8551)DS_iter, rms,mNorm,10**lambda,k_step,k_step*2+fwd_calls
 				  write(10,*)
-				   file_name_suffix='Hybrid'
+				   file_name_suffix='Hybrid_end'
 		           call write_output_files(DS_iter,d_Pred,m,file_name_suffix)  
 					  close(10)
 					goto 999
@@ -1287,7 +1286,7 @@ if (rms_c .lt. Desired_rms)then
 			   write(10,*) '2- Exit this Iteration with:'
 			   write(10,8551)DS_iter, rms,mNorm,10**lambda,k_step,k_step*2+fwd_calls
 			  write(10,*)
-			   file_name_suffix='Hybrid'
+			   file_name_suffix='Hybrid_end'
 	           call write_output_files(DS_iter,d_Pred,m,file_name_suffix)  
 				  close(10)
 				goto 999
@@ -1308,7 +1307,7 @@ if (rms_c .lt. Desired_rms)then
 		   write(10,*) 'Exit this Iteration with:'
 		   write(10,8551)DS_iter, rms,mNorm,10**lambda,k_step,k_step*2+fwd_calls
 		   write(10,*)		  
-		   file_name_suffix='Hybrid'
+		   file_name_suffix='Hybrid_end'
            call write_output_files(DS_iter,d_Pred,m,file_name_suffix)  
 	  close(10)
 	  goto 999
@@ -2346,38 +2345,25 @@ end subroutine MultA_JJT_DS
   
   end subroutine normalize_with_dataVecMTX
  !**********************************************************************
- subroutine write_output_files(Iter_number,data,model,file_name_suffix,fwd_calls)
+ subroutine write_output_files(Iter_number,data,model,file_name_suffix)
  
    type(dataVectorMTX_t), intent(in)              :: data
    type(modelParam_t), intent(in)              :: model
    integer,            intent(in)              :: Iter_number
    character(100), intent(in)   			   :: file_name_suffix
-   integer,            intent(in),optional              :: fwd_calls
    
    
    character(100)       		:: modelFile,dataFile
    type(iterControl_t)			:: CGiter
-   character(3)        			:: iterChar,iterChar_sub
+   character(3)        			:: iterChar
    
    
   	   	  write(iterChar,'(i3.3)') Iter_number
+	   	  modelFile = trim(file_name_suffix)//'_'//iterChar//'.cpr'
+	      call write_modelParam(model,trim(modelFile))
+    
 
-	if (present (fwd_calls)) then
-	  	   	  write(iterChar_sub,'(i3.3)') fwd_calls
-  	   	  modelFile = trim(file_name_suffix)//'_'//iterChar// '_' // iterChar_sub //'.cpr'
-	      call write_modelParam(model,trim(modelFile))
-    
-	       dataFile =trim(file_name_suffix)//'_'//iterChar// '_' // iterChar_sub //'.imp'
-           call write_dataVectorMTX(data,trim(dataFile))
-  else
-    	   	  modelFile = trim(file_name_suffix)//'_'//iterChar// '.cpr'
-	      call write_modelParam(model,trim(modelFile))
-    
 	       dataFile =trim(file_name_suffix)//'_'//iterChar//'.imp'
-           call write_dataVectorMTX(data,trim(dataFile)) 
-           
-   end if
-           
-           
+           call write_dataVectorMTX(data,trim(dataFile))
   end subroutine write_output_files
 end module DCG

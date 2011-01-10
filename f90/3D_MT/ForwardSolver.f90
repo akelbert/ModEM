@@ -24,7 +24,9 @@ implicit none
 !    routines in this module private
 !   rhs data structures for solving forward, sensitivity probs
 type(RHS_t), save, private			:: b0
-
+! Used for interpolating the BC from a larger grid.
+  type(grid_t),save,public               	 ::	 Larg_Grid   
+  type(solnVectorMTX_t),save,public          ::  eAll_larg
 !  initialization routines (call Fwd version if no sensitivities are
 !     are calculated).  Note that these routines are set up to
 !    automatically manage memory and to figure out which initialization
@@ -42,6 +44,7 @@ public exitSolver
 public fwdSolve, sensSolve
 
 logical, save, private		:: modelDataInitialized = .false.
+logical, save, private		:: BC_from_file_Initialized = .false.
 !  logical, save, private		:: sigmaNotCurrent = .true.
 
 Contains
@@ -90,6 +93,23 @@ Contains
    b0%sparse_Source = .false.
    call create_RHS(grid,iTx,b0)
 
+   !In case of interpolating the BC from eAll_larg   
+   ! If eAll_ larg solution is already allocated, then use that to interpolate the BC from it
+   if (eAll_larg%allocated) then
+     call Interpolate_BC_from_E_soln (eAll_larg,Larg_Grid,grid,b0%bc)
+     !Once we are ready from eAll_larg, deallocate it, and keep track, that BC_from_file are already Initialized.
+     call deall(eAll_larg)
+     BC_from_file_Initialized=.true.
+   end if
+   
+   if (BC_from_file_Initialized) then
+     b0%bc%read_E_from_file=.true.
+   end if
+   
+   
+   
+   
+        
    !  allocate for background solution
    call create_solnVector(grid,iTx,e0)
 
@@ -195,7 +215,7 @@ Contains
    do iMode = 1,e0%nPol
       ! compute boundary conditions for polarization iMode
       !   uses cell conductivity already set by updateCond
-      call SetBound(e0%Pol_index(iMode),period,e0%pol(imode),b0%bc)
+      call SetBound(e0%Pol_index(iMode),period,e0%pol(imode),b0%bc,iTx)
       write (*,'(a12,a12,a3,a20,i4,a2,es12.6,a15,i2)') node_info, 'Solving the ','FWD', &
 				' problem for period ',iTx,': ',(2*PI)/omega,' secs & mode # ',e0%Pol_index(iMode)
       call FWDsolve3D(b0,omega,e0%pol(imode))

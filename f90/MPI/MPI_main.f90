@@ -170,9 +170,6 @@ Subroutine Master_job_JmultT(sigma,d,dsigma,eAll,s_hat)
    
 
       if(.not. eAll_out%allocated) then
-       ! call deall(eAll)
-      !end if
-      
          call create_solnVectorMTX(d%nTx,eAll_out)
             do iTx=1,nTx
          		call create_solnVector(grid,iTx,e0)
@@ -239,7 +236,7 @@ Subroutine Master_job_JmultT(sigma,d,dsigma,eAll,s_hat)
    call deall_modelParam(dsigma_temp)
    call deall_modelParam(Qcomb)
    call deall (eAll_out)
-       call deall (e0)   
+   call deall (e0)   
 
 end Subroutine Master_job_JmultT
 
@@ -273,14 +270,13 @@ Subroutine Master_job_Jmult(mHat,m,d,eAll)
 	  d1 = d%d(1)
 	  d2 = d%d(1)
 	  
-      if (eAll_out%allocated ) then
-            call deall_solnVectorMTX(eAll_out)
+      if(.not. eAll_out%allocated) then
+         call create_solnVectorMTX(d%nTx,eAll_out)
+            do iTx=1,nTx
+         		call create_solnVector(grid,iTx,e0)
+        		call copy_solnVector(eAll_out%solns(iTx),e0) 
+        	 end do 
       end if
-            call create_solnVectorMTX(nTx,eAll_out)
-      do iTx=1,nTx
-            call create_solnVector(grid,iTx,e0)
-            eAll_out%solns(iTx)=e0
-      end do
       	  
    ! First distribute m, mHat and d
     	    call Master_job_Distribute_Model(m,mHat)
@@ -295,19 +291,20 @@ Subroutine Master_job_Jmult(mHat,m,d,eAll)
 
 
           do iper=1,nTx
-            e0=eAll%solns(iper)  
-            e =eAll_out%solns(iper)
+            !e0=eAll%solns(iper)  
+            !e =eAll_out%solns(iper)
             d1 = d%d(iper)
 	        d2 = d%d(iper)
-	        call Lmult(e0,m,e,d1)
-	        call Qmult(e0,m,mHat,d2)
+	        call Lmult(eAll%solns(iper)  ,m,eAll_out%solns(iper),d1)
+	        call Qmult(eAll%solns(iper)  ,m,mHat,d2)
 	        call linComb_dataVector(ONE,d1,ONE,d2,d%d(iper))
          end do	
          
 
   	  call deall_dataVector(d1)
 	  call deall_dataVector(d2)       
-
+   call deall (eAll_out)
+   call deall (e0)  
         !DONE: Received soln for all transmitter from all nodes
         write(ioMPI,*)'Jmult: Finished calculating for (', d%nTx , ') Transmitters '
 
@@ -962,7 +959,7 @@ subroutine create_data_vec_place_holder(d)
                     end do
               end do
                     
-        Nbytes=((2*sum1)+sum2)+1
+        Nbytes=((2*sum1)+(2*sum2))+1
 
          if(.not. associated(data_para_vec)) then
             allocate(data_para_vec(Nbytes))
@@ -986,6 +983,7 @@ end subroutine create_data_vec_place_holder
              call MPI_Pack(d%d(iper)%data(ndt)%value(1,1),ndata, MPI_DOUBLE_PRECISION, data_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
              call MPI_Pack(d%d(iper)%data(ndt)%error(1,1),ndata, MPI_DOUBLE_PRECISION, data_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
              call MPI_Pack(d%d(iper)%data(ndt)%errorBar,1,       MPI_LOGICAL,          data_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
+             call MPI_Pack(d%d(iper)%data(ndt)%allocated,1,       MPI_LOGICAL,          data_para_vec, Nbytes, index, MPI_COMM_WORLD, ierr)
        end do
      end do  
 
@@ -1007,6 +1005,7 @@ subroutine UnPack_data_para_vec(d)
              call MPI_Unpack(data_para_vec, Nbytes, index,d%d(iper)%data(ndt)%value(1,1),ndata, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, ierr)
              call MPI_Unpack(data_para_vec, Nbytes, index,d%d(iper)%data(ndt)%error(1,1),ndata, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, ierr)
              call MPI_Unpack(data_para_vec, Nbytes, index,d%d(iper)%data(ndt)%errorBar  ,1,     MPI_LOGICAL,          MPI_COMM_WORLD, ierr)
+             call MPI_Unpack(data_para_vec, Nbytes, index,d%d(iper)%data(ndt)%allocated  ,1,     MPI_LOGICAL,          MPI_COMM_WORLD, ierr)
        end do
      end do  
 
@@ -1026,7 +1025,6 @@ type (userdef_control),intent(inout)	:: cUserDef
              
  
           call create_userdef_control_place_holder
-          write(6,*)taskid, Nbytes
           call MPI_RECV(userdef_control_package, Nbytes, MPI_PACKED ,0, FROM_MASTER,MPI_COMM_WORLD,STATUS, ierr)
           call unpack_userdef_control (cUserDef)
 

@@ -34,6 +34,9 @@ module modelOperator3D
   type(rvector), public			::	volE    ! THE volume elements
   type(rvector), private		::	condE   ! THE edge conductivities
   real(kind=prec),private	::      omega   ! THE (active) frequency
+  !Vector to hold the BC interpolated from a file E solution file
+  type(cboundary), pointer, dimension(:)	:: BC_from_file
+  type(cvector), pointer, dimension(:)	    :: E0_from_file
 
   ! NOTE: THIS VARIABLE IS TEMPORARILY REQUIRED TO SET THE BOUNDARY CONDITIONS
   type(rscalar), private        :: Cond3D
@@ -234,10 +237,11 @@ Contains
 ! Uses input 3D conductivity in cells Cond3D, that has to be initialized
 ! by updateCond before calling this routine. Also uses mGrid set by
 ! ModelDataInit. Could use omega, which is set by updateFreq.
-  Subroutine SetBound(imode,period,E0,BC)
+  Subroutine SetBound(imode,period,E0,BC,iTx)
 
     !  Input mode, period
     integer, intent(in)		:: imode
+    integer, intent(in)		:: iTx
     real(kind=prec)	:: period
 
     ! Output electric field first guess (for iterative solver)
@@ -245,8 +249,19 @@ Contains
     ! Output boundary conditions
     type(cboundary), intent(inout)	:: BC
 
-    call BC_x0_WS(imode,period,mGrid,Cond3D,E0,BC)
-
+    if (BC%read_E_from_file) then
+          call BC_x0_WS(imode,period,mGrid,Cond3D,E0,BC)  
+          ! The BC are already computed from a larger grid for all transmitters and modes and stored in BC_from_file.
+          ! Overwrite BC with BC_from_file.
+          ! Note: Right now we are using the same period layout for both grid. 
+          ! This why, it is enough to know the period and mode index to pick up the BC from BC_from_file vector.
+          BC = BC_from_file((iTx*2)-(2-imode))  
+    else
+         ! Compute the BC using Weerachai 2D approach 
+          call BC_x0_WS(imode,period,mGrid,Cond3D,E0,BC)                          
+    end if
+    
+    
     ! Cell conductivity array is no longer needed
     ! NOT TRUE: needed for imode=2
     ! call deall_rscalar(Cond3D)

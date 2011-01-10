@@ -437,6 +437,7 @@ program earth
   call DeleteGlobalArrays()
 
 #ifdef MPI
+            close(ioMPI)
 	    call cleanUp_MPI()
 #else
             call cleanUp()

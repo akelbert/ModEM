@@ -3,7 +3,7 @@
 ! solver
 
 module EMsolve3D
-
+  use nestedEM
   use sg_boundary			! work between different data types
   					! (between boundary conditions and
 					! complex vectors)
@@ -28,8 +28,9 @@ module EMsolve3D
     real(kind = 8)            ::      tolEMfwd, tolEMadj, tolDivCor
     logical                   ::      E0fromFile
     logical                   ::      UseDefaults
-    integer                   ::      ioE0
+    logical                   ::      read_E0_from_File=.false. 
     character (len=80)        ::      E0fileName
+    integer                   ::      ioE0
   end type emsolve_control
 
   type :: emsolve_diag
@@ -522,6 +523,7 @@ end subroutine SdivCorr ! SdivCorr
     integer									:: ios
 	logical                             	:: exists
 	character(80)							:: string
+	integer									:: istat
 
     ! Initialize inverse solver configuration
 
@@ -543,8 +545,8 @@ end subroutine SdivCorr ! SdivCorr
        write(*,*) node_info,'Reading EM solver configuration from file ',trim(rFile)
     end if
 
-    open (unit=ioFwdCtrl,file=rFile,status='old',iostat=ios)
-
+    !open (unit=ioFwdCtrl,file=rFile,status='old',iostat=ios)
+     open (unit=ioFwdCtrl,file=rFile,form='formatted',status='old')
     if(ios/=0) then
        write(0,*) node_info,'Error opening file: ', rFile
     end if
@@ -575,8 +577,39 @@ end subroutine SdivCorr ! SdivCorr
     read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolDivCor
     if (output_level > 2) then
        write (*,'(a12,a47,g15.7)') node_info,string,solverControl%tolDivCor
-       write (*,*)
     end if
+    
+
+
+! Check if there is addtional line.
+! if yes, it is corresponde to the larger E field solution.
+
+      read(ioFwdCtrl,'(a48)',advance='no',iostat=istat) string
+      read(ioFwdCtrl,*,iostat=istat) solverControl%E0fileName
+      
+   if (istat .eq. 0 ) then
+     if (index(string,'#')>0) then
+      ! This is a comment line 
+       solverControl%read_E0_from_File=.false. 
+     else    
+	     if (output_level > 2) then
+	       write (*,'(a12,a48,a80)') node_info,string,solverControl%E0fileName
+	     end if
+       solverControl%read_E0_from_File=.true.
+       solverControl%ioE0=ioE
+     end if
+
+ else
+     solverControl%read_E0_from_File=.false.
+  end if
+           
+    
+
+       
+     
+    
+    
+    
 
     close(ioFwdCtrl)
 

@@ -492,9 +492,14 @@ Contains
     integer	    :: status
 
     ! deallocate memory for x,y,z
-	if(associated(E%x)) deallocate(E%x, STAT=status)
-	if(associated(E%y)) deallocate(E%y, STAT=status)
-	if(associated(E%z)) deallocate(E%z, STAT=status)
+    if (E%allocated) then 
+    deallocate(E%x, STAT=status)
+    deallocate(E%y, STAT=status)
+    deallocate(E%z, STAT=status)
+    end if
+	!if(associated(E%x)) deallocate(E%x, STAT=status)
+	!if(associated(E%y)) deallocate(E%y, STAT=status)
+	!if(associated(E%z)) deallocate(E%z, STAT=status)
     if(associated(E%grid)) nullify(E%grid)
 
     E%nx = 0
@@ -516,9 +521,16 @@ Contains
     integer	    :: status
 
     ! deallocate memory for x,y,z
-	if(associated(E%x)) deallocate(E%x, STAT=status)
-	if(associated(E%y)) deallocate(E%y, STAT=status)
-	if(associated(E%z)) deallocate(E%z, STAT=status)
+    if (E%allocated) then 
+    deallocate(E%x, STAT=status)
+    deallocate(E%y, STAT=status)
+    deallocate(E%z, STAT=status)
+    end if
+    
+
+	!if(associated(E%x)) deallocate(E%x, STAT=status)
+	!if(associated(E%y)) deallocate(E%y, STAT=status)
+	!if(associated(E%z)) deallocate(E%z, STAT=status)
     if(associated(E%grid)) nullify(E%grid)
 
     E%nx = 0

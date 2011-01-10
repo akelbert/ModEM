@@ -188,13 +188,18 @@ Contains
 
     gridType = EDGE
     Call create_sparsevecc(ii,LC,gridType)
-    LC%i = I
-    LC%j = J
-    LC%k = K
+    ! I, J, K and C inside LC have a pointer.
+    ! In some compiler (e.g. gfortran), it is not allowed
+    ! to copy implicitly a dimensioned array (I) into a pointer.  
+    ! Thus, copy explicitly
+     do n=1,ii
+      LC%i(n)=I(n)
+      LC%j(n)=J(n)
+      LC%k(n)=K(n)
+      LC%c(n)=C(n)
+     end do
     !   assuming xyz will be assigned to all elements of LC%xyz
     LC%xyz = xyz
-    LC%c = C
-
   end subroutine EinterpSetUp
 
 
@@ -326,12 +331,15 @@ Contains
     ! we are dealing with magnetic fields (therefore, gridtype = FACE)
     gridType = FACE
     Call create_sparsevecc(ii,LC,gridType)
-    LC%i = I
-    LC%j = J
-    LC%k = K
+    ! The same as for E
+     do n=1,ii
+      LC%i(n)=I(n)
+      LC%j(n)=J(n)
+      LC%k(n)=K(n)
+      LC%c(n)=C(n)
+     end do    
     !   assuming xyz will be assigned to all elements of LC%xyz
     LC%xyz = xyz
-    LC%c = C
 
   end subroutine BinterpSetUp
 
