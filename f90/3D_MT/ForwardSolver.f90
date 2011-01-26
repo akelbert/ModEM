@@ -99,6 +99,7 @@ Contains
      call Interpolate_BC_from_E_soln (eAll_larg,Larg_Grid,grid,b0%bc)
      !Once we are ready from eAll_larg, deallocate it, and keep track, that BC_from_file are already Initialized.
      call deall(eAll_larg)
+     call deall_grid(Larg_Grid)
      BC_from_file_Initialized=.true.
    end if
    

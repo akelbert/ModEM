@@ -163,6 +163,12 @@ subroutine Interpolate_BC_from_E_soln(eAll_larg,Larg_Grid,grid,BC)
            Call getBC(elecSoln%pol(iMode),  BC_from_file(counter))        
        end do
     end do
+    
+
+    
+    
+    
+    
 end subroutine Interpolate_BC_from_E_soln
 
 
@@ -533,9 +539,15 @@ end subroutine Interpolate_BC_from_E_soln
 
     ! no baggage left behind
     deallocate(enestDict, STAT=status)
-    totalSites = 0
 
-  end subroutine NestedE
+    do i=1,totalSites
+       call deall_sparsevecc (e_sparse_vector(i))
+    end do
+    deallocate(e_sparse_vector, STAT=status)
+    
+     totalSites = 0
+     
+end subroutine NestedE
 
 
 

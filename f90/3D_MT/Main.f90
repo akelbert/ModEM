@@ -97,6 +97,8 @@ Contains
 	else
 	  call warning('No input model parametrization')
 	end if
+	
+
 
 	!--------------------------------------------------------------------------
     !  Read forward solver control in EMsolve3D (or use defaults)
@@ -136,8 +138,8 @@ Contains
          enddo
       enddo
       close(ioNum)
+      call deall(e_temp)
      end if    
-    
     
     
 	!--------------------------------------------------------------------------

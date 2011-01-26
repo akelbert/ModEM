@@ -78,7 +78,11 @@ Subroutine Master_Job_fwdPred(sigma,d,eAll)
      starttime = MPI_Wtime()
 
 
-
+   if (eAll_larg%allocated) then
+         call deall(eAll_larg)
+         call deall_grid(Larg_Grid)
+   end if
+         
    
      
      ! First, distribute the current model to all workers
@@ -589,7 +593,7 @@ Subroutine Worker_job (sigma,d)
    character(80) 		  :: paramType,previous_message
 
 
-   Integer        :: iper,ipol
+   Integer        :: iper,ipol,i
    Integer        :: per_index,pol_index,stn_index,eAll_vec_size
    character(20)                               :: which_proc
  
@@ -633,6 +637,8 @@ if (trim(worker_job_task%what_to_do) .eq. 'FORWARD') then
 
 		       call initSolver(per_index,sigma,grid,e0)
 		       call set_e_soln(pol_index,e0)
+		       
+
 		       call fwdSolve(per_index,e0)  
                call reset_e_soln(e0)
 

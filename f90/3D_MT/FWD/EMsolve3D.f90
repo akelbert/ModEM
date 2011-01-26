@@ -546,7 +546,7 @@ end subroutine SdivCorr ! SdivCorr
     end if
 
     !open (unit=ioFwdCtrl,file=rFile,status='old',iostat=ios)
-     open (unit=ioFwdCtrl,file=rFile,form='formatted',status='old')
+     open (unit=ioFwdCtrl,file=rFile,form='formatted',status='old',iostat=ios)
     if(ios/=0) then
        write(0,*) node_info,'Error opening file: ', rFile
     end if
@@ -585,8 +585,7 @@ end subroutine SdivCorr ! SdivCorr
 ! if yes, it is corresponde to the larger E field solution.
 
       read(ioFwdCtrl,'(a48)',advance='no',iostat=istat) string
-      read(ioFwdCtrl,*,iostat=istat) solverControl%E0fileName
-      
+      read(ioFwdCtrl,'(a80)',iostat=istat) solverControl%E0fileName      
    if (istat .eq. 0 ) then
      if (index(string,'#')>0) then
       ! This is a comment line 
