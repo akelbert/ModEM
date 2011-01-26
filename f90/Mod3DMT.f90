@@ -45,14 +45,14 @@ program Mod3DMT
 
       call initGlobalData(cUserDef)
       ! set the grid for the numerical computations
-      
-#ifdef MPI    
+
+#ifdef MPI
       call setGrid_MPI(grid)
-#else      
+#else
       call setGrid(grid)
 #endif
-      
-      
+
+
 #ifdef MPI
     if (taskid.gt.0) then
 			    call Worker_job(sigma0,allData)
@@ -64,7 +64,7 @@ program Mod3DMT
 	            end if
     end if
 #endif
-    
+
 
 
 	 ! Start the (portable) clock
@@ -152,10 +152,6 @@ program Mod3DMT
         	sigma1 = dsigma
         	call DCGsolver(allData,sigma0,sigma1,cUserDef%lambda)
             !call Marquardt_M_space(allData,sigma0,sigma1,cUserDef%lambda)
-        	call write_modelParam(sigma1,cUserDef%wFile_Model)
-        if (write_data) then
-        	call write_dataVectorMTX(allData,cUserDef%wFile_Data)
-        end if
 #ifdef MPI
         	call Master_job_STOP_MESSAGE
 #endif
@@ -164,7 +160,9 @@ program Mod3DMT
         	write(*,*) 'Inverse search ',trim(cUserDef%search),' not yet implemented. Exiting...'
         	stop
         end if
-        call write_modelParam(sigma1,cUserDef%wFile_Model)
+        if (write_model) then
+            call write_modelParam(sigma1,cUserDef%wFile_Model)
+        end if
         if (write_data) then
         	call write_dataVectorMTX(allData,cUserDef%wFile_Data)
         end if
@@ -200,7 +198,7 @@ program Mod3DMT
      end select
 	 ! cleaning up
 	 call deallGlobalData()
-	 
+
 #ifdef MPI
             close(ioMPI)
 	    call cleanUp_MPI()
