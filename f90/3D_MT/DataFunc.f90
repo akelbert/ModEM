@@ -30,9 +30,9 @@ module dataFunc
   !   Names of these routines must be as here, as these are called by
   !    top-level inversion routines
   public                        :: dataResp, Lrows, Qrows
-  
 
-  !Keep the model responses as complex numbers (Z) which are required in Lrows subroutine. 
+
+  !Keep the model responses as complex numbers (Z) which are required in Lrows subroutine.
   complex(kind=prec),save, private	:: Z(6)
 
 
@@ -55,20 +55,18 @@ Contains
   real(kind=prec), intent(inout)	:: Resp(:)
 
 
-  
+
 
   ! Definition of the impedance elements:
   !   iDT=Full_Impedance
   ! 			Z(1) = Zxx; Z(2) = Zxy; Z(3) = Zyx; Z(4) = Zyy
-  !   iDT=Impedance_Plus_Hz
-  ! 			Z(5) = Zzx; Z(6) = Zzy in addition
   !   iDT=Off_Diagonal_Impedance
   !  			Z(1) = Zxy, Z(2) = Zyx
   !   iDT=Full_Vertical_Components
   !  			Z(1) = Tx, Z(2) = Ty
   !   iDT=Full_Interstation_TF
   ! 		 	Z(1) = Mxx; Z(2) = Mxy; Z(3) = Myx; Z(4) = Myy
-  !   iDT=Off_Diagonal_Rho_Phi (Added on behalf of Kristina Tietze, GFZ-Potsdam)
+  !   iDT=Off_Diagonal_Rho_Phase (Added on behalf of Kristina Tietze, GFZ-Potsdam)
   !  			Z(1) = Rhoxy , Z(2) = Phixy, Z(3) = Rhoyx, Z(4) = Phiyx
 
   !  optional argument, useful for linearized impedance
@@ -137,48 +135,6 @@ Contains
 		           enddo
 		        enddo
 
-     case(Impedance_Plus_Hz)
-              x     = rxDict(iRX)%x          !Local site position (x,y,z)
-		     ! First set up interpolation functionals for Ex, Ey
-			  xyz = 1
-			  call EinterpSetUp(ef%grid,x,xyz,Lex)
-			  xyz = 2
-			  call EinterpSetUp(ef%grid,x,xyz,Ley)
-			 ! Then set up interpolation functionals for Bx, By, Bz
-			  xyz = 1
-			  call BfromESetUp(ef%grid,omega,x,xyz,Lbx)
-			  xyz = 2
-			  call BfromESetUp(ef%grid,omega,x,xyz,Lby)
-			  xyz = 3
-     		  call BfromESetUp(ef%grid,omega,x,xyz,Lbz)
-			  ! loop over modes
-			  do iMode = 1,2
-			      ! electric fields
-			      EE(1,iMode) =  dotProd_noConj_scvector_f(Lex,ef%pol(iMode))
-			      EE(2,iMode) =  dotProd_noConj_scvector_f(Ley,ef%pol(iMode))
-			      ! magnetic fields
-			      BB(1,iMode) = dotProd_noConj_scvector_f(Lbx,ef%pol(iMode))
-			      BB(2,iMode) = dotProd_noConj_scvector_f(Lby,ef%pol(iMode))
-			      BB(3,iMode) = dotProd_noConj_scvector_f(Lbz,ef%pol(iMode))
-			 end do
-			 !invert horizontal B matrix using Kramer's rule.
-			  det = BB(1,1)*BB(2,2)-BB(1,2)*BB(2,1)
-			  ctemp = BB(1,1)
-			  BB(1,1) =  BB(2,2)/det
-			  BB(2,2) =  ctemp/det
-			  BB(1,2) = -BB(1,2)/det
-			  BB(2,1) = -BB(2,1)/det
-
-         do j = 1,2
-           do i = 1,2
-              ij = 2*(i-1)+j
-              Z(ij) = EE(i,1)*BB(1,j)+EE(i,2)*BB(2,j)
-           enddo
-	   !  vertical field TF
-           ij = 4+j
-           Z(ij) = BB(3,1)*BB(1,j)+BB(3,2)*BB(2,j)
-         enddo
-
      case(Off_Diagonal_Impedance)
               x     = rxDict(iRX)%x          !Local site position (x,y,z)
 		     ! First set up interpolation functionals for Ex, Ey
@@ -240,6 +196,7 @@ Contains
 
               Z(1) = BB(3,1)*BB(1,1)+BB(3,2)*BB(2,1)
               Z(2) = BB(3,1)*BB(1,2)+BB(3,2)*BB(2,2)
+
      case(Full_Interstation_TF)
               x     = rxDict(iRX)%x          !Local site position (x,y,z)
               x_ref = rxDict(iRX)%r          !Reference site position (x,y,z)
@@ -275,7 +232,8 @@ Contains
 			              Z(ij) = BB(i,1)*RR(1,j)+BB(i,2)*RR(2,j)
 			           enddo
 			        enddo
-       case(Off_Diagonal_Rho_Phi)
+
+       case(Off_Diagonal_Rho_Phase)
                x     = rxDict(iRX)%x          !Local site position (x,y,z)
 		     ! First set up interpolation functionals for Ex, Ey
 			  xyz = 1
@@ -310,6 +268,7 @@ Contains
 		       z(2)   = atan2(ISIGN*dimag(tempZ(1)),real(tempZ(1)))*R2D
 		       Z(3)   = abs(tempZ(2))**2*MU_0/omega
 		       Z(4)   = atan2(ISIGN*dimag(tempZ(2)),real(tempZ(2)))*R2D
+
   end select
 
   !  copy responses in Z (possibly complex) into real output vector Resp
@@ -392,7 +351,7 @@ Contains
   !                     Ex = 1; Ey =2; Bz = 3; (Bx = 4; By = 5,  at referance site)
   !						(can add more cases)
   !
-  
+
 
   select case(iDT)
      case(Full_Impedance)
@@ -406,17 +365,6 @@ Contains
            enddo
         enddo
         Call dataResp(e0,Sigma0,Full_Impedance,iRX,Resp,Binv)
-     case(Impedance_Plus_Hz)
-        nComp = 6
-        ComputeHz = .true.
-        do j = 1,2
-           do i = 1,3
-              IJ(1,2*(i-1)+j) = i
-              IJ(2,2*(i-1)+j) = j
-              IJ(3,2*(i-1)+j) = i
-           enddo
-        enddo
-        Call dataResp(e0,Sigma0,Impedance_Plus_Hz,iRX,Resp,Binv)
      case(Off_Diagonal_Impedance)
         nComp = 2
         ComputeHz = .false.
@@ -470,7 +418,7 @@ Contains
 
 
 
-  
+
 
   !  compute sparse vector representations of linearized functionals
   do n = 1,nComp

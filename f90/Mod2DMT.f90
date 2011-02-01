@@ -1,6 +1,9 @@
 ! *****************************************************************************
 program Mod2DMT
-!  program for running 3D MT forward, sensitivity and inverse modelling
+! Program for running 2D MT forward, sensitivity and inverse modelling
+! Copyright (c) 2004-2010 Oregon State University
+!              AUTHORS  Gary Egbert, Anna Kelbert & Naser Meqbel
+!              College of Atmospheric and Oceanic Sciences
 
      use SensComp
      use SymmetryTest
@@ -25,8 +28,8 @@ program Mod2DMT
 #ifdef MPI
               call  MPI_constructor
 			  if (taskid==0) then
-			      write(6,*)'I am a PARALLEL version'
 			      call parseArgs('Mod2DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
+			      write(6,*)'I am a PARALLEL version'
 			      call Master_job_Distribute_userdef_control(cUserDef)
 	              open(ioMPI,file=cUserDef%wFile_MPI)
 	              write(ioMPI,*) 'Total Number of nodes= ', number_of_workers
@@ -35,8 +38,8 @@ program Mod2DMT
 			 end if
 
 #else
-			 write(6,*)'I am a SERIAL version'
              call parseArgs('Mod3DMT',cUserDef) ! OR readStartup(rFile_Startup,cUserDef)
+			 write(6,*)'I am a SERIAL version'
 #endif
 
 

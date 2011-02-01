@@ -131,6 +131,11 @@ Contains
      type(userdef_control), intent(out)  :: ctrl
      logical :: res
 
+     write(*,*) 'Copyright (c) 2004-2010 Oregon State University'
+     write(*,*) 'AUTHORS  Gary Egbert, Anna Kelbert & Naser Meqbel'
+     write(*,*) 'College of Atmospheric and Oceanic Sciences'
+     write(*,*)
+
      call initUserCtrl(ctrl)
 
      !  parse command line ...  for now just uses first argument

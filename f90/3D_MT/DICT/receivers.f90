@@ -80,11 +80,10 @@ Contains
 ! a small number of values, so convenience is much more of an issue here!
 ! NM: modified to include referance site info.
 
-subroutine update_rxDict(loc,id,iRx,new_receiver,loc_ref,id_ref)
+function update_rxDict(loc,id,loc_ref,id_ref) result (iRx)
 
      character(*), intent(in)            :: id
      real(kind=prec), intent(in)         :: loc(3)
-     logical, intent(inout), optional    :: new_receiver
      real(kind=prec),intent(in),optional :: loc_ref(3)
      character(*), intent(in),optional   :: id_ref
      integer                             :: iRx
@@ -137,11 +136,7 @@ subroutine update_rxDict(loc,id,iRx,new_receiver,loc_ref,id_ref)
      deallocate(temp,STAT=istat)
      iRx = nRx+1
 
-     if (present(new_receiver)) then
-     	new_receiver = new_Rx
-     end if
-
-  end subroutine update_rxDict
+  end function update_rxDict
 
   ! **************************************************************************
   ! Cleans up and deletes receiver dictionary at end of program execution

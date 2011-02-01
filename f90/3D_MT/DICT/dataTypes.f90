@@ -31,7 +31,7 @@ module dataTypes
      ! must be defined for all data types.  These are accessed
      ! and used by the top-level inversion routines.
      !
-     ! AK: isComplex is also stored in the dataVector; the sole purpose of the dataType
+     ! isComplex is also stored in the dataVector; the sole purpose of the dataType
      ! should be to identify the mapping from the EM solution to the data vector.
      logical           :: isComplex = .false.
 
@@ -42,21 +42,22 @@ module dataTypes
      ! between local transfer function types (later maybe add interstation TFs)
      integer		   :: tfType
 
+     ! the units of the data type. If a value has different units, it's a new data type.
+     character(80)     :: units
+
      ! the number of components in the data type
      integer           :: nComp
 
-     ! id(nComp) are the text comments that describe the components; these are
-     ! initialized, but can be overwritten by the info from the data file.
-     !
-     ! AK: I suspect the way this is currently set up implies that the default order
-     ! of components must be preserved! This needs more attention; until then,
-     ! the user should specify the components in the default order.
+     ! the (real or complex) data type components in a fixed order as given;
+     ! the file can have a different component order on input.
      character(15), pointer, dimension(:) :: id
 
-     ! the units of the data type
-     ! (obviously, the way this is currently formulated, Impedance_Plus_Hz will
-     ! be partly non-dimensional; but this works for practical purposes)
-     character(80), pointer, dimension(:) :: units
+     ! these lists contain the indices into the data vector for each data type;
+     ! they make it possible to sort the data by receiver for output.
+     ! no data denoted by zero index; dimensions (nTx) and (nTx,nRx).
+     integer, pointer, dimension(:)   :: tx_index
+     integer, pointer, dimension(:)   :: dt_index
+     integer, pointer, dimension(:,:) :: rx_index
 
   end type dataType
 
@@ -64,13 +65,15 @@ module dataTypes
   !   by top-level inversion routines
   type (dataType), pointer, save, public, dimension(:) :: typeDict
 
+  ! For impedance plus vertical components, use data types 1 & 3.
+  ! Rho & Phase added on behalf of Kristina Tietze, GFZ-Potsdam by Naser Meqbel
   integer, parameter   :: Full_Impedance = 1
-  integer, parameter   :: Impedance_Plus_Hz = 2
-  integer, parameter   :: Off_Diagonal_Impedance = 3
-  integer, parameter   :: Full_Vertical_Components = 4
-  integer, parameter   :: Full_Interstation_TF = 5
-  !(Added on behalf of Kristina Tietze, GFZ-Potsdam)
-  integer, parameter   :: Off_Diagonal_Rho_Phi = 6
+  integer, parameter   :: Off_Diagonal_Impedance = 2
+  integer, parameter   :: Full_Vertical_Components = 3
+  integer, parameter   :: Full_Interstation_TF = 4
+  integer, parameter   :: Off_Diagonal_Rho_Phase = 5
+
+
 Contains
 
 
@@ -80,131 +83,59 @@ Contains
 
   	 integer     :: istat
 
-     allocate(typeDict(6),STAT=istat)
+     allocate(typeDict(5),STAT=istat)
 
      typeDict(Full_Impedance)%name = 'Full_Impedance'
      typeDict(Full_Impedance)%isComplex = .true.
      typeDict(Full_Impedance)%tfType    = Full_Impedance
+     typeDict(Full_Impedance)%units     = '[V/m]/[T]'
      typeDict(Full_Impedance)%nComp     = 8
-     allocate(typeDict(Full_Impedance)%id(8),STAT=istat)
-     typeDict(Full_Impedance)%id(1)    = 'Re(Zxx)'
-     typeDict(Full_Impedance)%id(2)    = 'Im(Zxx)'
-     typeDict(Full_Impedance)%id(3)    = 'Re(Zxy)'
-     typeDict(Full_Impedance)%id(4)    = 'Im(Zxy)'
-     typeDict(Full_Impedance)%id(5)    = 'Re(Zyx)'
-     typeDict(Full_Impedance)%id(6)    = 'Im(Zyx)'
-     typeDict(Full_Impedance)%id(7)    = 'Re(Zyy)'
-     typeDict(Full_Impedance)%id(8)    = 'Im(Zyy)'
-     allocate(typeDict(Full_Impedance)%units(8),STAT=istat)
-     typeDict(Full_Impedance)%units(1) = '[V/m]/[T]'
-     typeDict(Full_Impedance)%units(2) = '[V/m]/[T]'
-     typeDict(Full_Impedance)%units(3) = '[V/m]/[T]'
-     typeDict(Full_Impedance)%units(4) = '[V/m]/[T]'
-     typeDict(Full_Impedance)%units(5) = '[V/m]/[T]'
-     typeDict(Full_Impedance)%units(6) = '[V/m]/[T]'
-     typeDict(Full_Impedance)%units(7) = '[V/m]/[T]'
-     typeDict(Full_Impedance)%units(8) = '[V/m]/[T]'
-
-     typeDict(Impedance_Plus_Hz)%name = 'Full_Impedance_Plus_Hz'
-     typeDict(Impedance_Plus_Hz)%isComplex = .true.
-     typeDict(Impedance_Plus_Hz)%tfType    = Impedance_Plus_Hz
-     typeDict(Impedance_Plus_Hz)%nComp     = 12
-     allocate(typeDict(Impedance_Plus_Hz)%id(12),STAT=istat)
-     typeDict(Impedance_Plus_Hz)%id(1)    = 'Re(Zxx)'
-     typeDict(Impedance_Plus_Hz)%id(2)    = 'Im(Zxx)'
-     typeDict(Impedance_Plus_Hz)%id(3)    = 'Re(Zxy)'
-     typeDict(Impedance_Plus_Hz)%id(4)    = 'Im(Zxy)'
-     typeDict(Impedance_Plus_Hz)%id(5)    = 'Re(Zyx)'
-     typeDict(Impedance_Plus_Hz)%id(6)    = 'Im(Zyx)'
-     typeDict(Impedance_Plus_Hz)%id(7)    = 'Re(Zyy)'
-     typeDict(Impedance_Plus_Hz)%id(8)    = 'Im(Zyy)'
-     typeDict(Impedance_Plus_Hz)%id(9)    = 'Re(Tx)'
-     typeDict(Impedance_Plus_Hz)%id(10)   = 'Im(Tx)'
-     typeDict(Impedance_Plus_Hz)%id(11)   = 'Re(Ty)'
-     typeDict(Impedance_Plus_Hz)%id(12)   = 'Im(Ty)'
-     allocate(typeDict(Impedance_Plus_Hz)%units(12),STAT=istat)
-     typeDict(Impedance_Plus_Hz)%units(1) = '[V/m]/[T]'
-     typeDict(Impedance_Plus_Hz)%units(2) = '[V/m]/[T]'
-     typeDict(Impedance_Plus_Hz)%units(3) = '[V/m]/[T]'
-     typeDict(Impedance_Plus_Hz)%units(4) = '[V/m]/[T]'
-     typeDict(Impedance_Plus_Hz)%units(5) = '[V/m]/[T]'
-     typeDict(Impedance_Plus_Hz)%units(6) = '[V/m]/[T]'
-     typeDict(Impedance_Plus_Hz)%units(7) = '[V/m]/[T]'
-     typeDict(Impedance_Plus_Hz)%units(8) = '[V/m]/[T]'
-     typeDict(Impedance_Plus_Hz)%units(9) = '[]'
-     typeDict(Impedance_Plus_Hz)%units(10) = '[]'
-     typeDict(Impedance_Plus_Hz)%units(11) = '[]'
-     typeDict(Impedance_Plus_Hz)%units(12) = '[]'
+     allocate(typeDict(Full_Impedance)%id(4),STAT=istat)
+     typeDict(Full_Impedance)%id(1)    = 'ZXX'
+     typeDict(Full_Impedance)%id(2)    = 'ZXY'
+     typeDict(Full_Impedance)%id(3)    = 'ZYX'
+     typeDict(Full_Impedance)%id(4)    = 'ZYY'
 
      typeDict(Off_Diagonal_Impedance)%name = 'Off_Diagonal_Impedance'
      typeDict(Off_Diagonal_Impedance)%isComplex = .true.
      typeDict(Off_Diagonal_Impedance)%tfType    = Off_Diagonal_Impedance
+     typeDict(Off_Diagonal_Impedance)%units     = '[V/m]/[T]'
      typeDict(Off_Diagonal_Impedance)%nComp     = 4
-     allocate(typeDict(Off_Diagonal_Impedance)%id(4),STAT=istat)
-     typeDict(Off_Diagonal_Impedance)%id(1)    = 'Re(Zxy)'
-     typeDict(Off_Diagonal_Impedance)%id(2)    = 'Im(Zxy)'
-     typeDict(Off_Diagonal_Impedance)%id(3)    = 'Re(Zyx)'
-     typeDict(Off_Diagonal_Impedance)%id(4)    = 'Im(Zyx)'
-     allocate(typeDict(Off_Diagonal_Impedance)%units(4),STAT=istat)
-     typeDict(Off_Diagonal_Impedance)%units(1) = '[V/m]/[T]'
-     typeDict(Off_Diagonal_Impedance)%units(2) = '[V/m]/[T]'
-     typeDict(Off_Diagonal_Impedance)%units(3) = '[V/m]/[T]'
-     typeDict(Off_Diagonal_Impedance)%units(4) = '[V/m]/[T]'
+     allocate(typeDict(Off_Diagonal_Impedance)%id(2),STAT=istat)
+     typeDict(Off_Diagonal_Impedance)%id(1)    = 'ZXY'
+     typeDict(Off_Diagonal_Impedance)%id(2)    = 'ZYX'
 
      typeDict(Full_Vertical_Components)%name = 'Full_Vertical_Components'
      typeDict(Full_Vertical_Components)%isComplex = .true.
      typeDict(Full_Vertical_Components)%tfType    = Full_Vertical_Components
+     typeDict(Full_Vertical_Components)%units     = '[]'
      typeDict(Full_Vertical_Components)%nComp     = 4
-     allocate(typeDict(Full_Vertical_Components)%id(4),STAT=istat)
-     typeDict(Full_Vertical_Components)%id(1)    = 'Re(Tx)'
-     typeDict(Full_Vertical_Components)%id(2)    = 'Im(Tx)'
-     typeDict(Full_Vertical_Components)%id(3)    = 'Re(Ty)'
-     typeDict(Full_Vertical_Components)%id(4)    = 'Im(Ty)'
-     allocate(typeDict(Full_Vertical_Components)%units(4),STAT=istat)
-     typeDict(Full_Vertical_Components)%units(1) = '[]'
-     typeDict(Full_Vertical_Components)%units(2) = '[]'
-     typeDict(Full_Vertical_Components)%units(3) = '[]'
-     typeDict(Full_Vertical_Components)%units(4) = '[]'
-
+     allocate(typeDict(Full_Vertical_Components)%id(2),STAT=istat)
+     typeDict(Full_Vertical_Components)%id(1)    = 'TX '
+     typeDict(Full_Vertical_Components)%id(2)    = 'TY '
 
      typeDict(Full_Interstation_TF)%name = 'Full_Interstation_TF'
      typeDict(Full_Interstation_TF)%isComplex = .true.
      typeDict(Full_Interstation_TF)%tfType    = Full_Interstation_TF
+     typeDict(Full_Interstation_TF)%units     = '[]'
      typeDict(Full_Interstation_TF)%nComp     = 8
-     allocate(typeDict(Full_Interstation_TF)%id(8),STAT=istat)
-     typeDict(Full_Interstation_TF)%id(1)    = 'Re(Mxx)'
-     typeDict(Full_Interstation_TF)%id(2)    = 'Im(Mxx)'
-     typeDict(Full_Interstation_TF)%id(3)    = 'Re(Mxy)'
-     typeDict(Full_Interstation_TF)%id(4)    = 'Im(Mxy)'
-     typeDict(Full_Interstation_TF)%id(5)    = 'Re(Myx)'
-     typeDict(Full_Interstation_TF)%id(6)    = 'Im(Myx)'
-     typeDict(Full_Interstation_TF)%id(7)    = 'Re(Myy)'
-     typeDict(Full_Interstation_TF)%id(8)    = 'Im(Myy)'
-     allocate(typeDict(Full_Interstation_TF)%units(8),STAT=istat)
-     typeDict(Full_Interstation_TF)%units(1) = '[]'
-     typeDict(Full_Interstation_TF)%units(2) = '[]'
-     typeDict(Full_Interstation_TF)%units(3) = '[]'
-     typeDict(Full_Interstation_TF)%units(4) = '[]'
-     typeDict(Full_Interstation_TF)%units(5) = '[]'
-     typeDict(Full_Interstation_TF)%units(6) = '[]'
-     typeDict(Full_Interstation_TF)%units(7) = '[]'
-     typeDict(Full_Interstation_TF)%units(8) = '[]'
+     allocate(typeDict(Full_Interstation_TF)%id(4),STAT=istat)
+     typeDict(Full_Interstation_TF)%id(1)    = 'MXX'
+     typeDict(Full_Interstation_TF)%id(2)    = 'MXY'
+     typeDict(Full_Interstation_TF)%id(3)    = 'MYX'
+     typeDict(Full_Interstation_TF)%id(4)    = 'MYY'
 
+ 	 typeDict(Off_Diagonal_Rho_Phase)%name = 'Off_Diagonal_Rho_Phase'
+     typeDict(Off_Diagonal_Rho_Phase)%isComplex = .false.
+     typeDict(Off_Diagonal_Rho_Phase)%tfType    = Off_Diagonal_Rho_Phase
+     typeDict(Off_Diagonal_Rho_Phase)%units     = '[]'
+     typeDict(Off_Diagonal_Rho_Phase)%nComp     = 4
+     allocate(typeDict(Off_Diagonal_Rho_Phase)%id(4),STAT=istat)
+     typeDict(Off_Diagonal_Rho_Phase)%id(1) = 'RHOXY'
+     typeDict(Off_Diagonal_Rho_Phase)%id(2) = 'PHSXY'
+     typeDict(Off_Diagonal_Rho_Phase)%id(3) = 'RHOYX'
+     typeDict(Off_Diagonal_Rho_Phase)%id(4) = 'PHSYX'
 
- 	 typeDict(Off_Diagonal_Rho_Phi)%name = 'Off Diagonal Rho Phi'
-     typeDict(Off_Diagonal_Rho_Phi)%isComplex = .false.
-     typeDict(Off_Diagonal_Rho_Phi)%tfType     = Off_Diagonal_Rho_Phi
-     typeDict(Off_Diagonal_Rho_Phi)%nComp     = 4
-     allocate(typeDict(Off_Diagonal_Rho_Phi)%id(4),STAT=istat)
-     typeDict(Off_Diagonal_Rho_Phi)%id(1) = 'Rhoxy'
-     typeDict(Off_Diagonal_Rho_Phi)%id(2) = 'Phixy'
-     typeDict(Off_Diagonal_Rho_Phi)%id(3) = 'Rhoyx'
-     typeDict(Off_Diagonal_Rho_Phi)%id(4) = 'Phiyx'
-     allocate(typeDict(Off_Diagonal_Rho_Phi)%units(4),STAT=istat)
-     typeDict(Off_Diagonal_Rho_Phi)%units(1)  = '[]'
-     typeDict(Off_Diagonal_Rho_Phi)%units(2)  = '[]'
-     typeDict(Off_Diagonal_Rho_Phi)%units(3)  = '[]'
-     typeDict(Off_Diagonal_Rho_Phi)%units(4)  = '[]'
   end subroutine setup_typeDict
 
 ! **************************************************************************
@@ -219,9 +150,15 @@ Contains
 	      if (associated(typeDict(j)%id)) then
 	         deallocate(typeDict(j)%id,STAT=istat)
 	      end if
-	      if (associated(typeDict(j)%units)) then
-	         deallocate(typeDict(j)%units,STAT=istat)
-	      end if
+          if (associated(typeDict(j)%tx_index)) then
+             deallocate(typeDict(j)%tx_index,STAT=istat)
+          end if
+          if (associated(typeDict(j)%dt_index)) then
+             deallocate(typeDict(j)%dt_index,STAT=istat)
+          end if
+          if (associated(typeDict(j)%rx_index)) then
+             deallocate(typeDict(j)%rx_index,STAT=istat)
+          end if
 	   end do
 
        deallocate(typeDict,STAT=istat)
@@ -284,16 +221,101 @@ Contains
   end function ImpUnits
 
 !**********************************************************************
-! Figures out the data type from the component ids
+! Figures out the data type from its name
 
-  function ImpType(nComp,header) result (dataType)
+  function ImpType(typeName) result (dataType)
+
+    character(*), intent(in)    :: typeName
+	integer	             	 	:: dataType
+
+    select case (trim(typeName))
+
+       case('Full_Impedance')
+          dataType = Full_Impedance
+
+       case('Off_Diagonal_Impedance')
+          dataType = Off_Diagonal_Impedance
+
+       case('Full_Vertical_Components')
+          dataType = Full_Vertical_Components
+
+       case('Full_Interstation_TF')
+          dataType = Full_Interstation_TF
+
+       case('Off_Diagonal_Rho_Phase')
+          dataType = Off_Diagonal_Rho_Phase
+
+       case default
+          call errStop('Unknown data type:'//trim(typeName))
+
+    end select
+
+  end function ImpType
+
+!**********************************************************************
+! Sorts out the data type header
+
+  function ImpHeader(dataType) result (header)
+
+    integer, intent(in)         :: dataType
+    character(200)              :: header
+
+    select case (dataType)
+
+       case(Full_Impedance,Off_Diagonal_Impedance,Full_Vertical_Components)
+          header = '# Period(s) Code GG_Lat GG_Lon X(m) Y(m) Z(m) Component Real Imag Error'
+
+       case(Full_Interstation_TF)
+          header = '# Period(s) Code GG_Lat GG_Lon X(m) Y(m) Z(m) Ref_Code Ref_Lat Ref_Lon Ref_X(m) Ref_Y(m) Ref_Z(m) Component Real Imag Error'
+
+       case(Off_Diagonal_Rho_Phase)
+          header = '# Period(s) Code GG_Lat GG_Lon X(m) Y(m) Z(m) Component Value Error'
+
+    end select
+
+  end function ImpHeader
+
+!**********************************************************************
+! Figures out the component index from its name for any data type
+
+  function ImpComp(compid,dataType) result (icomp)
+
+    character(*), intent(in)    :: compid
+    integer,      intent(in)    :: dataType
+    integer                     :: icomp
+    ! local
+    integer                     :: i, ncomp
+
+    ncomp = typeDict(dataType)%ncomp
+    if (typeDict(dataType)%isComplex) then
+        ncomp = ncomp/2
+    end if
+    icomp = 0
+
+    do i = 1,ncomp
+        if (index(typeDict(dataType)%id(i),trim(compid))>0) then
+            icomp = i
+            exit
+        end if
+    end do
+
+    if (icomp == 0) then
+        call errStop('Problem locating the component '//trim(compid)//' in data type '//trim(typeDict(dataType)%name))
+    end if
+
+  end function ImpComp
+
+!*************************************************************************
+! Supports the old data format file: figures out the data type from header
+
+  function ImpTypeFromHeader(nComp,header) result (dataType)
 
     integer, intent(in)         :: nComp
     character(*), intent(in)    :: header
-	integer	             	 	:: dataType
-	! local
-	character(15), allocatable  :: compids(:)
-	integer                     :: j,istat
+    integer                     :: dataType
+    ! local
+    character(15), allocatable  :: compids(:)
+    integer                     :: j,istat
 
     allocate(compids(nComp),STAT=istat)
 
@@ -306,59 +328,30 @@ Contains
           else
              dataType =  Full_Impedance
           end if
-       case(12)
-          dataType =  Impedance_Plus_Hz
        case(4)
           if (index(compids(1),'Tx')>0) then
              dataType =  Full_Vertical_Components
           elseif (index(compids(1),'Zxy')>0) then
              dataType =  Off_Diagonal_Impedance
           elseif (index(compids(1),'Rhoxy')>0) then
-             dataType =  Off_Diagonal_Rho_Phi
+             dataType =  Off_Diagonal_Rho_Phase
           end if
     end select
 
     do j = 1,nComp
-    	if (compids(j) .ne. typeDict(dataType)%id(j)) then
-    		call errStop('Wrong order of impedance components in data header')
-    	end if
+        if (compids(j) .ne. typeDict(dataType)%id(j)) then
+            call errStop('Wrong order of impedance components in data header')
+        end if
     end do
 
     deallocate(compids,STAT=istat)
 
-  end function ImpType
+  end function ImpTypeFromHeader
 
 
-! Maybe it is not required anymore.
-  subroutine get_nComp_DT(DT_word,dataType,nComp)
+!*************************************************************************
+! Supports the old data format file: checks the order of components
 
-    character(*), intent(in)        :: DT_word
-	integer, intent(inout)   	 	:: dataType
-	integer, intent(inout)          :: nComp
-
-    select case (DT_word)
-       case('Full_Impedance')
-          dataType =  Full_Impedance
-          nComp    =  8
-       case('Full_Impedance_Plus_Hz')
-          dataType =  Impedance_Plus_Hz
-           nComp   =  12
-       case('Off_Diagonal_Impedance')
-          dataType =  Off_Diagonal_Impedance
-          nComp    =  4
-       case('Full_Vertical_Components')
-          dataType =  Full_Vertical_Components
-          nComp    =  4
-       case('Full_Interstation_TF')
-          dataType =  Full_Interstation_TF
-          nComp    =  8
-    end select
-
-
-  end subroutine get_nComp_DT
-
-
- ! Maybe it is not required anymore.
  subroutine check_header_order(nComp,dataType,header)
  	 integer, intent(in)   	 	 :: nComp
  	 integer, intent(in)   	 	 :: dataType
@@ -379,7 +372,7 @@ Contains
 
     deallocate(compids,STAT=istat)
 
- end   subroutine check_header_order
+ end subroutine check_header_order
 
 
 end module dataTypes

@@ -563,8 +563,6 @@ Contains
          selectcase(nComp)
             case(8)
                allData%d(iTx)%datatype =  Full_Impedance
-            case(12)
-               allData%d(iTx)%datatype =  Impedance_Plus_Hz
             case(4)
                allData%d(iTx)%datatype =  Off_Diagonal_Impedance
          endselect

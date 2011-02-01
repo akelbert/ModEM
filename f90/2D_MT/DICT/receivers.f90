@@ -16,7 +16,7 @@ module receivers
      !   accomodate additional data types
      real(kind=prec)					::  x(2)
      ! site ID used for input/output and for searching through the list
-     character(10)                      ::  id=''
+     character(50)                      ::  id=''
   end type MTrx
 
   ! receiver dictionary for 2D MT data will be an array of

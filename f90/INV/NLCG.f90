@@ -599,7 +599,7 @@ Contains
         call write_modelParam(mHat,trim(mHatFile))
       end if
    	  if (output_level > 2) then
-   	    dataFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.imp'
+   	    dataFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.dat'
         call write_dataVectorMTX(dHat,trim(dataFile))
       end if
       ! compute residual for output: res = d-dHat; do not normalize by errors

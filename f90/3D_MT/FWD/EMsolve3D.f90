@@ -28,7 +28,7 @@ module EMsolve3D
     real(kind = 8)            ::      tolEMfwd, tolEMadj, tolDivCor
     logical                   ::      E0fromFile
     logical                   ::      UseDefaults
-    logical                   ::      read_E0_from_File=.false. 
+    logical                   ::      read_E0_from_File=.false.
     character (len=80)        ::      E0fileName
     integer                   ::      ioE0
   end type emsolve_control
@@ -553,32 +553,32 @@ end subroutine SdivCorr ! SdivCorr
 
     ! This is the list of options specified in the startup file
 
-    read (ioFwdCtrl,'(a47,i5)') string,solverControl%IterPerDivCor
+    read (ioFwdCtrl,'(a48,i5)') string,solverControl%IterPerDivCor
     if (output_level > 2) then
        write (*,*)
-       write (*,'(a12,a47,i5)') node_info,string,solverControl%IterPerDivCor
+       write (*,'(a12,a48,i5)') node_info,string,solverControl%IterPerDivCor
     end if
-    read (ioFwdCtrl,'(a47,i5)') string,solverControl%MaxDivCor
+    read (ioFwdCtrl,'(a48,i5)') string,solverControl%MaxDivCor
     if (output_level > 2) then
-       write (*,'(a12,a47,i5)') node_info,string,solverControl%MaxDivCor
+       write (*,'(a12,a48,i5)') node_info,string,solverControl%MaxDivCor
     end if
-    read (ioFwdCtrl,'(a47,i5)') string,solverControl%MaxIterDivCor
+    read (ioFwdCtrl,'(a48,i5)') string,solverControl%MaxIterDivCor
     if (output_level > 2) then
-       write (*,'(a12,a47,i5)') node_info,string,solverControl%MaxIterDivCor
+       write (*,'(a12,a48,i5)') node_info,string,solverControl%MaxIterDivCor
     end if
-    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolEMfwd
+    read (ioFwdCtrl,'(a48,g15.7)') string,solverControl%tolEMfwd
     if (output_level > 2) then
-       write (*,'(a12,a47,g15.7)') node_info,string,solverControl%tolEMfwd
+       write (*,'(a12,a48,g15.7)') node_info,string,solverControl%tolEMfwd
     end if
-    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolEMadj
+    read (ioFwdCtrl,'(a48,g15.7)') string,solverControl%tolEMadj
     if (output_level > 2) then
-       write (*,'(a12,a47,g15.7)') node_info,string,solverControl%tolEMadj
+       write (*,'(a12,a48,g15.7)') node_info,string,solverControl%tolEMadj
     end if
-    read (ioFwdCtrl,'(a47,g15.7)') string,solverControl%tolDivCor
+    read (ioFwdCtrl,'(a48,g15.7)') string,solverControl%tolDivCor
     if (output_level > 2) then
-       write (*,'(a12,a47,g15.7)') node_info,string,solverControl%tolDivCor
+       write (*,'(a12,a48,g15.7)') node_info,string,solverControl%tolDivCor
     end if
-    
+
 
 
 ! Check if there is addtional line.
@@ -588,9 +588,9 @@ end subroutine SdivCorr ! SdivCorr
       read(ioFwdCtrl,'(a80)',iostat=istat) solverControl%E0fileName      
    if (istat .eq. 0 ) then
      if (index(string,'#')>0) then
-      ! This is a comment line 
-       solverControl%read_E0_from_File=.false. 
-     else    
+      ! This is a comment line
+       solverControl%read_E0_from_File=.false.
+     else
 	     if (output_level > 2) then
 	       write (*,'(a12,a48,a80)') node_info,string,solverControl%E0fileName
 	     end if
@@ -601,14 +601,14 @@ end subroutine SdivCorr ! SdivCorr
  else
      solverControl%read_E0_from_File=.false.
   end if
-           
-    
 
-       
-     
-    
-    
-    
+
+
+
+
+
+
+
 
     close(ioFwdCtrl)
 

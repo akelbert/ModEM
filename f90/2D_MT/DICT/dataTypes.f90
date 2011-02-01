@@ -18,6 +18,8 @@ module dataTypes
      !        different names, types, etc.) for  different applications.
      ! character(2)                :: mode = ''! = 'TE' or 'TM'
      character(80)               :: name = ''
+     ! the units of the data type
+     character(80)              :: units
      ! the number of components in the data type
      integer           			:: nComp
      !  could add rxDictNumber to keep track of reciever dictionary
@@ -26,6 +28,13 @@ module dataTypes
      ! id(nComp) are the text comments that describe the components; these are
      ! initialized, but can be overwritten by the info from the data file.
      character(15), pointer, dimension(:) :: id
+
+     ! these lists contain the indices into the data vector for each data type;
+     ! they make it possible to sort the data by receiver for output.
+     ! no data denoted by zero index; dimensions (nTx) and (nTx,nRx).
+     integer, pointer, dimension(:)   :: tx_index
+     integer, pointer, dimension(:)   :: dt_index
+     integer, pointer, dimension(:,:) :: rx_index
 
   end type dataType
 
@@ -46,18 +55,18 @@ Contains
   	 integer     :: istat
 
      allocate(typeDict(2),STAT=istat)
-     typeDict(TE_Impedance)%name = 'TE Impedance'
+     typeDict(TE_Impedance)%name = 'TE_Impedance'
      typeDict(TE_Impedance)%isComplex = .true.
+     typeDict(TE_Impedance)%units     = '[V/m]/[T]'
      typeDict(TE_Impedance)%nComp     = 2
-     allocate(typeDict(TE_Impedance)%id(2),STAT=istat)
-     typeDict(TE_Impedance)%id(1)     = 'Re'
-     typeDict(TE_Impedance)%id(2)     = 'Im'
-     typeDict(TM_Impedance)%name = 'TM Impedance'
+     allocate(typeDict(TE_Impedance)%id(1),STAT=istat)
+     typeDict(TE_Impedance)%id(1)     = 'TE'
+     typeDict(TM_Impedance)%name = 'TM_Impedance'
      typeDict(TM_Impedance)%isComplex = .true.
+     typeDict(TM_Impedance)%units     = '[V/m]/[T]'
      typeDict(TM_Impedance)%nComp     = 2
-     allocate(typeDict(TM_Impedance)%id(2),STAT=istat)
-     typeDict(TM_Impedance)%id(1)     = 'Re'
-     typeDict(TM_Impedance)%id(2)     = 'Im'
+     allocate(typeDict(TM_Impedance)%id(1),STAT=istat)
+     typeDict(TM_Impedance)%id(1)     = 'TM'
 
   end subroutine setup_typeDict
 
@@ -73,6 +82,15 @@ Contains
 	      if (associated(typeDict(j)%id)) then
 	         deallocate(typeDict(j)%id,STAT=istat)
 	      end if
+          if (associated(typeDict(j)%tx_index)) then
+             deallocate(typeDict(j)%tx_index,STAT=istat)
+          end if
+          if (associated(typeDict(j)%dt_index)) then
+             deallocate(typeDict(j)%dt_index,STAT=istat)
+          end if
+          if (associated(typeDict(j)%rx_index)) then
+             deallocate(typeDict(j)%rx_index,STAT=istat)
+          end if
 	   end do
 
        deallocate(typeDict,STAT=istat)
@@ -129,21 +147,69 @@ Contains
   end function ImpUnits
 
 !**********************************************************************
-! Figures out the data type from the component ids
+! Figures out the data type from the mode name
 
   function ImpType(mode) result (dataType)
 
     character(*), intent(in)    :: mode
-	integer	             	 	:: dataType
+    integer                     :: dataType
 
     if (index(mode,'TE')>0) then
         dataType = TE_Impedance
     else if (index(mode,'TM')>0) then
         dataType = TM_Impedance
     else
-	   call errStop('Unknown mode in ImpType: '//trim(mode))
+       call errStop('Unknown mode in ImpType: '//trim(mode))
     end if
 
   end function ImpType
+
+!**********************************************************************
+! Sorts out the data type header
+
+  function ImpHeader(dataType) result (header)
+
+    integer, intent(in)         :: dataType
+    character(200)              :: header
+
+    select case (dataType)
+
+       case(TE_Impedance,TM_Impedance)
+          header = '# Period(s) Code GG_Lat GG_Lon X(m) Y(m) Z(m) Component Real Imag Error'
+
+    end select
+
+  end function ImpHeader
+
+!**********************************************************************
+! Figures out the component index from its name for any data type
+
+  function ImpComp(compid,dataType) result (icomp)
+
+    character(*), intent(in)    :: compid
+    integer,      intent(in)    :: dataType
+    integer                     :: icomp
+    ! local
+    integer                     :: i, ncomp
+
+    ncomp = typeDict(dataType)%ncomp
+    if (typeDict(dataType)%isComplex) then
+        ncomp = ncomp/2
+    end if
+    icomp = 0
+
+    do i = 1,ncomp
+        if (index(typeDict(dataType)%id(i),trim(compid))>0) then
+            icomp = i
+            exit
+        end if
+    end do
+
+    if (icomp == 0) then
+        call errStop('Problem locating the component '//trim(compid)//' in data type '//trim(typeDict(dataType)%name))
+    end if
+
+  end function ImpComp
+
 
 end module dataTypes

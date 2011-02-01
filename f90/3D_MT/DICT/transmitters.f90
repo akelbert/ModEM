@@ -71,11 +71,10 @@ Contains
 ! This is not efficient; but this would only be used a few times, with
 ! a small number of values, so convenience is much more of an issue here!
 
-  subroutine update_txDict(Period,nPol,iTx,new_transmitter)
+  function update_txDict(Period,nPol) result (iTx)
 
      real(kind=prec), intent(in)        :: Period
      integer, intent(in), optional		:: nPol
-     logical, intent(out), optional		:: new_transmitter
      integer                            :: iTx
      ! local
      type(MTtx)                         :: new
@@ -125,11 +124,7 @@ Contains
      deallocate(temp,STAT=istat)
      iTx = nTx+1
 
-     if (present(new_transmitter)) then
-     	new_transmitter = new_Tx
-     end if
-
-  end subroutine update_txDict
+  end function update_txDict
 
 ! **************************************************************************
 ! Cleans up and deletes transmitter dictionary at end of program execution

@@ -89,7 +89,7 @@ module DataSpace
 
       ! nComp is number of EM components observed (e.g., 2 (3) for
       ! MT (with verticl field TFs)) times 2 to allow for real/imag;
-      ! has to match the data type index dt
+      ! has to match the data type
       integer 		:: nComp = 0
 
       ! nSite is number of sites where these components are observed
@@ -97,6 +97,9 @@ module DataSpace
 
       ! actual data; dimensions (nComp,nSite)
       real (kind=prec), pointer, dimension(:,:) :: value, error
+
+      ! if data value doesn't exist, it is zero and we don't count it
+      logical, pointer, dimension(:,:) :: exist
 
       ! rx(nSite) is the array of indices into receiver dictionary
       integer, pointer, dimension(:) :: rx
@@ -167,6 +170,8 @@ module DataSpace
   public            :: random_dataBlock, random_dataVector, random_dataVectorMTX
   ! additional operators needed for the upper level code
   public			:: count_dataVectorMTX_f, countBlock_dataVectorMTX_f
+  ! this are needed specifically for data output, but could be used more generally
+  public            :: index_dataVectorMTX
 
 Contains
 
@@ -244,6 +249,10 @@ Contains
        d%error = R_ZERO
     endif
 
+    ! by default, all data exist
+    allocate(d%exist(nComp, nSite), STAT=istat)
+    d%exist = .true.
+
     d%normalized = .false.
     d%allocated = .true.
 
@@ -263,7 +272,7 @@ Contains
 
     if(d%allocated) then
        !  deallocate everything relevant
-       deallocate(d%value, d%rx, STAT=istat)
+       deallocate(d%value, d%exist, d%rx, STAT=istat)
        if (associated(d%error)) deallocate(d%error, STAT=istat)
     endif
 
@@ -353,6 +362,7 @@ Contains
     if (d2%errorBar) then
        d2%error = d1%error
     endif
+    d2%exist = d1%exist
     d2%normalized = d1%normalized
     d2%rx = d1%rx
     d2%tx = d1%tx
@@ -421,6 +431,9 @@ Contains
 
     !  finally do the linear combination ...
     dOut%value = a*d1%value + b*d2%value
+
+    ! the result exists if both values exist
+    dOut%exist = d1%exist .and. d2%exist
 
 	! set errBar=.true. if at least one of the inputs has error bars
 	errBar = (d1%errorBar .or. d2%errorBar)
@@ -554,7 +567,9 @@ Contains
 
    do j = 1, d%nSite
      do i = 1, d%nComp
-        if (abs(d%error(i,j)) <= TOL6 * abs(d%value(i,j))) then
+        if (.not. d%exist(i,j)) then
+            cycle
+        elseif (abs(d%error(i,j)) <= TOL6 * abs(d%value(i,j))) then
            call errStop('data error bars too small in normalize_dataBlock')
         endif
         d%value(i,j) = d%value(i,j)/(d%error(i,j)**nn)
@@ -575,7 +590,8 @@ Contains
     type(dataBlock_t), intent(inout)     :: d
 
     ! local variables
-    real, allocatable       :: values(:,:), errors(:,:)
+    real(8), allocatable    :: values(:,:), errors(:,:)
+    logical, allocatable    :: exists(:,:)
     integer, allocatable    :: rxList(:)
     logical                 :: newRx, errorBar
     integer                 :: i,j,iRx,nComp,nSite,nSiteMax,istat
@@ -606,6 +622,7 @@ Contains
     if(errorBar) then
         allocate(errors(nComp,nSiteMax),STAT=istat)
     endif
+    allocate(exists(nComp,nSiteMax),STAT=istat)
     nSite = 0
 
     do i = 1,d1%nSite
@@ -624,6 +641,7 @@ Contains
             if(errorBar) then
                 errors(:,nSite) = d1%error(:,i)
             endif
+            exists(:,nSite) = d1%exist(:,i)
         endif
     enddo
 
@@ -643,6 +661,7 @@ Contains
             if(errorBar) then
                 errors(:,nSite) = d2%error(:,i)
             endif
+            exists(:,nSite) = d2%exist(:,i)
         endif
     enddo
 
@@ -651,6 +670,7 @@ Contains
     if(errorBar) then
         d%error = errors(1:nComp,1:nSite)
     endif
+    d%exist = exists(1:nComp,1:nSite)
     d%rx = rxList(1:nSite)
     d%dataType = d1%dataType
     d%tx = d1%tx
@@ -662,6 +682,7 @@ Contains
     if(errorBar) then
         deallocate(errors,STAT=istat)
     endif
+    deallocate(exists,STAT=istat)
 
   end subroutine merge_dataBlock
 
@@ -1331,12 +1352,14 @@ Contains
   !**********************************************************************
   ! Merge two multi-transmitter data vectors into a single dataVectorMTX
 
-  subroutine merge_dataVectorMTX(d1,d2,d)
+  subroutine merge_dataVectorMTX(d1,d2,dout)
 
     type(dataVectorMTX_t), intent(in)        :: d1,d2
-    type(dataVectorMTX_t), intent(inout)     :: d
+    type(dataVectorMTX_t), intent(inout)     :: dout
 
-    ! local variables
+    ! local variables; introduce a local data vector to avoid deallocating
+    ! one of the inputs, if the output and an input use the same variable
+    type(dataVectorMTX_t)   :: d
     integer, allocatable    :: i1(:),i2(:),txList(:)
     logical                 :: newTx
     integer                 :: i,j,iTx,nTx,countTx,istat
@@ -1344,10 +1367,10 @@ Contains
     if(.not. d1%allocated .and. .not. d2%allocated) then
         call errStop('both input data vectors not allocated in merge_dataVectorMTX')
     elseif(.not. d1%allocated) then
-        d = d2
+        dout = d2
         return
     elseif(.not. d2%allocated) then
-        d = d1
+        dout = d1
         return
     endif
 
@@ -1409,6 +1432,9 @@ Contains
     enddo
     d%allocated = .true.
 
+    dout = d
+
+    call deall_dataVectorMTX(d)
     deallocate(txList,STAT=istat)
     deallocate(i1,i2,STAT=istat)
 
@@ -1431,7 +1457,7 @@ Contains
    ndata = 0
    do j = 1,d%nTx
      do i = 1,d%d(j)%nDt
-       ndata = ndata + d%d(j)%data(i)%nComp * d%d(j)%data(i)%nSite
+       ndata = ndata + count(d%d(j)%data(i)%exist)
      enddo
    enddo
 
@@ -1439,21 +1465,67 @@ Contains
 
   !**********************************************************************
   ! count the number of data blocks in the full data vector dataVectorMTX.
-  ! there should be one for each transmitter and data type
+  ! there should be one for each transmitter and data type... if iDt
+  ! is present, count the number of blocks for this data type only.
 
-  function countBlock_dataVectorMTX_f(d) result(nblock)
+  function countBlock_dataVectorMTX_f(d,iDt) result(nblock)
 
    type(dataVectorMTX_t), intent(in)		:: d
+   integer, intent(in), optional            :: iDt
    integer				:: nblock
 
    ! local variables
-   integer 				:: j
+   integer 				:: i,j
    nblock = 0
-   do j = 1,d%nTx
-     nblock = nblock + d%d(j)%nDt
-   enddo
+   if (present(iDt)) then
+    do j = 1,d%nTx
+        do i = 1,d%d(j)%nDt
+            if (d%d(j)%data(i)%dataType == iDt) then
+                nblock = nblock + 1
+            endif
+        enddo
+    enddo
+   else
+    do j = 1,d%nTx
+        nblock = nblock + d%d(j)%nDt
+    enddo
+   endif
 
   end function countBlock_dataVectorMTX_f
+
+  !**********************************************************************
+  ! index the transmitters and receivers in dataVectorMTX: for a specific
+  ! data type, and for each transmitter and receiver in the dictionary,
+  ! this allows to quickly locate the respective data components.
+  ! The output arrays are tx_index(nTx) and rx_index(nTx,nRx), where
+  ! nTx and nRx are the lengths of the respective dictionaries.
+
+  subroutine index_dataVectorMTX(d,iDt,tx_index,dt_index,rx_index)
+
+   type(dataVectorMTX_t), intent(in)        :: d
+   integer, intent(in)                      :: iDt
+   integer, intent(inout)                   :: tx_index(:), dt_index(:), rx_index(:,:)
+
+   ! local variables
+   integer              :: i,j,k
+
+   tx_index = 0
+   dt_index = 0
+   rx_index = 0
+
+   do j = 1,d%nTx
+        do i = 1,d%d(j)%nDt
+            if (d%d(j)%data(i)%dataType == iDt) then
+                tx_index(d%d(j)%tx) = j
+                dt_index(d%d(j)%tx) = i
+                do k = 1,d%d(j)%data(i)%nSite
+                    rx_index(d%d(j)%data(i)%tx,d%d(j)%data(i)%rx(k)) = k
+                enddo
+            endif
+        enddo
+   enddo
+
+  end subroutine index_dataVectorMTX
 
 
 end module DataSpace
