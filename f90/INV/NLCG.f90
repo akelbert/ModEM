@@ -518,10 +518,20 @@ Contains
    call printf('START',lambda,alpha,value,mNorm,rms)
    call printf('START',lambda,alpha,value,mNorm,rms,logFile)
 	 nfunc = 1
+   write(iterChar,'(i3.3)') 0
+
+   ! output initial model and responses for later reference
+   if (output_level > 1) then
+     mFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.rho'
+     call write_modelParam(m,trim(mFile))
+   end if
+   if (output_level > 2) then
+     dataFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.dat'
+     call write_dataVectorMTX(dHat,trim(dataFile))
+   end if
 
    ! compute gradient of the full penalty functional
    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-   write(iterChar,'(i3.3)') 0
    if (output_level > 4) then
      gradFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.grt'
      call write_modelParam(grad,trim(gradFile))
@@ -560,7 +570,8 @@ Contains
 	  ! at the end of line search, set mHat to the new value
 	  ! mHat = mHat + alpha*h  and evaluate gradient at new mHat
 	  ! data and solnVector only needed for output
-	  write(*,*) 'Starting line search...'
+      write(*,'(a23)') 'Starting line search...'
+      write(ioLog,'(a23)') 'Starting line search...'
 	  select case (flavor)
 	  case ('Cubic')
 	  	call lineSearchCubic(lambda,d,m0,h,alpha,mHat,value,grad,rms,nLS,dHat,eAll)
@@ -618,11 +629,13 @@ Contains
       		gnorm = sqrt(dotProd(grad,grad))
       		alpha = min(iterControl%alpha_1,startdm/gnorm)
       		write(*,'(a48,es12.6)') 'The value of line search step alpha updated to ',alpha
+            write(ioLog,'(a48,es12.6)') 'The value of line search step alpha updated to ',alpha
       		! g = - grad
 			call linComb(MinusONE,grad,R_ZERO,grad,g)
 			! check that lambda is still at a reasonable value
 			if (lambda < iterControl%lambdaTol) then
 				write(*,'(a55)') 'Unable to get out of a local minimum. Exiting...'
+                write(ioLog,'(a55)') 'Unable to get out of a local minimum. Exiting...'
 				! multiply by C^{1/2} and add m_0
                 call CmSqrtMult(mHat,m_minus_m0)
                 call linComb(ONE,m_minus_m0,ONE,m0,m)
@@ -829,6 +842,8 @@ Contains
     niter = niter + 1
     ! check whether the solution satisfies the sufficient decrease condition
     if (f < f_0 + c * alpha * g_0) then
+        write(*,'(a60)') 'Good enough value found, exiting line search'
+        write(ioLog,'(a60)') 'Good enough value found, exiting line search'
     	exit
     end if
     ! this should not happen, but in practice it is possible to end up with
@@ -836,8 +851,8 @@ Contains
     ! Most likely, this is due to an inaccuracy in the gradient computations.
     ! In this case, we avoid an infinite loop by exiting the line search.
     if (f > f_0) then
-		print *, 'Unable to fit a quadratic due to bad gradient estimate, exiting line search'
-		starting_guess = .true.
+        write(*,'(a75)') 'Unable to fit a quadratic due to bad gradient estimate, exiting line search'
+        write(ioLog,'(a75)') 'Unable to fit a quadratic due to bad gradient estimate, exiting line search'
    		exit
     end if
     ! otherwise, iterate, using the most recent value of f & alpha
@@ -867,7 +882,8 @@ Contains
    		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms,logFile)
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-	print *, 'Gradient computed, line search finished'
+    write(*,'(a39)') 'Gradient computed, line search finished'
+    write(ioLog,'(a39)') 'Gradient computed, line search finished'
 
    call deall_dataVectorMTX(dHat_1)
    call deall_modelParam(mHat_0)
@@ -1011,7 +1027,8 @@ Contains
    		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms,logFile)
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-	print *, 'Gradient computed, exiting line search'
+    write(*,'(a45)') 'Quadratic has no minimum, exiting line search'
+    write(ioLog,'(a45)') 'Quadratic has no minimum, exiting line search'
 	call deall_dataVectorMTX(dHat_1)
 	call deall_modelParam(mHat_0)
 	call deall_modelParam(mHat_1)
@@ -1047,7 +1064,8 @@ Contains
    	end if
 
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-	print *, 'Gradient computed, exiting line search'
+    write(*,'(a60)') 'Sufficient decrease condition satisfied, exiting line search'
+    write(ioLog,'(a60)') 'Sufficient decrease condition satisfied, exiting line search'
 	call deall_dataVectorMTX(dHat_1)
 	call deall_modelParam(mHat_0)
 	call deall_modelParam(mHat_1)
@@ -1058,11 +1076,14 @@ Contains
    ! this should not happen, but in practice it is possible to end up with
    ! a function increase at this point (e.g. in the current global code).
    ! Most likely, this is due to an inaccuracy in the gradient computations.
-   ! In this case, we avoid an infinite loop by taking starting guess and exiting.
+   ! In this case, we avoid an infinite loop by exiting line search.
+   ! It is also possible that both f_1 and f are worse than the starting value!
+   ! Then, take whichever is smaller. Ideally, want to decrease the tolerance
+   ! for gradient computations if this happens.
    if (f > f_0) then
 
-	print *, 'Unable to fit a quadratic due to bad gradient estimate, take starting guess'
-	starting_guess = .true.
+    write(*,'(a75)') 'Unable to fit a quadratic due to bad gradient estimate, exiting line search'
+    write(ioLog,'(a75)') 'Unable to fit a quadratic due to bad gradient estimate, exiting line search'
 
    else
     ! fit a cubic and backtrack (initialize)
@@ -1099,7 +1120,8 @@ Contains
         f_j = f
         ! check that the function still decreases to avoid infinite loops in case of a bug
         if (abs(f_j - f_i) < TOL8) then
-    	   print *, 'Warning: exiting cubic search since the function no longer decreases!'
+           write(*,'(a69)') 'Warning: exiting cubic search since the function no longer decreases!'
+           write(ioLog,'(a69)') 'Warning: exiting cubic search since the function no longer decreases!'
     	   exit
         end if
     end do fit_cubic
@@ -1127,7 +1149,8 @@ Contains
    		call printf('RELAX',lambda,gamma*alpha,f,mNorm,rms,logFile)
    	end if
     call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-	print *, 'Gradient computed, line search finished'
+	write(*,'(a39)') 'Gradient computed, line search finished'
+    write(ioLog,'(a39)') 'Gradient computed, line search finished'
 
    call deall_dataVectorMTX(dHat_1)
    call deall_modelParam(mHat_0)
