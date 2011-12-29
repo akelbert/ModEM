@@ -130,6 +130,69 @@ Contains
 
 
   ! **************************************************************************
+  subroutine find_index(array, xmin, xmax, imin, imax)
+    ! For an increasing or decreasing array,
+    ! find the minimum and maximum indices
+    ! such that xmin <= array(i) < xmax
+    ! author: A. Kelbert
+
+    implicit none
+    real (kind=prec), dimension(:), intent(in)     :: array
+    real (kind=prec), intent(in)                   :: xmin,xmax
+    integer, intent(out)                           :: imin,imax
+    ! local
+    logical                                     :: incr
+    integer                                     :: i,n
+
+    ! quick check to see what kind of array this is
+    n = size(array)
+    if (array(1) <= array(n)) then
+        incr = .true.
+    else
+        incr = .false.
+    endif
+
+    if (incr) then
+        ! for an increasing array...
+
+        imin = 0
+        do i = 1,n
+           if(clean(array(i)) .ge. clean(xmin)) then
+              imin = i
+              exit
+           endif
+        enddo
+
+        imax = 0
+        do i = imin,n
+           if(clean(array(i)) .lt. clean(xmax)) then
+              imax = i
+           endif
+        enddo
+
+    else
+        ! for a decreasing array...
+
+        imax = 0
+        do i = n,1,-1
+           if(clean(array(i)) .ge. clean(xmin)) then
+              imax = i
+              exit
+           endif
+        enddo
+
+        imin = 0
+        do i = imax,1,-1
+           if(clean(array(i)) .lt. clean(xmax)) then
+              imin = i
+           endif
+        enddo
+
+    endif
+
+  end subroutine find_index
+
+  ! **************************************************************************
   function minNode(x, xNode) result(ix)
     !  This is a utility routine, used by several data functional
     !  set up routines, and for other interpolation functions
@@ -193,6 +256,27 @@ Contains
     enddo
 
   end function maxNode
+
+  ! **************************************************************************
+  logical function ismember(n,Nvec)
+    ! replicates the corresponding function in Matlab: for an integer array,
+    ! outputs true if our integer is in the array, otherwise false.
+    ! author: A. Kelbert
+
+    integer                 :: n
+    integer, dimension(:)   :: Nvec
+    ! local
+    integer                 :: i
+
+    ismember = .false.
+    do i = 1,size(Nvec)
+        if (Nvec(i) == n) then
+            ismember = .true.
+            return
+        end if
+    end do
+
+  end function
 
 ! *****************************************************************************
 
