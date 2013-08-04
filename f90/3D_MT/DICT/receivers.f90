@@ -112,16 +112,23 @@ function update_rxDict(loc,id,loc_ref,id_ref) result (iRx)
 
      nRx = size(rxDict)
 
-     ! If this site isn't new, do nothing
+     ! If this site isn't new, do nothing, unless a new ref. site is found in case of Inter-Stations TF.
      do i = 1,nRx
      	if (new%id .eq. rxDict(i)%id) then
+           if (present(loc_ref)) then
+           !Check if the this site is associated with the same Ref. site. If not, then continue and append another site to the Rx dictionary. 
+              if (new%id_ref .eq. rxDict(i)%id_ref) then 
+     	         rxDict(i)%r=loc_ref
+     	         rxDict(i)%id_ref=id_ref
+                 iRx=i
+                 new_Rx = .false.
+                 return
+              end if   
+           else    
      	    iRx=i
-     	     if (present(loc_ref)) then
-     	      rxDict(i)%r=loc_ref
-     	      rxDict(i)%id_ref=id_ref
-     	     end if
-     	     new_Rx = .false.
+            new_Rx = .false.
      		return
+           end if 
      	end if
      end do
 
