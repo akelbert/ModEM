@@ -67,7 +67,7 @@ Contains
    type(NLCGiterControl_t), intent(inout)	:: iterControl
 
      ! maximum number of iterations in one call to iterative solver
-     iterControl%maxIter = 200
+     iterControl%maxIter = 600
      ! convergence criteria: return from solver if rms < rmsTol
      iterControl%rmsTol  = 1.05
      ! inversion stalls when abs(rms - rmsPrev) < fdiffTol (2e-3 works well)
@@ -528,7 +528,9 @@ Contains
 	 nfunc = 1
    write(iterChar,'(i3.3)') 0
 
-   ! output initial model and responses for later reference
+   ! output (smoothed) initial model and responses for later reference
+   call CmSqrtMult(mHat,m_minus_m0)
+   call linComb(ONE,m_minus_m0,ONE,m0,m)
    if (output_level > 1) then
      mFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.rho'
      call write_modelParam(m,trim(mFile))
@@ -540,7 +542,7 @@ Contains
 
    ! compute gradient of the full penalty functional
    call gradient(lambda,d,m0,mHat,grad,dHat,eAll)
-   if (output_level > 4) then
+   if (output_level > 3) then
      gradFile = trim(iterControl%fname)//'_NLCG_'//iterChar//'.grt'
      call write_modelParam(grad,trim(gradFile))
    end if
