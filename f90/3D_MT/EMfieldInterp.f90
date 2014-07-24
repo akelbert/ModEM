@@ -15,6 +15,126 @@ module EMfieldInterp
 
 Contains
 
+ ! **************************************************************************
+  ! POTENTIAL field coeffcients in the sparse vector
+  subroutine VinterpSetUp(inGrid,x,xyz,LC,CondE)
+    ! sets up coefficients in sparse vector LC for evaluation/interpolation
+    ! at location x of electric field vector defined on edges of staggered
+    ! grid. xyz (1 = x; 2 = y; 3 = z) gives the component
+    ! INTERPOLATION METHOD: tri-linear spline
+    ! Allocates arrays in sparse vector LC, deallocating first if already
+    ! allocated   ...  note that in general the number of non-zero
+    ! coefficients in LC is in general computed within this routine
+    ! at execution time
+
+    implicit none
+    type(grid_t), target, intent(in)              :: inGrid
+    real(kind=prec), dimension(3), intent(in)     :: x
+    integer, intent(in)                         :: xyz
+    type(sparsevecc), intent(inout)             :: LC
+    type(modelParam_t), intent(in), optional  :: CondE
+
+    ! Local Variables
+    integer                                     :: i0,j0,k0,ii,n,m,p,ic,jc,kc,iix,iiy,iiz
+    integer, dimension(8)                       :: I,J,K
+    integer                                     :: nxMax, nyMax, nzMax
+    integer                                     :: status,iint,jint,kint
+    complex(kind=prec), dimension(8)    :: C
+    real(kind=prec), dimension(3,2)     :: w
+    real(kind=prec)                     :: wadd,t1,t2,t3,t11,t21,t31
+    character (len = 80)                        :: gridType = ''
+    logical                     		:: UseCond
+
+    integer, parameter		:: IX = 1, IY = 2, IZ = 3
+
+    UseCond = present(CondE)
+    if(LC%allocated) then
+       deallocate(LC%i,STAT=status)
+       deallocate(LC%j, STAT=status)
+       deallocate(LC%k, STAT=status)
+       deallocate(LC%xyz, STAT=status)
+       deallocate(LC%c, STAT=status)
+       LC%gridType = ''
+       LC%allocated = .false.
+    endif
+
+    ! maximum number of edge nodes
+    nxMax = inGrid%nx+1
+    nyMax = inGrid%ny+1
+    nzMax = inGrid%nz+1
+    i0 = minNode(x(1),inGrid%xEdge)
+    j0 = minNode(x(2),inGrid%yEdge)
+    k0 = minNode(x(3),inGrid%zEdge)
+!TRILINEAR INTERPOLATION OF RHOA
+
+      do 3110,iix=1,nxMax
+      if(inGrid%xEdge(iix).ge.x(1)) then
+       iint=iix
+       goto 3115
+      endif
+3110  continue
+      
+ 3115 continue
+      do 3120,iiy=1,nyMax
+      if(inGrid%yEdge(iiy).ge.x(2)) then
+       jint=iiy
+       goto 3125
+      endif
+3120  continue
+      
+ 3125 continue
+      do 3130,iiz=1,nzMax
+      if(inGrid%zEdge(iiz).ge.x(3)) then
+       kint=iiz
+       goto 3135
+      endif
+3130  continue
+      
+3135  continue
+
+     
+      w(1,2)=(x(1)- inGrid%xEdge(iint-1))/(inGrid%xEdge(iint)-inGrid%xEdge(iint-1))
+      w(2,2)=(x(2)- inGrid%yEdge(jint-1))/(inGrid%yEdge(jint)-inGrid%yEdge(jint-1))
+      w(3,2)=(x(3)- inGrid%zEdge(kint-1))/(inGrid%zEdge(kint)-inGrid%zEdge(kint-1))
+    
+    
+    w(1,1) = 1-w(1,2)
+    w(2,1) = 1-w(2,2)
+    w(3,1) = 1-w(3,2)
+
+     !write(6,'(3f10.2)') x(1),x(2),x(3)
+    ii = 0
+    do n = 1,2
+       do m = 1,2
+          do p = 1,2
+             wadd = w(1,n)*w(2,m)*w(3,p)
+             if(wadd .gt. 0) then
+                ii = ii + 1
+                I(ii) = iint+n-2 
+                J(ii) = jint+m-2 
+                K(ii) = kint+p-2 
+                C(ii) = wadd  
+                !write(6,'(7i5,f10.2)')ii,n,m,p,I(ii),J(ii),K(ii),wadd
+             endif
+          enddo
+       enddo
+    enddo
+    gridType = EDGE
+    Call create_sparsevecc(ii,LC,gridType)
+    ! I, J, K and C inside LC have a pointer.
+    ! In some compiler (e.g. gfortran), it is not allowed
+    ! to copy implicitly a dimensioned array (I) into a pointer.  
+    ! Thus, copy explicitly
+     do n=1,ii
+      LC%i(n)=I(n)
+      LC%j(n)=J(n)
+      LC%k(n)=K(n)
+      LC%c(n)=C(n)
+     end do
+    !   assuming xyz will be assigned to all elements of LC%xyz
+    LC%xyz = xyz
+  end subroutine VinterpSetUp
+
   ! **************************************************************************
   ! electrical field coeffcients in the sparse vector
   subroutine EinterpSetUp(inGrid,x,xyz,LC,CondE)

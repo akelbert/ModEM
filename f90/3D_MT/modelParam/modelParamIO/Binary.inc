@@ -101,17 +101,22 @@
       integer                :: ios
 
       integer 		:: i,Nz,NzAir
-      character(80) :: temp
+      character(80) :: temp,openfile
       logical		:: opened
 
-      temp = header
+      temp = trim(header)
 
       inquire(file=cfile, opened=opened)
       if (.not. opened) then
       	open(unit=ioSens, file=cfile, form='unformatted', iostat=ios)
+      else
+        inquire(ioSens, name=openfile)
+        if (index(cfile,openfile) == 0) then
+           write(0,*) 'Error: writing to file ',openfile,' which is different from ',cfile
+        endif
       endif
-      !write(ioSens) temp
-      !write(ioSens) nSigma
+      write(ioSens) temp
+      write(ioSens) nSigma
 
       do i = 1,nSigma
          Nz = m(i)%grid%Nz
@@ -150,7 +155,7 @@
       read(ioSens) nS
 
       if(nS .NE. nSigma) then
-          call errStop('size of sigma does not agree with contents of file in readAll_Cond2D')
+          call errStop('size of sigma does not agree with contents of file in readVec_modelParam_binary')
       endif
 
       do i = 1,nSigma
@@ -158,7 +163,7 @@
          read(ioSens) Nx,Ny,NzEarth
          if((m(i)%Nx .NE. Nx) .OR. (m(i)%Ny .NE. Ny) .OR. (m(i)%NzEarth .NE. NzEarth)) then
             close(ioSens)
-            call errStop('Size of cond does not agree with contents of file in readAll_Cond2D')
+            call errStop('Size of cond does not agree with contents of file in readVec_modelParam_binary')
          else
             Nz = m(i)%grid%Nz
             NzAir = m(i)%grid%Nz-m(i)%NzEarth

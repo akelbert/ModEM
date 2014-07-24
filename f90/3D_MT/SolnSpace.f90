@@ -59,8 +59,10 @@ end interface
     !! polarizations; 2 for 3D MT - one electrical field solution for each
     !! allows a variable number of polarizations to accommodate other uses
     !! e.g. active source applications
-    integer					:: nPol = 2
-    integer                 :: Pol_index(2)
+	!! NM: to make it possibile to have both MT and CSEM in one eAll solution, the nPol must be general.
+	!! Since nPol is defined from the Tx dictionary, there is NO need to have an abstract nPol.
+    integer		          :: nPol  
+    integer ,pointer      :: Pol_index(:) 	
     type(cvector), pointer  :: pol(:)
 
     !! tx points to information in the transmitter dictionary about the source
@@ -95,7 +97,8 @@ end interface
     !!  this doesn't really need the grid... not used anywhere at the moment
     !!  but then the generic create interface shouldn't use it either
     !!  unless sparse vectors require the grid pointer for something.
-    integer						:: nPol = 2
+    !! Since nPol is defined from the Tx dictionary, there is NO need to have an abstract nPol.
+    integer						:: nPol  
     integer						:: nCoeff = 0
     type(sparsevecc), pointer	:: L(:)
     logical						:: allocated = .false.
@@ -128,7 +131,7 @@ end interface
      !  full rhs used for the abstract full solnVector
      ! pointer to the grid needed for cleaner routines in this module.
 
-     integer				:: nPol = 2
+     integer				:: nPol
      type (RHS_t), pointer	:: b(:)
      logical                    :: nonzero_BC     = .false.
      logical                    :: nonzero_Source = .false.
@@ -175,6 +178,7 @@ contains
        end if
 
        e%nPol = txDict(iTx)%nPol
+	   allocate(e%Pol_index(e%nPol), STAT=istat)
        
        do iPol=1,e%nPol
         e%Pol_index(iPol)=iPol
@@ -533,7 +537,7 @@ contains
 
 			 if (b%allocated) then
 					! do nothing - exit the create subroutine
-					return
+					!return        !NM: In case of MT and CSEM we need to create b for b%nonzero_source
 			 endif
 
        if (b%nonzero_BC) then

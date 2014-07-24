@@ -1,9 +1,9 @@
 ! *****************************************************************************
 program Mod3DMT
 ! Program for running 3D MT forward, sensitivity and inverse modelling
-! Copyright (c) 2004-2010 Oregon State University
+! Copyright (c) 2004-2014 Oregon State University
 !              AUTHORS  Gary Egbert, Anna Kelbert & Naser Meqbel
-!              College of Atmospheric and Oceanic Sciences
+!              College of Earth, Ocean and Atmospheric Sciences
 
      use SensComp
      use SymmetryTest
@@ -23,6 +23,10 @@ program Mod3DMT
 
      ! Variable required for storing the date and time
      type (timer_t)         :: timer
+
+     ! Output variable
+     character(80)          :: header
+     integer                :: ios
 
 
 
@@ -50,11 +54,20 @@ program Mod3DMT
       ! set the grid for the numerical computations
 
 #ifdef MPI
-      call setGrid_MPI(grid)
+    call setGrid_MPI(grid)
+    if (Read_Efield_from_file) then
+      if (taskid==0) then
+            call read_Efiled_from_file
+            call Interpolate_BC(grid)
+            call Master_job_Distribute_nTx_nPol(nTx_nPol)
+      else
+            call RECV_nTx_nPol
+            call ini_BC_from_file(grid)
+            call RECV_BC_form_Master
+      end if    
+    end if    
 #else
-
       call setGrid(grid)
-
 #endif
 
 
@@ -63,7 +76,7 @@ program Mod3DMT
 			    call Worker_job(sigma0,allData)
 	            if (trim(worker_job_task%what_to_do) .eq. 'Job Completed')  then
 	               	 call deallGlobalData()
-		             call cleanUp_MPI()
+		             !call cleanUp_MPI()
 	                 call MPI_destructor
 	              stop
 	            end if
@@ -102,6 +115,7 @@ program Mod3DMT
         call fwdPred(sigma0,allData,eAll)
 #endif
 
+
         ! write out all impedances
         call write_dataVectorMTX(allData,cUserDef%wFile_Data)
 
@@ -126,7 +140,7 @@ program Mod3DMT
         write(*,*) 'Multiplying by J...'
 
 #ifdef MPI
-            !call Master_job_Jmult(dsigma,sigma0,allData)
+            call Master_job_Jmult(dsigma,sigma0,allData)
             call Master_job_STOP_MESSAGE
 #else
             call Jmult(dsigma,sigma0,allData)
@@ -138,14 +152,31 @@ program Mod3DMT
      case (MULT_BY_J_T)
         write(*,*) 'Multiplying by J^T...'
 #ifdef MPI
-         call Master_job_fwdPred(sigma0,allData,eAll)
-         call Master_job_JmultT(sigma0,allData,dsigma,eAll)
+         !call Master_job_fwdPred(sigma0,allData,eAll)
+         call Master_job_JmultT(sigma0,allData,dsigma)
          call Master_job_STOP_MESSAGE
 #else
          call JmultT(sigma0,allData,dsigma)
 #endif
 
          call write_modelParam(dsigma,cUserDef%wFile_dModel)
+         
+     case (MULT_BY_J_T_multi_Tx)
+        write(*,*) 'Multiplying by J^T...output multi-Tx model vectors'
+#ifdef MPI
+         call Master_job_fwdPred(sigma0,allData,eAll)
+         call Master_job_JmultT(sigma0,allData,dsigma,eAll,JT_multi_Tx_vec)
+         call Master_job_STOP_MESSAGE
+#else
+         call fwdPred(sigma0,allData,eAll)
+         call JmultT(sigma0,allData,dsigma,eAll,JT_multi_Tx_vec)
+#endif
+         open(unit=ioSens, file=cUserDef%wFile_dModel, form='unformatted', iostat=ios)
+         write(0,*) 'Output JT_multi_Tx_vec...'
+         write(header,*) 'JT multi_Tx vectors'
+         write(ioSens) header
+         call writeVec_modelParam_binary(size(JT_multi_Tx_vec),JT_multi_Tx_vec,header,cUserDef%wFile_dModel)
+         close(ioSens)
 
      case (INVERSE)
      	if (trim(cUserDef%search) == 'NLCG') then
@@ -154,13 +185,14 @@ program Mod3DMT
             sigma1 = dsigma
            	call NLCGsolver(allData,cUserDef%lambda,sigma0,sigma1,cUserDef%rFile_invCtrl)
 
+
 #ifdef MPI
         	call Master_job_STOP_MESSAGE
 #endif
     	elseif (trim(cUserDef%search) == 'DCG') then
         	write(*,*) 'Starting the DCG search...'
         	sigma1 = dsigma
-        	call DCGsolver(allData,sigma0,sigma1,cUserDef%lambda)
+        	call DCGsolver(allData,sigma0,sigma1,cUserDef%lambda,cUserDef%rFile_invCtrl)
             !call Marquardt_M_space(allData,sigma0,sigma1,cUserDef%lambda)
 #ifdef MPI
         	call Master_job_STOP_MESSAGE
@@ -177,7 +209,7 @@ program Mod3DMT
         	call write_dataVectorMTX(allData,cUserDef%wFile_Data)
         end if
 
-     case (APPLY_COV)
+case (APPLY_COV)
         select case (cUserDef%option)
             case('FWD')
                 write(*,*) 'Multiplying input model parameter by square root of the covariance ...'
@@ -223,11 +255,11 @@ program Mod3DMT
 
      end select
 	 ! cleaning up
-	 call deallGlobalData()
+	 !call deallGlobalData()
 
 #ifdef MPI
             close(ioMPI)
-	    call cleanUp_MPI()
+	     ! call cleanUp_MPI()
 #else
             call cleanUp()
 #endif

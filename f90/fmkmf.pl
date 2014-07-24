@@ -267,10 +267,10 @@ print "\n# Here is the link step \n";
 
 if ($WIN) {
 	print "$execfile: \$(OBJDIR) \$(OBJ) \n";
-	print "\t \$(F90) /link \$(OUTDIR)/$execfile \$(OBJ) \$(LIBS) \$(LIBS_PATH)\n";
+	print "\t \$(F90) /link \$(OUTDIR)/$execfile \$(OBJ) \$(LIBS_PATH) \$(LIBS)\n";
 } else {
 	print "$execfile: \$(OBJDIR) \$(OBJ) \n";
-	print "\t \$(F90) -o \$(OUTDIR)/$execfile \$(OBJ) \$(LIBS) \$(LIBS_PATH)\n";
+	print "\t \$(F90) -o \$(OUTDIR)/$execfile \$(OBJ) \$(LIBS_PATH) \$(LIBS)\n";
 }
 # print "\trm -f *.mod \n";
 

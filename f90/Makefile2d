@@ -2,11 +2,11 @@
 # Generated using: ./fmkmf.pl [OPTIONS] Mod2DMT.f90 > Makefile
 # with command line options
 # -p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/DICT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod
-# -f90 pgf95 (compiler)
-# -opt -O3 -fastsse -mp -tp=istanbul-64 (compiler optimisation)
-# -lp ${PGI}/linux86-64/current/lib (linking options: path to libraries)
-# -l -llapack -lblas -lpgftnrtl -Mconcur -mp (linking options)
-# -o ./objs/2D_MT/PGIRelease (output directory for object files)
+# -f90 gfortran (compiler)
+# -opt -O3 -ffree-line-length-none (compiler optimisation)
+# -lp /usr/lib64 (linking options: path to libraries)
+# -l -llapack -lblas (linking options)
+# -o ./objs/2D_MT/GFortRelease (output directory for object files)
 
 #  Uncomment these lines to make program for Solaris OS (legacy)
 # F90 = f90
@@ -44,13 +44,13 @@
 
 # ------------------Macro-Defs---------------------
 include Makefile.local
-OBJDIR = ./objs/2D_MT/PGIRelease
-F90 = pgf95 
-FFLAGS = -O3 -fastsse -mp -tp=istanbul-64
-MPIFLAGS = -Mpreprocess
-MODULE = -module $(OBJDIR)
-LIBS_PATH = -L${PGI}/linux86-64/current/lib
-LIBS = -llapack -lblas -lpgftnrtl -Mconcur -mp
+OBJDIR = ./objs/2D_MT/GFortRelease
+F90 = gfortran 
+FFLAGS = -O3 -ffree-line-length-none
+MPIFLAGS = -x f95-cpp-input
+MODULE = --sysroot=$(OBJDIR)
+LIBS_PATH = -L/usr/lib64
+LIBS = -llapack -lblas
 
 # -------------------End-macro-Defs---------------------------
 OBJ = $(OBJDIR)/math_constants.o $(OBJDIR)/utilities.o $(OBJDIR)/file_units.o $(OBJDIR)/DataSpace.o $(OBJDIR)/GridDef.o $(OBJDIR)/EMfield.o $(OBJDIR)/ModelSpace.o $(OBJDIR)/SensMatrix.o $(OBJDIR)/EMfieldInterp.o $(OBJDIR)/transmitters.o $(OBJDIR)/SolnSpace.o $(OBJDIR)/receivers.o $(OBJDIR)/dataTypes.o $(OBJDIR)/DataFunc.o $(OBJDIR)/DataSens.o $(OBJDIR)/SolverSens.o $(OBJDIR)/WSfwd2D.o $(OBJDIR)/FwdTEmod.o $(OBJDIR)/FwdTMmod.o $(OBJDIR)/ForwardSolver.o $(OBJDIR)/SensComp.o $(OBJDIR)/SymmetryTest.o $(OBJDIR)/UserCtrl.o $(OBJDIR)/ioAscii.o $(OBJDIR)/DataIO.o $(OBJDIR)/Main.o $(OBJDIR)/NLCG.o $(OBJDIR)/DCG.o $(OBJDIR)/Mod2DMT.o 
@@ -60,7 +60,7 @@ all: Mod2DMT
 
 # Here is the link step 
 Mod2DMT: $(OBJDIR) $(OBJ) 
-	 $(F90) -o $(OUTDIR)/Mod2DMT $(OBJ) $(LIBS) $(LIBS_PATH)
+	 $(F90) -o $(OUTDIR)/Mod2DMT $(OBJ) $(LIBS_PATH) $(LIBS)
 
 # Here are the compile steps 
 

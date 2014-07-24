@@ -8,34 +8,34 @@ if [ -e $1 ]; then
 fi
 if [ $2 = "debug" ]; then
 # Debug configuration
-perl fmkmf.pl -f90 g95 \
--opt '-g -ftrace=frame -fbounds-check' \
--mpi '-cpp' \
--o './objs/2D_MT/G95Debug' \
+perl fmkmf.pl -f90 gfortran \
+-opt '-g -fbacktrace -fbounds-check -ffree-line-length-none' \
+-mpi '-x f95-cpp-input' \
+-o './objs/2D_MT/GFortDebug' \
 -l '-llapack -lblas' \
--lp '/usr/local/lib' \
+-lp '/usr/lib64' \
 -p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/DICT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod \
 Mod2DMT.f90 > $1
 
 elif [ $2 = "release" ]; then
 # Release configuration
-perl fmkmf.pl -f90 g95 \
--opt '-O3' \
--mpi '-cpp' \
--o './objs/2D_MT/G95Release' \
+perl fmkmf.pl -f90 gfortran \
+-opt '-O3 -ffree-line-length-none' \
+-mpi '-x f95-cpp-input' \
+-o './objs/2D_MT/GFortRelease' \
 -l '-llapack -lblas' \
--lp '/usr/local/lib' \
+-lp '/usr/lib64' \
 -p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/DICT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod \
 Mod2DMT.f90 > $1
 
 else
 # MPI configuration (not tested)
-perl fmkmf.pl -f90 g95 \
--opt '-O3' \
--mpi '-cpp -DMPI' \
--o './objs/2D_MT/G95ReleaseMPI' \
+perl fmkmf.pl -f90 gfortran \
+-opt '-O3 -ffree-line-length-none' \
+-mpi '-x f95-cpp-input -DMPI' \
+-o './objs/2D_MT/GFortReleaseMPI' \
 -l '-llapack -lblas' \
--lp '/usr/local/lib' \
+-lp '/usr/lib64' \
 -p .:INV:LAPACK:SENS:UTILS:2D_MT:2D_MT/DICT:2D_MT/modelParam:2D_MT/FWD:2D_MT/ioMod \
 Mod2DMT.f90 > $1
 fi

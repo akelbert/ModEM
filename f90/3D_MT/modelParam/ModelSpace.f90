@@ -206,6 +206,13 @@ Contains
      endif
 
    end subroutine deall_modelParam
+      
+	!**********************************************************************
+  subroutine getType_modelParam(m,paramType)
+      type(modelParam_t), intent(in)    :: m
+      character(*), intent(out)		      :: paramType
+	  paramType=trim(m%paramType)
+ end subroutine getType_modelParam
 
    !**********************************************************************
    ! Converts the input model parameter structure to paramType, by
