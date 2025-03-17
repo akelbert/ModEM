@@ -28,6 +28,21 @@ Nodes_Status_*
 .*.swp
 .DS_store
 
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
 # Hide MatLab files too, just in case
 # MatLab files to ignore
 # Windows default autosave extension
