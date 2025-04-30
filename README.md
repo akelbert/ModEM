@@ -52,6 +52,7 @@ remote: Compressing objects: 100% (54/54), done.
 remote: Total 18608 (delta 162), reused 152 (delta 145), pack-reused 18409 (from 1)
 Receiving objects: 100% (18608/18608), 73.43 MiB | 13.34 MiB/s, done.
 Resolving deltas: 100% (14565/14565), done.
+$ git checkout classic
 ```
 
 For more information on Git, GitHub and cloning, please see:
