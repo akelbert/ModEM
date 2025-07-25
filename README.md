@@ -293,6 +293,13 @@ Egbert, Gary & Kelbert, Anna. (2012). Computational recipes for electromagnetic
 inverse problems. Geophysical Journal International. 189. 251-267.
 10.1111/j.1365-246X.2011.05347.x. 
 
+If you use the SP versions in your work, please cite this source (divergence-free 
+method) as well: 
+
+Hao Dong,  Gary D. Egbert. Divergence-free solutions to electromagnetic forward 
+and adjoint problems: a regularization approach, Geophysical Journal International,
+Volume 216(2), 2019, Pages 906–918, https://doi.org/10.1093/gji/ggy462
+
 If you use the CUDA/HIP interfaces of ModEM in your work, please also
 cite the following source:
 
