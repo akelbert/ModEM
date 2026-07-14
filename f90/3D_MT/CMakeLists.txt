@@ -21,7 +21,6 @@ add_subdirectory(modelParam)
 
 target_sources(${MODEM_EXE} 
     PRIVATE DataFunc.f90
-    PRIVATE DataIO.f90
     PRIVATE EMfieldInterp.f90
     PRIVATE ForwardSolver.f90
     PRIVATE GridDef.f90
@@ -29,9 +28,11 @@ target_sources(${MODEM_EXE}
     PRIVATE SolnSpace.f90
     PRIVATE SolverSens.f90
     PRIVATE Sub_MPI.f90
+    PRIVATE DataIO.f90
+    PRIVATE DataIO_ASCII.f90
 )
 
-if (!BUILD_SPHERICAL)
+if (NOT BUILD_SPHERICAL)
     target_sources(${MODEM_EXE}
         PRIVATE GridCalc.f90
     )
