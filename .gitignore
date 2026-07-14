@@ -101,6 +101,7 @@ src/**Makefile
 out/
 build/
 install/
+debug/
 *.cmake
 cmake_install.cmake
 install_manifest.txt
@@ -112,3 +113,9 @@ CMakeUserPresets.json
 # Visual Studio Cache
 .vs/
 .vscode/
+*.code-workspace
+
+# Local AI configs and help files
+.claude/
+CLAUDE.md
+git_workflow_reminder.md
