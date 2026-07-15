@@ -40,7 +40,7 @@
             }
         },
 
- 
+
         {
             "name": "linux-base",
             "hidden": true,
@@ -98,6 +98,40 @@
             "inherits": "windows-base",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
+                "BUILD_MPI": "ON",
+                "BUILD_HDF5": "OFF",
+                "BUILD_GPU": "OFF",
+                "USE_C_TIMERS": "OFF",
+                "FG": "ON",
+                "FORWARD_FORMULATION": "SP2",
+                "MODEM_BUILD_DIMS": "3D"
+            }
+        },
+        {
+            "name": "win-debug-sp2-sph-serial",
+            "displayName": "Windows Debug SP2 Spherical (no MPI, no HDF5, no GPU)",
+            "inherits": "windows-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "FORCE_SPHERICAL": "ON",
+                "BUILD_SPHERICAL": "ON",
+                "BUILD_MPI": "OFF",
+                "BUILD_HDF5": "OFF",
+                "BUILD_GPU": "OFF",
+                "USE_C_TIMERS": "OFF",
+                "FG": "OFF",
+                "FORWARD_FORMULATION": "SP2",
+                "MODEM_BUILD_DIMS": "3D"
+            }
+        },
+        {
+            "name": "win-debug-sp2-sph-mpi",
+            "displayName": "Windows Debug SP2 Spherical + MPI",
+            "inherits": "windows-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "FORCE_SPHERICAL": "ON",
+                "BUILD_SPHERICAL": "ON",
                 "BUILD_MPI": "ON",
                 "BUILD_HDF5": "OFF",
                 "BUILD_GPU": "OFF",
