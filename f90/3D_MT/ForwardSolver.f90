@@ -26,7 +26,16 @@ logical, save, public   :: NESTED_BC = .false.
 logical, save, public   :: BC_FROM_RHS_FILE = .false.
 logical, save, public   :: BC_FROM_E0_FILE = .false.
 
-! option to read a primary solution from file for SFF
+! Secondary field formulation (SFF) controls.
+!  USE_SFF                 -- master switch: compute the forward problem via the
+!                            secondary field formulation (set by the -E job OR the
+!                            optional namelist SFF=.true.). Drives fwd_mechanism_of.
+!  PRIMARY_MODEL_FROM_FILE -- read the 1D background model sigma1D from a file
+!                            (otherwise laterally average the 3D model -- reserved).
+!  PRIMARY_E_FROM_FILE     -- read the primary E-field from a file
+!                            (otherwise compute the 1D primary internally -- reserved).
+logical, save, public   :: USE_SFF = .false.
+logical, save, public   :: PRIMARY_MODEL_FROM_FILE = .false.
 logical, save, public   :: PRIMARY_E_FROM_FILE = .false.
 
 !=======================================================================
@@ -184,6 +193,30 @@ end subroutine unpack_BC_from_file
 
 
    !**********************************************************************
+   ! Resolve the forward COMPUTATION mechanism for transmitter iTx -- how the
+   ! FWD problem's RHS/source is built (MT boundary conditions, CSEM dipole,
+   ! SFF interior anomaly source, TIDE, GLOBAL). This is DECOUPLED from the
+   ! data type (txDict%Tx_type), which continues to govern nPol and the data
+   ! functionals. Rule: use the secondary-field formulation ('SFF') whenever
+   ! the SFF override is active (USE_SFF -- set by the -E job or the optional
+   ! namelist SFF=.true., meaning "compute via SFF") OR the transmitter is
+   ! natively 'SFF'; otherwise the transmitter's own type. So an MT (or CSEM /
+   ! TIDE / GLOBAL) data set can be COMPUTED via SFF without changing its data
+   ! functionals. The result is cached in txDict%fwd_mechanism (metadata / file
+   ! headers). Every source-building switch in initSolver*/fwdSetup/fwdSolve
+   ! uses THIS, not Tx_type directly.
+   function fwd_mechanism_of(iTx) result(mech)
+       integer, intent(in) :: iTx
+       character(10)       :: mech
+       if (USE_SFF .or. (trim(txDict(iTx)%Tx_type) == 'SFF')) then
+           mech = 'SFF'
+       else
+           mech = trim(txDict(iTx)%Tx_type)
+       end if
+       txDict(iTx)%fwd_mechanism = mech
+   end function fwd_mechanism_of
+
+   !**********************************************************************
    subroutine initSolver(iTx,sigma,grid,e0,e,comb)
    !   Initializes forward solver for transmitter iTx.
    !     Idea is to call this before calling fwdSolve or sensSolve,
@@ -271,7 +304,7 @@ end subroutine unpack_BC_from_file
 !      sigmaNotCurrent = .false.
 !   endif
 
-   if (txDict(iTx)%Tx_type=='SFF') then
+   if (fwd_mechanism_of(iTx)=='SFF') then
       ! compute sigma-sigma1D for the source... NOT PHYSICAL!
       !Call linComb_modelParam(ONE,sigma,MinusONE,sigmaPrimary,sigmaTemp)
       ! sigmaTemp is the anomalous conductivity, map it onto edges
@@ -379,7 +412,7 @@ end subroutine unpack_BC_from_file
 !      sigmaNotCurrent = .false.
 !   endif
 
-   if (txDict(iTx)%Tx_type=='SFF') then
+   if (fwd_mechanism_of(iTx)=='SFF') then
       ! compute sigma-sigma1D for the source... NOT PHYSICAL!
       !Call linComb_modelParam(ONE,sigma,MinusONE,sigmaPrimary,sigmaTemp)
       ! sigmaTemp is the anomalous conductivity, map it onto edges
@@ -490,7 +523,7 @@ end subroutine unpack_BC_from_file
 !      sigmaNotCurrent = .false.
 !   endif
 
-   if (txDict(iTx)%Tx_type=='SFF') then
+   if (fwd_mechanism_of(iTx)=='SFF') then
       ! compute sigma-sigma1D for the source... NOT PHYSICAL!
       !Call linComb_modelParam(ONE,sigma,MinusONE,sigmaPrimary,sigmaTemp)
       ! sigmaTemp is the anomalous conductivity, map it onto edges
@@ -598,7 +631,7 @@ end subroutine unpack_BC_from_file
 !      sigmaNotCurrent = .false.
 !   endif
 
-   if (txDict(iTx)%Tx_type=='SFF') then
+   if (fwd_mechanism_of(iTx)=='SFF') then
       ! compute sigma-sigma1D for the source... NOT PHYSICAL!
       !Call linComb_modelParam(ONE,sigma,MinusONE,sigmaPrimary,sigmaTemp)
       ! sigmaTemp is the anomalous conductivity, map it onto edges
@@ -695,7 +728,7 @@ end subroutine unpack_BC_from_file
     ! (2) CSEM has a source term while that of MT is zeros
     ! Initialize the RHS vector; should we always clean it up on input?
     if (.not. b0%allocated) then
-      select case (txDict(iTx)%Tx_type)
+      select case (fwd_mechanism_of(iTx))
       case ('CSEM','SFF')
         b0%nonzero_Source = .true.
         b0%sparse_Source = .false.
@@ -721,7 +754,7 @@ end subroutine unpack_BC_from_file
     do j = 1,e0%nPol
         iMode = e0%Pol_index(j)
 
-        select case (txDict(iTx)%Tx_type)
+        select case (fwd_mechanism_of(iTx))
 
             case ('CSEM')
                 !  set period, complete setup of 3D EM equation system
@@ -828,9 +861,9 @@ end subroutine unpack_BC_from_file
    i_omega_mu = cmplx(0.,ISIGN*MU_0*omega,kind=prec)
 
    !  complete operator intialization, for this frequency
-   if (txDict(iTx)%Tx_type=='CSEM') then 
+   if (fwd_mechanism_of(iTx)=='CSEM') then
 
-      ! THIS IS THE TEMPORARY SETUP FOR CSEM - NOT ACTIVE AT PRESENT [AK] 
+      ! THIS IS THE TEMPORARY SETUP FOR CSEM - NOT ACTIVE AT PRESENT [AK]
       ! Now finish up the computation of the general b0%s = - ISIGN * i\omega\mu_0 j
       !call diagMult(condAnomaly,E_P,b0%s)
       !call scMult(-i_omega_mu,b0%s,b0%s)
@@ -846,8 +879,8 @@ end subroutine unpack_BC_from_file
       !term=1.0/10.0 ! txDict(iTx)%Moment  
       !call scMult(term,e0%pol(1),e0%pol(1))
 
-   elseif (txDict(iTx)%Tx_type=='SFF') then 
- 
+   elseif (fwd_mechanism_of(iTx)=='SFF') then
+
       ! General b0%s = - ISIGN * i\omega\mu_0 (sigma-sigma1d) E1D already computed
       do iMode = 1,e0%nPol
          ! Extract primary solution again...
@@ -866,7 +899,7 @@ end subroutine unpack_BC_from_file
          call add(E_p,e0%pol(iMode),e0%pol(iMode))
       enddo
 
-   elseif ((txDict(iTx)%Tx_type=='MT') .or. (txDict(iTx)%Tx_type=='TIDE')) then
+   elseif ((fwd_mechanism_of(iTx)=='MT') .or. (fwd_mechanism_of(iTx)=='TIDE')) then
        !  loop over polarizations
        do iMode = 1,e0%nPol
        ! compute boundary conditions for polarization iMode

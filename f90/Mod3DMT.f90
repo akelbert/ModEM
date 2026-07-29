@@ -139,25 +139,35 @@ program Mod3DMT
     end if
 #endif
 
+    ! ---------------------------------------------------------------------
+    ! Load the SFF primary: the 1D background model (sigmaPrimary) and the
+    ! primary E-field (eAllPrimary). Under MPI every rank reads the files
+    ! directly (there is currently no master->worker broadcast of the primary).
+    ! The reserved pathways (depth-averaged model / internally-computed field)
+    ! abort in initGlobalData before reaching here, but are guarded here too so
+    ! that activating them later is a localized change.
+    ! ---------------------------------------------------------------------
+    if (USE_SFF) then
+        ! primary 1D background model sigma1D
+        if (PRIMARY_MODEL_FROM_FILE) then
+            call read_modelParam(grid,airLayers,sigmaPrimary,cUserDef%rFile_Model1D)
+        else
+            call errStop('SFF: depth-averaged primary 1D model is not yet implemented')
+        end if
+        ! primary E-field
+        if (PRIMARY_E_FROM_FILE) then
+            call read_solnVectorMTX(grid,eAllPrimary,cUserDef%rFile_EMsoln)
 #ifdef MPI
-    if (PRIMARY_E_FROM_FILE) then
-        if (taskid==0) then
-            call read_solnVectorMTX(grid,eAllPrimary,cUserDef%rFile_EMsoln)
+            if (taskid==0) then
+#endif
             write(0,*) 'Read the primary electric field solutions for',eAllPrimary%nTx,' periods'
-            call read_modelParam(grid,airLayers,sigmaPrimary,cUserDef%rFile_Model1D)
-       else
-            ! need to logic to fetch the interior source from the master node
-            ! for now, just reading the files again on each node!
-            call read_solnVectorMTX(grid,eAllPrimary,cUserDef%rFile_EMsoln)
-            call read_modelParam(grid,airLayers,sigmaPrimary,cUserDef%rFile_Model1D)
+#ifdef MPI
+            end if
+#endif
+        else
+            call errStop('SFF: internally-computed primary E-field is not yet implemented')
         end if
     end if
-#else
-    if (PRIMARY_E_FROM_FILE) then
-        call read_solnVectorMTX(grid,eAllPrimary,cUserDef%rFile_EMsoln)
-        call read_modelParam(grid,airLayers,sigmaPrimary,cUserDef%rFile_Model1D)
-    end if
-#endif
 
 #ifdef MPI
       ! for debug

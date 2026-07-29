@@ -25,8 +25,17 @@ module transmitters
 
   type :: transmitter_t
 
-     ! defines the kind of transmitter: MT, CSEM, SFF, TIDE, GLOBAL
+     ! defines the kind of transmitter: MT, CSEM, SFF, TIDE, GLOBAL.
+     ! tx_type governs the DATA side: which data functionals apply and nPol.
      character(10)		        :: tx_type=''
+     ! forward COMPUTATION mechanism -- how the RHS/source of the FWD problem is
+     ! built (MT boundary conditions, CSEM dipole, SFF interior anomaly source,
+     ! TIDE, GLOBAL). Decoupled from tx_type so an MT (or CSEM/TIDE/GLOBAL) data
+     ! set can be COMPUTED via the secondary-field formulation without changing
+     ! its data functionals: resolved as SFF iff (SFF override is active .or.
+     ! tx_type=='SFF'), else = tx_type. Empty until resolved (see ForwardSolver's
+     ! resolve_fwd_mechanism); fwdSetup/fwdSolve switch the source on THIS field.
+     character(10)               :: fwd_mechanism=''
      ! attributes common for all transmitter types:
      integer				:: nPol !while setting up the Tx, nPol=2 for MT and 1 for CSEM
      ! angular frequency (radians/sec), and for convenience period (s)

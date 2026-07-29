@@ -530,10 +530,33 @@ Contains
           write(0,*) 'WARNING: grid is not set up properly in read_solnVectorMTX'
       end if
 
+      ! cross-check the number of periods (data file / txDict vs E-field file)
+      if (nTx /= size(txDict)) then
+          write(0,'(a,i5,a,i5,a)') &
+              'WARNING (read_solnVectorMTX): E-field file has ',nTx, &
+              ' period(s) but the transmitter dictionary has ',size(txDict),'.'
+      end if
+
       call create_solnVectorMTX(nTx,eAll)
       do iTx=1,nTx
-          call create_solnVector(Larg_Grid,iTx,eAll%solns(iTx))
-      end do		  
+          ! Size each solution to the number of modes actually stored in the
+          ! FILE (nMode, from the header via FileReadInit) rather than assuming
+          ! txDict's value -- lets -E/SFF read N>=1 polarizations. Warn if the
+          ! file's mode count disagrees with what the run set up (e.g. data file
+          ! expected 2, E-field file has N). For SFF the primary field file is
+          ! authoritative, so adopt its mode count into txDict as well, so the
+          ! secondary solve (e0, sized from txDict) runs the same N modes.
+          if (nMode /= txDict(iTx)%nPol) then
+              write(0,'(a,i4,a,i2,a,i2,a)') &
+                  'WARNING (read_solnVectorMTX): transmitter ',iTx, &
+                  ' expects nPol=',txDict(iTx)%nPol,' but E-field file has ',nMode, &
+                  ' mode(s); using the file value.'
+              if (trim(txDict(iTx)%tx_type) == 'SFF') then
+                  txDict(iTx)%nPol = nMode
+              end if
+          end if
+          call create_solnVector(Larg_Grid,iTx,eAll%solns(iTx),nMode)
+      end do
 		  
 		  
           nRecSkip = 0
@@ -588,6 +611,9 @@ Contains
 
           write(*,*) 'E-fields written to ',trim(fn_output)
 
+          ! write the ACTUAL number of polarizations into the header (was
+          ! hardcoded nMode=2). SFF may carry N>=1; MT is unchanged (nPol=2).
+          nMode = eAll%solns(1)%nPol
           call FileWriteInit(version,fn_output,ioE,eAll%solns(1)%grid,eAll%nTX,nMode,ios)
           do j = 1,eAll%nTx
              do k = 1,eAll%solns(j)%nPol

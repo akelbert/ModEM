@@ -54,8 +54,14 @@ module UserCtrl
 	character(80)       :: wFile_dModel
 	character(80)       :: wFile_EMsoln, wFile_EMrhs, wFile_Sens
 
-    ! Primary Field information
-    character(80)       :: primary_field ! Method for primary field, 'gen', 'file'
+    ! Primary Field information (for the secondary field formulation, SFF)
+    ! primary_model: source of the 1D background model sigma1D, 'file' | 'average'
+    !                ('average' = laterally average the 3D model at each depth)
+    ! primary_field: source of the primary E-field, 'file' | 'compute'
+    !                ('compute' = compute the 1D primary internally)
+    character(80)       :: primary_model
+    character(80)       :: primary_model_file
+    character(80)       :: primary_field
     character(80)       :: primary_field_file
 
 	! Specify covariance configuration
@@ -127,6 +133,8 @@ Contains
   	ctrl%rFile_Prior = 'n'
   	ctrl%wFile_Sens = 'n'
   	ctrl%rFile_Cov = 'n'
+    ctrl% primary_model = 'n'
+    ctrl% primary_model_file = 'n'
     ctrl% primary_field = 'n'
     ctrl% primary_field_file = 'n'
   	ctrl%search = 'NLCG'
@@ -1041,13 +1049,17 @@ Contains
      character (len=256) :: iomsg
 
      ! Namlist - &grid - section
+     character(len=80) :: primary_model
+     character(len=80) :: primary_model_file
      character(len=80) :: primary_field
      character(len=80) :: primary_field_file
      logical :: sff
 
-     namelist /grid/ sff, primary_field, primary_field_file
+     namelist /grid/ sff, primary_model, primary_model_file, primary_field, primary_field_file
 
      sff = ctrl % SFF
+     primary_model = ctrl % primary_model
+     primary_model_file = ctrl % primary_model_file
      primary_field = ctrl % primary_field
      primary_field_file = ctrl % primary_field_file
 
@@ -1068,6 +1080,8 @@ Contains
      write(0,*) "Optional namelist section '&grid' was read!"
 
      ctrl % SFF = sff
+     ctrl % primary_model = primary_model
+     ctrl % primary_model_file = primary_model_file
      ctrl % primary_field = primary_field
      ctrl % primary_field_file = primary_field_file
 
@@ -1080,9 +1094,11 @@ Contains
       integer :: nl_fid
 
       write(nl_fid, *) '&grid'
-      write(nl_fid, *) '    SFF = .false.  ! Currently unused'
-      write(nl_fid, *) '    primary_field = "file" ! Currently unused'
-      write(nl_fid, *) '    primary_field_file = "none" ! Currently unused'
+      write(nl_fid, *) '    SFF = .false.  ! .true. forces the secondary field formulation (SFF)'
+      write(nl_fid, *) '    primary_model = "file"      ! source of the 1D model: "file" | "average"'
+      write(nl_fid, *) '    primary_model_file = "none" ! 1D model file when primary_model = "file"'
+      write(nl_fid, *) '    primary_field = "file"      ! source of the primary E-field: "file" | "compute"'
+      write(nl_fid, *) '    primary_field_file = "none" ! primary E-field (.esoln) when primary_field = "file"'
       write(nl_fid, *) '/'
 
   end subroutine gen_nml_section_grid 

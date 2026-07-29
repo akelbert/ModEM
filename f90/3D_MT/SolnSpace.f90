@@ -165,21 +165,31 @@ contains
 !           Basic solnVector methods
 !**********************************************************************
 
-     subroutine create_solnVector(grid,iTx,e)
+     subroutine create_solnVector(grid,iTx,e,nPol)
 
      !  generic routine for creating the solnVector type for 3D problems:
-     !  number of polarization obtained from the transmitter dictionary
+     !  number of polarizations obtained from the transmitter dictionary,
+     !  UNLESS the optional nPol is supplied (e.g. by read_solnVectorMTX, to
+     !  size a solution to the number of modes actually stored in a file --
+     !  needed for SFF, which may carry N>=1 polarizations, not just 2).
 
        implicit none
        type(grid_t), intent(in), target	    :: grid
        integer, intent(in)                  :: iTx
        type (solnVector_t), intent(inout)		:: e
+       integer, intent(in), optional        :: nPol
 
        ! local variables
-       integer				:: k,istat,iPol
+       integer				:: k,istat,iPol,nP
+
+       if (present(nPol)) then
+          nP = nPol
+       else
+          nP = txDict(iTx)%nPol
+       end if
 
        if (e%allocated) then
-          if (associated(e%grid, target=grid) .and. (e%tx == iTx)) then
+          if (associated(e%grid, target=grid) .and. (e%tx == iTx) .and. (e%nPol == nP)) then
              ! do nothing
              return
           else
@@ -187,32 +197,35 @@ contains
           end if
        end if
 
-       e%nPol = txDict(iTx)%nPol
+       e%nPol = nP
 	   allocate(e%Pol_index(e%nPol), STAT=istat)
        allocate(e%Pol_name(e%nPol), STAT=istat)
-       
+
        do iPol=1,e%nPol
         e%Pol_index(iPol)=iPol
        end do
-       
-       ! set up the mode names based on transmitter type;
-       ! for now, only set up for MT. Used for I/O.
+
+       ! set up the mode names. Used for the descriptive ModeName label in
+       ! .esoln/.rhs file headers only (Pol_name is never read by DataFunc.f90
+       ! or any data/impedance/Jacobian code -- those use the plain integer
+       ! index throughout -- so labels do NOT affect Zxy/Zyx, transfer
+       ! functions, predicted data, or inversion).
        ! FIX (2026-07-27): boundary_ws.f90/boundary_wsS.f90's BC_x0_WS computes
        ! imode=1 as Ey-polarization (only E0%y set) and imode=2 as
-       ! Ex-polarization (only E0%x set) -- the labels below previously had
-       ! this backwards (Pol_name(1)='Ex'), mislabeling the ModeName string
-       ! written into .esoln/.rhs file headers. Confirmed cosmetic-only: Pol_name
-       ! is never read by DataFunc.f90 or any other data/impedance/Jacobian
-       ! code (those use the plain integer index throughout), so this does not
-       ! change Zxy/Zyx, transfer functions, -F predicted-data output, or
-       ! inversion results -- only the descriptive label in solution/RHS files.
-       if (trim(txDict(iTx)%tx_type) .eq. 'MT') then
-        if (e%nPol == 2) then
+       ! Ex-polarization (only E0%x set) -- the MT labels below previously had
+       ! this backwards (Pol_name(1)='Ex').
+       ! GENERALIZED (2026-07-29): MT keeps its Ey/Ex labels (still requires
+       ! exactly 2 pols); any other type (e.g. SFF with N pols) gets generic
+       ! per-mode labels 'E1'..'EN', so N != 2 no longer aborts here.
+       if ((trim(txDict(iTx)%tx_type) .eq. 'MT') .and. (e%nPol == 2)) then
             e%Pol_name(1) = 'Ey'
             e%Pol_name(2) = 'Ex'
-        else
-         call errStop('problem creating MT modes in create_solnVector')
-        end if
+       else if (trim(txDict(iTx)%tx_type) .eq. 'MT') then
+            call errStop('problem creating MT modes in create_solnVector (MT requires exactly 2 polarizations)')
+       else
+            do iPol = 1,e%nPol
+                write(e%Pol_name(iPol),'(a1,i0)') 'E', iPol
+            end do
        end if
 
        allocate(e%pol(e%nPol), STAT=istat)

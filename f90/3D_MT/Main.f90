@@ -122,6 +122,71 @@ Contains
   end subroutine initAirLayers
 
   ! ***************************************************************************
+  ! * Configure the secondary field formulation (SFF) from the optional
+  ! * namelist (&grid SFF=.true.), used to force SFF for -F / -I whose command
+  ! * line does not carry a primary. Interprets primary_model / primary_field,
+  ! * sets the ForwardSolver flags PRIMARY_MODEL_FROM_FILE / PRIMARY_E_FROM_FILE,
+  ! * and copies the namelist file paths into the canonical rFile_Model1D /
+  ! * rFile_EMsoln consumed by the primary-load path. Only three combinations
+  ! * are supported; the two internally-computed-primary pathways are reserved
+  ! * (deactivated) for now.
+  subroutine configure_SFF_from_namelist(cUserDef)
+
+    type(userdef_control), intent(inout) :: cUserDef
+    logical       :: exists
+    character(80) :: pmodel, pfield
+
+    pmodel = adjustl(cUserDef%primary_model)
+    pfield = adjustl(cUserDef%primary_field)
+
+    ! --- source of the 1D background model sigma1D ---
+    select case (trim(pmodel))
+    case ('file')
+        PRIMARY_MODEL_FROM_FILE = .true.
+        cUserDef%rFile_Model1D = cUserDef%primary_model_file
+        inquire(FILE=cUserDef%rFile_Model1D, EXIST=exists)
+        if (.not. exists) then
+            call errStop('SFF namelist: primary_model_file not found: '//trim(cUserDef%rFile_Model1D))
+        end if
+    case ('average')
+        PRIMARY_MODEL_FROM_FILE = .false.   ! laterally average the 3D model
+    case default
+        call errStop("SFF namelist: primary_model must be 'file' or 'average' (got '"//trim(pmodel)//"')")
+    end select
+
+    ! --- source of the primary E-field ---
+    select case (trim(pfield))
+    case ('file')
+        PRIMARY_E_FROM_FILE = .true.
+        cUserDef%rFile_EMsoln = cUserDef%primary_field_file
+        inquire(FILE=cUserDef%rFile_EMsoln, EXIST=exists)
+        if (.not. exists) then
+            call errStop('SFF namelist: primary_field_file not found: '//trim(cUserDef%rFile_EMsoln))
+        end if
+    case ('compute')
+        PRIMARY_E_FROM_FILE = .false.       ! compute the 1D primary internally
+    case default
+        call errStop("SFF namelist: primary_field must be 'file' or 'compute' (got '"//trim(pfield)//"')")
+    end select
+
+    ! --- validate the supported combinations & guard the reserved pathways ---
+    if (PRIMARY_MODEL_FROM_FILE .and. PRIMARY_E_FROM_FILE) then
+        ! (1) primary_model='file', primary_field='file' -- ACTIVE
+        continue
+    else if (PRIMARY_MODEL_FROM_FILE .and. (.not. PRIMARY_E_FROM_FILE)) then
+        ! (2) primary_model='file', primary_field='compute' -- reserved
+        call errStop('SFF mode (primary_model=file, primary_field=compute) is not yet implemented')
+    else if ((.not. PRIMARY_MODEL_FROM_FILE) .and. (.not. PRIMARY_E_FROM_FILE)) then
+        ! (3) primary_model='average', primary_field='compute' -- reserved
+        call errStop('SFF mode (primary_model=average, primary_field=compute) is not yet implemented')
+    else
+        ! primary_model='average', primary_field='file' -- not a supported pairing
+        call errStop('SFF mode (primary_model=average, primary_field=file) is not supported')
+    end if
+
+  end subroutine configure_SFF_from_namelist
+
+  ! ***************************************************************************
   ! * InitGlobalData is the routine to call to initialize all derived data types
   ! * and other variables defined in modules basics, modeldef, datadef and
   ! * in this module. These include:
@@ -135,7 +200,9 @@ Contains
   subroutine initGlobalData(cUserDef)
 
 	implicit none
-	type (userdef_control), intent(in)          :: cUserDef
+	! intent(inout): for a namelist-driven SFF run we copy the primary
+	! model/field file paths into the canonical rFile_Model1D/rFile_EMsoln
+	type (userdef_control), intent(inout)       :: cUserDef
 	integer										:: i,ios=0,istat=0
 	logical                                     :: exists
 	character(80)                               :: paramtype,header
@@ -172,12 +239,38 @@ Contains
         NESTED_BC = .true.
       end if
     end if
-    ! Determine whether or not there is a primary solution file to read;
-    ! otherwise, if E field is supplied, grab the boundary conditions only
+    ! ---------------------------------------------------------------------
+    ! Decide the forward COMPUTATION mechanism (USE_SFF) and how the SFF
+    ! primary is supplied -- the 1D background model sigma1D and the primary
+    ! E-field. The secondary field formulation is activated either by:
+    !   (a) the -E (SECONDARY_FIELD) job, whose command line carries the
+    !       primary model (rFile_Model1D) and E-field (rFile_EMsoln) as
+    !       positional arguments; or
+    !   (b) the optional namelist SFF=.true., which lets -F / -I run the SFF
+    !       for data types (MT/CSEM/TIDE/GLOBAL) whose command line does NOT
+    !       carry a primary -- the primary is then described by the namelist
+    !       primary_model / primary_field (and their *_file paths).
+    ! Three primary-supply combinations are supported (see
+    ! configure_SFF_from_namelist):
+    !   (1) primary_model='file',    primary_field='file'    -- ACTIVE
+    !   (2) primary_model='file',    primary_field='compute' -- reserved (stub)
+    !   (3) primary_model='average', primary_field='compute' -- reserved (stub)
+    ! ---------------------------------------------------------------------
     inquire(FILE=cUserDef%rFile_EMsoln,EXIST=exists)
-    if (exists .and. (cUserDef%job==SECONDARY_FIELD)) then
+    if (cUserDef%job==SECONDARY_FIELD) then
+       ! -E job: primary 1D model and E-field come from the positional args.
+       if (.not. exists) then
+          call errStop('SECONDARY_FIELD (-E) requires a primary E-field solution file (rFile_EMsoln)')
+       end if
+       USE_SFF = .true.
+       PRIMARY_MODEL_FROM_FILE = .true.
        PRIMARY_E_FROM_FILE = .true.
+    elseif (cUserDef%SFF) then
+       ! Namelist-driven SFF override (e.g. for -F / -I).
+       USE_SFF = .true.
+       call configure_SFF_from_namelist(cUserDef)
     elseif (exists) then
+       ! Non-SFF job with an E-field file present: use it for BCs only.
        BC_FROM_E0_FILE = .true.
     end if
 
