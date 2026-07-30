@@ -618,7 +618,7 @@ Subroutine Master_job_fwdPred(sigma,d1,eAll,comm)
 
      ! local variables
      Integer        :: iper, comm_current
-     Integer        :: per_index,pol_index,stn_index,iTx,i,iDt,j
+     Integer        :: per_index,pol_index,stn_index,iTx,i,iDt,j,iPol
      character(80)  :: job_name
 
      ! nTX is number of transmitters;
@@ -667,9 +667,12 @@ Subroutine Master_job_fwdPred(sigma,d1,eAll,comm)
          do i = 1,d1%d(iTx)%nDt
              d1%d(iTx)%data(i)%errorBar = .false.
              iDt = d1%d(iTx)%data(i)%dataType
+             ! for single-field (SFF) data types, select the polarization this
+             ! block's mode name refers to (defaults to 1 for all other data)
+             iPol = pol_index_from_mode(eAll%solns(iTx),d1%d(iTx)%data(i)%modeName)
              do j = 1,d1%d(iTx)%data(i)%nSite
                  call dataResp(eAll%solns(iTx),sigma,iDt,d1%d(iTx)%data(i)%rx(j),d1%d(iTx)%data(i)%value(:,j), &
-                           d1%d(iTx)%data(i)%orient(j))
+                           d1%d(iTx)%data(i)%orient(j),iPol=iPol)
              end do
          end do
      end do

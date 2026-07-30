@@ -40,7 +40,7 @@ module dataFunc
 Contains
 
 !******************************************************************************
-  subroutine dataResp(ef,Sigma,iDT,iRX,Resp,Orient,Binv)
+  subroutine dataResp(ef,Sigma,iDT,iRX,Resp,Orient,Binv,iPol)
   ! given electric field solutions (both modes--and note
   !    that the solution knows about the transmitter used),
   ! and indices into data types and receiver dictionaries for one
@@ -48,6 +48,11 @@ Contains
   ! Orient is optional input argument that defines output data orientation.
   ! Binv is optional output argument, needed for linearized
   ! impedance calculation in this module (not used by higher levels)
+  ! iPol is optional input argument selecting which polarization of ef the
+  ! single-field data types (Ex/Ey/Bx/By/Bz -- used by the secondary field
+  ! formulation with N modes) are evaluated for; defaults to 1. It is ignored
+  ! by the multi-polarization functionals (e.g. impedance), which always use
+  ! all polarizations.
 
   implicit none
   type (solnVector_t), intent(in)		:: ef
@@ -76,7 +81,11 @@ Contains
   !  optional argument, useful for linearized impedance
   complex(kind=prec), intent(out), optional	:: Binv(2,2)
 
+  !  optional polarization selector for single-field data types (SFF)
+  integer, intent(in), optional :: iPol
+
   !  local variables
+  integer			:: iP
   integer			:: iMode, i,j,xyz,ij, iComp,ncomp,iFunc,nFunc
   real(kind=prec)	:: omega,x(3),x_ref(3),detX
   complex(kind=prec)    :: tempZ(4)
@@ -93,6 +102,10 @@ Contains
 
   !  probably should dependence on omega into BinterpSetup, as in 2D!
   omega = txDict(ef%tx)%omega
+
+  !  polarization selector for the single-field (SFF) data types; default 1
+  iP = 1
+  if (present(iPol)) iP = iPol
 
   ncomp = typeDict(iDT)%ncomp
   if(typeDict(iDT)%isComplex) then
@@ -119,27 +132,27 @@ Contains
 		   x = rxDict(iRX)%x     	
 		   xyz = 1
 		   call EinterpSetUp(ef%grid,x,xyz,Lex)		
-		   Z = dotProd_noConj_scvector_f(Lex,ef%pol(1))
+		   Z = dotProd_noConj_scvector_f(Lex,ef%pol(iP))
 	  case (Ey_Field)
 		   x = rxDict(iRX)%x     	
 		   xyz = 2
 		   call EinterpSetUp(ef%grid,x,xyz,Ley)		
-		   Z = dotProd_noConj_scvector_f(Ley,ef%pol(1))
+		   Z = dotProd_noConj_scvector_f(Ley,ef%pol(iP))
 	  case (Bx_Field)
 		   x = rxDict(iRX)%x
 		   xyz = 1
 		   call BfromESetUp(ef%grid,omega,x,xyz,Lbx)		
-		   Z = dotProd_noConj_scvector_f(Lbx,ef%pol(1))
+		   Z = dotProd_noConj_scvector_f(Lbx,ef%pol(iP))
 	  case (By_Field)
 		   x = rxDict(iRX)%x
 		   xyz = 2
 		   call BfromESetUp(ef%grid,omega,x,xyz,Lby)		
-		   Z = dotProd_noConj_scvector_f(Lby,ef%pol(1))
+		   Z = dotProd_noConj_scvector_f(Lby,ef%pol(iP))
 	  case (Bz_Field)
 		   x = rxDict(iRX)%x
 		   xyz = 3
 		   call BfromESetUp(ef%grid,omega,x,xyz,Lbz)   
-		   Z = dotProd_noConj_scvector_f(Lbz,ef%pol(1))	      
+		   Z = dotProd_noConj_scvector_f(Lbz,ef%pol(iP))	      
 	  case (Full_Impedance)
                x     = rxDict(iRX)%x         !Local site position (x,y,z)
          

@@ -119,6 +119,13 @@ Contains
     real(8)                         :: x(3),ref_x(3),Xx(3),Period,SI_factor,large
     real(8)                         :: lat,lon,ref_lat,ref_lon,rx_azimuth
     logical                         :: conjugate, isComplex
+    ! mode-aware output (secondary field formulation): local per-(txType,dataType,mode)
+    ! index arrays and the list of distinct mode names for the current data type
+    integer, allocatable            :: ltx_index(:),ldt_index(:),lrx_index(:,:)
+    character(20), allocatable      :: modeList(:)
+    character(20)                   :: thisMode
+    integer                         :: imode,m,nModeBlk
+    logical                         :: foundMode
     type(orient_t)                  :: azimu ! 2022.09.28, Liu Zhongyin, add azimuth for MT
     
     !===========================================================================
@@ -130,6 +137,10 @@ Contains
     real(8)                         :: Omega, Amplitude
 
     open(unit=ioDat,recl=4096,file=cfile,form='formatted',status='unknown')
+
+    ! local index arrays, recomputed per (txType,dataType,mode) below
+    allocate(ltx_index(size(txDict)),ldt_index(size(txDict)), &
+             lrx_index(size(txDict),size(rxDict)),STAT=istat)
 
     ! For each data type in dictionary, if data of this type exists, write it out.
     WRITE_TX_TYPE: do iTxt = 1,5
@@ -152,24 +163,57 @@ Contains
 	! no data for this data type; skip it - this shouldn't happen anymore
 	! since the "defined" logical deals with this on input
         cycle WRITE_DATA_TYPE
-      else
-        ! count the number of transmitters and receivers
-        nTx = 0
-        nRx = 0
-        do iTx = 1,size(txDict)
-            if (fileInfo(iTxt,iDt)%tx_index(iTx) > 0) then
-                nTx = nTx + 1
-            end if
-        end do
-        do iRx = 1,size(rxDict)
-            do iTx = 1,size(txDict)
-                if (fileInfo(iTxt,iDt)%rx_index(iTx,iRx) > 0) then
-                    nRx = nRx + 1
-                    exit
-                end if
-            end do
-        end do
       end if
+
+      ! Enumerate the distinct mode names present for this (transmitter type,
+      ! data type). Non-SFF data always has a single, empty mode name, so this
+      ! reduces to a single iteration writing exactly one block as before. SFF
+      ! data has one block per mode/polarization, each written as its own
+      ! block with a "+ SFF MODE <name>" header.
+      if (allocated(modeList)) deallocate(modeList)
+      allocate(modeList(nBlocks),STAT=istat)
+      nModeBlk = 0
+      do j = 1,allData%nTx
+        do i = 1,allData%d(j)%nDt
+          if ((allData%d(j)%data(i)%txType == iTxt) .and. &
+              (allData%d(j)%data(i)%dataType == iDt)) then
+            foundMode = .false.
+            do m = 1,nModeBlk
+              if (trim(modeList(m)) == trim(allData%d(j)%data(i)%modeName)) then
+                foundMode = .true.
+                exit
+              end if
+            end do
+            if (.not. foundMode) then
+              nModeBlk = nModeBlk + 1
+              modeList(nModeBlk) = allData%d(j)%data(i)%modeName
+            end if
+          end if
+        end do
+      end do
+
+      WRITE_MODE: do imode = 1,nModeBlk
+      thisMode = modeList(imode)
+
+      ! index the transmitters/receivers for this (txType,dataType,mode)
+      call index_dataVectorMTX(allData,iTxt,iDt,ltx_index,ldt_index,lrx_index,thisMode)
+
+      ! count the number of transmitters and receivers for this mode
+      nTx = 0
+      nRx = 0
+      do iTx = 1,size(txDict)
+          if (ltx_index(iTx) > 0) then
+              nTx = nTx + 1
+          end if
+      end do
+      do iRx = 1,size(rxDict)
+          do iTx = 1,size(txDict)
+              if (lrx_index(iTx,iRx) > 0) then
+                  nRx = nRx + 1
+                  exit
+              end if
+          end do
+      end do
 
       ! write the data type header
       call date_and_time(today)
@@ -185,7 +229,11 @@ Contains
       ! as the input data file
       if (.not. old_data_file_format) then
             write(ioDat,'(a2)',advance='no') '+ '
-            write(ioDat,*,iostat=ios) trim(tx_type_name(iTxt))
+            if (len_trim(thisMode) > 0) then
+                write(ioDat,*,iostat=ios) trim(tx_type_name(iTxt))//' MODE '//trim(thisMode)
+            else
+                write(ioDat,*,iostat=ios) trim(tx_type_name(iTxt))
+            end if
       end if
 
       ! write the remainder of data type header
@@ -218,9 +266,9 @@ Contains
       do iRx = 1,size(rxDict)
         do iTx = 1,size(txDict)
 
-            k = fileInfo(iTxt,iDt)%rx_index(iTx,iRx)
-            i = fileInfo(iTxt,iDt)%dt_index(iTx)
-            j = fileInfo(iTxt,iDt)%tx_index(iTx)
+            k = lrx_index(iTx,iRx)
+            i = ldt_index(iTx)
+            j = ltx_index(iTx)
             if (k == 0) then
                 cycle
             end if
@@ -388,7 +436,18 @@ Contains
                         else
                             write(ioDat,'(es13.6)',  iostat=ios,advance='no') Period
                         end if
-                        write(ioDat,'(a40,3f15.3)',iostat=ios,advance='no') trim(siteid),x(:)
+                        if (iTxt == SFF) then
+                            ! mirror the impedance geographic format so SFF
+                            ! raw-field output round-trips with the reader
+                            if (FindStr(gridCoords, SPHERICAL)>0) then
+                                read(siteid,'(a20,2f15.3)',iostat=ios) sitename,Xx(1),Xx(2)
+                                write(ioDat,'(a20,5f15.3)',iostat=ios,advance='no') trim(sitename),x(1),x(2),Xx(1),Xx(2),x(3)
+                            else
+                                write(ioDat,'(a50,3f15.3)',iostat=ios,advance='no') trim(siteid),x(:)
+                            end if
+                        else
+                            write(ioDat,'(a40,3f15.3)',iostat=ios,advance='no') trim(siteid),x(:)
+                        end if
                         write(ioDat, '(a1)', iostat=ios,advance='no') ' '
 !                        write(ioDat,'(a8,3es15.6)',iostat=ios) trim(compid),value(2*icomp-1),value(2*icomp), error(2*icomp)
 !                        error(2*icomp) = sqrt(value(2*icomp-1)*value(2*icomp-1) + value(2*icomp)*value(2*icomp))/100.0;
@@ -459,13 +518,19 @@ Contains
       end do  ! receivers
 
       if (output_level > 4) then
-	write(6,*) 'Written ',countData,' data values of type ',tx_type_name(iTxt),': ',trim(typeDict(iDt)%name),' to file'
+	write(6,*) 'Written ',countData,' data values of type ',tx_type_name(iTxt), &
+                   ' mode ',trim(thisMode),': ',trim(typeDict(iDt)%name),' to file'
       end if
       deallocate(value, error, exist, STAT=istat)
+
+      end do WRITE_MODE ! modes/polarizations
 
      end do WRITE_DATA_TYPE ! data types
 
     end do WRITE_TX_TYPE
+
+    if (allocated(modeList)) deallocate(modeList,STAT=istat)
+    deallocate(ltx_index,ldt_index,lrx_index,STAT=istat)
 
     close(ioDat)
 
@@ -494,8 +559,9 @@ Contains
     integer, allocatable            :: new_Rx(:) ! contains rxDict indices (nRx)
     character(2)                    :: temp
     character(200)                  :: txTypeName,typeName,typeInfo,typeHeader
+    character(20)                   :: modeName
     character(50)                   :: siteid,ref_siteid,compid
-    integer                         :: nTxt,iTxt,iDt,i,j,k,istat,ios
+    integer                         :: nTxt,iTxt,iDt,i,j,k,istat,ios,ipos
     character(40)                   :: code,ref_code
     real(8)                         :: x(3),ref_x(3), Period,SI_factor
     real(8)                         :: lat,lon,ref_lat,ref_lon,rx_azimuth
@@ -543,19 +609,54 @@ Contains
     	read(ioDat,'(a2,a100)',iostat=ios) temp,typeName
 
         ! If transmitter name exists, it precedes the typeName
+        modeName = ''
         if (temp(1:1) == '+') then
             txTypeName = typeName
             read(ioDat,'(a2,a100)',iostat=ios) temp,typeName
             old_data_file_format = .false.
+            ! Parse an optional "MODE <name>" qualifier on the txType line, e.g.
+            !   + SFF MODE 01
+            ! Everything before MODE is the transmitter type; the token after
+            ! MODE is the mode/polarization name (used by the SFF). Absence of
+            ! the tag means a single mode (default name assigned below).
+            ipos = index(txTypeName,'MODE')
+            if (ipos > 0) then
+                modeName = adjustl(txTypeName(ipos+4:))
+                txTypeName = txTypeName(1:ipos-1)
+            end if
         else
             txTypeName = 'MT'
         end if
         iTxt = tx_type_index(txTypeName)
     	if (ios /= 0) exit
+
+        ! The mode name only applies to SFF; default to a single mode ('01')
+        ! when the txType is SFF but no MODE tag was supplied. For all other
+        ! transmitter types the mode name is left empty.
+        if (iTxt == SFF) then
+            if (len_trim(modeName) == 0) modeName = '01'
+        else
+            modeName = ''
+        end if
     
     	! Read new data type
     	call compact(typeName)
     	iDt = ImpType(typeName)
+
+        ! Restrict "+ SFF" blocks to the raw-field data types. Impedance (and
+        ! other functionals) for an MT/CSEM/TIDE/GLOBAL problem computed via the
+        ! secondary field formulation is obtained through those txTypes together
+        ! with the USE_SFF override -- not through a "+ SFF" data block.
+        if (iTxt == SFF) then
+            select case (iDt)
+            case (Ex_Field, Ey_Field, Bx_Field, By_Field, Bz_Field)
+                ! allowed raw-field data types
+            case default
+                call errStop('"+ SFF" data blocks only support raw-field data types '// &
+                    '(Ex_Field, Ey_Field, Bx_Field, By_Field, Bz_Field); found: '//trim(typeName))
+            end select
+        end if
+
     	ncomp = typeDict(iDt)%nComp
     	if (typeDict(iDt)%isComplex) then
         	ncomp = ncomp/2
@@ -686,7 +787,20 @@ Contains
 
                 ! Update the receiver dictionary and index (sets up if necessary)
                 ! For now, make lat & lon part of site ID; could use directly in the future
-                write(siteid,'(a22,2f9.3)') code
+                if (iTxt == SFF) then
+                    ! SFF raw-field lines carry lat/lon like impedance; preserve
+                    ! them (embedded in the site ID, as impedance does) so the
+                    ! predicted data can be written back out in the same format
+                    if (FindStr(gridCoords, SPHERICAL)>0) then
+                        write(siteid,'(a20,2f15.3)') code,x(1),x(2)
+                        x(1) = lat
+                        x(2) = lon
+                    else
+                        write(siteid,'(a20,2f9.3)') code,lat,lon
+                    end if
+                else
+                    write(siteid,'(a22,2f9.3)') code
+                end if
                 iRx = update_rxDict(x,siteid)
 
             case(Exy_Ampli_Phase)
@@ -1101,6 +1215,7 @@ Contains
 	       newData%d(i)%data(1)%dataType = iDt
 	       newData%d(i)%data(1)%tx = new_Tx(i)
 	       newData%d(i)%data(1)%txType = new_TxType(i)
+	       newData%d(i)%data(1)%modeName = modeName
 	       newData%d(i)%data(1)%allocated = .TRUE.
 
         end do SAVE_DATA

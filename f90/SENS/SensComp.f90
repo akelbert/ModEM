@@ -583,7 +583,7 @@ Contains
    type(solnVector_t), intent(inout)	:: emsoln
 
    ! local variables
-   integer				:: iTx,iDt,i,j
+   integer				:: iTx,iDt,i,j,iPol
 
       if(.not.d%allocated) then
          call errStop('data vector not allocated on input to fwdPred')
@@ -610,12 +610,16 @@ Contains
 
          iDt = d%data(i)%dataType
 
+         ! for single-field (SFF) data types, select the polarization this
+         ! block's mode name refers to (defaults to 1 for all other data)
+         iPol = pol_index_from_mode(emsoln,d%data(i)%modeName)
+
          ! apply data functionals - loop over sites
 		     do j = 1,d%data(i)%nSite
 
 		        ! output is a real vector: complex values come in pairs
               call dataResp(emsoln,sigma,iDt,d%data(i)%rx(j),d%data(i)%value(:,j), &
-                           d%data(i)%orient(j))
+                           d%data(i)%orient(j),iPol=iPol)
 
 		     enddo
 
@@ -694,7 +698,7 @@ Contains
    type(solnVectorMTX_t), optional, intent(in) :: eAll
 
    ! local variables
-   integer              :: i,j,k,iTx,iDt,iMode
+   integer              :: i,j,k,iTx,iDt,iMode,iPol
 
    if(.not.d%allocated) then
       call errStop('data vector not allocated on input to dataOnly')
@@ -724,12 +728,16 @@ Contains
 
             iDt = d%d(j)%data(i)%dataType
 
+            ! for single-field (SFF) data types, select the polarization this
+            ! block's mode name refers to (defaults to 1 for all other data)
+            iPol = pol_index_from_mode(eAll%solns(j),d%d(j)%data(i)%modeName)
+
             ! apply data functionals - loop over sites
              do k = 1,d%d(j)%data(i)%nSite
 
                 ! output is a real vector: complex values come in pairs
               call dataResp(eAll%solns(j),sigma,iDt,d%d(j)%data(i)%rx(k),d%d(j)%data(i)%value(:,k), &
-                           d%d(j)%data(i)%orient(k))
+                           d%d(j)%data(i)%orient(k),iPol=iPol)
 
              enddo
 

@@ -240,6 +240,48 @@ contains
      end subroutine create_solnVector
 
      !************************************************************
+     ! Map a data block's mode name to the polarization index of a solution.
+     ! Used by the secondary field formulation (SFF), where a raw-field datum
+     ! is tagged with a mode name (see dataBlock_t%modeName) that must select
+     ! one of the e%nPol polarizations. Resolution order:
+     !   (1) empty mode name -> the first polarization (legacy / non-SFF);
+     !   (2) exact match against a polarization name e%Pol_name;
+     !   (3) otherwise interpret the mode name as an integer index (e.g. '01').
+     ! Errors if the resulting index is out of range.
+     function pol_index_from_mode(e,modeName) result(iPol)
+
+       type(solnVector_t), intent(in) :: e
+       character(*), intent(in)       :: modeName
+       integer                        :: iPol
+       integer                        :: k,ios
+
+       iPol = 1
+       if (len_trim(modeName) == 0) return
+
+       ! (2) exact name match against the solution's polarization names
+       if (associated(e%Pol_name)) then
+          do k = 1,e%nPol
+             if (trim(adjustl(modeName)) == trim(adjustl(e%Pol_name(k)))) then
+                iPol = k
+                return
+             end if
+          end do
+       end if
+
+       ! (3) fall back to an integer polarization index
+       read(modeName,*,iostat=ios) iPol
+       if (ios /= 0) then
+          call errStop('cannot map data mode "'//trim(modeName)// &
+               '" to a polarization (not a name in Pol_name and not an integer)')
+       end if
+       if ((iPol < 1) .or. (iPol > e%nPol)) then
+          call errStop('data mode "'//trim(modeName)// &
+               '" is out of range for the number of polarizations available')
+       end if
+
+     end function pol_index_from_mode
+
+     !************************************************************
      subroutine deall_solnVector(e)
 
        !  3D  version

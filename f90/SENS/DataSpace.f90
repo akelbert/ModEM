@@ -118,6 +118,13 @@ module DataSpace
       ! dt is index into data type dictionary
       integer       :: dataType = 0
 
+      ! mode/polarization name for this block (secondary field formulation).
+      ! Empty for all non-SFF data types (MT/CSEM/TIDE/GLOBAL), so block
+      ! identity for those reduces to (tx,txType,dataType) exactly as before.
+      ! For SFF this is the mode name read after the "+ SFF MODE" header and
+      ! is later matched to solnVector%Pol_name to pick the polarization.
+      character(20) :: modeName = ''
+
       ! scaling factor allows different weighting of blocks for inversion;
       ! upon initialization they are always one unless specified
       real (kind=prec)   :: scalingFactor
@@ -243,6 +250,7 @@ Contains
     d%tx = 0
     d%txType = 0
     d%dataType = 0
+    d%modeName = ''
     d%scalingFactor = ONE
     allocate(d%rx(nSite), STAT=istat)
     d%rx = 0
@@ -310,6 +318,7 @@ Contains
     d%tx = 0
     d%txType = 0
     d%dataType = 0
+    d%modeName = ''
     d%scalingFactor = ONE
     d%isComplex = .false.
     d%errorBar = .false.
@@ -412,6 +421,7 @@ Contains
     d2%tx = d1%tx
     d2%txType = d1%txType
     d2%dataType = d1%dataType
+    d2%modeName = d1%modeName
     d2%scalingFactor = d1%scalingFactor
 
     ! 2022.09.28, Liu Zhongyin, add azimuth copy
@@ -685,8 +695,9 @@ Contains
         return
     endif
 
-    if((d1%txType .ne. d2%txType) .or. (d1%tx .ne. d2%tx) .or. (d1%dataType .ne. d2%dataType)) then
-        call errStop('different transmitter types, transmitters or data types in merge_dataBlock')
+    if((d1%txType .ne. d2%txType) .or. (d1%tx .ne. d2%tx) .or. (d1%dataType .ne. d2%dataType) &
+        .or. (trim(d1%modeName) .ne. trim(d2%modeName))) then
+        call errStop('different transmitter types, transmitters, data types or modes in merge_dataBlock')
     elseif(d1%errorBar .neqv. d2%errorBar) then
         call errStop('input error bars incompatible in merge_dataBlock')
     elseif(d1%normalized .ne. d2%normalized) then
@@ -767,6 +778,7 @@ Contains
     d%dataType = d1%dataType
     d%tx = d1%tx
     d%txType = d1%txType
+    d%modeName = d1%modeName
     d%scalingFactor = (d1%scalingFactor + d2%scalingFactor)/TWO
     d%normalized = d1%normalized
     d%allocated = .true.
@@ -1129,6 +1141,8 @@ Contains
 
     ! local variables
     integer, allocatable    :: i1(:),i2(:),typeList(:)
+    character(20), allocatable :: modeList(:)
+    character(20)           :: modeName
     logical                 :: newDt
     integer                 :: i,j,iDt,nDt,countDt,istat
 
@@ -1152,16 +1166,21 @@ Contains
 
     nDt = d1%nDt + d2%nDt
     allocate(typeList(nDt),STAT=istat)
+    allocate(modeList(nDt),STAT=istat)
     allocate(i1(nDt),i2(nDt),STAT=istat)
     countDt = 0
 
-    ! make list of d1 data types and indices
+    ! make list of d1 data types and indices. Blocks are distinguished by
+    ! (dataType,modeName): modeName is '' for all non-SFF data, so this is
+    ! identical to matching on dataType alone for those; for SFF it keeps
+    ! separate modes (e.g. two Ex_Field blocks) from being merged into one.
     i1 = 0
     do i = 1,d1%nDt
         iDt = d1%data(i)%dataType
+        modeName = d1%data(i)%modeName
         newDt = .true.
         do j = 1,countDt
-            if(iDt .eq. typeList(j)) then
+            if((iDt .eq. typeList(j)) .and. (trim(modeName) .eq. trim(modeList(j)))) then
                 i1(j) = i
                 newDt = .false.
                 exit
@@ -1170,6 +1189,7 @@ Contains
         if(newDt) then
             countDt = countDt + 1
             typeList(countDt) = iDt
+            modeList(countDt) = modeName
             i1(countDt) = i
         endif
     enddo
@@ -1178,9 +1198,10 @@ Contains
     i2 = 0
     do i = 1,d2%nDt
         iDt = d2%data(i)%dataType
+        modeName = d2%data(i)%modeName
         newDt = .true.
         do j = 1,countDt
-            if(iDt .eq. typeList(j)) then
+            if((iDt .eq. typeList(j)) .and. (trim(modeName) .eq. trim(modeList(j)))) then
                 i2(j) = i
                 newDt = .false.
                 exit
@@ -1189,6 +1210,7 @@ Contains
         if(newDt) then
             countDt = countDt + 1
             typeList(countDt) = iDt
+            modeList(countDt) = modeName
             i2(countDt) = i
         endif
     enddo
@@ -1211,6 +1233,7 @@ Contains
     d%allocated = .true.
 
     deallocate(typeList,STAT=istat)
+    deallocate(modeList,STAT=istat)
     deallocate(i1,i2,STAT=istat)
 
   end subroutine merge_dataVector
@@ -1721,14 +1744,21 @@ Contains
   ! The output arrays are tx_index(nTx) and rx_index(nTx,nRx), where
   ! nTx and nRx are the lengths of the respective dictionaries.
 
-  subroutine index_dataVectorMTX(d,iTxt,iDt,tx_index,dt_index,rx_index)
+  subroutine index_dataVectorMTX(d,iTxt,iDt,tx_index,dt_index,rx_index,modeName)
 
    type(dataVectorMTX_t), intent(in)        :: d
    integer, intent(in)                      :: iTxt,iDt
    integer, intent(inout)                   :: tx_index(:), dt_index(:), rx_index(:,:)
+   ! optional mode-name filter: when present, only blocks whose modeName
+   ! matches exactly are indexed. This distinguishes the several same-dataType
+   ! blocks of an SFF transmitter (one per mode/polarization). Absent (or empty)
+   ! reproduces the historical behavior for all non-SFF data, whose modeName
+   ! is always ''.
+   character(*), intent(in), optional       :: modeName
 
    ! local variables
    integer              :: i,j,k
+   logical              :: modeMatch
 
    tx_index = 0
    dt_index = 0
@@ -1736,7 +1766,13 @@ Contains
 
    do j = 1,d%nTx
         do i = 1,d%d(j)%nDt
-            if ((d%d(j)%data(i)%txType == iTxt) .and. (d%d(j)%data(i)%dataType == iDt)) then
+            if (present(modeName)) then
+                modeMatch = (trim(d%d(j)%data(i)%modeName) == trim(modeName))
+            else
+                modeMatch = .true.
+            endif
+            if ((d%d(j)%data(i)%txType == iTxt) .and. (d%d(j)%data(i)%dataType == iDt) &
+                 .and. modeMatch) then
                 tx_index(d%d(j)%tx) = j
                 dt_index(d%d(j)%tx) = i
                 do k = 1,d%d(j)%data(i)%nSite
