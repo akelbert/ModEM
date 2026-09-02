@@ -452,7 +452,7 @@ program Mod3DMT
      if (write_EMsoln) then
          ! write out EM solutions
          write(*,*) 'Saving the EM solution...'
-         call write_solnVectorMTX(eAll,cUserDef%wFile_EMsoln)
+         call write_solnVectorMTX(eAll,cUserDef%wFile_EMsoln,cUserDef%esoln_output)
      end if
 
      if (write_EMrhs) then

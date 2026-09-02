@@ -580,26 +580,47 @@ Contains
       end subroutine read_solnVectorMTX
 
 !******************************************************************
-      subroutine write_solnVectorMTX(eAll,cfile)
+      subroutine write_solnVectorMTX(eAll,cfile,esoln_output)
 
       !  open cfile on unit fid, writes out object of
       !   type cvector in standard format (readable by matlab
       !   routine readcvector.m), closes file
       !  NOT coded at present to specifically write out TE/TM
-      !    solutions, periods, etc. (can get this infor from
+      !    solutions, periods, etc. (can get this info from
       !    eAll%solns(j)%tx, but only with access to TXdict.
+      !
+      !  esoln_output (optional, default 'ALL') controls output granularity:
+      !    'ALL'             -- one combined file with every transmitter and
+      !                         polarization (the original, only, behavior).
+      !    'PER_PERIOD'      -- one file per transmitter (period), bundling
+      !                         all of its polarizations (modes) together.
+      !    'PER_PERIOD_MODE' -- one file per individual (period,mode) pair.
+      !  Split files are tagged '.perN' / '.perN.modeM' (see tag_esoln_file),
+      !  N/M being the transmitter/polarization's GLOBAL 1-based index (not
+      !  renumbered to 1 per file), so each file stays traceable to its
+      !  position in the original problem; the block header's iFreq/iMode
+      !  fields carry the same global index for the same reason. This
+      !  applies to whatever eAll contains -- not only SFF transmitters --
+      !  since the file-writing level has no other reason to distinguish
+      !  transmitter types.
 
       character(*), intent(in)          :: cfile
       type(solnVectorMTX_t), intent(in)               :: eAll
+      character(*), intent(in), optional :: esoln_output
 
       !   local variables
       integer           :: j,k,nMode = 2, ios,ig,cdot
       character (len=3)         :: igchar
       character (len=20) 		:: version = ''
       character (len=200)       :: fn_output
+      character (len=80)        :: granularity
       real (kind=prec)   :: omega
 
-          fn_output = trim(cfile)
+          if (present(esoln_output)) then
+              granularity = esoln_output
+          else
+              granularity = 'ALL'
+          end if
 
            ! Test that the output grid is well-defined, at least on a basic level
           if (.not. eAll%solns(1)%grid%allocated) then
@@ -609,23 +630,99 @@ Contains
               write(0,*) 'WARNING: E-field grid is not output properly in write_solnVectorMTX'
           end if
 
-          write(*,*) 'E-fields written to ',trim(fn_output)
+          select case (trim(granularity))
 
-          ! write the ACTUAL number of polarizations into the header (was
-          ! hardcoded nMode=2). SFF may carry N>=1; MT is unchanged (nPol=2).
-          nMode = eAll%solns(1)%nPol
-          call FileWriteInit(version,fn_output,ioE,eAll%solns(1)%grid,eAll%nTX,nMode,ios)
-          do j = 1,eAll%nTx
-             do k = 1,eAll%solns(j)%nPol
-               omega = txDict(eAll%solns(j)%tx)%omega
+          case ('ALL')
+              fn_output = trim(cfile)
+              write(*,*) 'E-fields written to ',trim(fn_output)
 
-               call EfileWrite(ioE, omega, j,  k, eAll%solns(j)%Pol_name(k), eAll%solns(j)%pol(k))
+              ! write the ACTUAL number of polarizations into the header (was
+              ! hardcoded nMode=2). SFF may carry N>=1; MT is unchanged (nPol=2).
+              nMode = eAll%solns(1)%nPol
+              call FileWriteInit(version,fn_output,ioE,eAll%solns(1)%grid,eAll%nTX,nMode,ios)
+              do j = 1,eAll%nTx
+                 do k = 1,eAll%solns(j)%nPol
+                   omega = txDict(eAll%solns(j)%tx)%omega
 
-             enddo
-          enddo
-          close(ioE)
+                   call EfileWrite(ioE, omega, j,  k, eAll%solns(j)%Pol_name(k), eAll%solns(j)%pol(k))
+
+                 enddo
+              enddo
+              close(ioE)
+
+          case ('PER_PERIOD')
+              do j = 1,eAll%nTx
+                 fn_output = tag_esoln_file(cfile,j,0)
+                 write(*,*) 'E-fields written to ',trim(fn_output)
+                 nMode = eAll%solns(j)%nPol
+                 call FileWriteInit(version,fn_output,ioE,eAll%solns(j)%grid,1,nMode,ios)
+                 do k = 1,eAll%solns(j)%nPol
+                    omega = txDict(eAll%solns(j)%tx)%omega
+                    call EfileWrite(ioE, omega, j, k, eAll%solns(j)%Pol_name(k), eAll%solns(j)%pol(k))
+                 enddo
+                 close(ioE)
+              enddo
+
+          case ('PER_PERIOD_MODE')
+              do j = 1,eAll%nTx
+                 do k = 1,eAll%solns(j)%nPol
+                    fn_output = tag_esoln_file(cfile,j,k)
+                    write(*,*) 'E-fields written to ',trim(fn_output)
+                    call FileWriteInit(version,fn_output,ioE,eAll%solns(j)%grid,1,1,ios)
+                    omega = txDict(eAll%solns(j)%tx)%omega
+                    call EfileWrite(ioE, omega, j, k, eAll%solns(j)%Pol_name(k), eAll%solns(j)%pol(k))
+                    close(ioE)
+                 enddo
+              enddo
+
+          case default
+              call errStop('write_solnVectorMTX: unknown esoln_output value "'//trim(granularity)// &
+                            '"; valid options are ALL, PER_PERIOD, PER_PERIOD_MODE')
+
+          end select
 
       end subroutine write_solnVectorMTX
+
+      !**********************************************************************
+      ! Inserts a '.perN' (imode==0) or '.perN.modeM' (imode>0) tag into cfile,
+      ! before the file's own extension (text after the LAST '.') if it has
+      ! one, else appended at the end. N/M are written with no leading zeros
+      ! or fixed width (i0), so the tag is unambiguous for any magnitude.
+      function tag_esoln_file(cfile,iper,imode) result(tagged)
+        character(*), intent(in) :: cfile
+        integer, intent(in)      :: iper, imode
+        character(200)           :: tagged
+        character(200)           :: base, ext
+        character(20)            :: perstr, modestr
+        character(40)            :: tagpart
+        integer                  :: dotpos
+
+        dotpos = index(cfile,'.',back=.true.)
+        if (dotpos > 0) then
+            base = cfile(1:dotpos-1)
+            ext  = cfile(dotpos:)
+        else
+            base = cfile
+            ext  = ''
+        end if
+
+        ! zero-padded to (at least) 2 digits -- e.g. period 3 -> "03", period
+        ! 12 -> "12" -- so files sort correctly on disk for the common case
+        ! of up to 99 periods/modes; a wide field width (not just the m=2
+        ! minimum) means 3+ digit values are shown in full, not overflowed.
+        write(perstr,'(i6.2)') iper
+        perstr = adjustl(perstr)
+        if (imode > 0) then
+            write(modestr,'(i6.2)') imode
+            modestr = adjustl(modestr)
+            tagpart = '.per'//trim(perstr)//'.mode'//trim(modestr)
+        else
+            tagpart = '.per'//trim(perstr)
+        end if
+
+        tagged = trim(base)//trim(tagpart)//trim(ext)
+
+      end function tag_esoln_file
 
       !******************************************************************
       subroutine read_rhsVectorMTX(grid,bAll,cfile,format)

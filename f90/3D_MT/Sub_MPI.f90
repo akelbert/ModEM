@@ -96,7 +96,7 @@ end subroutine count_number_of_messages_to_RECV
 	implicit none
 	integer Nbytes1,Nbytes2,Nbytes3,Nbytes4
 	!
-	CALL MPI_PACK_SIZE(80*28, MPI_CHARACTER,        MPI_COMM_WORLD, Nbytes1,  ierr)
+	CALL MPI_PACK_SIZE(80*29, MPI_CHARACTER,        MPI_COMM_WORLD, Nbytes1,  ierr)
 	CALL MPI_PACK_SIZE(3,     MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, Nbytes2,  ierr)
 	CALL MPI_PACK_SIZE(2,     MPI_INTEGER,          MPI_COMM_WORLD, Nbytes3,  ierr)
 	CALL MPI_PACK_SIZE(2,     MPI_LOGICAL,          MPI_COMM_WORLD, Nbytes4,  ierr)
@@ -116,7 +116,7 @@ end subroutine count_number_of_messages_to_RECV
      	type(userdef_control), intent(in)   :: ctrl
         integer index
         index=1
-        call MPI_Pack(ctrl%job,80*28, MPI_CHARACTER, userdef_control_package, Nbytes, index, MPI_COMM_WORLD, ierr)
+        call MPI_Pack(ctrl%job,80*29, MPI_CHARACTER, userdef_control_package, Nbytes, index, MPI_COMM_WORLD, ierr)
         call MPI_Pack(ctrl%lambda,3, MPI_DOUBLE_PRECISION, userdef_control_package, Nbytes, index, MPI_COMM_WORLD, ierr)
         call MPI_Pack(ctrl%CovType,1, MPI_INTEGER, userdef_control_package,  Nbytes, index, MPI_COMM_WORLD, ierr)
         call MPI_Pack(ctrl%output_level,1, MPI_INTEGER, userdef_control_package, Nbytes, index, MPI_COMM_WORLD, ierr)
@@ -162,6 +162,7 @@ end subroutine pack_userdef_control
    call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%primary_model_file,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
    call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%primary_field,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
    call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%primary_field_file,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
+   call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%esoln_output,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
 
    call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%rFile_Cov,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
    call MPI_Unpack(userdef_control_package, Nbytes, index, ctrl%search,80, MPI_CHARACTER,MPI_COMM_WORLD, ierr)
@@ -214,6 +215,10 @@ subroutine check_userdef_control_MPI (which_proc,ctrl)
 
     if (trim(ctrl % primary_field_file) /= 'n') then ! 'hidden option' only print if it has been set via namelist
         write(6,*)trim(which_proc),' : ctrl%primary_field_file',trim(ctrl%primary_field_file)
+    end if
+
+    if (trim(ctrl % esoln_output) /= 'ALL') then ! only print if it has been set to something non-default via namelist
+        write(6,*)trim(which_proc),' : ctrl%esoln_output',trim(ctrl%esoln_output)
     end if
 
     write(6,*)trim(which_proc),' : ctrl%prefix ',trim(ctrl%prefix)

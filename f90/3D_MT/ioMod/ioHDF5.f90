@@ -742,7 +742,7 @@ subroutine write_hdf5_attr(a_type, attr_name, attr_obj, path_id)
       end subroutine read_solnVectorMTX
 
 !******************************************************************
-      subroutine write_solnVectorMTX(eAll,cfile)
+      subroutine write_solnVectorMTX(eAll,cfile,esoln_output)
 
       !  open cfile on unit fid, writes out object of
       !   type cvector in standard format (readable by matlab
@@ -750,18 +750,31 @@ subroutine write_hdf5_attr(a_type, attr_name, attr_obj, path_id)
       !  NOT coded at present to specifically write out TE/TM
       !    solutions, periods, etc. (can get this infor from
       !    eAll%solns(j)%tx, but only with access to TXdict.
+      !
+      !  esoln_output (optional, default 'ALL'): output granularity -- see
+      !  the sibling ioAscii.f90's write_solnVectorMTX for the full
+      !  documentation; this is the same ASCII-format writer (just compiled
+      !  under the HDF5 build flag alongside write_solnVectorMTX_hdf5) and
+      !  is kept signature-identical so either build compiles against the
+      !  same Mod3DMT.f90 call site.
 
       character(*), intent(in)          :: cfile
       type(solnVectorMTX_t), intent(in)               :: eAll
+      character(*), intent(in), optional :: esoln_output
 
       !   local variables
       integer           :: j,k,nMode = 2, ios,ig,cdot
       character (len=3)         :: igchar
       character (len=20) 		:: version = ''
       character (len=200)       :: fn_output
+      character (len=80)        :: granularity
       real (kind=prec)   :: omega
 
-          fn_output = trim(cfile)
+          if (present(esoln_output)) then
+              granularity = esoln_output
+          else
+              granularity = 'ALL'
+          end if
 
            ! Test that the output grid is well-defined, at least on a basic level
           if (.not. eAll%solns(1)%grid%allocated) then
@@ -771,20 +784,98 @@ subroutine write_hdf5_attr(a_type, attr_name, attr_obj, path_id)
               write(0,*) 'WARNING: E-field grid is not output properly in write_solnVectorMTX'
           end if
 
-          write(*,*) 'E-fields written to ',trim(fn_output)
+          select case (trim(granularity))
 
-          call FileWriteInit(version,fn_output,ioE,eAll%solns(1)%grid,eAll%nTX,nMode,ios)
-          do j = 1,eAll%nTx
-             do k = 1,eAll%solns(j)%nPol
-               omega = txDict(eAll%solns(j)%tx)%omega
-              
-               call EfileWrite(ioE, omega, j,  k, eAll%solns(j)%Pol_name(k), eAll%solns(j)%pol(k))
+          case ('ALL')
+              fn_output = trim(cfile)
+              write(*,*) 'E-fields written to ',trim(fn_output)
 
-             enddo
-          enddo
-          close(ioE)
+              ! write the ACTUAL number of polarizations into the header (was
+              ! hardcoded nMode=2). SFF may carry N>=1; MT is unchanged (nPol=2).
+              nMode = eAll%solns(1)%nPol
+              call FileWriteInit(version,fn_output,ioE,eAll%solns(1)%grid,eAll%nTX,nMode,ios)
+              do j = 1,eAll%nTx
+                 do k = 1,eAll%solns(j)%nPol
+                   omega = txDict(eAll%solns(j)%tx)%omega
+
+                   call EfileWrite(ioE, omega, j,  k, eAll%solns(j)%Pol_name(k), eAll%solns(j)%pol(k))
+
+                 enddo
+              enddo
+              close(ioE)
+
+          case ('PER_PERIOD')
+              do j = 1,eAll%nTx
+                 fn_output = tag_esoln_file(cfile,j,0)
+                 write(*,*) 'E-fields written to ',trim(fn_output)
+                 nMode = eAll%solns(j)%nPol
+                 call FileWriteInit(version,fn_output,ioE,eAll%solns(j)%grid,1,nMode,ios)
+                 do k = 1,eAll%solns(j)%nPol
+                    omega = txDict(eAll%solns(j)%tx)%omega
+                    call EfileWrite(ioE, omega, j, k, eAll%solns(j)%Pol_name(k), eAll%solns(j)%pol(k))
+                 enddo
+                 close(ioE)
+              enddo
+
+          case ('PER_PERIOD_MODE')
+              do j = 1,eAll%nTx
+                 do k = 1,eAll%solns(j)%nPol
+                    fn_output = tag_esoln_file(cfile,j,k)
+                    write(*,*) 'E-fields written to ',trim(fn_output)
+                    call FileWriteInit(version,fn_output,ioE,eAll%solns(j)%grid,1,1,ios)
+                    omega = txDict(eAll%solns(j)%tx)%omega
+                    call EfileWrite(ioE, omega, j, k, eAll%solns(j)%Pol_name(k), eAll%solns(j)%pol(k))
+                    close(ioE)
+                 enddo
+              enddo
+
+          case default
+              call errStop('write_solnVectorMTX: unknown esoln_output value "'//trim(granularity)// &
+                            '"; valid options are ALL, PER_PERIOD, PER_PERIOD_MODE')
+
+          end select
 
       end subroutine write_solnVectorMTX
+
+      !**********************************************************************
+      ! See ioAscii.f90's tag_esoln_file (identical implementation, kept
+      ! separate since this module is compiled standalone under the HDF5
+      ! build and does not use ioAscii's).
+      function tag_esoln_file(cfile,iper,imode) result(tagged)
+        character(*), intent(in) :: cfile
+        integer, intent(in)      :: iper, imode
+        character(200)           :: tagged
+        character(200)           :: base, ext
+        character(20)            :: perstr, modestr
+        character(40)            :: tagpart
+        integer                  :: dotpos
+
+        dotpos = index(cfile,'.',back=.true.)
+        if (dotpos > 0) then
+            base = cfile(1:dotpos-1)
+            ext  = cfile(dotpos:)
+        else
+            base = cfile
+            ext  = ''
+        end if
+
+        ! zero-padded to (at least) 2 digits -- e.g. period 3 -> "03", period
+        ! 12 -> "12" -- so files sort correctly on disk for the common case
+        ! of up to 99 periods/modes; a wide field width (not just the m=2
+        ! minimum) means 3+ digit values are shown in full, not overflowed.
+        write(perstr,'(i6.2)') iper
+        perstr = adjustl(perstr)
+        if (imode > 0) then
+            write(modestr,'(i6.2)') imode
+            modestr = adjustl(modestr)
+            tagpart = '.per'//trim(perstr)//'.mode'//trim(modestr)
+        else
+            tagpart = '.per'//trim(perstr)
+        end if
+
+        tagged = trim(base)//trim(tagpart)//trim(ext)
+
+      end function tag_esoln_file
 !******************************************************************
       subroutine write_solnVectorMTX_hdf5(eAll,cfile)
 

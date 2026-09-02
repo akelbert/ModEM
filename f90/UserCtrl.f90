@@ -64,6 +64,18 @@ module UserCtrl
     character(80)       :: primary_field
     character(80)       :: primary_field_file
 
+    ! Output granularity for the EM solution (wFile_EMsoln, e.g. the -E job's
+    ! total field): 'ALL' (default) writes every transmitter/polarization
+    ! into ONE combined .esoln, exactly as before. 'PER_PERIOD' writes one
+    ! .esoln per transmitter (period), bundling all of its polarizations
+    ! (modes) together. 'PER_PERIOD_MODE' writes one .esoln per individual
+    ! (period,mode) pair -- the finest granularity, most useful for the
+    ! secondary field formulation's N-polarization output, where a single
+    ! combined file can otherwise get unwieldy for downstream per-mode
+    ! tooling. Applies to whatever is written, not only to SFF transmitters
+    ! specifically. See ioMod/ioAscii.f90's write_solnVectorMTX.
+    character(80)       :: esoln_output
+
 	! Specify covariance configuration
 	character(80)       :: rFile_Cov
 
@@ -137,6 +149,7 @@ Contains
     ctrl% primary_model_file = 'n'
     ctrl% primary_field = 'n'
     ctrl% primary_field_file = 'n'
+    ctrl%esoln_output = 'ALL'
   	ctrl%search = 'NLCG'
   	ctrl%option = 'J'
   	ctrl%lambda = 10.
@@ -1053,15 +1066,18 @@ Contains
      character(len=80) :: primary_model_file
      character(len=80) :: primary_field
      character(len=80) :: primary_field_file
+     character(len=80) :: esoln_output
      logical :: sff
 
-     namelist /grid/ sff, primary_model, primary_model_file, primary_field, primary_field_file
+     namelist /grid/ sff, primary_model, primary_model_file, primary_field, primary_field_file, &
+                     esoln_output
 
      sff = ctrl % SFF
      primary_model = ctrl % primary_model
      primary_model_file = ctrl % primary_model_file
      primary_field = ctrl % primary_field
      primary_field_file = ctrl % primary_field_file
+     esoln_output = ctrl % esoln_output
 
      read(nl_fid, nml=grid, iostat=iostat, iomsg=iomsg)
      if (iostat /= 0) then
@@ -1079,11 +1095,21 @@ Contains
 
      write(0,*) "Optional namelist section '&grid' was read!"
 
+     select case (trim(esoln_output))
+        case ('ALL','PER_PERIOD','PER_PERIOD_MODE')
+           continue
+        case default
+           write(0,*) "ERROR: namelist '&grid' esoln_output must be 'ALL', 'PER_PERIOD' or ", &
+                      "'PER_PERIOD_MODE' (got '"//trim(esoln_output)//"')"
+           call ModEM_abort()
+     end select
+
      ctrl % SFF = sff
      ctrl % primary_model = primary_model
      ctrl % primary_model_file = primary_model_file
      ctrl % primary_field = primary_field
      ctrl % primary_field_file = primary_field_file
+     ctrl % esoln_output = esoln_output
 
   end subroutine process_nml_section_grid
 
@@ -1099,6 +1125,7 @@ Contains
       write(nl_fid, *) '    primary_model_file = "none" ! 1D model file when primary_model = "file"'
       write(nl_fid, *) '    primary_field = "file"      ! source of the primary E-field: "file" | "compute"'
       write(nl_fid, *) '    primary_field_file = "none" ! primary E-field (.esoln) when primary_field = "file"'
+      write(nl_fid, *) '    esoln_output = "ALL"        ! EM solution output granularity: "ALL" | "PER_PERIOD" | "PER_PERIOD_MODE"'
       write(nl_fid, *) '/'
 
   end subroutine gen_nml_section_grid 
